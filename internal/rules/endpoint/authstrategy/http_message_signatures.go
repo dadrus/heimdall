@@ -59,7 +59,7 @@ type HTTPMessageSignatures struct {
 	TTL        *time.Duration `mapstructure:"ttl"`
 	Label      string         `mapstructure:"label"`
 
-	resolver *secrets.SecretInformer[httpsig.Signer]
+	informer *secrets.SecretInformer[httpsig.Signer]
 	hash     atomic.Value
 }
 
@@ -67,7 +67,7 @@ func (s *HTTPMessageSignatures) Apply(req *http.Request) error {
 	logger := zerolog.Ctx(req.Context())
 	logger.Debug().Msg("Applying http_message_signatures strategy to authenticate request")
 
-	signer, ok := s.resolver.Get()
+	signer, ok := s.informer.Get(req.Context())
 	if !ok {
 		return errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
@@ -94,24 +94,29 @@ func (s *HTTPMessageSignatures) Hash() []byte {
 }
 
 func (s *HTTPMessageSignatures) init(ctx context.Context, appCtx app.Context) error {
-	s.resolver = &secrets.SecretInformer[httpsig.Signer]{
-		Manager:   appCtx.SecretsManager(),
-		Reference: secrets.InternalRef(s.Signer.Secret.Source, s.Signer.Secret.Selector),
-		Converter: s.createSigner,
-		OnUpdate: func(ctx context.Context, secret secrets.Secret, _ httpsig.Signer) {
-			aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
+	informer, err := secrets.NewSecretInformer(
+		ctx,
+		appCtx.SecretResolver(),
+		secrets.Reference{Source: s.Signer.Secret.Source, Selector: s.Signer.Secret.Selector},
+		secrets.InformerOptions[httpsig.Signer]{
+			Converter:   s.createSigner,
+			ResolveMode: secrets.ResolveEager,
+			OnUpdate: func(_ context.Context, secret secrets.Secret, _ httpsig.Signer) {
+				aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
 
-			appCtx.KeyRegistry().Notify(keyregistry.KeyInfo{Key: aks, Exportable: true})
-			s.updateHash(aks)
+				appCtx.KeyRegistry().Notify(keyregistry.KeyInfo{Key: aks, Exportable: true})
+				s.updateHash(aks)
+			},
 		},
-	}
-
-	if err := s.resolver.Start(ctx); err != nil {
+	)
+	if err != nil {
 		return errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"failed resolving secret for http_message_signatures strategy",
 		).CausedBy(err)
 	}
+
+	s.informer = informer
 
 	return nil
 }

@@ -45,7 +45,7 @@ type OAuth2ClientCredentials struct {
 	TTL         *time.Duration               `mapstructure:"cache_ttl"`
 	Header      *headerConfig                `mapstructure:"header"`
 
-	resolver *secrets.CredentialsInformer[clientcredentials.Config]
+	informer *secrets.CredentialsInformer[clientcredentials.Config]
 	hash     atomic.Value
 }
 
@@ -55,7 +55,7 @@ func (c *OAuth2ClientCredentials) Apply(req *http.Request) error {
 
 	logger.Debug().Msg("Applying oauth2_client_credentials strategy to authenticate request")
 
-	cfg, ok := c.resolver.Get()
+	cfg, ok := c.informer.Get(ctx)
 	if !ok {
 		return errorchain.NewWithMessage(
 			pipeline.ErrInternal,
@@ -90,21 +90,26 @@ func (c *OAuth2ClientCredentials) init(ctx context.Context, appCtx app.Context) 
 		c.AuthMethod = clientcredentials.AuthMethodBasicAuth
 	}
 
-	c.resolver = &secrets.CredentialsInformer[clientcredentials.Config]{
-		Manager:   appCtx.SecretsManager(),
-		Reference: secrets.InternalRef(c.Credentials.Source, c.Credentials.Selector),
-		Converter: c.createClientCredentialsConfig,
-		OnUpdate: func(_ context.Context, _ secrets.Credentials, cfg clientcredentials.Config) {
-			c.hash.Store(cfg.Hash())
+	informer, err := secrets.NewCredentialsInformer(
+		ctx,
+		appCtx.SecretResolver(),
+		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
+		secrets.CredentialsInformerOptions[clientcredentials.Config]{
+			Converter:   c.createClientCredentialsConfig,
+			ResolveMode: secrets.ResolveEager,
+			OnUpdate: func(_ context.Context, _ secrets.Credentials, cfg clientcredentials.Config) {
+				c.hash.Store(cfg.Hash())
+			},
 		},
-	}
-
-	if err := c.resolver.Start(ctx); err != nil {
+	)
+	if err != nil {
 		return errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"failed resolving oauth2 client credentials",
 		).CausedBy(err)
 	}
+
+	c.informer = informer
 
 	return nil
 }

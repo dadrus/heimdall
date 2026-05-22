@@ -17,6 +17,7 @@
 package authstrategy
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
@@ -27,22 +28,40 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/types"
-	"github.com/dadrus/heimdall/internal/secrets/types/mocks"
 )
+
+func TestBasicAuthCredentialsHash(t *testing.T) {
+	t.Parallel()
+
+	creds := basicAuthCredentials{
+		UserID:   "baz",
+		Password: "foo",
+	}
+
+	require.NotEmpty(t, creds.Hash())
+	require.Equal(t, creds.Hash(), creds.Hash())
+}
 
 func TestBasicAuthInit(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, sm *mocks.ManagerMock)
+		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.CredentialsHandleMock)
 		assert func(t *testing.T, err error, ba *BasicAuth)
 	}{
 		"fails to resolve credentials": {
-			setup: func(t *testing.T, sm *mocks.ManagerMock) {
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, _ *secretsmocks.CredentialsHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
+				sr.EXPECT().
+					Credentials(
+						mock.Anything,
+						secrets.Reference{Source: "foo", Selector: "bar"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, ba *BasicAuth) {
@@ -53,51 +72,45 @@ func TestBasicAuthInit(t *testing.T) {
 				require.ErrorContains(t, err, "failed resolving basic auth credentials")
 
 				assert.Nil(t, ba.Hash())
-				_, ok := ba.resolver.Get()
-				require.False(t, ok)
-			},
-		},
-		"fails due to an invalid credentials structure": {
-			setup: func(t *testing.T, sm *mocks.ManagerMock) {
-				t.Helper()
-
-				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types.NewCredentials("bar", map[string]any{
-						"foo": "baz",
-						"bar": "foo",
-					}), nil)
-			},
-			assert: func(t *testing.T, err error, ba *BasicAuth) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "invalid credentials payload")
-
-				assert.Nil(t, ba.Hash())
-				_, ok := ba.resolver.Get()
-				require.False(t, ok)
+				assert.Nil(t, ba.informer)
 			},
 		},
 		"succeeds": {
-			setup: func(t *testing.T, sm *mocks.ManagerMock) {
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.CredentialsHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
-				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types.NewCredentials("bar", map[string]any{
-						"user_id":  "baz",
-						"password": "foo",
-					}), nil)
+				creds := types.NewCredentials("bar", map[string]any{
+					"user_id":  "baz",
+					"password": "foo",
+				})
+
+				sr.EXPECT().
+					Credentials(
+						mock.Anything,
+						secrets.Reference{Source: "foo", Selector: "bar"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(context.Background(), creds)
+						require.NoError(t, err)
+
+						return true
+					}))
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(creds, true)
 			},
 			assert: func(t *testing.T, err error, ba *BasicAuth) {
 				t.Helper()
 
 				require.NoError(t, err)
+				require.NotNil(t, ba.informer)
 
-				require.NotNil(t, ba.resolver)
-
-				val, ok := ba.resolver.Get()
+				val, ok := ba.informer.Get(t.Context())
 				require.True(t, ok)
 				assert.Equal(t, "baz", val.UserID)
 				assert.Equal(t, "foo", val.Password)
@@ -106,22 +119,23 @@ func TestBasicAuthInit(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			secret := config.Secret{Source: "foo", Selector: "bar"}
-			sm := mocks.NewManagerMock(t)
+			t.Parallel()
 
-			tc.setup(t, sm)
+			secret := config.Secret{Source: "foo", Selector: "bar"}
+
+			sr := secretsmocks.NewResolverMock(t)
+			handle := secretsmocks.NewCredentialsHandleMock(t)
+
+			tc.setup(t, sr, handle)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().SecretsManager().Return(sm)
+			appCtx.EXPECT().SecretResolver().Return(sr)
 
-			ak := &BasicAuth{Credentials: secret}
+			ba := &BasicAuth{Credentials: secret}
 
-			// WHEN
-			err := ak.init(t.Context(), appCtx)
+			err := ba.init(t.Context(), appCtx)
 
-			// THEN
-			tc.assert(t, err, ak)
+			tc.assert(t, err, ba)
 		})
 	}
 }
@@ -130,17 +144,29 @@ func TestBasicAuthApply(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		ignoreInitError bool
-		setup           func(t *testing.T, sm *mocks.ManagerMock)
-		assert          func(t *testing.T, err error, req *http.Request)
+		credentials config.Secret
+		setup       func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.CredentialsHandleMock)
+		assert      func(t *testing.T, err error, req *http.Request)
 	}{
-		"no secret available": {
-			ignoreInitError: true,
-			setup: func(t *testing.T, sm *mocks.ManagerMock) {
+		"no credentials available": {
+			credentials: config.Secret{Source: "foo", Selector: "bar"},
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.CredentialsHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(nil, assert.AnError)
+				sr.EXPECT().
+					Credentials(
+						mock.Anything,
+						secrets.Reference{Source: "foo", Selector: "bar"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.Anything)
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(nil, false)
 			},
 			assert: func(t *testing.T, err error, _ *http.Request) {
 				t.Helper()
@@ -150,16 +176,68 @@ func TestBasicAuthApply(t *testing.T) {
 				require.ErrorContains(t, err, "basic auth credentials are not available")
 			},
 		},
-		"Authorization header is set": {
-			setup: func(t *testing.T, sm *mocks.ManagerMock) {
+		"invalid credentials structure": {
+			credentials: config.Secret{Source: "foo", Selector: "bar"},
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.CredentialsHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
-				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(types.NewCredentials("bar", map[string]any{
-						"user_id":  "baz",
-						"password": "foo",
-					}), nil)
+				creds := types.NewCredentials("bar", map[string]any{
+					"foo": "baz",
+					"bar": "foo",
+				})
+
+				sr.EXPECT().
+					Credentials(
+						mock.Anything,
+						secrets.Reference{Source: "foo", Selector: "bar"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.Anything)
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(creds, true)
+			},
+			assert: func(t *testing.T, err error, _ *http.Request) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
+				require.ErrorContains(t, err, "basic auth credentials are not available")
+			},
+		},
+		"authorization header is set": {
+			credentials: config.Secret{Source: "foo", Selector: "bar"},
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.CredentialsHandleMock) {
+				t.Helper()
+
+				creds := types.NewCredentials("bar", map[string]any{
+					"user_id":  "baz",
+					"password": "foo",
+				})
+
+				sr.EXPECT().
+					Credentials(
+						mock.Anything,
+						secrets.Reference{Source: "foo", Selector: "bar"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(context.Background(), creds)
+						require.NoError(t, err)
+
+						return true
+					}))
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(creds, true)
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -174,33 +252,78 @@ func TestBasicAuthApply(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
+			t.Parallel()
+
 			req, err := http.NewRequestWithContext(
 				t.Context(),
 				http.MethodPost,
-				"http//example.com/test?bar=foo",
+				"http://example.com/test?bar=foo",
 				nil,
 			)
 			require.NoError(t, err)
 
-			ba := &BasicAuth{}
+			sr := secretsmocks.NewResolverMock(t)
+			handle := secretsmocks.NewCredentialsHandleMock(t)
 
-			sm := mocks.NewManagerMock(t)
-			tc.setup(t, sm)
+			tc.setup(t, sr, handle)
 
-			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().SecretsManager().Return(sm)
+			ba := &BasicAuth{Credentials: tc.credentials}
 
-			err = ba.init(t.Context(), appCtx)
-			if !tc.ignoreInitError {
+			if tc.credentials.Source != "" || tc.credentials.Selector != "" {
+				appCtx := app.NewContextMock(t)
+				appCtx.EXPECT().SecretResolver().Return(sr)
+
+				err = ba.init(t.Context(), appCtx)
 				require.NoError(t, err)
 			}
 
-			// WHEN
 			err = ba.Apply(req)
 
-			// THEN
 			tc.assert(t, err, req)
+		})
+	}
+}
+
+func TestToBasicAuthCredentials(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		credentials secrets.Credentials
+		assert      func(t *testing.T, got basicAuthCredentials, err error)
+	}{
+		"decodes credentials": {
+			credentials: types.NewCredentials("bar", map[string]any{
+				"user_id":  "baz",
+				"password": "foo",
+			}),
+			assert: func(t *testing.T, got basicAuthCredentials, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "baz", got.UserID)
+				assert.Equal(t, "foo", got.Password)
+			},
+		},
+		"returns decode error": {
+			credentials: types.NewCredentials("bar", map[string]any{
+				"foo": "baz",
+				"bar": "foo",
+			}),
+			assert: func(t *testing.T, got basicAuthCredentials, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.Empty(t, got.UserID)
+				assert.Empty(t, got.Password)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			got, err := toBasicAuthCredentials(tc.credentials)
+
+			tc.assert(t, got, err)
 		})
 	}
 }

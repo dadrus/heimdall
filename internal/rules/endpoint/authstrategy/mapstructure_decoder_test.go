@@ -17,6 +17,7 @@
 package authstrategy
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -36,8 +37,9 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
+	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -50,10 +52,9 @@ func TestDecodeAuthenticationStrategyHookFuncForBasicAuthStrategy(t *testing.T) 
 		AuthStrategy endpoint.AuthenticationStrategy `mapstructure:"auth"`
 	}
 
-	// du to a bug in the linter
 	for uc, tc := range map[string]struct {
 		config []byte
-		setup  func(t *testing.T, sm *secretsmocks.ManagerMock)
+		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.CredentialsHandleMock)
 		assert func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
 		"all required properties configured": {
@@ -65,25 +66,39 @@ auth:
       source: foo
       selector: bar
 `),
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.CredentialsHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
-				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-					Return(
-						secrettypes.NewCredentials("bar", map[string]any{
-							"user_id":  "baz",
-							"password": "zab",
-						}),
-						nil)
+				creds := secrettypes.NewCredentials("bar", map[string]any{
+					"user_id":  "baz",
+					"password": "zab",
+				})
+
+				sr.EXPECT().
+					Credentials(
+						mock.Anything,
+						secrets.Reference{Source: "foo", Selector: "bar"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(context.Background(), creds)
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.IsType(t, &BasicAuth{}, as)
-				bas := as.(*BasicAuth) // nolint: forcetypeassert
-				require.NotNil(t, bas.resolver)
+
+				bas := as.(*BasicAuth) //nolint:forcetypeassert
+				require.NotNil(t, bas.informer)
+				assert.NotEmpty(t, bas.Hash())
 			},
 		},
 		"with unsupported properties": {
@@ -133,20 +148,16 @@ auth:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			validator, err := validation.NewValidator()
-			require.NoError(t, err)
+			t.Parallel()
 
-			setup := x.IfThenElse(tc.setup != nil, tc.setup, func(t *testing.T, _ *secretsmocks.ManagerMock) { t.Helper() })
-
-			sm := secretsmocks.NewManagerMock(t)
-			setup(t, sm)
-
-			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().DecoderFactory().
-				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
-			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
-			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+			appCtx, sr, _, credentialsHandle, _ := newAuthStrategyDecodeTestContext(t)
+			x.IfThenElse(
+				tc.setup != nil,
+				tc.setup,
+				func(t *testing.T, _ *secretsmocks.ResolverMock, _ *secretsmocks.CredentialsHandleMock) {
+					t.Helper()
+				},
+			)(t, sr, credentialsHandle)
 
 			var typ Type
 
@@ -161,10 +172,8 @@ auth:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			// WHEN
 			err = dec.Decode(conf)
 
-			// THEN
 			tc.assert(t, err, typ.AuthStrategy)
 		})
 	}
@@ -177,10 +186,9 @@ func TestDecodeAuthenticationStrategyHookFuncForAPIKeyStrategy(t *testing.T) {
 		AuthStrategy endpoint.AuthenticationStrategy `mapstructure:"auth"`
 	}
 
-	// du to a bug in the linter
 	for uc, tc := range map[string]struct {
 		config []byte
-		setup  func(t *testing.T, sm *secretsmocks.ManagerMock)
+		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock)
 		assert func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
 		"all required properties, with in=header": {
@@ -194,23 +202,18 @@ auth:
       selector: bar
     in: header
 `),
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
-				t.Helper()
-
-				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
-					Return(func() {}, nil)
-				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(secrettypes.NewStringSecret("bar", "baz"), nil)
-			},
+			setup: setupAPIKeySecret,
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.IsType(t, &APIKey{}, as)
-				aks := as.(*APIKey) // nolint: forcetypeassert
+
+				aks := as.(*APIKey) //nolint:forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
-				assert.NotNil(t, aks.resolver)
 				assert.Equal(t, "header", aks.In)
+				assert.NotNil(t, aks.informer)
+				assert.NotEmpty(t, aks.Hash())
 			},
 		},
 		"with unsupported properties": {
@@ -244,23 +247,18 @@ auth:
       selector: bar
     in: cookie
 `),
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
-				t.Helper()
-
-				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
-					Return(func() {}, nil)
-				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(secrettypes.NewStringSecret("bar", "baz"), nil)
-			},
+			setup: setupAPIKeySecret,
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.IsType(t, &APIKey{}, as)
-				aks := as.(*APIKey) // nolint: forcetypeassert
+
+				aks := as.(*APIKey) //nolint:forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
-				assert.NotNil(t, aks.resolver)
 				assert.Equal(t, "cookie", aks.In)
+				assert.NotNil(t, aks.informer)
+				assert.NotEmpty(t, aks.Hash())
 			},
 		},
 		"all required properties, with in=query": {
@@ -274,23 +272,18 @@ auth:
       selector: bar
     in: query
 `),
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
-				t.Helper()
-
-				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
-					Return(func() {}, nil)
-				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(secrettypes.NewStringSecret("bar", "baz"), nil)
-			},
+			setup: setupAPIKeySecret,
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.IsType(t, &APIKey{}, as)
-				aks := as.(*APIKey) // nolint: forcetypeassert
+
+				aks := as.(*APIKey) //nolint:forcetypeassert
 				assert.Equal(t, "foo", aks.Name)
 				assert.Equal(t, "query", aks.In)
-				assert.NotNil(t, aks.resolver)
+				assert.NotNil(t, aks.informer)
+				assert.NotEmpty(t, aks.Hash())
 			},
 		},
 		"all required properties, with in=foobar": {
@@ -374,20 +367,16 @@ auth:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			validator, err := validation.NewValidator()
-			require.NoError(t, err)
+			t.Parallel()
 
-			setup := x.IfThenElse(tc.setup != nil, tc.setup, func(t *testing.T, _ *secretsmocks.ManagerMock) { t.Helper() })
-
-			sm := secretsmocks.NewManagerMock(t)
-			setup(t, sm)
-
-			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().DecoderFactory().
-				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
-			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
-			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+			appCtx, sr, secretHandle, _, _ := newAuthStrategyDecodeTestContext(t)
+			x.IfThenElse(
+				tc.setup != nil,
+				tc.setup,
+				func(t *testing.T, _ *secretsmocks.ResolverMock, _ *secretsmocks.SecretHandleMock) {
+					t.Helper()
+				},
+			)(t, sr, secretHandle)
 
 			var typ Type
 
@@ -402,10 +391,8 @@ auth:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			// WHEN
 			err = dec.Decode(conf)
 
-			// THEN
 			tc.assert(t, err, typ.AuthStrategy)
 		})
 	}
@@ -421,7 +408,7 @@ func TestDecodeAuthenticationStrategyHookFuncForClientCredentialsStrategy(t *tes
 	for uc, tc := range map[string]struct {
 		enforceTLS bool
 		config     []byte
-		setup      func(t *testing.T, sm *secretsmocks.ManagerMock)
+		setup      func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.CredentialsHandleMock)
 		assert     func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
 		"minimal possible configuration": {
@@ -434,30 +421,23 @@ auth:
       selector: bar
     token_url: http://foobar.foo
 `),
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
-				t.Helper()
-
-				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
-					Return(func() {}, nil)
-				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).Return(
-					secrettypes.NewCredentials("bar", map[string]any{
-						"client_id":     "foo",
-						"client_secret": "bar",
-					}), nil)
-			},
+			setup: setupOAuth2ClientCredentials,
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.IsType(t, &OAuth2ClientCredentials{}, as)
-				ccs := as.(*OAuth2ClientCredentials) // nolint: forcetypeassert
+
+				ccs := as.(*OAuth2ClientCredentials) //nolint:forcetypeassert
 				assert.Equal(t, "http://foobar.foo", ccs.TokenURL)
 				assert.Empty(t, ccs.Scopes)
 				require.NotNil(t, ccs.Header)
 				assert.Equal(t, "Authorization", ccs.Header.Name)
 				assert.Equal(t, "Bearer", ccs.Header.Scheme)
-				assert.Equal(t, clientcredentials.AuthMethod("basic_auth"), ccs.AuthMethod)
+				assert.Equal(t, clientcredentials.AuthMethodBasicAuth, ccs.AuthMethod)
 				assert.Nil(t, ccs.TTL)
+				assert.NotNil(t, ccs.informer)
+				assert.NotEmpty(t, ccs.Hash())
 			},
 		},
 		"with unsupported properties": {
@@ -497,32 +477,47 @@ auth:
       - foo
       - bar
 `),
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.CredentialsHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
-					Return(func() {}, nil)
-				sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).Return(
-					secrettypes.NewCredentials("bar", map[string]any{
-						"client_id":     "foo",
-						"client_secret": "bar",
-					}), nil)
+				creds := secrettypes.NewCredentials("bar", map[string]any{
+					"client_id":     "foo",
+					"client_secret": "bar",
+				})
+
+				sr.EXPECT().
+					Credentials(
+						mock.Anything,
+						secrets.Reference{Source: "oauth", Selector: "client-creds"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(context.Background(), creds)
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.IsType(t, &OAuth2ClientCredentials{}, as)
-				ccs := as.(*OAuth2ClientCredentials) // nolint: forcetypeassert
+
+				ccs := as.(*OAuth2ClientCredentials) //nolint:forcetypeassert
 				assert.Equal(t, "http://foobar.foo", ccs.TokenURL)
 				assert.Equal(t, []string{"foo", "bar"}, ccs.Scopes)
 				require.NotNil(t, ccs.Header)
 				assert.Equal(t, "X-Foo", ccs.Header.Name)
 				assert.Equal(t, "Bar", ccs.Header.Scheme)
-				assert.Equal(t, clientcredentials.AuthMethod("request_body"), ccs.AuthMethod)
+				assert.Equal(t, clientcredentials.AuthMethodRequestBody, ccs.AuthMethod)
 				require.NotNil(t, ccs.TTL)
 				assert.Equal(t, time.Hour, *ccs.TTL)
-				assert.NotNil(t, ccs.resolver)
+				assert.NotNil(t, ccs.informer)
+				assert.NotEmpty(t, ccs.Hash())
 			},
 		},
 		"without credentials property": {
@@ -603,24 +598,20 @@ auth:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
-			validator, err := validation.NewValidator(
-				validation.WithTagValidator(es),
-				validation.WithErrorTranslator(es),
+			t.Parallel()
+
+			appCtx, sr, _, credentialsHandle, _ := newAuthStrategyDecodeTestContext(
+				t,
+				validation.WithTagValidator(config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}),
+				validation.WithErrorTranslator(config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}),
 			)
-			require.NoError(t, err)
-
-			setup := x.IfThenElse(tc.setup != nil, tc.setup, func(t *testing.T, _ *secretsmocks.ManagerMock) { t.Helper() })
-
-			sm := secretsmocks.NewManagerMock(t)
-			setup(t, sm)
-
-			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().DecoderFactory().
-				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
-			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
-			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+			x.IfThenElse(
+				tc.setup != nil,
+				tc.setup,
+				func(t *testing.T, _ *secretsmocks.ResolverMock, _ *secretsmocks.CredentialsHandleMock) {
+					t.Helper()
+				},
+			)(t, sr, credentialsHandle)
 
 			var typ Type
 
@@ -635,10 +626,8 @@ auth:
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			// WHEN
 			err = dec.Decode(conf)
 
-			// THEN
 			tc.assert(t, err, typ.AuthStrategy)
 		})
 	}
@@ -658,7 +647,7 @@ func TestDecodeAuthenticationStrategyHookFuncForHTTPMessageSignatures(t *testing
 
 	for uc, tc := range map[string]struct {
 		config []byte
-		setup  func(t *testing.T, sm *secretsmocks.ManagerMock)
+		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock)
 		assert func(t *testing.T, err error, as endpoint.AuthenticationStrategy)
 	}{
 		"without signer": {
@@ -670,6 +659,7 @@ auth:
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
+
 				require.Error(t, err)
 				require.ErrorContains(t, err, "'signer' is a required field")
 			},
@@ -685,6 +675,7 @@ auth:
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
+
 				require.Error(t, err)
 				require.ErrorContains(t, err, "'signer'.'secret' is a required field")
 			},
@@ -701,6 +692,7 @@ auth:
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
+
 				require.Error(t, err)
 				require.ErrorContains(t, err, "'signer'.'secret'.'source' is a required field")
 			},
@@ -717,6 +709,7 @@ auth:
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
+
 				require.Error(t, err)
 				require.ErrorContains(t, err, "'components' must contain more than 0 items")
 			},
@@ -732,13 +725,20 @@ auth:
         source: foo
         selector: bar
 `),
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, _ *secretsmocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(nil, assert.AnError)
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "foo", Selector: "bar"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
+
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed resolving secret")
@@ -758,6 +758,7 @@ auth:
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
+
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "invalid keys: foo")
@@ -774,40 +775,48 @@ auth:
         source: foo
         selector: bar
 `),
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(secret, nil)
-				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "foo", Selector: "bar"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(context.Background(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, as endpoint.AuthenticationStrategy) {
 				t.Helper()
+
 				require.NoError(t, err)
 
 				httpSig, ok := as.(*HTTPMessageSignatures)
 				require.True(t, ok)
-				assert.NotNil(t, httpSig.resolver)
+				assert.NotNil(t, httpSig.informer)
+				assert.NotEmpty(t, httpSig.Hash())
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			validator, err := validation.NewValidator()
-			require.NoError(t, err)
+			t.Parallel()
 
-			setup := x.IfThenElse(tc.setup != nil, tc.setup, func(t *testing.T, _ *secretsmocks.ManagerMock) { t.Helper() })
-
-			sm := secretsmocks.NewManagerMock(t)
-			setup(t, sm)
-
-			krm := keyregistrymocks.NewRegistryMock(t)
-			krm.EXPECT().Notify(mock.Anything).Maybe()
-
-			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().DecoderFactory().
-				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
-			appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
-			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
-			appCtx.EXPECT().KeyRegistry().Maybe().Return(krm)
+			appCtx, sr, secretHandle, _, _ := newAuthStrategyDecodeTestContext(t)
+			x.IfThenElse(
+				tc.setup != nil,
+				tc.setup,
+				func(t *testing.T, _ *secretsmocks.ResolverMock, _ *secretsmocks.SecretHandleMock) {
+					t.Helper()
+				},
+			)(t, sr, secretHandle)
 
 			var typ Type
 
@@ -823,6 +832,7 @@ auth:
 			require.NoError(t, err)
 
 			err = dec.Decode(conf)
+
 			tc.assert(t, err, typ.AuthStrategy)
 		})
 	}
@@ -835,7 +845,6 @@ func TestDecodeAuthenticationStrategyHookFuncForUnknownStrategy(t *testing.T) {
 		AuthStrategy endpoint.AuthenticationStrategy `mapstructure:"auth"`
 	}
 
-	// GIVEN
 	var typ Type
 
 	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
@@ -854,10 +863,96 @@ auth:
 `))
 	require.NoError(t, err)
 
-	// WHEN
 	err = dec.Decode(conf)
 
-	// THEN
 	require.Error(t, err)
 	require.ErrorContains(t, err, "unsupported authentication type")
+}
+
+func setupAPIKeySecret(
+	t *testing.T,
+	sr *secretsmocks.ResolverMock,
+	handle *secretsmocks.SecretHandleMock,
+) {
+	t.Helper()
+
+	secret := secrettypes.NewStringSecret("bar", "baz")
+
+	sr.EXPECT().
+		Secret(
+			mock.Anything,
+			secrets.Reference{Source: "foo", Selector: "bar"},
+			mock.AnythingOfType("secrets2.ResolveOption"),
+		).
+		Return(handle, nil)
+
+	handle.EXPECT().
+		OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+			err := cb(context.Background(), secret)
+			require.NoError(t, err)
+
+			return true
+		}))
+}
+
+func setupOAuth2ClientCredentials(
+	t *testing.T,
+	sr *secretsmocks.ResolverMock,
+	handle *secretsmocks.CredentialsHandleMock,
+) {
+	t.Helper()
+
+	creds := secrettypes.NewCredentials("bar", map[string]any{
+		"client_id":     "foo",
+		"client_secret": "bar",
+	})
+
+	sr.EXPECT().
+		Credentials(
+			mock.Anything,
+			secrets.Reference{Source: "foo", Selector: "bar"},
+			mock.AnythingOfType("secrets2.ResolveOption"),
+		).
+		Return(handle, nil)
+
+	handle.EXPECT().
+		OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+			err := cb(context.Background(), creds)
+			require.NoError(t, err)
+
+			return true
+		}))
+}
+
+func newAuthStrategyDecodeTestContext(
+	t *testing.T,
+	validatorOpts ...validation.Option,
+) (
+	*app.ContextMock,
+	*secretsmocks.ResolverMock,
+	*secretsmocks.SecretHandleMock,
+	*secretsmocks.CredentialsHandleMock,
+	*keyregistrymocks.RegistryMock,
+) {
+	t.Helper()
+
+	validator, err := validation.NewValidator(validatorOpts...)
+	require.NoError(t, err)
+
+	sr := secretsmocks.NewResolverMock(t)
+	secretHandle := secretsmocks.NewSecretHandleMock(t)
+	credentialsHandle := secretsmocks.NewCredentialsHandleMock(t)
+	krm := keyregistrymocks.NewRegistryMock(t)
+
+	appCtx := app.NewContextMock(t)
+	appCtx.EXPECT().
+		DecoderFactory().
+		Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
+	appCtx.EXPECT().Logger().Maybe().Return(log.Logger)
+	appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
+	appCtx.EXPECT().KeyRegistry().Maybe().Return(krm)
+
+	krm.EXPECT().Notify(mock.Anything).Maybe()
+
+	return appCtx, sr, secretHandle, credentialsHandle, krm
 }

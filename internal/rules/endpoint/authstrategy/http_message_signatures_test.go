@@ -17,6 +17,7 @@
 package authstrategy
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -40,8 +41,8 @@ import (
 	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -52,14 +53,19 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, sm *secretsmocks.ManagerMock)
+		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock)
 		assert func(t *testing.T, err error, conf *HTTPMessageSignatures)
 	}{
 		"starting resolver fails": {
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, _ *secretsmocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "foo", Selector: "bar"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, hms *HTTPMessageSignatures) {
@@ -70,40 +76,61 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				require.ErrorContains(t, err, "failed resolving secret")
 
 				assert.Empty(t, hms.Hash())
-				_, ok := hms.resolver.Get()
-				require.False(t, ok)
+				assert.Nil(t, hms.informer)
 			},
 		},
 		"successful configuration": {
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock) {
 				t.Helper()
 
-				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(
-					secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil),
-					nil)
-				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Maybe().Return(func() {}, nil)
+				secret := secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil)
+
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "foo", Selector: "bar"},
+						mock.AnythingOfType("secrets2.ResolveOption"),
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(context.Background(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
+
+				handle.EXPECT().
+					Get(mock.Anything).
+					Return(secret, true)
 			},
 			assert: func(t *testing.T, err error, hms *HTTPMessageSignatures) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.NotEmpty(t, hms.Hash())
-				_, ok := hms.resolver.Get()
+
+				_, ok := hms.informer.Get(t.Context())
 				require.True(t, ok)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
 			secret := config.Secret{Source: "foo", Selector: "bar"}
 
-			sm := secretsmocks.NewManagerMock(t)
-			tc.setup(t, sm)
+			sr := secretsmocks.NewResolverMock(t)
+			handle := secretsmocks.NewSecretHandleMock(t)
+
+			tc.setup(t, sr, handle)
 
 			reg := keyregistrymocks.NewRegistryMock(t)
 			reg.EXPECT().Notify(mock.Anything).Maybe()
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().SecretsManager().Return(sm)
+			appCtx.EXPECT().SecretResolver().Return(sr)
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(reg)
 
 			conf := &HTTPMessageSignatures{
@@ -111,7 +138,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				Components: []string{"@method"},
 			}
 
-			err = conf.init(t.Context(), appCtx)
+			err := conf.init(t.Context(), appCtx)
 
 			tc.assert(t, err, conf)
 		})
@@ -121,36 +148,37 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 func TestHTTPMessageSignaturesHash(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
 	secret := secrettypes.NewAsymmetricKeySecret("bar", "baz", nil, nil)
+
 	conf1 := &HTTPMessageSignatures{
 		Signer:     SignerConfig{Name: "foo"},
 		Components: []string{"@method"},
-		TTL:        new(time.Hour),
+		TTL:        new(time.Duration),
 	}
+	*conf1.TTL = time.Hour
 	conf1.updateHash(secret)
 
 	conf2 := &HTTPMessageSignatures{
 		Label:      "label",
 		Signer:     SignerConfig{Name: "bar"},
 		Components: []string{"@status"},
-		TTL:        new(time.Hour),
+		TTL:        new(time.Duration),
 	}
+	*conf2.TTL = time.Hour
 	conf2.updateHash(secret)
 
 	conf3 := &HTTPMessageSignatures{
 		Signer:     SignerConfig{Name: "baz"},
 		Components: []string{"@method"},
-		TTL:        new(time.Hour),
+		TTL:        new(time.Duration),
 	}
+	*conf3.TTL = time.Hour
 	conf3.updateHash(secret)
 
-	// WHEN
 	hash1 := conf1.Hash()
 	hash2 := conf2.Hash()
 	hash3 := conf3.Hash()
 
-	// THEN
 	assert.NotEqual(t, hash1, hash2)
 	assert.NotEqual(t, hash1, hash3)
 	assert.NotEmpty(t, hash1)
@@ -162,18 +190,36 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	sm := secretsmocks.NewManagerMock(t)
-	sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Maybe().Return(func() {}, nil)
-	sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(
-		secrettypes.NewAsymmetricKeySecret("bar", "kid-1", privKey, nil),
-		nil,
-	)
+	secret := secrettypes.NewAsymmetricKeySecret("bar", "kid-1", privKey, nil)
+
+	sr := secretsmocks.NewResolverMock(t)
+	handle := secretsmocks.NewSecretHandleMock(t)
+
+	sr.EXPECT().
+		Secret(
+			mock.Anything,
+			secrets.Reference{Source: "foo", Selector: "bar"},
+			mock.AnythingOfType("secrets2.ResolveOption"),
+		).
+		Return(handle, nil)
+
+	handle.EXPECT().
+		OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+			err := cb(context.Background(), secret)
+			require.NoError(t, err)
+
+			return true
+		}))
+
+	handle.EXPECT().
+		Get(mock.Anything).
+		Return(secret, true)
 
 	reg := keyregistrymocks.NewRegistryMock(t)
 	reg.EXPECT().Notify(mock.Anything).Maybe()
 
 	appCtx := app.NewContextMock(t)
-	appCtx.EXPECT().SecretsManager().Return(sm)
+	appCtx.EXPECT().SecretResolver().Return(sr)
 	appCtx.EXPECT().KeyRegistry().Maybe().Return(reg)
 
 	conf := &HTTPMessageSignatures{
@@ -248,8 +294,12 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 			},
 		},
 		"certificate validation error": {
-			secret: secrettypes.NewAsymmetricKeySecret("kid1", "kid1",
-				privateKey, []*x509.Certificate{leafCert, rootCA.Certificate}),
+			secret: secrettypes.NewAsymmetricKeySecret(
+				"kid1",
+				"kid1",
+				privateKey,
+				[]*x509.Certificate{leafCert, rootCA.Certificate},
+			),
 			components: []string{"@method"},
 			assert: func(t *testing.T, err error, _ httpsig.Signer) {
 				t.Helper()
@@ -280,8 +330,12 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 			},
 		},
 		"successful configuration": {
-			secret: secrettypes.NewAsymmetricKeySecret("kid1", "kid1",
-				privateKey, []*x509.Certificate{leafCert, intermediateCert, rootCA.Certificate}),
+			secret: secrettypes.NewAsymmetricKeySecret(
+				"kid1",
+				"kid1",
+				privateKey,
+				[]*x509.Certificate{leafCert, intermediateCert, rootCA.Certificate},
+			),
 			components: []string{"@method"},
 			assert: func(t *testing.T, err error, sig httpsig.Signer) {
 				t.Helper()
@@ -292,6 +346,8 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
 			hms := &HTTPMessageSignatures{
 				Components: tc.components,
 				Label:      "label",
@@ -345,7 +401,7 @@ func TestToHTTPSigKey(t *testing.T) {
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
-		secret secrettypes.AsymmetricKeySecret
+		secret secrets.AsymmetricKeySecret
 		alg    httpsig.SignatureAlgorithm
 		err    error
 	}{
@@ -391,6 +447,8 @@ func TestToHTTPSigKey(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
 			key, err := toHTTPSigKey(tc.secret)
 
 			if tc.err != nil {

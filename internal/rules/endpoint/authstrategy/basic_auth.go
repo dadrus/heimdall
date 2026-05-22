@@ -51,7 +51,7 @@ func (c basicAuthCredentials) Hash() []byte {
 type BasicAuth struct {
 	Credentials config.Secret `mapstructure:"credentials" validate:"required"`
 
-	resolver *secrets.CredentialsInformer[basicAuthCredentials]
+	informer *secrets.CredentialsInformer[basicAuthCredentials]
 	hash     atomic.Value
 }
 
@@ -59,7 +59,7 @@ func (c *BasicAuth) Apply(req *http.Request) error {
 	logger := zerolog.Ctx(req.Context())
 	logger.Debug().Msg("Applying basic_auth strategy to authenticate request")
 
-	creds, ok := c.resolver.Get()
+	creds, ok := c.informer.Get(req.Context())
 	if !ok {
 		return errorchain.NewWithMessage(
 			pipeline.ErrInternal,
@@ -81,21 +81,26 @@ func (c *BasicAuth) Hash() []byte {
 }
 
 func (c *BasicAuth) init(ctx context.Context, appCtx app.Context) error {
-	c.resolver = &secrets.CredentialsInformer[basicAuthCredentials]{
-		Manager:   appCtx.SecretsManager(),
-		Reference: secrets.InternalRef(c.Credentials.Source, c.Credentials.Selector),
-		Converter: toBasicAuthCredentials,
-		OnUpdate: func(_ context.Context, _ secrets.Credentials, creds basicAuthCredentials) {
-			c.hash.Store(creds.Hash())
+	informer, err := secrets.NewCredentialsInformer(
+		ctx,
+		appCtx.SecretResolver(),
+		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
+		secrets.CredentialsInformerOptions[basicAuthCredentials]{
+			Converter:   toBasicAuthCredentials,
+			ResolveMode: secrets.ResolveEager,
+			OnUpdate: func(_ context.Context, _ secrets.Credentials, creds basicAuthCredentials) {
+				c.hash.Store(creds.Hash())
+			},
 		},
-	}
-
-	if err := c.resolver.Start(ctx); err != nil {
+	)
+	if err != nil {
 		return errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"failed resolving basic auth credentials",
 		).CausedBy(err)
 	}
+
+	c.informer = informer
 
 	return nil
 }

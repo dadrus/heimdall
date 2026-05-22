@@ -37,7 +37,7 @@ type APIKey struct {
 	Name   string        `mapstructure:"name"   validate:"required"`
 	Secret config.Secret `mapstructure:"secret" validate:"required"`
 
-	resolver *secrets.SecretInformer[string]
+	informer *secrets.SecretInformer[string]
 	hash     atomic.Value
 }
 
@@ -45,7 +45,7 @@ func (c *APIKey) Apply(req *http.Request) error {
 	logger := zerolog.Ctx(req.Context())
 	logger.Debug().Msg("Applying api_key strategy to authenticate request")
 
-	creds, ok := c.resolver.Get()
+	creds, ok := c.informer.Get(req.Context())
 	if !ok {
 		return errorchain.NewWithMessage(
 			pipeline.ErrInternal,
@@ -79,29 +79,34 @@ func (c *APIKey) Hash() []byte {
 }
 
 func (c *APIKey) init(ctx context.Context, appCtx app.Context) error {
-	c.resolver = &secrets.SecretInformer[string]{
-		Manager:   appCtx.SecretsManager(),
-		Reference: secrets.InternalRef(c.Secret.Source, c.Secret.Selector),
-		Converter: toStringSecret,
-		OnUpdate: func(_ context.Context, _ secrets.Secret, value string) {
-			hash := sha256.New()
+	informer, err := secrets.NewSecretInformer(
+		ctx,
+		appCtx.SecretResolver(),
+		secrets.Reference{Source: c.Secret.Source, Selector: c.Secret.Selector},
+		secrets.InformerOptions[string]{
+			Converter:   toStringSecret,
+			ResolveMode: secrets.ResolveEager,
+			OnUpdate: func(_ context.Context, _ secrets.Secret, value string) {
+				hash := sha256.New()
 
-			hash.Write(stringx.ToBytes(c.In))
-			hash.Write(stringx.ToBytes(c.Name))
-			hash.Write(stringx.ToBytes(value))
+				hash.Write(stringx.ToBytes(c.In))
+				hash.Write(stringx.ToBytes(c.Name))
+				hash.Write(stringx.ToBytes(value))
 
-			var result [sha256.Size]byte
+				var result [sha256.Size]byte
 
-			c.hash.Store(hash.Sum(result[:0]))
+				c.hash.Store(hash.Sum(result[:0]))
+			},
 		},
-	}
-
-	if err := c.resolver.Start(ctx); err != nil {
+	)
+	if err != nil {
 		return errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"failed resolving api key secret",
 		).CausedBy(err)
 	}
+
+	c.informer = informer
 
 	return nil
 }
