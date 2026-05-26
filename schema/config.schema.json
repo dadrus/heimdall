@@ -2820,11 +2820,6 @@
           }
         ]
       }
-    },
-    "secrets_reload_enabled": {
-      "description": "Enables or disables watching for changes in referenced files with keys, certificates, credentials",
-      "type": "boolean",
-      "default": false
     }
   }
 }

@@ -37,7 +37,6 @@ type Configuration struct { //nolint:musttag
 	Catalogue            *MechanismCatalogue `koanf:"mechanisms,omitempty"`
 	Default              *DefaultRule        `koanf:"default_rule,omitempty"`
 	Providers            RuleProviders       `koanf:"providers,omitempty"`
-	SecretsReloadEnabled bool                `koanf:"secrets_reload_enabled"`
 }
 
 func NewConfiguration(
