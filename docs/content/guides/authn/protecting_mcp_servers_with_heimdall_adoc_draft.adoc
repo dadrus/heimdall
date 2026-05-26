@@ -1,0 +1,1092 @@
+= Protecting MCP Servers and Tool Calls with heimdall
+:toc: left
+:toclevels: 3
+:sectanchors:
+:source-highlighter: rouge
+
+// Draft notes:
+// - This guide is intended for the dev documentation and the heimdall 0.18.0 feature set.
+// - Configuration snippets marked with TODO must be verified against the final 0.18.0 configuration reference.
+// - The accompanying example is expected to live below examples/guides/agentic-systems/mcp/.
+
+== Introduction
+
+Model Context Protocol (MCP) makes it easy to expose tools, resources, and prompts to agentic systems.
+That is powerful, but it also turns MCP servers into security-sensitive HTTP endpoints: an MCP client can discover available capabilities and invoke tools that may read data, create tickets, or trigger operational actions.
+
+This guide shows how to protect a remote MCP server with heimdall.
+Instead of implementing authentication, authorization, JSON-RPC-aware error handling, and upstream identity handling inside the MCP server, you place heimdall in front of it.
+heimdall validates the caller, authorizes JSON-RPC methods and MCP tool calls, and forwards a trusted upstream identity to the MCP server.
+
+The example intentionally uses heimdall in proxy mode because it is the easiest way to understand the complete request flow.
+The same policy model can also be used with heimdall in decision mode behind an existing API gateway or reverse proxy.
+
+[IMPORTANT]
+====
+This guide does not forward the original client access token to the MCP server.
+Although heimdall can be configured to pass credentials through, doing so couples the MCP server to the external identity provider and increases the blast radius if a token leaks.
+Instead, heimdall validates the client token and issues a short-lived upstream JWT for the MCP server.
+====
+
+== What you will build
+
+You will run a small local environment consisting of:
+
+* MCP Inspector as a browser-based MCP client
+* heimdall as an authentication and authorization proxy
+* a Python FastMCP demo server
+* a small local token helper for demo users
+
+The request flow looks like this:
+
+[plantuml]
+----
+@startuml
+actor "User" as user
+participant "MCP Inspector\n(browser UI)" as inspector
+participant "heimdall\n(proxy mode)" as heimdall
+participant "FastMCP\ndemo server" as mcp
+
+user -> inspector: choose transport and token
+inspector -> heimdall: MCP request over HTTP\nAuthorization: Bearer <access token>
+heimdall -> heimdall: validate token
+heimdall -> heimdall: authorize JSON-RPC method/tool
+heimdall -> mcp: forward request\nAuthorization: Bearer <upstream JWT>
+mcp --> heimdall: MCP response
+heimdall --> inspector: MCP response
+@enduml
+----
+
+The demo server exposes four tools:
+
+[cols="1,1,2",options="header"]
+|===
+| Tool
+| Required role
+| Purpose
+
+| `time.now`
+| `viewer`
+| Return the current server time.
+
+| `weather.lookup`
+| `viewer`
+| Return demo weather information for a city.
+
+| `ticket.create`
+| `operator`
+| Create a demo support ticket.
+
+| `deployment.trigger`
+| `admin`
+| Trigger a demo deployment.
+|===
+
+The role hierarchy used by the guide is intentionally simple:
+
+[source,text]
+----
+viewer   -> may list tools and call read-like tools
+operator -> may additionally call operational write tools
+admin    -> may additionally call privileged tools
+----
+
+== Prerequisites
+
+You need:
+
+* Docker
+* Docker Compose
+* A browser
+* `jq`, optional, for inspecting tokens and JSON responses
+
+No MCP-specific CLI is required.
+You will use MCP Inspector in the browser for the main walkthrough.
+
+== Example files
+
+The example files used by this guide are expected to live in the repository like this:
+
+[source,text]
+----
+examples/
+  guides/
+    agentic-systems/
+      mcp/
+        docker-compose.yaml
+        heimdall/
+          config.yaml
+          rules.yaml
+          secrets/
+            upstream-signer.pem
+        mcp-server/
+          pyproject.toml
+          server.py
+        token-helper/
+          Dockerfile
+          issue-token.py
+          jwks/
+            issuer-private.jwk
+            issuer-public.jwks
+----
+
+The exact file layout can be adjusted to match the existing examples structure.
+The important part is that the guide can be followed with a single `docker compose up` from the example directory.
+
+== Configure local secrets
+
+The example uses heimdall's `secret_management` configuration to keep all local demo secrets in one place.
+The secret-management abstraction defines named secret sources and lets consumers reference individual entries by `source` and `selector`.
+
+For this guide, two sources are useful:
+
+* `heimdall_signing_keys`, a `pem` source that loads the key material used by heimdall to issue upstream JWTs and sign upstream requests.
+* `inline_secrets`, an `inline` source that contains small demo-only values such as the DPoP nonce master key.
+
+[source,yaml]
+----
+secret_management:
+  heimdall_signing_keys:
+    type: pem
+    config:
+      path: /etc/heimdall/secrets/upstream-signer.pem
+      watch: true
+
+  inline_secrets:
+    type: inline
+    config:
+      dpop_nonce_master_key: "change-me-change-me-change-me-change-me"
+----
+
+[NOTE]
+====
+Inline secrets are convenient for local examples because the secret value is defined directly in the heimdall configuration.
+For production deployments, use a dedicated secret source instead of putting long-lived secrets into configuration files.
+====
+
+== Start the demo environment
+
+Clone the heimdall repository and start the example environment:
+
+[source,bash]
+----
+cd examples/guides/agentic-systems/mcp
+docker compose up
+----
+
+The environment starts:
+
+* heimdall on `http://localhost:4455`
+* the FastMCP demo server on the internal Docker network
+* MCP Inspector on `http://localhost:6274`
+* a local token helper that can issue demo access tokens
+
+[NOTE]
+====
+The exact ports may be changed if they conflict with other local services.
+If you change them, update the URLs in the following sections accordingly.
+====
+
+== The demo MCP server
+
+The demo server is intentionally small, but it is a real MCP server built with FastMCP.
+It exposes tools that are useful for demonstrating different authorization decisions.
+
+[source,python]
+----
+from datetime import datetime, timezone
+from typing import Annotated
+
+from fastmcp import FastMCP
+
+mcp = FastMCP("heimdall-mcp-demo")
+
+
+@mcp.tool(name="time.now")
+def time_now() -> str:
+    """Return the current server time."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+@mcp.tool(name="weather.lookup")
+def weather_lookup(city: Annotated[str, "City name"]) -> dict:
+    """Return demo weather information for a city."""
+    return {
+        "city": city,
+        "condition": "sunny",
+        "temperature_celsius": 21,
+        "source": "demo",
+    }
+
+
+@mcp.tool(name="ticket.create")
+def ticket_create(title: str, description: str) -> dict:
+    """Create a demo support ticket."""
+    return {
+        "id": "TICKET-1234",
+        "title": title,
+        "description": description,
+        "status": "created",
+    }
+
+
+@mcp.tool(name="deployment.trigger")
+def deployment_trigger(environment: str, version: str) -> dict:
+    """Trigger a demo deployment."""
+    return {
+        "environment": environment,
+        "version": version,
+        "status": "triggered",
+    }
+
+
+if __name__ == "__main__":
+    mcp.run(
+        transport="streamable-http",
+        host="0.0.0.0",
+        port=8000,
+        path="/mcp",
+    )
+----
+
+The server validates the upstream JWT issued by heimdall before executing tools.
+This keeps the MCP server independent from the external identity provider: it only needs to trust heimdall's issuer and public keys.
+
+FastMCP can validate JWTs for HTTP transports by configuring a `JWTVerifier`.
+In this guide, the verifier trusts heimdall as the issuer of the upstream token.
+
+[source,python]
+----
+import os
+from datetime import datetime, timezone
+from typing import Annotated
+
+from fastmcp import FastMCP
+from fastmcp.server.auth.providers.jwt import JWTVerifier
+from fastmcp.server.dependencies import get_access_token
+
+HEIMDALL_ISSUER = os.environ.get("HEIMDALL_ISSUER", "heimdall-mcp-gateway")
+HEIMDALL_JWKS_URI = os.environ.get(
+    "HEIMDALL_JWKS_URI",
+    "http://heimdall:4457/.well-known/jwks.json",
+)
+UPSTREAM_AUDIENCE = os.environ.get("UPSTREAM_AUDIENCE", "fastmcp-demo-server")
+
+auth = JWTVerifier(
+    jwks_uri=HEIMDALL_JWKS_URI,
+    issuer=HEIMDALL_ISSUER,
+    audience=UPSTREAM_AUDIENCE,
+)
+
+mcp = FastMCP("heimdall-mcp-demo", auth=auth)
+
+
+def current_subject() -> dict:
+    token = get_access_token()
+    if token is None:
+        return {"sub": "unknown", "roles": []}
+    return {
+        "sub": token.claims.get("sub", "unknown"),
+        "roles": token.claims.get("roles", []),
+    }
+
+
+@mcp.tool(name="time.now")
+def time_now() -> dict:
+    """Return the current server time."""
+    return {
+        "time": datetime.now(timezone.utc).isoformat(),
+        "subject": current_subject(),
+    }
+
+
+@mcp.tool(name="weather.lookup")
+def weather_lookup(city: Annotated[str, "City name"]) -> dict:
+    """Return demo weather information for a city."""
+    return {
+        "city": city,
+        "condition": "sunny",
+        "temperature_celsius": 21,
+        "source": "demo",
+        "subject": current_subject(),
+    }
+
+
+@mcp.tool(name="ticket.create")
+def ticket_create(title: str, description: str) -> dict:
+    """Create a demo support ticket."""
+    return {
+        "id": "TICKET-1234",
+        "title": title,
+        "description": description,
+        "status": "created",
+        "subject": current_subject(),
+    }
+
+
+@mcp.tool(name="deployment.trigger")
+def deployment_trigger(environment: str, version: str) -> dict:
+    """Trigger a demo deployment."""
+    return {
+        "environment": environment,
+        "version": version,
+        "status": "triggered",
+        "subject": current_subject(),
+    }
+
+
+if __name__ == "__main__":
+    mcp.run(
+        transport="streamable-http",
+        host="0.0.0.0",
+        port=8000,
+        path="/mcp",
+    )
+----
+
+[NOTE]
+====
+The FastMCP server validates only heimdall-issued upstream JWTs.
+It does not validate the original client access token and does not need to know the external identity provider used by MCP clients.
+====
+
+== Configure heimdall as an MCP gateway
+
+heimdall is configured with:
+
+* a JWT authenticator for the client access token
+* a CEL expression authorizer for JSON-RPC method and tool-call authorization
+* a generic error handler that emits JSON-RPC-compatible error responses
+* a JWT finalizer that issues an upstream token for the MCP server
+
+The following snippets show the relevant parts of the configuration.
+The final example files should contain complete, runnable YAML files.
+
+=== Validate client access tokens
+
+The client sends an access token to heimdall:
+
+[source,http]
+----
+Authorization: Bearer <access token>
+----
+
+heimdall validates this token and creates the default principal for the request.
+The demo tokens contain a subject and a simple list of roles:
+
+[source,json]
+----
+{
+  "sub": "alice",
+  "roles": ["viewer"],
+  "iss": "http://token-helper:8080/",
+  "aud": "heimdall-mcp-demo"
+}
+----
+
+The JWT authenticator validates the token signature and the configured token assertions.
+In this example, heimdall retrieves the signing keys from the token helper's JWKS endpoint and requires a trusted issuer and audience.
+
+[source,yaml]
+----
+mechanisms:
+  authenticators:
+    - id: access_token
+      type: jwt
+      config:
+        jwks_endpoint:
+          url: http://token-helper:8080/.well-known/jwks.json
+        assertions:
+          issuers:
+            - http://token-helper:8080/
+          audience:
+            - heimdall-mcp-demo
+          allowed_algorithms:
+            - ES256
+        principal:
+          id: sub
+----
+
+If `principal` is omitted, heimdall uses the `sub` claim as the principal id and makes all JWT claims available as subject attributes.
+The explicit `principal` mapping is shown here to make that behavior visible in the guide.
+
+=== Authorize JSON-RPC methods and tool calls
+
+MCP requests over HTTP use JSON-RPC.
+For JSON-RPC, the relevant operation is not only the HTTP path or method.
+It is also the JSON-RPC method and, for `tools/call`, the requested tool name.
+
+For example, the following request is a tool call even though the HTTP request is just a `POST /mcp`:
+
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": "call-1",
+  "method": "tools/call",
+  "params": {
+    "name": "ticket.create",
+    "arguments": {
+      "title": "Demo ticket",
+      "description": "Created through MCP Inspector"
+    }
+  }
+}
+----
+
+The CEL expression authorizer can use `Request.Body()` to evaluate this information.
+The example policy is role-based:
+
+[source,text]
+----
+tools/list                      -> any authenticated user
+time.now, weather.lookup        -> viewer, operator, admin
+ticket.create                   -> operator, admin
+deployment.trigger              -> admin
+----
+
+[source,yaml]
+----
+mechanisms:
+  authorizers:
+    - id: authorize_mcp_tool_call
+      type: cel
+      config:
+        expressions:
+          - expression: |
+              has(Request.Body().method) &&
+              (
+                Request.Body().method == "tools/list" ||
+                (
+                  Request.Body().method == "tools/call" &&
+                  has(Request.Body().params.name) &&
+                  Request.Body().params.name in ["time.now", "weather.lookup"] &&
+                  has(Subject.Attributes.roles) &&
+                  Subject.Attributes.roles.exists(r, r in ["viewer", "operator", "admin"])
+                ) ||
+                (
+                  Request.Body().method == "tools/call" &&
+                  has(Request.Body().params.name) &&
+                  Request.Body().params.name == "ticket.create" &&
+                  has(Subject.Attributes.roles) &&
+                  Subject.Attributes.roles.exists(r, r in ["operator", "admin"])
+                ) ||
+                (
+                  Request.Body().method == "tools/call" &&
+                  has(Request.Body().params.name) &&
+                  Request.Body().params.name == "deployment.trigger" &&
+                  has(Subject.Attributes.roles) &&
+                  Subject.Attributes.roles.exists(r, r == "admin")
+                )
+              )
+            message: MCP method or tool call is not allowed for the authenticated subject
+----
+
+[NOTE]
+====
+This guide uses roles because they are easy to understand in a first-party demo.
+In a production setup, the same pattern can be backed by claims from an identity provider, contextual information retrieved by heimdall, or a dedicated authorization system.
+====
+
+=== Return JSON-RPC-compatible errors
+
+Plain HTTP errors are inconvenient for JSON-RPC-based clients because the client expects a JSON-RPC response containing the original request id.
+The generic error handler can emit protocol-specific JSON-RPC error payloads.
+
+[source,yaml]
+----
+mechanisms:
+  error_handlers:
+    - id: mcp_error
+      type: generic
+      config:
+        code: 200
+        headers:
+          - Content-Type: application/json
+        body: |
+          {
+            "jsonrpc": "2.0",
+            "id": {{ .Request.Body.id | toJson }},
+            "error": {
+              "code": {{ .Values.errorCode }},
+              "message": {{ .Values.message | quote }}
+            }
+          }
+        values:
+          errorCode: -32603
+          message: "internal error"
+----
+
+The rule can override the protocol-level error details depending on the kind of failure:
+
+[source,yaml]
+----
+# TODO: Verify final rule syntax and error type names.
+on_error:
+  - if: type(Error) == authentication_error
+    error_handler: mcp_error
+    config:
+      values:
+        errorCode: -32001
+        message: unauthorized
+  - if: type(Error) == authorization_error
+    error_handler: mcp_error
+    config:
+      values:
+        errorCode: -32003
+        message: forbidden
+----
+
+=== Issue an upstream JWT for the MCP server
+
+After authentication and authorization succeed, heimdall issues a short-lived JWT for the MCP server.
+The MCP server validates this JWT and derives its local user context from it.
+
+[source,yaml]
+----
+mechanisms:
+  finalizers:
+    - id: upstream_jwt
+      type: jwt
+      config:
+        signer:
+          name: heimdall-mcp-gateway
+          secret:
+            source: heimdall_signing_keys
+            selector: heimdall-demo
+        ttl: 2m
+        header:
+          name: Authorization
+          scheme: Bearer
+        claims: |
+          {
+            "sub": {{ .Subject.ID | quote }},
+            "aud": "fastmcp-demo-server",
+            "roles": {{ .Subject.Attributes.roles | toJson }},
+            "mcp": {
+              "gateway": "heimdall",
+              "authorized": true
+            }
+          }
+----
+
+[IMPORTANT]
+====
+The upstream JWT is not the original client token.
+It is minted by heimdall after the request has passed authentication and authorization.
+The MCP server therefore only needs to trust heimdall, not the external identity provider used by MCP clients.
+====
+
+=== Define the MCP rule
+
+The rule matches the MCP endpoint and runs the configured pipeline.
+
+[source,yaml]
+----
+rules:
+  - id: rule:mcp-demo:streamable-http
+    match:
+      routes:
+        - path: /mcp
+      methods:
+        - POST
+    forward_to:
+      host: mcp-server:8000
+      rewrite:
+        scheme: http
+    execute:
+      - authenticator: access_token
+      - authorizer: authorize_mcp_tool_call
+      - finalizer: upstream_jwt
+    on_error:
+      - if: type(Error) == authentication_error
+        error_handler: mcp_error
+        config:
+          values:
+            errorCode: -32001
+            message: unauthorized
+      - if: type(Error) == authorization_error
+        error_handler: mcp_error
+        config:
+          values:
+            errorCode: -32003
+            message: forbidden
+      - error_handler: mcp_error
+----
+
+[NOTE]
+====
+The example uses plain HTTP between containers and therefore requires the corresponding development flags for local demos.
+Do not disable TLS enforcement for production deployments.
+====
+
+== Try it out with MCP Inspector
+
+Open MCP Inspector in your browser:
+
+[source,text]
+----
+http://localhost:6274
+----
+
+Select the HTTP transport supported by the Inspector for remote MCP servers and use heimdall as the server URL:
+
+[source,text]
+----
+http://localhost:4455/mcp
+----
+
+Depending on the Inspector version, the transport may be called `Streamable HTTP` or similar.
+
+=== Connect without a token
+
+First, try to connect without an `Authorization` header.
+
+Expected result: heimdall denies the request and returns a JSON-RPC error response.
+The response should contain the JSON-RPC request id if the request contained one.
+
+Example shape:
+
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": "...",
+  "error": {
+    "code": -32001,
+    "message": "unauthorized"
+  }
+}
+----
+
+=== Create a viewer token
+
+Use the token helper to create a token for a viewer:
+
+[source,bash]
+----
+docker compose exec token-helper issue-token viewer
+----
+
+Copy the token and configure MCP Inspector to send it as an HTTP header:
+
+[source,http]
+----
+Authorization: Bearer <viewer-token>
+----
+
+=== Connect as a viewer
+
+Reconnect through MCP Inspector.
+
+Expected result: the connection succeeds and the Inspector can list the available tools.
+
+The `viewer` role can call:
+
+* `time.now`
+* `weather.lookup`
+
+Try calling `weather.lookup` with:
+
+[source,json]
+----
+{
+  "city": "Berlin"
+}
+----
+
+Expected result: the call succeeds.
+
+=== Try to call an operator tool as a viewer
+
+Now call `ticket.create` as the same viewer:
+
+[source,json]
+----
+{
+  "title": "Demo ticket",
+  "description": "This should not be allowed for a viewer"
+}
+----
+
+Expected result: heimdall denies the call with a JSON-RPC error response:
+
+[source,json]
+----
+{
+  "jsonrpc": "2.0",
+  "id": "...",
+  "error": {
+    "code": -32003,
+    "message": "forbidden"
+  }
+}
+----
+
+=== Connect as an operator
+
+Create an operator token:
+
+[source,bash]
+----
+docker compose exec token-helper issue-token operator
+----
+
+Replace the Authorization header in MCP Inspector and reconnect.
+
+Expected result:
+
+* `ticket.create` succeeds.
+* `deployment.trigger` is still denied.
+
+=== Connect as an admin
+
+Create an admin token:
+
+[source,bash]
+----
+docker compose exec token-helper issue-token admin
+----
+
+Replace the Authorization header and reconnect.
+
+Expected result: `deployment.trigger` succeeds.
+
+== Optional: Inspect the raw JSON-RPC exchange
+
+MCP Inspector is the primary client for this guide.
+If you want to inspect the raw request and response, you can also use `curl`.
+
+[source,bash]
+----
+curl -i \
+  -H "Authorization: Bearer ${VIEWER_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "jsonrpc": "2.0",
+    "id": "list-1",
+    "method": "tools/list"
+  }' \
+  http://localhost:4455/mcp
+----
+
+This is useful for debugging the JSON-RPC error handler or checking which request body heimdall evaluates.
+
+== How it works
+
+=== Why JSON-RPC body evaluation matters
+
+For many HTTP APIs, authorization can be expressed in terms of path and method:
+
+[source,text]
+----
+GET /orders
+POST /orders
+DELETE /orders/123
+----
+
+MCP over HTTP is different.
+Many requests target the same HTTP endpoint, while the actual operation is expressed as JSON-RPC inside the body:
+
+[source,json]
+----
+{
+  "method": "tools/call",
+  "params": {
+    "name": "deployment.trigger"
+  }
+}
+----
+
+This is why the rule evaluates `Request.Body().method` and `Request.Body().params.name`.
+Without this, a gateway could only protect the MCP endpoint as a whole, but not distinguish between harmless and privileged tool calls.
+
+=== Why the original access token is not forwarded
+
+In this guide, the original access token is consumed by heimdall.
+The MCP server does not receive it.
+
+Instead, heimdall issues a short-lived upstream JWT after successful authorization.
+This has two practical benefits:
+
+* The MCP server does not need to know the external identity provider.
+* The token received by the MCP server contains only the identity information required by the upstream.
+
+This keeps the MCP server focused on serving tools and avoids duplicating gateway-level security logic inside the server.
+
+=== How roles are mapped to MCP tool calls
+
+The demo uses roles because they keep the example understandable:
+
+[source,text]
+----
+viewer   -> read-like tools
+operator -> operational tools
+admin    -> privileged tools
+----
+
+The policy is intentionally implemented at the gateway.
+The FastMCP server still validates that the request comes from heimdall by checking the upstream JWT, but it does not need to know the external access token format or the external issuer.
+
+=== What the MCP server receives from heimdall
+
+The MCP server receives the original JSON-RPC request, plus an upstream JWT issued by heimdall:
+
+[source,http]
+----
+Authorization: Bearer <heimdall-issued-upstream-jwt>
+----
+
+The upstream JWT can contain claims such as:
+
+[source,json]
+----
+{
+  "iss": "heimdall",
+  "sub": "alice",
+  "roles": ["viewer"],
+  "mcp": {
+    "gateway": "heimdall",
+    "authorized": true
+  }
+}
+----
+
+The MCP server verifies the JWT signature and can use the claims for logging, auditing, or local business logic.
+
+== Optional: Validate DPoP-bound access tokens
+
+Bearer tokens can be replayed by whoever obtains them.
+DPoP-bound access tokens reduce that risk by binding the token to a key held by the client.
+
+The main gateway pattern stays the same:
+
+[source,text]
+----
+MCP client -> heimdall -> MCP server
+----
+
+The difference is that heimdall validates not only the JWT access token but also the DPoP proof sent with the request.
+This gives heimdall stronger evidence that the caller presenting the token also possesses the corresponding key.
+
+A DPoP-aware version of the JWT authenticator can require proof-of-possession by extending the token assertions:
+
+[source,yaml]
+----
+mechanisms:
+  authenticators:
+    - id: access_token
+      type: jwt
+      config:
+        jwks_endpoint:
+          url: http://token-helper:8080/.well-known/jwks.json
+        assertions:
+          issuers:
+            - http://token-helper:8080/
+          audience:
+            - heimdall-mcp-demo
+          allowed_algorithms:
+            - ES256
+          proof_of_possession:
+            type: dpop
+            config:
+              max_age: 1m
+              nonce_required: true
+              replay_allowed: false
+        nonce:
+          master_key:
+            secret:
+              source: inline_secrets
+              selector: dpop_nonce_master_key
+        error_signaling:
+          enabled: true
+----
+
+With this configuration, heimdall expects a valid `DPoP` proof in addition to the access token.
+When nonce enforcement is enabled, heimdall can challenge the client with `use_dpop_nonce` and a `DPoP-Nonce` response header if the proof does not contain a valid nonce.
+
+[NOTE]
+====
+Nonce generation and validation require a symmetric master key.
+The example uses an inline secret because this is a local demo.
+For production deployments, use a secret source that supports operational secret management and rotation.
+====
+
+== Optional: Use HTTP Message Signatures for the upstream request
+
+The main example uses a JWT finalizer to represent the authorized subject to the MCP server.
+Another option is to use HTTP Message Signatures for the upstream request.
+
+In that setup, heimdall signs selected HTTP message components before forwarding the request to the MCP server.
+The MCP server verifies the signature and can ensure that the signed components were produced by heimdall and were not modified in transit.
+
+Conceptually:
+
+[source,text]
+----
+MCP client -> heimdall
+  external access token is validated here
+
+heimdall -> MCP server
+  selected request components are signed by heimdall
+----
+
+This can be attractive if the MCP server wants to verify not only who authorized the request, but also that selected headers and the request body are bound to heimdall's signature.
+
+A message-signature based upstream configuration can be modeled as an outbound authentication strategy on the forwarded request.
+The exact mechanism name depends on where the finalizer lands in the 0.18.0 configuration, but the important parts are the same: select the covered components and configure a signer.
+
+[source,yaml]
+----
+mechanisms:
+  finalizers:
+    - id: sign_upstream_request
+      type: header
+      config:
+        headers:
+          X-Forwarded-Subject: '{{ .Subject.ID }}'
+          X-Forwarded-Roles: '{{ .Subject.Attributes.roles | toJson }}'
+
+# Conceptual 0.18.0 shape for an HTTP Message Signatures finalizer.
+# Replace with the final mechanism type if it differs.
+    - id: upstream_http_signature
+      type: http_message_signatures
+      config:
+        ttl: 1m
+        label: heimdall
+        components:
+          - "@method"
+          - "@target-uri"
+          - "authorization"
+          - "content-digest"
+          - "x-forwarded-subject"
+          - "x-forwarded-roles"
+        signer:
+          name: heimdall-mcp-gateway
+          secret:
+            source: heimdall_signing_keys
+            selector: heimdall-demo
+----
+
+If `content-digest` is covered, heimdall computes the digest over the forwarded body and includes it in the signed components.
+That allows the MCP server to verify that the JSON-RPC request body it received is the body heimdall authorized.
+
+== Optional: Combine user and agent identities
+
+Agentic systems often have more than one relevant identity.
+For example:
+
+* the human or workload owner on whose behalf a request is made
+* the agent runtime that sends the request
+
+heimdall can compose multiple authenticators into one subject.
+For example, a JWT authenticator can identify the user, while an HTTP Message Signatures authenticator can identify the agent runtime.
+
+The authorization policy can then require both:
+
+[source,text]
+----
+Allow deployment.trigger only if:
+
+1. the user has the admin role, and
+2. the agent runtime is trusted, and
+3. the request signature covers the relevant request components.
+----
+
+This is useful for high-risk MCP tools.
+A user may be allowed to deploy, but only trusted agent runtimes should be allowed to invoke the deployment tool.
+
+For example, the rule pipeline could authenticate the user with a JWT and the agent runtime with HTTP Message Signatures:
+
+[source,yaml]
+----
+execute:
+  - authenticator: access_token
+    principal: user
+  - authenticator: agent_signature
+    principal: agent
+  - authorizer: authorize_mcp_tool_call
+  - finalizer: upstream_jwt
+----
+
+The CEL policy can then require both identities for privileged tools:
+
+[source,yaml]
+----
+mechanisms:
+  authorizers:
+    - id: authorize_privileged_agentic_tool_call
+      type: cel
+      config:
+        expressions:
+          - expression: |
+              Request.Body().method != "tools/call" ||
+              Request.Body().params.name != "deployment.trigger" ||
+              (
+                has(Subject.Principals.user.Attributes.roles) &&
+                Subject.Principals.user.Attributes.roles.exists(r, r == "admin") &&
+                has(Subject.Principals.agent.ID) &&
+                Subject.Principals.agent.ID in ["agent-runtime-prod", "agent-runtime-ci"]
+              )
+            message: deployment.trigger requires an admin user and a trusted agent runtime
+----
+
+This is the main advantage of composing mechanisms in heimdall: the user and the agent runtime do not have to be represented by the same credential.
+
+== Using heimdall in decision mode
+
+The guide uses proxy mode because it keeps the setup compact.
+In production, you may already have an API gateway, ingress controller, or reverse proxy in front of your MCP servers.
+In that case, heimdall can be used in decision mode.
+
+The high-level model stays the same:
+
+[source,text]
+----
+MCP client -> API gateway -> MCP server
+                    |
+                    v
+                 heimdall
+              authorization decision
+----
+
+The same important considerations apply:
+
+* heimdall must receive enough request information to evaluate the policy.
+* For MCP over JSON-RPC, this usually includes the request body.
+* The gateway should pass heimdall's protocol-aware denial response through, or otherwise be configured to preserve JSON-RPC-compatible error semantics.
+* Forwarded headers and trusted proxy settings must be configured carefully.
+
+[WARNING]
+====
+If a gateway does not send the request body to heimdall, heimdall cannot authorize individual JSON-RPC methods or MCP tool calls.
+It can only authorize the MCP endpoint as a whole.
+====
+
+== Cleanup
+
+Stop the demo environment:
+
+[source,bash]
+----
+docker compose down
+----
+
+If the example creates local volumes, remove them as well:
+
+[source,bash]
+----
+docker compose down -v
+----
+
+== Next steps
+
+From here, you can adapt the example in several directions:
+
+* replace the local token helper with your identity provider
+* retrieve roles or permissions through a heimdall contextualizer
+* move policy decisions to OPA, OpenFGA, or another authorization system
+* enable DPoP for proof-of-possession access tokens
+* add HTTP Message Signatures to authenticate the agent runtime or sign upstream requests
+* run the same policy in decision mode behind your existing gateway
+
