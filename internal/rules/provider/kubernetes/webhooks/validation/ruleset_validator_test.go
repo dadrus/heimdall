@@ -32,6 +32,7 @@ import (
 	cfgv1beta1 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -299,7 +300,17 @@ func TestRulesetValidatorHandle(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			fm := mocks.NewFactoryMock(t)
-			rsv := &rulesetValidator{f: fm}
+			srm := secretsmocks.NewScopedResolverMock(t)
+			srm.EXPECT().Release().Maybe()
+
+			srfm := secretsmocks.NewScopedResolverFactoryMock(t)
+			srfm.EXPECT().Create(mock.Anything, mock.Anything).Maybe().
+				Return(srm)
+
+			rsv := &rulesetValidator{
+				f:  fm,
+				rf: srfm,
+			}
 
 			configureMocks := x.IfThenElse(
 				tc.configureMocks != nil,
