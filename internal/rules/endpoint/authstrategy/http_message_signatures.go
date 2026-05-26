@@ -99,8 +99,7 @@ func (s *HTTPMessageSignatures) init(ctx context.Context, appCtx app.Context) er
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: s.Signer.Secret.Source, Selector: s.Signer.Secret.Selector},
 		secrets.InformerOptions[httpsig.Signer]{
-			Converter:   s.createSigner,
-			ResolveMode: secrets.ResolveEager,
+			Converter: s.createSigner,
 			OnUpdate: func(_ context.Context, secret secrets.Secret, _ httpsig.Signer) error {
 				aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
 

@@ -90,8 +90,7 @@ func newCertificateInformer(
 		sr,
 		secrets.Reference{Source: tlsCfg.Secret.Source, Selector: tlsCfg.Secret.Selector},
 		secrets.InformerOptions[*tls.Certificate]{
-			Converter:   toTLSCertificate,
-			ResolveMode: secrets.ResolveEager,
+			Converter: toTLSCertificate,
 			OnUpdate: func(ctx context.Context, secret secrets.Secret, _ *tls.Certificate) error {
 				ko.Notify(keyregistry.KeyInfo{
 					Key:        secret.(secrets.AsymmetricKeySecret), //nolint:forcetypeassert

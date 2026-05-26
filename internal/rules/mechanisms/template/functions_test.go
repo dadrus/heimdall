@@ -125,11 +125,7 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						ref,
-						mock.AnythingOfType("secrets.ResolveOption"),
-					).
+					Secret(mock.Anything, ref, mock.Anything).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -179,11 +175,7 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						ref,
-						mock.AnythingOfType("secrets.ResolveOption"),
-					).
+					Secret(mock.Anything, ref, mock.Anything).
 					Return(handle, nil).
 					Once()
 
@@ -208,11 +200,7 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						ref,
-						mock.AnythingOfType("secrets.ResolveOption"),
-					).
+					Secret(mock.Anything, ref, mock.Anything).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -235,11 +223,7 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						ref,
-						mock.AnythingOfType("secrets.ResolveOption"),
-					).
+					Secret(mock.Anything, ref, mock.Anything).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -262,11 +246,7 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						ref,
-						mock.AnythingOfType("secrets.ResolveOption"),
-					).
+					Secret(mock.Anything, ref, mock.Anything).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -290,11 +270,7 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						ref,
-						mock.AnythingOfType("secrets.ResolveOption"),
-					).
+					Secret(mock.Anything, ref, mock.Anything).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -317,11 +293,7 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						ref,
-						mock.AnythingOfType("secrets.ResolveOption"),
-					).
+					Secret(mock.Anything, ref, mock.Anything).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -344,11 +316,7 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						ref,
-						mock.AnythingOfType("secrets.ResolveOption"),
-					).
+					Secret(mock.Anything, ref, mock.Anything).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -368,11 +336,7 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						ref,
-						mock.AnythingOfType("secrets.ResolveOption"),
-					).
+					Secret(mock.Anything, ref, mock.Anything).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -392,11 +356,7 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						ref,
-						mock.AnythingOfType("secrets.ResolveOption"),
-					).
+					Secret(mock.Anything, ref, mock.Anything).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -413,11 +373,7 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						ref,
-						mock.AnythingOfType("secrets.ResolveOption"),
-					).
+					Secret(mock.Anything, ref, mock.Anything).
 					Return(handle, nil)
 
 				handle.EXPECT().

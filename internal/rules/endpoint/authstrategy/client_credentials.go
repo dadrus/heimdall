@@ -98,8 +98,7 @@ func (c *OAuth2ClientCredentials) init(ctx context.Context, appCtx app.Context) 
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
 		secrets.CredentialsInformerOptions[clientcredentials.Config]{
-			Converter:   c.createClientCredentialsConfig,
-			ResolveMode: secrets.ResolveEager,
+			Converter: c.createClientCredentialsConfig,
 			OnUpdate: func(_ context.Context, _ secrets.Credentials, cfg clientcredentials.Config) error {
 				c.hash.Store(cfg.Hash())
 

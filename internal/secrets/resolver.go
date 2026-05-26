@@ -50,7 +50,7 @@ func applyScopeOptions(opts ...ScopeOption) scopeOptions {
 
 func applyResolveOptions(opts ...ResolveOption) resolveOptions {
 	resolved := resolveOptions{
-		mode: ResolveEager,
+		mode: ResolveLazy,
 	}
 
 	for _, opt := range opts {

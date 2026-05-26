@@ -57,7 +57,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(chm, nil)
 
@@ -101,7 +101,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -145,7 +145,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -203,7 +203,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -228,7 +228,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 			},
@@ -315,7 +315,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(appHandle, nil)
 			},
@@ -347,7 +347,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(appHandle, nil)
 
@@ -355,7 +355,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "baz"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(stepHandle, nil)
 			},
@@ -398,7 +398,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(appHandle, nil)
 
@@ -406,7 +406,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "baz"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -439,7 +439,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(appHandle, nil)
 			},
@@ -469,7 +469,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(appHandle, nil)
 			},
@@ -514,7 +514,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(appHandle, nil)
 			},
@@ -566,7 +566,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets.ResolveOption"),
+						mock.Anything,
 					).
 					Return(appHandle, nil)
 			},
@@ -908,7 +908,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 				Credentials(
 					mock.Anything,
 					secrets.Reference{Source: "foo", Selector: "bar"},
-					mock.AnythingOfType("secrets.ResolveOption"),
+					mock.Anything,
 				).
 				Return(handle, nil)
 
@@ -998,7 +998,7 @@ func TestBasicAuthAuthenticatorDecorateErrorResponse(t *testing.T) {
 				Credentials(
 					mock.Anything,
 					secrets.Reference{Source: "foo", Selector: "bar"},
-					mock.AnythingOfType("secrets.ResolveOption"),
+					mock.Anything,
 				).
 				Return(handle, nil)
 

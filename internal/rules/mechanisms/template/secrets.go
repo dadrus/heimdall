@@ -60,8 +60,7 @@ func createSecretInformers(
 			resolver,
 			ref,
 			secrets.InformerOptions[string]{
-				Converter:   toStringSecret,
-				ResolveMode: secrets.ResolveLazy,
+				Converter: toStringSecret,
 			},
 		)
 		if err != nil {

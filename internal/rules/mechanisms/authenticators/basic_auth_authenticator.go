@@ -134,8 +134,7 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 		app.SecretResolver(),
 		secrets.Reference{Source: conf.Credentials.Source, Selector: conf.Credentials.Selector},
 		secrets.CredentialsInformerOptions[credentialsChecker]{
-			Converter:   toCredentialsChecker(app.DecoderFactory()),
-			ResolveMode: secrets.ResolveLazy,
+			Converter: toCredentialsChecker(app.DecoderFactory()),
 		},
 	)
 	if err != nil {
@@ -280,8 +279,7 @@ func (a *basicAuthAuthenticator) CreateStep(
 			resolver,
 			secrets.Reference{Source: conf.Credentials.Source, Selector: conf.Credentials.Selector},
 			secrets.CredentialsInformerOptions[credentialsChecker]{
-				Converter:   toCredentialsChecker(a.app.DecoderFactory()),
-				ResolveMode: secrets.ResolveLazy,
+				Converter: toCredentialsChecker(a.app.DecoderFactory()),
 			},
 		)
 		if err != nil {

@@ -84,8 +84,7 @@ func (c *APIKey) init(ctx context.Context, appCtx app.Context) error {
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: c.Secret.Source, Selector: c.Secret.Selector},
 		secrets.InformerOptions[string]{
-			Converter:   toStringSecret,
-			ResolveMode: secrets.ResolveEager,
+			Converter: toStringSecret,
 			OnUpdate: func(_ context.Context, _ secrets.Secret, value string) error {
 				hash := sha256.New()
 

@@ -100,8 +100,7 @@ func newOAuth2ClientCredentialsFinalizer(
 		app.SecretResolver(),
 		secrets.Reference{Source: conf.Credentials.Source, Selector: conf.Credentials.Selector},
 		secrets.CredentialsInformerOptions[oauth2ClientCredentials]{
-			Converter:   toOAuth2ClientCredentials(app.DecoderFactory()),
-			ResolveMode: secrets.ResolveLazy,
+			Converter: toOAuth2ClientCredentials(app.DecoderFactory()),
 		},
 	)
 	if err != nil {

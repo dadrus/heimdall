@@ -74,14 +74,14 @@ func TestApplyResolveOptions(t *testing.T) {
 		opts []ResolveOption
 		want ResolveMode
 	}{
-		"defaults to eager": {
-			want: ResolveEager,
+		"defaults to lazy": {
+			want: ResolveLazy,
 		},
 		"applies lazy": {
 			opts: []ResolveOption{Lazy()},
 			want: ResolveLazy,
 		},
-		"applies eager last": {
+		"applies eager": {
 			opts: []ResolveOption{Lazy(), Eager()},
 			want: ResolveEager,
 		},

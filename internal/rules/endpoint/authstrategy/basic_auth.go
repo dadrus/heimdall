@@ -87,8 +87,7 @@ func (c *BasicAuth) init(ctx context.Context, appCtx app.Context) error {
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
 		secrets.CredentialsInformerOptions[basicAuthCredentials]{
-			Converter:   toBasicAuthCredentials(appCtx.DecoderFactory()),
-			ResolveMode: secrets.ResolveEager,
+			Converter: toBasicAuthCredentials(appCtx.DecoderFactory()),
 			OnUpdate: func(_ context.Context, _ secrets.Credentials, creds basicAuthCredentials) error {
 				c.hash.Store(creds.Hash())
 
