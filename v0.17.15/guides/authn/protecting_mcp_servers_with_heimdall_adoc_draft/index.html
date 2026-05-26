@@ -1,0 +1,526 @@
+<!doctype html><html lang=en><head><title></title><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="An open source Identity Aware Proxy and an Access Control Decision service for cloud native applications"><meta name=dc.relation content="https://dadrus.github.io/"><meta name=theme-color content="#1A94D2"><link rel=stylesheet href=../../../css/styles.min.css media=screen><link rel='shortcut icon' type=image/x-icon href=../../../favicon.ico></head><body><header class="navbar navbar-expand-md navbar-dark bg-dark sticky-top"><nav class="container-xxl flex-wrap flex-lg-nowrap px-0" aria-label="Main navigation"><button class="btn btn-outline-dark d-lg-none navbar-toggler border-0 shadow-none ps-3" type=button data-bs-toggle=offcanvas data-bs-target=#docsMenuContent aria-controls=docsMenuContent aria-expanded=false aria-label="Open docs menu">
+<svg width="36" height="36" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5.0 01.5-.5h10a.5.5.0 010 1H3a.5.5.0 01-.5-.5m0-4a.5.5.0 01.5-.5h10a.5.5.0 010 1H3A.5.5.0 012.5 8m0-4a.5.5.0 01.5-.5h10a.5.5.0 010 1H3A.5.5.0 012.5 4"/></svg></button><nav class="offcanvas offcanvas-start d-md-none text-bg-light" tabindex=-1 id=docsMenuContent aria-labelledby=docsMenuContentLabel><div class=offcanvas-header><h5 class=offcanvas-title id=docsMenuContentLabel>Browse guides</h5><button type=button class=btn-close data-bs-dismiss=offcanvas aria-label="Close docs menu"></button></div><div class="offcanvas-body docs-sidebar"><div class=docs-search-button><button type=button class="btn btn-outline-secondary mb-3 d-none d-md-block w-100 text-start" data-bs-toggle=modal data-bs-target=#docSearch aria-controls=docSearch aria-expanded=false aria-label="Open search">
+<svg width="20" height="20" fill="currentColor" class="bi bi-search me-2" viewBox="0 0 20 20"><path d="M11.742 10.344a6.5 6.5.0 10-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85a1 1 0 00-.115-.1zM12 6.5a5.5 5.5.0 11-11 0 5.5 5.5.0 0111 0"/></svg>
+<span>Quick search...</span></button></div><nav id=SideBarToc><ul><li><span>API Gateways & Proxies</span><ul><li><a href=../../../guides/proxies/caddy/>Caddy Integration</a></li><li><a href=../../../guides/proxies/contour/>Contour Integration</a></li><li><a href=../../../guides/proxies/emissary/>Emissary Ingress Integration</a></li><li><a href=../../../guides/proxies/envoy/>Envoy Integration</a></li><li><a href=../../../guides/proxies/envoy_gateway/>Envoy Gateway Integration</a></li><li><a href=../../../guides/proxies/haproxy/>HAProxy Integration</a></li><li><a href=../../../guides/proxies/istio/>Istio Service Mesh Integration</a></li><li><a href=../../../guides/proxies/nginx/>NGINX Integration</a></li><li><a href=../../../guides/proxies/traefik/>Traefik Proxy Integration</a></li></ul></li><li><span>Authorization Services</span><ul><li><a href=../../../guides/authz/opa/>Integration with OPA</a></li><li><a href=../../../guides/authz/openfga/>Integration with OpenFGA</a></li></ul></li><li><span>Authentication Protocols & Services</span><ul><li><a href=../../../guides/authn/oidc_first_party_auth/>First-Party Authentication with OpenID Connect</a></li></ul></li></ul></nav></div></nav><div class="d-flex align-items-center px-4"><a class="navbar-brand navbar-brand-highlight text-white me-0" href=../../../ style=font-weight:500;font-size:1.5rem>Heimdall</a><ul class="navbar-nav d-none d-md-flex ms-3"><li class=nav-item><a class='nav-link text-white' href=../../../docs/getting_started/discover_heimdall>Docs</a></li><li class=nav-item><a class='nav-link text-white active' href=../../../guides/>Guides</a></li><li class=nav-item><a class='nav-link text-white' href=../../../openapi/>API</a></li></ul></div><div class=d-flex><button type=button class="btn btn-outline-dark navbar-toggler border-0 shadow-none" data-bs-toggle=modal data-bs-target=#docSearch aria-controls=docSearch aria-expanded=false aria-label="Open search">
+<span class="bi bi-search"></span>
+</button>
+<button class="btn btn-outline-dark navbar-toggler border-0 shadow-none pe-3" type=button data-bs-toggle=offcanvas data-bs-target=#mainMenuContent aria-controls=mainMenuContent aria-expanded=false aria-label="Open main menu">
+<svg width="24" height="24" fill="currentColor" class="bi bi-three-dots" viewBox="0 0 16 16"><path d="M3 9.5a1.5 1.5.0 110-3 1.5 1.5.0 010 3m5 0a1.5 1.5.0 110-3 1.5 1.5.0 010 3m5 0a1.5 1.5.0 110-3 1.5 1.5.0 010 3"/></svg></button><div class="offcanvas offcanvas-end text-bg-dark" tabindex=-1 id=mainMenuContent aria-labelledby=mainMenuContentLabel><div class=offcanvas-header><h5 class="offcanvas-title text-white" id=mainMenuContentLabel>Heimdall</h5><button type=button class="btn-close btn-close-white" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class=offcanvas-body><ul class="navbar-nav flex-column d-md-none d-lg-none d-xl-none"><li class=nav-item><a class='nav-link text-white' href=../../../docs/getting_started/discover_heimdall>Docs</a></li><li class=nav-item><a class='nav-link text-white active' href=../../../guides/>Guides</a></li><li class=nav-item><a class='nav-link text-white' href=../../../openapi/>API</a></li></ul><hr class="text-white-50 d-md-none"><ul class="navbar-nav flex-column ms-auto"><doc-version-select class="nav-item dropdown" version-file=/heimdall/data.json current-version=v0.17.15 current-page=/guides/authn/protecting_mcp_servers_with_heimdall_adoc_draft/><button class="btn btn-dark dropdown-toggle me-4" data-bs-toggle=dropdown aria-expanded=false>
+v0.17.15</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li class="nav-item mb-1 pe-4"><a class="nav-link text-white" style=align-self:center href=https://github.com/dadrus/heimdall><svg role="img" width="20" height="20" fill="currentColor" class="bi bi-github text-white" viewBox="0 0 16 16"><title>GitHub</title><path d="M8 0C3.58.0.0 3.58.0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38.0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95.0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12.0.0.67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15.0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48.0 1.07-.01 1.93-.01 2.2.0.21.15.46.55.38A8.012 8.012.0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+<small class="ms-2 d-md-none">GitHub</small></a></li></ul></div></div></div></nav></header><div class=modal id=docSearch tabindex=-1 aria-labelledby=docSearchLabel aria-hidden=true><doc-search class="col-auto me-auto mw-75" index-file=/heimdall/v0.17.15/index.json path-prefix=/heimdall/v0.17.15><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class=modal-content><div class="modal-header p-2"><div class=input-group><div class="input-group-text bg-body border-0 fs-4"><svg width="16" height="16" fill="currentColor" class="bi bi-search text-secondary my-0" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5.0 10-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85a1 1 0 00-.115-.1zM12 6.5a5.5 5.5.0 11-11 0 5.5 5.5.0 0111 0"/></svg></div><input id=search-input class="form-control search-bar border-0" type=search placeholder="Search documentation " aria-label="Search docs..." autocomplete=off autofocus><div class="input-group-text bg-body border-0"><a class="btn input-group-text text-muted border p-1 bg-light-subtle fs-7 fw-bold font-monospace" data-bs-dismiss=modal aria-label=Close>ESC</a></div></div></div><div class=modal-body><div class=search-results><p class="text-center mt-5">No recent searches</p></div></div><div class=modal-footer></div></div></div></doc-search></div><div class="container-xxl docs-layout px-4"><aside class="d-none pe-3 docs-sidebar"><div class=docs-search-button><button type=button class="btn btn-outline-secondary mb-3 d-none d-md-block w-100 text-start" data-bs-toggle=modal data-bs-target=#docSearch aria-controls=docSearch aria-expanded=false aria-label="Open search">
+<svg width="20" height="20" fill="currentColor" class="bi bi-search me-2" viewBox="0 0 20 20"><path d="M11.742 10.344a6.5 6.5.0 10-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85a1 1 0 00-.115-.1zM12 6.5a5.5 5.5.0 11-11 0 5.5 5.5.0 0111 0"/></svg>
+<span>Quick search...</span></button></div><nav id=SideBarToc><ul><li><span>API Gateways & Proxies</span><ul><li><a href=../../../guides/proxies/caddy/>Caddy Integration</a></li><li><a href=../../../guides/proxies/contour/>Contour Integration</a></li><li><a href=../../../guides/proxies/emissary/>Emissary Ingress Integration</a></li><li><a href=../../../guides/proxies/envoy/>Envoy Integration</a></li><li><a href=../../../guides/proxies/envoy_gateway/>Envoy Gateway Integration</a></li><li><a href=../../../guides/proxies/haproxy/>HAProxy Integration</a></li><li><a href=../../../guides/proxies/istio/>Istio Service Mesh Integration</a></li><li><a href=../../../guides/proxies/nginx/>NGINX Integration</a></li><li><a href=../../../guides/proxies/traefik/>Traefik Proxy Integration</a></li></ul></li><li><span>Authorization Services</span><ul><li><a href=../../../guides/authz/opa/>Integration with OPA</a></li><li><a href=../../../guides/authz/openfga/>Integration with OpenFGA</a></li></ul></li><li><span>Authentication Protocols & Services</span><ul><li><a href=../../../guides/authn/oidc_first_party_auth/>First-Party Authentication with OpenID Connect</a></li></ul></li></ul></nav></aside><main class=docs-main><div class="d-md-none docs-location bg-body"><nav style="--bs-breadcrumb-divider:'>'" aria-label=breadcrumb><ol class="breadcrumb mb-0"><li class="breadcrumb-item fw-bold">Authentication Protocols & Services</li><li class="breadcrumb-item active" aria-current=page></li></ol></nav></div><div class="docs-intro pt-3 pe-3"><h1></h1><p></p></div><aside class="text-muted docs-toc"><strong class="d-md-block h6 pb-2 my-2 ms-2 border-bottom d-none d-md-none d-lg-block">On this page</strong><div id=page-content-toc class="mt-1 mb-3 text-muted d-none d-md-none d-lg-block docs-toc-content"><nav id=TableOfContents><ul><li><a href=#_introduction>Introduction</a></li><li><a href=#_what_you_will_build>What you will build</a></li><li><a href=#_prerequisites>Prerequisites</a></li><li><a href=#_example_files>Example files</a></li><li><a href=#_configure_local_secrets>Configure local secrets</a></li><li><a href=#_start_the_demo_environment>Start the demo environment</a></li><li><a href=#_the_demo_mcp_server>The demo MCP server</a></li><li><a href=#_configure_heimdall_as_an_mcp_gateway>Configure heimdall as an MCP gateway</a><ul><li><a href=#_validate_client_access_tokens>Validate client access tokens</a></li><li><a href=#_authorize_json_rpc_methods_and_tool_calls>Authorize JSON-RPC methods and tool calls</a></li><li><a href=#_return_json_rpc_compatible_errors>Return JSON-RPC-compatible errors</a></li><li><a href=#_issue_an_upstream_jwt_for_the_mcp_server>Issue an upstream JWT for the MCP server</a></li><li><a href=#_define_the_mcp_rule>Define the MCP rule</a></li></ul></li><li><a href=#_try_it_out_with_mcp_inspector>Try it out with MCP Inspector</a><ul><li><a href=#_connect_without_a_token>Connect without a token</a></li><li><a href=#_create_a_viewer_token>Create a viewer token</a></li><li><a href=#_connect_as_a_viewer>Connect as a viewer</a></li><li><a href=#_try_to_call_an_operator_tool_as_a_viewer>Try to call an operator tool as a viewer</a></li><li><a href=#_connect_as_an_operator>Connect as an operator</a></li><li><a href=#_connect_as_an_admin>Connect as an admin</a></li></ul></li><li><a href=#_optional_inspect_the_raw_json_rpc_exchange>Optional: Inspect the raw JSON-RPC exchange</a></li><li><a href=#_how_it_works>How it works</a><ul><li><a href=#_why_json_rpc_body_evaluation_matters>Why JSON-RPC body evaluation matters</a></li><li><a href=#_why_the_original_access_token_is_not_forwarded>Why the original access token is not forwarded</a></li><li><a href=#_how_roles_are_mapped_to_mcp_tool_calls>How roles are mapped to MCP tool calls</a></li><li><a href=#_what_the_mcp_server_receives_from_heimdall>What the MCP server receives from heimdall</a></li></ul></li><li><a href=#_optional_validate_dpop_bound_access_tokens>Optional: Validate DPoP-bound access tokens</a></li><li><a href=#_optional_use_http_message_signatures_for_the_upstream_request>Optional: Use HTTP Message Signatures for the upstream request</a></li><li><a href=#_optional_combine_user_and_agent_identities>Optional: Combine user and agent identities</a></li><li><a href=#_using_heimdall_in_decision_mode>Using heimdall in decision mode</a></li><li><a href=#_cleanup>Cleanup</a></li><li><a href=#_next_steps>Next steps</a></li></ul></nav></div><button class="btn btn-outline-secondary text-decoration-none d-lg-none collapsed" type=button data-bs-toggle=collapse data-bs-target=#page-content-toc-collapsible aria-expanded=false aria-controls=page-content-toc-collapsible>
+On this page
+<svg width="16" height="16" fill="currentColor" class="bi bi-chevron-expand" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M3.646 9.146a.5.5.0 01.708.0L8 12.793l3.646-3.647a.5.5.0 01.708.708l-4 4a.5.5.0 01-.708.0l-4-4a.5.5.0 010-.708m0-2.292a.5.5.0 00.708.0L8 3.207l3.646 3.647a.5.5.0 00.708-.708l-4-4a.5.5.0 00-.708.0l-4 4a.5.5.0 000 .708"/></svg></button><div id=page-content-toc-collapsible class="mt-1 mb-3 text-muted d-lg-none collapse docs-toc-content"><div class="card card-body"><nav id=TableOfContents><ul><li><a href=#_introduction>Introduction</a></li><li><a href=#_what_you_will_build>What you will build</a></li><li><a href=#_prerequisites>Prerequisites</a></li><li><a href=#_example_files>Example files</a></li><li><a href=#_configure_local_secrets>Configure local secrets</a></li><li><a href=#_start_the_demo_environment>Start the demo environment</a></li><li><a href=#_the_demo_mcp_server>The demo MCP server</a></li><li><a href=#_configure_heimdall_as_an_mcp_gateway>Configure heimdall as an MCP gateway</a><ul><li><a href=#_validate_client_access_tokens>Validate client access tokens</a></li><li><a href=#_authorize_json_rpc_methods_and_tool_calls>Authorize JSON-RPC methods and tool calls</a></li><li><a href=#_return_json_rpc_compatible_errors>Return JSON-RPC-compatible errors</a></li><li><a href=#_issue_an_upstream_jwt_for_the_mcp_server>Issue an upstream JWT for the MCP server</a></li><li><a href=#_define_the_mcp_rule>Define the MCP rule</a></li></ul></li><li><a href=#_try_it_out_with_mcp_inspector>Try it out with MCP Inspector</a><ul><li><a href=#_connect_without_a_token>Connect without a token</a></li><li><a href=#_create_a_viewer_token>Create a viewer token</a></li><li><a href=#_connect_as_a_viewer>Connect as a viewer</a></li><li><a href=#_try_to_call_an_operator_tool_as_a_viewer>Try to call an operator tool as a viewer</a></li><li><a href=#_connect_as_an_operator>Connect as an operator</a></li><li><a href=#_connect_as_an_admin>Connect as an admin</a></li></ul></li><li><a href=#_optional_inspect_the_raw_json_rpc_exchange>Optional: Inspect the raw JSON-RPC exchange</a></li><li><a href=#_how_it_works>How it works</a><ul><li><a href=#_why_json_rpc_body_evaluation_matters>Why JSON-RPC body evaluation matters</a></li><li><a href=#_why_the_original_access_token_is_not_forwarded>Why the original access token is not forwarded</a></li><li><a href=#_how_roles_are_mapped_to_mcp_tool_calls>How roles are mapped to MCP tool calls</a></li><li><a href=#_what_the_mcp_server_receives_from_heimdall>What the MCP server receives from heimdall</a></li></ul></li><li><a href=#_optional_validate_dpop_bound_access_tokens>Optional: Validate DPoP-bound access tokens</a></li><li><a href=#_optional_use_http_message_signatures_for_the_upstream_request>Optional: Use HTTP Message Signatures for the upstream request</a></li><li><a href=#_optional_combine_user_and_agent_identities>Optional: Combine user and agent identities</a></li><li><a href=#_using_heimdall_in_decision_mode>Using heimdall in decision mode</a></li><li><a href=#_cleanup>Cleanup</a></li><li><a href=#_next_steps>Next steps</a></li></ul></nav></div></div></aside><div class="docs-content pe-3"><div data-bs-spy=scroll data-bs-target=#page-content-toc class=mt-3><linkable-headline-area><div class=sect1><h2 id=_introduction><a class=anchor href=#_introduction></a>Introduction</h2><div class=sectionbody><div class=paragraph><p>Model Context Protocol (MCP) makes it easy to expose tools, resources, and prompts to agentic systems.
+That is powerful, but it also turns MCP servers into security-sensitive HTTP endpoints: an MCP client can discover available capabilities and invoke tools that may read data, create tickets, or trigger operational actions.</p></div><div class=paragraph><p>This guide shows how to protect a remote MCP server with heimdall.
+Instead of implementing authentication, authorization, JSON-RPC-aware error handling, and upstream identity handling inside the MCP server, you place heimdall in front of it.
+heimdall validates the caller, authorizes JSON-RPC methods and MCP tool calls, and forwards a trusted upstream identity to the MCP server.</p></div><div class=paragraph><p>The example intentionally uses heimdall in proxy mode because it is the easiest way to understand the complete request flow.
+The same policy model can also be used with heimdall in decision mode behind an existing API gateway or reverse proxy.</p></div><div class="admonitionblock important"><table><tbody><tr><td class=icon><i class="fa icon-important" title=Important></i></td><td class=content><div class=paragraph><p>This guide does not forward the original client access token to the MCP server.
+Although heimdall can be configured to pass credentials through, doing so couples the MCP server to the external identity provider and increases the blast radius if a token leaks.
+Instead, heimdall validates the client token and issues a short-lived upstream JWT for the MCP server.</p></div></td></tr></tbody></table></div></div></div><div class=sect1><h2 id=_what_you_will_build><a class=anchor href=#_what_you_will_build></a>What you will build</h2><div class=sectionbody><div class=paragraph><p>You will run a small local environment consisting of:</p></div><div class=ulist><ul><li><p>MCP Inspector as a browser-based MCP client</p></li><li><p>heimdall as an authentication and authorization proxy</p></li><li><p>a Python FastMCP demo server</p></li><li><p>a small local token helper for demo users</p></li></ul></div><div class=paragraph><p>The request flow looks like this:</p></div><div class=listingblock><div class=content><pre>Failed to generate image: Could not load PlantUML. Either require &#39;asciidoctor-diagram-plantuml&#39; or specify the location of the PlantUML JAR(s) using the &#39;DIAGRAM_PLANTUML_CLASSPATH&#39; environment variable. Alternatively a PlantUML binary can be provided (plantuml-native in $PATH).
+@startuml
+actor &#34;User&#34; as user
+participant &#34;MCP Inspector\n(browser UI)&#34; as inspector
+participant &#34;heimdall\n(proxy mode)&#34; as heimdall
+participant &#34;FastMCP\ndemo server&#34; as mcp
+
+user -&gt; inspector: choose transport and token
+inspector -&gt; heimdall: MCP request over HTTP\nAuthorization: Bearer &lt;access token&gt;
+heimdall -&gt; heimdall: validate token
+heimdall -&gt; heimdall: authorize JSON-RPC method/tool
+heimdall -&gt; mcp: forward request\nAuthorization: Bearer &lt;upstream JWT&gt;
+mcp --&gt; heimdall: MCP response
+heimdall --&gt; inspector: MCP response
+@enduml</pre></div></div><div class=paragraph><p>The demo server exposes four tools:</p></div><table class="tableblock frame-all grid-all stretch"><col style=width:25%><col style=width:25%><col style=width:50%><thead><tr><th class="tableblock halign-left valign-top">Tool</th><th class="tableblock halign-left valign-top">Required role</th><th class="tableblock halign-left valign-top">Purpose</th></tr></thead><tbody><tr><td class="tableblock halign-left valign-top"><p class=tableblock><code>time.now</code></p></td><td class="tableblock halign-left valign-top"><p class=tableblock><code>viewer</code></p></td><td class="tableblock halign-left valign-top"><p class=tableblock>Return the current server time.</p></td></tr><tr><td class="tableblock halign-left valign-top"><p class=tableblock><code>weather.lookup</code></p></td><td class="tableblock halign-left valign-top"><p class=tableblock><code>viewer</code></p></td><td class="tableblock halign-left valign-top"><p class=tableblock>Return demo weather information for a city.</p></td></tr><tr><td class="tableblock halign-left valign-top"><p class=tableblock><code>ticket.create</code></p></td><td class="tableblock halign-left valign-top"><p class=tableblock><code>operator</code></p></td><td class="tableblock halign-left valign-top"><p class=tableblock>Create a demo support ticket.</p></td></tr><tr><td class="tableblock halign-left valign-top"><p class=tableblock><code>deployment.trigger</code></p></td><td class="tableblock halign-left valign-top"><p class=tableblock><code>admin</code></p></td><td class="tableblock halign-left valign-top"><p class=tableblock>Trigger a demo deployment.</p></td></tr></tbody></table><div class=paragraph><p>The role hierarchy used by the guide is intentionally simple:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>viewer   -&gt; may list tools and call read-like tools
+operator -&gt; may additionally call operational write tools
+admin    -&gt; may additionally call privileged tools</code></pre></div></div></div></div><div class=sect1><h2 id=_prerequisites><a class=anchor href=#_prerequisites></a>Prerequisites</h2><div class=sectionbody><div class=paragraph><p>You need:</p></div><div class=ulist><ul><li><p>Docker</p></li><li><p>Docker Compose</p></li><li><p>A browser</p></li><li><p><code>jq</code>, optional, for inspecting tokens and JSON responses</p></li></ul></div><div class=paragraph><p>No MCP-specific CLI is required.
+You will use MCP Inspector in the browser for the main walkthrough.</p></div></div></div><div class=sect1><h2 id=_example_files><a class=anchor href=#_example_files></a>Example files</h2><div class=sectionbody><div class=paragraph><p>The example files used by this guide are expected to live in the repository like this:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>examples/
+  guides/
+    agentic-systems/
+      mcp/
+        docker-compose.yaml
+        heimdall/
+          config.yaml
+          rules.yaml
+          secrets/
+            upstream-signer.pem
+        mcp-server/
+          pyproject.toml
+          server.py
+        token-helper/
+          Dockerfile
+          issue-token.py
+          jwks/
+            issuer-private.jwk
+            issuer-public.jwks</code></pre></div></div><div class=paragraph><p>The exact file layout can be adjusted to match the existing examples structure.
+The important part is that the guide can be followed with a single <code>docker compose up</code> from the example directory.</p></div></div></div><div class=sect1><h2 id=_configure_local_secrets><a class=anchor href=#_configure_local_secrets></a>Configure local secrets</h2><div class=sectionbody><div class=paragraph><p>The example uses heimdall’s <code>secret_management</code> configuration to keep all local demo secrets in one place.
+The secret-management abstraction defines named secret sources and lets consumers reference individual entries by <code>source</code> and <code>selector</code>.</p></div><div class=paragraph><p>For this guide, two sources are useful:</p></div><div class=ulist><ul><li><p><code>heimdall_signing_keys</code>, a <code>pem</code> source that loads the key material used by heimdall to issue upstream JWTs and sign upstream requests.</p></li><li><p><code>inline_secrets</code>, an <code>inline</code> source that contains small demo-only values such as the DPoP nonce master key.</p></li></ul></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>secret_management</span><span class=pi>:</span>
+  <span class=na>heimdall_signing_keys</span><span class=pi>:</span>
+    <span class=na>type</span><span class=pi>:</span> <span class=s>pem</span>
+    <span class=na>config</span><span class=pi>:</span>
+      <span class=na>path</span><span class=pi>:</span> <span class=s>/etc/heimdall/secrets/upstream-signer.pem</span>
+      <span class=na>watch</span><span class=pi>:</span> <span class=kc>true</span>
+
+  <span class=na>inline_secrets</span><span class=pi>:</span>
+    <span class=na>type</span><span class=pi>:</span> <span class=s>inline</span>
+    <span class=na>config</span><span class=pi>:</span>
+      <span class=na>dpop_nonce_master_key</span><span class=pi>:</span> <span class=s2>&#34;</span><span class=s>change-me-change-me-change-me-change-me&#34;</span></code></pre></div></div><div class="admonitionblock note"><table><tbody><tr><td class=icon><i class="fa icon-note" title=Note></i></td><td class=content><div class=paragraph><p>Inline secrets are convenient for local examples because the secret value is defined directly in the heimdall configuration.
+For production deployments, use a dedicated secret source instead of putting long-lived secrets into configuration files.</p></div></td></tr></tbody></table></div></div></div><div class=sect1><h2 id=_start_the_demo_environment><a class=anchor href=#_start_the_demo_environment></a>Start the demo environment</h2><div class=sectionbody><div class=paragraph><p>Clone the heimdall repository and start the example environment:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=bash><span class=nb>cd </span>examples/guides/agentic-systems/mcp
+docker compose up</code></pre></div></div><div class=paragraph><p>The environment starts:</p></div><div class=ulist><ul><li><p>heimdall on <code><a href=http://localhost:4455 class=bare>http://localhost:4455</a></code></p></li><li><p>the FastMCP demo server on the internal Docker network</p></li><li><p>MCP Inspector on <code><a href=http://localhost:6274 class=bare>http://localhost:6274</a></code></p></li><li><p>a local token helper that can issue demo access tokens</p></li></ul></div><div class="admonitionblock note"><table><tbody><tr><td class=icon><i class="fa icon-note" title=Note></i></td><td class=content><div class=paragraph><p>The exact ports may be changed if they conflict with other local services.
+If you change them, update the URLs in the following sections accordingly.</p></div></td></tr></tbody></table></div></div></div><div class=sect1><h2 id=_the_demo_mcp_server><a class=anchor href=#_the_demo_mcp_server></a>The demo MCP server</h2><div class=sectionbody><div class=paragraph><p>The demo server is intentionally small, but it is a real MCP server built with FastMCP.
+It exposes tools that are useful for demonstrating different authorization decisions.</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=python><span class=kn>from</span> <span class=n>datetime</span> <span class=kn>import</span> <span class=n>datetime</span><span class=p>,</span> <span class=n>timezone</span>
+<span class=kn>from</span> <span class=n>typing</span> <span class=kn>import</span> <span class=n>Annotated</span>
+
+<span class=kn>from</span> <span class=n>fastmcp</span> <span class=kn>import</span> <span class=n>FastMCP</span>
+
+<span class=n>mcp</span> <span class=o>=</span> <span class=nc>FastMCP</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>heimdall-mcp-demo</span><span class=sh>&#34;</span><span class=p>)</span>
+
+
+<span class=nd>@mcp.tool</span><span class=p>(</span><span class=n>name</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>time.now</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=k>def</span> <span class=nf>time_now</span><span class=p>()</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Return the current server time.</span><span class=sh>&#34;&#34;&#34;</span>
+    <span class=k>return</span> <span class=n>datetime</span><span class=p>.</span><span class=nf>now</span><span class=p>(</span><span class=n>timezone</span><span class=p>.</span><span class=n>utc</span><span class=p>).</span><span class=nf>isoformat</span><span class=p>()</span>
+
+
+<span class=nd>@mcp.tool</span><span class=p>(</span><span class=n>name</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>weather.lookup</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=k>def</span> <span class=nf>weather_lookup</span><span class=p>(</span><span class=n>city</span><span class=p>:</span> <span class=n>Annotated</span><span class=p>[</span><span class=nb>str</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>City name</span><span class=sh>&#34;</span><span class=p>])</span> <span class=o>-&gt;</span> <span class=nb>dict</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Return demo weather information for a city.</span><span class=sh>&#34;&#34;&#34;</span>
+    <span class=k>return</span> <span class=p>{</span>
+        <span class=sh>&#34;</span><span class=s>city</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>city</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>condition</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>sunny</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>temperature_celsius</span><span class=sh>&#34;</span><span class=p>:</span> <span class=mi>21</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>source</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>demo</span><span class=sh>&#34;</span><span class=p>,</span>
+    <span class=p>}</span>
+
+
+<span class=nd>@mcp.tool</span><span class=p>(</span><span class=n>name</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>ticket.create</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=k>def</span> <span class=nf>ticket_create</span><span class=p>(</span><span class=n>title</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span> <span class=n>description</span><span class=p>:</span> <span class=nb>str</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>dict</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Create a demo support ticket.</span><span class=sh>&#34;&#34;&#34;</span>
+    <span class=k>return</span> <span class=p>{</span>
+        <span class=sh>&#34;</span><span class=s>id</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>TICKET-1234</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>title</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>title</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>description</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>description</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>status</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>created</span><span class=sh>&#34;</span><span class=p>,</span>
+    <span class=p>}</span>
+
+
+<span class=nd>@mcp.tool</span><span class=p>(</span><span class=n>name</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>deployment.trigger</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=k>def</span> <span class=nf>deployment_trigger</span><span class=p>(</span><span class=n>environment</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span> <span class=n>version</span><span class=p>:</span> <span class=nb>str</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>dict</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Trigger a demo deployment.</span><span class=sh>&#34;&#34;&#34;</span>
+    <span class=k>return</span> <span class=p>{</span>
+        <span class=sh>&#34;</span><span class=s>environment</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>environment</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>version</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>version</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>status</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>triggered</span><span class=sh>&#34;</span><span class=p>,</span>
+    <span class=p>}</span>
+
+
+<span class=k>if</span> <span class=n>__name__</span> <span class=o>==</span> <span class=sh>&#34;</span><span class=s>__main__</span><span class=sh>&#34;</span><span class=p>:</span>
+    <span class=n>mcp</span><span class=p>.</span><span class=nf>run</span><span class=p>(</span>
+        <span class=n>transport</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>streamable-http</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=n>host</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>0.0.0.0</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=n>port</span><span class=o>=</span><span class=mi>8000</span><span class=p>,</span>
+        <span class=n>path</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>/mcp</span><span class=sh>&#34;</span><span class=p>,</span>
+    <span class=p>)</span></code></pre></div></div><div class=paragraph><p>The server validates the upstream JWT issued by heimdall before executing tools.
+This keeps the MCP server independent from the external identity provider: it only needs to trust heimdall’s issuer and public keys.</p></div><div class=paragraph><p>FastMCP can validate JWTs for HTTP transports by configuring a <code>JWTVerifier</code>.
+In this guide, the verifier trusts heimdall as the issuer of the upstream token.</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=python><span class=kn>import</span> <span class=n>os</span>
+<span class=kn>from</span> <span class=n>datetime</span> <span class=kn>import</span> <span class=n>datetime</span><span class=p>,</span> <span class=n>timezone</span>
+<span class=kn>from</span> <span class=n>typing</span> <span class=kn>import</span> <span class=n>Annotated</span>
+
+<span class=kn>from</span> <span class=n>fastmcp</span> <span class=kn>import</span> <span class=n>FastMCP</span>
+<span class=kn>from</span> <span class=n>fastmcp.server.auth.providers.jwt</span> <span class=kn>import</span> <span class=n>JWTVerifier</span>
+<span class=kn>from</span> <span class=n>fastmcp.server.dependencies</span> <span class=kn>import</span> <span class=n>get_access_token</span>
+
+<span class=n>HEIMDALL_ISSUER</span> <span class=o>=</span> <span class=n>os</span><span class=p>.</span><span class=n>environ</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>HEIMDALL_ISSUER</span><span class=sh>&#34;</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>heimdall-mcp-gateway</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=n>HEIMDALL_JWKS_URI</span> <span class=o>=</span> <span class=n>os</span><span class=p>.</span><span class=n>environ</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span>
+    <span class=sh>&#34;</span><span class=s>HEIMDALL_JWKS_URI</span><span class=sh>&#34;</span><span class=p>,</span>
+    <span class=sh>&#34;</span><span class=s>http://heimdall:4457/.well-known/jwks.json</span><span class=sh>&#34;</span><span class=p>,</span>
+<span class=p>)</span>
+<span class=n>UPSTREAM_AUDIENCE</span> <span class=o>=</span> <span class=n>os</span><span class=p>.</span><span class=n>environ</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>UPSTREAM_AUDIENCE</span><span class=sh>&#34;</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>fastmcp-demo-server</span><span class=sh>&#34;</span><span class=p>)</span>
+
+<span class=n>auth</span> <span class=o>=</span> <span class=nc>JWTVerifier</span><span class=p>(</span>
+    <span class=n>jwks_uri</span><span class=o>=</span><span class=n>HEIMDALL_JWKS_URI</span><span class=p>,</span>
+    <span class=n>issuer</span><span class=o>=</span><span class=n>HEIMDALL_ISSUER</span><span class=p>,</span>
+    <span class=n>audience</span><span class=o>=</span><span class=n>UPSTREAM_AUDIENCE</span><span class=p>,</span>
+<span class=p>)</span>
+
+<span class=n>mcp</span> <span class=o>=</span> <span class=nc>FastMCP</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>heimdall-mcp-demo</span><span class=sh>&#34;</span><span class=p>,</span> <span class=n>auth</span><span class=o>=</span><span class=n>auth</span><span class=p>)</span>
+
+
+<span class=k>def</span> <span class=nf>current_subject</span><span class=p>()</span> <span class=o>-&gt;</span> <span class=nb>dict</span><span class=p>:</span>
+    <span class=n>token</span> <span class=o>=</span> <span class=nf>get_access_token</span><span class=p>()</span>
+    <span class=k>if</span> <span class=n>token</span> <span class=ow>is</span> <span class=bp>None</span><span class=p>:</span>
+        <span class=k>return</span> <span class=p>{</span><span class=sh>&#34;</span><span class=s>sub</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>unknown</span><span class=sh>&#34;</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>roles</span><span class=sh>&#34;</span><span class=p>:</span> <span class=p>[]}</span>
+    <span class=k>return</span> <span class=p>{</span>
+        <span class=sh>&#34;</span><span class=s>sub</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>token</span><span class=p>.</span><span class=n>claims</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>sub</span><span class=sh>&#34;</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>unknown</span><span class=sh>&#34;</span><span class=p>),</span>
+        <span class=sh>&#34;</span><span class=s>roles</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>token</span><span class=p>.</span><span class=n>claims</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>roles</span><span class=sh>&#34;</span><span class=p>,</span> <span class=p>[]),</span>
+    <span class=p>}</span>
+
+
+<span class=nd>@mcp.tool</span><span class=p>(</span><span class=n>name</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>time.now</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=k>def</span> <span class=nf>time_now</span><span class=p>()</span> <span class=o>-&gt;</span> <span class=nb>dict</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Return the current server time.</span><span class=sh>&#34;&#34;&#34;</span>
+    <span class=k>return</span> <span class=p>{</span>
+        <span class=sh>&#34;</span><span class=s>time</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>datetime</span><span class=p>.</span><span class=nf>now</span><span class=p>(</span><span class=n>timezone</span><span class=p>.</span><span class=n>utc</span><span class=p>).</span><span class=nf>isoformat</span><span class=p>(),</span>
+        <span class=sh>&#34;</span><span class=s>subject</span><span class=sh>&#34;</span><span class=p>:</span> <span class=nf>current_subject</span><span class=p>(),</span>
+    <span class=p>}</span>
+
+
+<span class=nd>@mcp.tool</span><span class=p>(</span><span class=n>name</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>weather.lookup</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=k>def</span> <span class=nf>weather_lookup</span><span class=p>(</span><span class=n>city</span><span class=p>:</span> <span class=n>Annotated</span><span class=p>[</span><span class=nb>str</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>City name</span><span class=sh>&#34;</span><span class=p>])</span> <span class=o>-&gt;</span> <span class=nb>dict</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Return demo weather information for a city.</span><span class=sh>&#34;&#34;&#34;</span>
+    <span class=k>return</span> <span class=p>{</span>
+        <span class=sh>&#34;</span><span class=s>city</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>city</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>condition</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>sunny</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>temperature_celsius</span><span class=sh>&#34;</span><span class=p>:</span> <span class=mi>21</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>source</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>demo</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>subject</span><span class=sh>&#34;</span><span class=p>:</span> <span class=nf>current_subject</span><span class=p>(),</span>
+    <span class=p>}</span>
+
+
+<span class=nd>@mcp.tool</span><span class=p>(</span><span class=n>name</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>ticket.create</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=k>def</span> <span class=nf>ticket_create</span><span class=p>(</span><span class=n>title</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span> <span class=n>description</span><span class=p>:</span> <span class=nb>str</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>dict</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Create a demo support ticket.</span><span class=sh>&#34;&#34;&#34;</span>
+    <span class=k>return</span> <span class=p>{</span>
+        <span class=sh>&#34;</span><span class=s>id</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>TICKET-1234</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>title</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>title</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>description</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>description</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>status</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>created</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>subject</span><span class=sh>&#34;</span><span class=p>:</span> <span class=nf>current_subject</span><span class=p>(),</span>
+    <span class=p>}</span>
+
+
+<span class=nd>@mcp.tool</span><span class=p>(</span><span class=n>name</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>deployment.trigger</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=k>def</span> <span class=nf>deployment_trigger</span><span class=p>(</span><span class=n>environment</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span> <span class=n>version</span><span class=p>:</span> <span class=nb>str</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>dict</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Trigger a demo deployment.</span><span class=sh>&#34;&#34;&#34;</span>
+    <span class=k>return</span> <span class=p>{</span>
+        <span class=sh>&#34;</span><span class=s>environment</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>environment</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>version</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>version</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>status</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>triggered</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>subject</span><span class=sh>&#34;</span><span class=p>:</span> <span class=nf>current_subject</span><span class=p>(),</span>
+    <span class=p>}</span>
+
+
+<span class=k>if</span> <span class=n>__name__</span> <span class=o>==</span> <span class=sh>&#34;</span><span class=s>__main__</span><span class=sh>&#34;</span><span class=p>:</span>
+    <span class=n>mcp</span><span class=p>.</span><span class=nf>run</span><span class=p>(</span>
+        <span class=n>transport</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>streamable-http</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=n>host</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>0.0.0.0</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=n>port</span><span class=o>=</span><span class=mi>8000</span><span class=p>,</span>
+        <span class=n>path</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>/mcp</span><span class=sh>&#34;</span><span class=p>,</span>
+    <span class=p>)</span></code></pre></div></div><div class="admonitionblock note"><table><tbody><tr><td class=icon><i class="fa icon-note" title=Note></i></td><td class=content><div class=paragraph><p>The FastMCP server validates only heimdall-issued upstream JWTs.
+It does not validate the original client access token and does not need to know the external identity provider used by MCP clients.</p></div></td></tr></tbody></table></div></div></div><div class=sect1><h2 id=_configure_heimdall_as_an_mcp_gateway><a class=anchor href=#_configure_heimdall_as_an_mcp_gateway></a>Configure heimdall as an MCP gateway</h2><div class=sectionbody><div class=paragraph><p>heimdall is configured with:</p></div><div class=ulist><ul><li><p>a JWT authenticator for the client access token</p></li><li><p>a CEL expression authorizer for JSON-RPC method and tool-call authorization</p></li><li><p>a generic error handler that emits JSON-RPC-compatible error responses</p></li><li><p>a JWT finalizer that issues an upstream token for the MCP server</p></li></ul></div><div class=paragraph><p>The following snippets show the relevant parts of the configuration.
+The final example files should contain complete, runnable YAML files.</p></div><div class=sect2><h3 id=_validate_client_access_tokens><a class=anchor href=#_validate_client_access_tokens></a>Validate client access tokens</h3><div class=paragraph><p>The client sends an access token to heimdall:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=http><span class=err>Authorization: Bearer &lt;access token&gt;</span></code></pre></div></div><div class=paragraph><p>heimdall validates this token and creates the default principal for the request.
+The demo tokens contain a subject and a simple list of roles:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=json><span class=p>{</span><span class=w>
+  </span><span class=nl>&#34;sub&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;alice&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;roles&#34;</span><span class=p>:</span><span class=w> </span><span class=p>[</span><span class=s2>&#34;viewer&#34;</span><span class=p>],</span><span class=w>
+  </span><span class=nl>&#34;iss&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;http://token-helper:8080/&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;aud&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;heimdall-mcp-demo&#34;</span><span class=w>
+</span><span class=p>}</span></code></pre></div></div><div class=paragraph><p>The JWT authenticator validates the token signature and the configured token assertions.
+In this example, heimdall retrieves the signing keys from the token helper’s JWKS endpoint and requires a trusted issuer and audience.</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>mechanisms</span><span class=pi>:</span>
+  <span class=na>authenticators</span><span class=pi>:</span>
+    <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>access_token</span>
+      <span class=na>type</span><span class=pi>:</span> <span class=s>jwt</span>
+      <span class=na>config</span><span class=pi>:</span>
+        <span class=na>jwks_endpoint</span><span class=pi>:</span>
+          <span class=na>url</span><span class=pi>:</span> <span class=s>http://token-helper:8080/.well-known/jwks.json</span>
+        <span class=na>assertions</span><span class=pi>:</span>
+          <span class=na>issuers</span><span class=pi>:</span>
+            <span class=pi>-</span> <span class=s>http://token-helper:8080/</span>
+          <span class=na>audience</span><span class=pi>:</span>
+            <span class=pi>-</span> <span class=s>heimdall-mcp-demo</span>
+          <span class=na>allowed_algorithms</span><span class=pi>:</span>
+            <span class=pi>-</span> <span class=s>ES256</span>
+        <span class=na>principal</span><span class=pi>:</span>
+          <span class=na>id</span><span class=pi>:</span> <span class=s>sub</span></code></pre></div></div><div class=paragraph><p>If <code>principal</code> is omitted, heimdall uses the <code>sub</code> claim as the principal id and makes all JWT claims available as subject attributes.
+The explicit <code>principal</code> mapping is shown here to make that behavior visible in the guide.</p></div></div><div class=sect2><h3 id=_authorize_json_rpc_methods_and_tool_calls><a class=anchor href=#_authorize_json_rpc_methods_and_tool_calls></a>Authorize JSON-RPC methods and tool calls</h3><div class=paragraph><p>MCP requests over HTTP use JSON-RPC.
+For JSON-RPC, the relevant operation is not only the HTTP path or method.
+It is also the JSON-RPC method and, for <code>tools/call</code>, the requested tool name.</p></div><div class=paragraph><p>For example, the following request is a tool call even though the HTTP request is just a <code>POST /mcp</code>:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=json><span class=p>{</span><span class=w>
+  </span><span class=nl>&#34;jsonrpc&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;2.0&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;id&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;call-1&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;method&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;tools/call&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;params&#34;</span><span class=p>:</span><span class=w> </span><span class=p>{</span><span class=w>
+    </span><span class=nl>&#34;name&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;ticket.create&#34;</span><span class=p>,</span><span class=w>
+    </span><span class=nl>&#34;arguments&#34;</span><span class=p>:</span><span class=w> </span><span class=p>{</span><span class=w>
+      </span><span class=nl>&#34;title&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;Demo ticket&#34;</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;description&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;Created through MCP Inspector&#34;</span><span class=w>
+    </span><span class=p>}</span><span class=w>
+  </span><span class=p>}</span><span class=w>
+</span><span class=p>}</span></code></pre></div></div><div class=paragraph><p>The CEL expression authorizer can use <code>Request.Body()</code> to evaluate this information.
+The example policy is role-based:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>tools/list                      -&gt; any authenticated user
+time.now, weather.lookup        -&gt; viewer, operator, admin
+ticket.create                   -&gt; operator, admin
+deployment.trigger              -&gt; admin</code></pre></div></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>mechanisms</span><span class=pi>:</span>
+  <span class=na>authorizers</span><span class=pi>:</span>
+    <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>authorize_mcp_tool_call</span>
+      <span class=na>type</span><span class=pi>:</span> <span class=s>cel</span>
+      <span class=na>config</span><span class=pi>:</span>
+        <span class=na>expressions</span><span class=pi>:</span>
+          <span class=pi>-</span> <span class=na>expression</span><span class=pi>:</span> <span class=pi>|</span>
+              <span class=s>has(Request.Body().method) &amp;&amp;</span>
+              <span class=s>(</span>
+                <span class=s>Request.Body().method == &#34;tools/list&#34; ||</span>
+                <span class=s>(</span>
+                  <span class=s>Request.Body().method == &#34;tools/call&#34; &amp;&amp;</span>
+                  <span class=s>has(Request.Body().params.name) &amp;&amp;</span>
+                  <span class=s>Request.Body().params.name in [&#34;time.now&#34;, &#34;weather.lookup&#34;] &amp;&amp;</span>
+                  <span class=s>has(Subject.Attributes.roles) &amp;&amp;</span>
+                  <span class=s>Subject.Attributes.roles.exists(r, r in [&#34;viewer&#34;, &#34;operator&#34;, &#34;admin&#34;])</span>
+                <span class=s>) ||</span>
+                <span class=s>(</span>
+                  <span class=s>Request.Body().method == &#34;tools/call&#34; &amp;&amp;</span>
+                  <span class=s>has(Request.Body().params.name) &amp;&amp;</span>
+                  <span class=s>Request.Body().params.name == &#34;ticket.create&#34; &amp;&amp;</span>
+                  <span class=s>has(Subject.Attributes.roles) &amp;&amp;</span>
+                  <span class=s>Subject.Attributes.roles.exists(r, r in [&#34;operator&#34;, &#34;admin&#34;])</span>
+                <span class=s>) ||</span>
+                <span class=s>(</span>
+                  <span class=s>Request.Body().method == &#34;tools/call&#34; &amp;&amp;</span>
+                  <span class=s>has(Request.Body().params.name) &amp;&amp;</span>
+                  <span class=s>Request.Body().params.name == &#34;deployment.trigger&#34; &amp;&amp;</span>
+                  <span class=s>has(Subject.Attributes.roles) &amp;&amp;</span>
+                  <span class=s>Subject.Attributes.roles.exists(r, r == &#34;admin&#34;)</span>
+                <span class=s>)</span>
+              <span class=s>)</span>
+            <span class=na>message</span><span class=pi>:</span> <span class=s>MCP method or tool call is not allowed for the authenticated subject</span></code></pre></div></div><div class="admonitionblock note"><table><tbody><tr><td class=icon><i class="fa icon-note" title=Note></i></td><td class=content><div class=paragraph><p>This guide uses roles because they are easy to understand in a first-party demo.
+In a production setup, the same pattern can be backed by claims from an identity provider, contextual information retrieved by heimdall, or a dedicated authorization system.</p></div></td></tr></tbody></table></div></div><div class=sect2><h3 id=_return_json_rpc_compatible_errors><a class=anchor href=#_return_json_rpc_compatible_errors></a>Return JSON-RPC-compatible errors</h3><div class=paragraph><p>Plain HTTP errors are inconvenient for JSON-RPC-based clients because the client expects a JSON-RPC response containing the original request id.
+The generic error handler can emit protocol-specific JSON-RPC error payloads.</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>mechanisms</span><span class=pi>:</span>
+  <span class=na>error_handlers</span><span class=pi>:</span>
+    <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>mcp_error</span>
+      <span class=na>type</span><span class=pi>:</span> <span class=s>generic</span>
+      <span class=na>config</span><span class=pi>:</span>
+        <span class=na>code</span><span class=pi>:</span> <span class=m>200</span>
+        <span class=na>headers</span><span class=pi>:</span>
+          <span class=pi>-</span> <span class=na>Content-Type</span><span class=pi>:</span> <span class=s>application/json</span>
+        <span class=na>body</span><span class=pi>:</span> <span class=pi>|</span>
+          <span class=s>{</span>
+            <span class=s>&#34;jsonrpc&#34;: &#34;2.0&#34;,</span>
+            <span class=s>&#34;id&#34;: {{ .Request.Body.id | toJson }},</span>
+            <span class=s>&#34;error&#34;: {</span>
+              <span class=s>&#34;code&#34;: {{ .Values.errorCode }},</span>
+              <span class=s>&#34;message&#34;: {{ .Values.message | quote }}</span>
+            <span class=s>}</span>
+          <span class=s>}</span>
+        <span class=na>values</span><span class=pi>:</span>
+          <span class=na>errorCode</span><span class=pi>:</span> <span class=s>-32603</span>
+          <span class=na>message</span><span class=pi>:</span> <span class=s2>&#34;</span><span class=s>internal</span><span class=nv> </span><span class=s>error&#34;</span></code></pre></div></div><div class=paragraph><p>The rule can override the protocol-level error details depending on the kind of failure:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=c1># TODO: Verify final rule syntax and error type names.</span>
+<span class=na>on_error</span><span class=pi>:</span>
+  <span class=pi>-</span> <span class=na>if</span><span class=pi>:</span> <span class=s>type(Error) == authentication_error</span>
+    <span class=na>error_handler</span><span class=pi>:</span> <span class=s>mcp_error</span>
+    <span class=na>config</span><span class=pi>:</span>
+      <span class=na>values</span><span class=pi>:</span>
+        <span class=na>errorCode</span><span class=pi>:</span> <span class=s>-32001</span>
+        <span class=na>message</span><span class=pi>:</span> <span class=s>unauthorized</span>
+  <span class=pi>-</span> <span class=na>if</span><span class=pi>:</span> <span class=s>type(Error) == authorization_error</span>
+    <span class=na>error_handler</span><span class=pi>:</span> <span class=s>mcp_error</span>
+    <span class=na>config</span><span class=pi>:</span>
+      <span class=na>values</span><span class=pi>:</span>
+        <span class=na>errorCode</span><span class=pi>:</span> <span class=s>-32003</span>
+        <span class=na>message</span><span class=pi>:</span> <span class=s>forbidden</span></code></pre></div></div></div><div class=sect2><h3 id=_issue_an_upstream_jwt_for_the_mcp_server><a class=anchor href=#_issue_an_upstream_jwt_for_the_mcp_server></a>Issue an upstream JWT for the MCP server</h3><div class=paragraph><p>After authentication and authorization succeed, heimdall issues a short-lived JWT for the MCP server.
+The MCP server validates this JWT and derives its local user context from it.</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>mechanisms</span><span class=pi>:</span>
+  <span class=na>finalizers</span><span class=pi>:</span>
+    <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>upstream_jwt</span>
+      <span class=na>type</span><span class=pi>:</span> <span class=s>jwt</span>
+      <span class=na>config</span><span class=pi>:</span>
+        <span class=na>signer</span><span class=pi>:</span>
+          <span class=na>name</span><span class=pi>:</span> <span class=s>heimdall-mcp-gateway</span>
+          <span class=na>secret</span><span class=pi>:</span>
+            <span class=na>source</span><span class=pi>:</span> <span class=s>heimdall_signing_keys</span>
+            <span class=na>selector</span><span class=pi>:</span> <span class=s>heimdall-demo</span>
+        <span class=na>ttl</span><span class=pi>:</span> <span class=s>2m</span>
+        <span class=na>header</span><span class=pi>:</span>
+          <span class=na>name</span><span class=pi>:</span> <span class=s>Authorization</span>
+          <span class=na>scheme</span><span class=pi>:</span> <span class=s>Bearer</span>
+        <span class=na>claims</span><span class=pi>:</span> <span class=pi>|</span>
+          <span class=s>{</span>
+            <span class=s>&#34;sub&#34;: {{ .Subject.ID | quote }},</span>
+            <span class=s>&#34;aud&#34;: &#34;fastmcp-demo-server&#34;,</span>
+            <span class=s>&#34;roles&#34;: {{ .Subject.Attributes.roles | toJson }},</span>
+            <span class=s>&#34;mcp&#34;: {</span>
+              <span class=s>&#34;gateway&#34;: &#34;heimdall&#34;,</span>
+              <span class=s>&#34;authorized&#34;: true</span>
+            <span class=s>}</span>
+          <span class=s>}</span></code></pre></div></div><div class="admonitionblock important"><table><tbody><tr><td class=icon><i class="fa icon-important" title=Important></i></td><td class=content><div class=paragraph><p>The upstream JWT is not the original client token.
+It is minted by heimdall after the request has passed authentication and authorization.
+The MCP server therefore only needs to trust heimdall, not the external identity provider used by MCP clients.</p></div></td></tr></tbody></table></div></div><div class=sect2><h3 id=_define_the_mcp_rule><a class=anchor href=#_define_the_mcp_rule></a>Define the MCP rule</h3><div class=paragraph><p>The rule matches the MCP endpoint and runs the configured pipeline.</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>rules</span><span class=pi>:</span>
+  <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>rule:mcp-demo:streamable-http</span>
+    <span class=na>match</span><span class=pi>:</span>
+      <span class=na>routes</span><span class=pi>:</span>
+        <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/mcp</span>
+      <span class=na>methods</span><span class=pi>:</span>
+        <span class=pi>-</span> <span class=s>POST</span>
+    <span class=na>forward_to</span><span class=pi>:</span>
+      <span class=na>host</span><span class=pi>:</span> <span class=s>mcp-server:8000</span>
+      <span class=na>rewrite</span><span class=pi>:</span>
+        <span class=na>scheme</span><span class=pi>:</span> <span class=s>http</span>
+    <span class=na>execute</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=na>authenticator</span><span class=pi>:</span> <span class=s>access_token</span>
+      <span class=pi>-</span> <span class=na>authorizer</span><span class=pi>:</span> <span class=s>authorize_mcp_tool_call</span>
+      <span class=pi>-</span> <span class=na>finalizer</span><span class=pi>:</span> <span class=s>upstream_jwt</span>
+    <span class=na>on_error</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=na>if</span><span class=pi>:</span> <span class=s>type(Error) == authentication_error</span>
+        <span class=na>error_handler</span><span class=pi>:</span> <span class=s>mcp_error</span>
+        <span class=na>config</span><span class=pi>:</span>
+          <span class=na>values</span><span class=pi>:</span>
+            <span class=na>errorCode</span><span class=pi>:</span> <span class=s>-32001</span>
+            <span class=na>message</span><span class=pi>:</span> <span class=s>unauthorized</span>
+      <span class=pi>-</span> <span class=na>if</span><span class=pi>:</span> <span class=s>type(Error) == authorization_error</span>
+        <span class=na>error_handler</span><span class=pi>:</span> <span class=s>mcp_error</span>
+        <span class=na>config</span><span class=pi>:</span>
+          <span class=na>values</span><span class=pi>:</span>
+            <span class=na>errorCode</span><span class=pi>:</span> <span class=s>-32003</span>
+            <span class=na>message</span><span class=pi>:</span> <span class=s>forbidden</span>
+      <span class=pi>-</span> <span class=na>error_handler</span><span class=pi>:</span> <span class=s>mcp_error</span></code></pre></div></div><div class="admonitionblock note"><table><tbody><tr><td class=icon><i class="fa icon-note" title=Note></i></td><td class=content><div class=paragraph><p>The example uses plain HTTP between containers and therefore requires the corresponding development flags for local demos.
+Do not disable TLS enforcement for production deployments.</p></div></td></tr></tbody></table></div></div></div></div><div class=sect1><h2 id=_try_it_out_with_mcp_inspector><a class=anchor href=#_try_it_out_with_mcp_inspector></a>Try it out with MCP Inspector</h2><div class=sectionbody><div class=paragraph><p>Open MCP Inspector in your browser:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>http://localhost:6274</code></pre></div></div><div class=paragraph><p>Select the HTTP transport supported by the Inspector for remote MCP servers and use heimdall as the server URL:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>http://localhost:4455/mcp</code></pre></div></div><div class=paragraph><p>Depending on the Inspector version, the transport may be called <code>Streamable HTTP</code> or similar.</p></div><div class=sect2><h3 id=_connect_without_a_token><a class=anchor href=#_connect_without_a_token></a>Connect without a token</h3><div class=paragraph><p>First, try to connect without an <code>Authorization</code> header.</p></div><div class=paragraph><p>Expected result: heimdall denies the request and returns a JSON-RPC error response.
+The response should contain the JSON-RPC request id if the request contained one.</p></div><div class=paragraph><p>Example shape:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=json><span class=p>{</span><span class=w>
+  </span><span class=nl>&#34;jsonrpc&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;2.0&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;id&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;...&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;error&#34;</span><span class=p>:</span><span class=w> </span><span class=p>{</span><span class=w>
+    </span><span class=nl>&#34;code&#34;</span><span class=p>:</span><span class=w> </span><span class=mi>-32001</span><span class=p>,</span><span class=w>
+    </span><span class=nl>&#34;message&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;unauthorized&#34;</span><span class=w>
+  </span><span class=p>}</span><span class=w>
+</span><span class=p>}</span></code></pre></div></div></div><div class=sect2><h3 id=_create_a_viewer_token><a class=anchor href=#_create_a_viewer_token></a>Create a viewer token</h3><div class=paragraph><p>Use the token helper to create a token for a viewer:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=bash>docker compose <span class=nb>exec </span>token-helper issue-token viewer</code></pre></div></div><div class=paragraph><p>Copy the token and configure MCP Inspector to send it as an HTTP header:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=http><span class=err>Authorization: Bearer &lt;viewer-token&gt;</span></code></pre></div></div></div><div class=sect2><h3 id=_connect_as_a_viewer><a class=anchor href=#_connect_as_a_viewer></a>Connect as a viewer</h3><div class=paragraph><p>Reconnect through MCP Inspector.</p></div><div class=paragraph><p>Expected result: the connection succeeds and the Inspector can list the available tools.</p></div><div class=paragraph><p>The <code>viewer</code> role can call:</p></div><div class=ulist><ul><li><p><code>time.now</code></p></li><li><p><code>weather.lookup</code></p></li></ul></div><div class=paragraph><p>Try calling <code>weather.lookup</code> with:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=json><span class=p>{</span><span class=w>
+  </span><span class=nl>&#34;city&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;Berlin&#34;</span><span class=w>
+</span><span class=p>}</span></code></pre></div></div><div class=paragraph><p>Expected result: the call succeeds.</p></div></div><div class=sect2><h3 id=_try_to_call_an_operator_tool_as_a_viewer><a class=anchor href=#_try_to_call_an_operator_tool_as_a_viewer></a>Try to call an operator tool as a viewer</h3><div class=paragraph><p>Now call <code>ticket.create</code> as the same viewer:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=json><span class=p>{</span><span class=w>
+  </span><span class=nl>&#34;title&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;Demo ticket&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;description&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;This should not be allowed for a viewer&#34;</span><span class=w>
+</span><span class=p>}</span></code></pre></div></div><div class=paragraph><p>Expected result: heimdall denies the call with a JSON-RPC error response:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=json><span class=p>{</span><span class=w>
+  </span><span class=nl>&#34;jsonrpc&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;2.0&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;id&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;...&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;error&#34;</span><span class=p>:</span><span class=w> </span><span class=p>{</span><span class=w>
+    </span><span class=nl>&#34;code&#34;</span><span class=p>:</span><span class=w> </span><span class=mi>-32003</span><span class=p>,</span><span class=w>
+    </span><span class=nl>&#34;message&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;forbidden&#34;</span><span class=w>
+  </span><span class=p>}</span><span class=w>
+</span><span class=p>}</span></code></pre></div></div></div><div class=sect2><h3 id=_connect_as_an_operator><a class=anchor href=#_connect_as_an_operator></a>Connect as an operator</h3><div class=paragraph><p>Create an operator token:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=bash>docker compose <span class=nb>exec </span>token-helper issue-token operator</code></pre></div></div><div class=paragraph><p>Replace the Authorization header in MCP Inspector and reconnect.</p></div><div class=paragraph><p>Expected result:</p></div><div class=ulist><ul><li><p><code>ticket.create</code> succeeds.</p></li><li><p><code>deployment.trigger</code> is still denied.</p></li></ul></div></div><div class=sect2><h3 id=_connect_as_an_admin><a class=anchor href=#_connect_as_an_admin></a>Connect as an admin</h3><div class=paragraph><p>Create an admin token:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=bash>docker compose <span class=nb>exec </span>token-helper issue-token admin</code></pre></div></div><div class=paragraph><p>Replace the Authorization header and reconnect.</p></div><div class=paragraph><p>Expected result: <code>deployment.trigger</code> succeeds.</p></div></div></div></div><div class=sect1><h2 id=_optional_inspect_the_raw_json_rpc_exchange><a class=anchor href=#_optional_inspect_the_raw_json_rpc_exchange></a>Optional: Inspect the raw JSON-RPC exchange</h2><div class=sectionbody><div class=paragraph><p>MCP Inspector is the primary client for this guide.
+If you want to inspect the raw request and response, you can also use <code>curl</code>.</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=bash>curl <span class=nt>-i</span> <span class=se>\</span>
+  <span class=nt>-H</span> <span class=s2>&#34;Authorization: Bearer </span><span class=k>${</span><span class=nv>VIEWER_TOKEN</span><span class=k>}</span><span class=s2>&#34;</span> <span class=se>\</span>
+  <span class=nt>-H</span> <span class=s2>&#34;Content-Type: application/json&#34;</span> <span class=se>\</span>
+  <span class=nt>-d</span> <span class=s1>&#39;{
+    &#34;jsonrpc&#34;: &#34;2.0&#34;,
+    &#34;id&#34;: &#34;list-1&#34;,
+    &#34;method&#34;: &#34;tools/list&#34;
+  }&#39;</span> <span class=se>\</span>
+  http://localhost:4455/mcp</code></pre></div></div><div class=paragraph><p>This is useful for debugging the JSON-RPC error handler or checking which request body heimdall evaluates.</p></div></div></div><div class=sect1><h2 id=_how_it_works><a class=anchor href=#_how_it_works></a>How it works</h2><div class=sectionbody><div class=sect2><h3 id=_why_json_rpc_body_evaluation_matters><a class=anchor href=#_why_json_rpc_body_evaluation_matters></a>Why JSON-RPC body evaluation matters</h3><div class=paragraph><p>For many HTTP APIs, authorization can be expressed in terms of path and method:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>GET /orders
+POST /orders
+DELETE /orders/123</code></pre></div></div><div class=paragraph><p>MCP over HTTP is different.
+Many requests target the same HTTP endpoint, while the actual operation is expressed as JSON-RPC inside the body:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=json><span class=p>{</span><span class=w>
+  </span><span class=nl>&#34;method&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;tools/call&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;params&#34;</span><span class=p>:</span><span class=w> </span><span class=p>{</span><span class=w>
+    </span><span class=nl>&#34;name&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;deployment.trigger&#34;</span><span class=w>
+  </span><span class=p>}</span><span class=w>
+</span><span class=p>}</span></code></pre></div></div><div class=paragraph><p>This is why the rule evaluates <code>Request.Body().method</code> and <code>Request.Body().params.name</code>.
+Without this, a gateway could only protect the MCP endpoint as a whole, but not distinguish between harmless and privileged tool calls.</p></div></div><div class=sect2><h3 id=_why_the_original_access_token_is_not_forwarded><a class=anchor href=#_why_the_original_access_token_is_not_forwarded></a>Why the original access token is not forwarded</h3><div class=paragraph><p>In this guide, the original access token is consumed by heimdall.
+The MCP server does not receive it.</p></div><div class=paragraph><p>Instead, heimdall issues a short-lived upstream JWT after successful authorization.
+This has two practical benefits:</p></div><div class=ulist><ul><li><p>The MCP server does not need to know the external identity provider.</p></li><li><p>The token received by the MCP server contains only the identity information required by the upstream.</p></li></ul></div><div class=paragraph><p>This keeps the MCP server focused on serving tools and avoids duplicating gateway-level security logic inside the server.</p></div></div><div class=sect2><h3 id=_how_roles_are_mapped_to_mcp_tool_calls><a class=anchor href=#_how_roles_are_mapped_to_mcp_tool_calls></a>How roles are mapped to MCP tool calls</h3><div class=paragraph><p>The demo uses roles because they keep the example understandable:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>viewer   -&gt; read-like tools
+operator -&gt; operational tools
+admin    -&gt; privileged tools</code></pre></div></div><div class=paragraph><p>The policy is intentionally implemented at the gateway.
+The FastMCP server still validates that the request comes from heimdall by checking the upstream JWT, but it does not need to know the external access token format or the external issuer.</p></div></div><div class=sect2><h3 id=_what_the_mcp_server_receives_from_heimdall><a class=anchor href=#_what_the_mcp_server_receives_from_heimdall></a>What the MCP server receives from heimdall</h3><div class=paragraph><p>The MCP server receives the original JSON-RPC request, plus an upstream JWT issued by heimdall:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=http><span class=err>Authorization: Bearer &lt;heimdall-issued-upstream-jwt&gt;</span></code></pre></div></div><div class=paragraph><p>The upstream JWT can contain claims such as:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=json><span class=p>{</span><span class=w>
+  </span><span class=nl>&#34;iss&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;heimdall&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;sub&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;alice&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;roles&#34;</span><span class=p>:</span><span class=w> </span><span class=p>[</span><span class=s2>&#34;viewer&#34;</span><span class=p>],</span><span class=w>
+  </span><span class=nl>&#34;mcp&#34;</span><span class=p>:</span><span class=w> </span><span class=p>{</span><span class=w>
+    </span><span class=nl>&#34;gateway&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;heimdall&#34;</span><span class=p>,</span><span class=w>
+    </span><span class=nl>&#34;authorized&#34;</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=w>
+  </span><span class=p>}</span><span class=w>
+</span><span class=p>}</span></code></pre></div></div><div class=paragraph><p>The MCP server verifies the JWT signature and can use the claims for logging, auditing, or local business logic.</p></div></div></div></div><div class=sect1><h2 id=_optional_validate_dpop_bound_access_tokens><a class=anchor href=#_optional_validate_dpop_bound_access_tokens></a>Optional: Validate DPoP-bound access tokens</h2><div class=sectionbody><div class=paragraph><p>Bearer tokens can be replayed by whoever obtains them.
+DPoP-bound access tokens reduce that risk by binding the token to a key held by the client.</p></div><div class=paragraph><p>The main gateway pattern stays the same:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>MCP client -&gt; heimdall -&gt; MCP server</code></pre></div></div><div class=paragraph><p>The difference is that heimdall validates not only the JWT access token but also the DPoP proof sent with the request.
+This gives heimdall stronger evidence that the caller presenting the token also possesses the corresponding key.</p></div><div class=paragraph><p>A DPoP-aware version of the JWT authenticator can require proof-of-possession by extending the token assertions:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>mechanisms</span><span class=pi>:</span>
+  <span class=na>authenticators</span><span class=pi>:</span>
+    <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>access_token</span>
+      <span class=na>type</span><span class=pi>:</span> <span class=s>jwt</span>
+      <span class=na>config</span><span class=pi>:</span>
+        <span class=na>jwks_endpoint</span><span class=pi>:</span>
+          <span class=na>url</span><span class=pi>:</span> <span class=s>http://token-helper:8080/.well-known/jwks.json</span>
+        <span class=na>assertions</span><span class=pi>:</span>
+          <span class=na>issuers</span><span class=pi>:</span>
+            <span class=pi>-</span> <span class=s>http://token-helper:8080/</span>
+          <span class=na>audience</span><span class=pi>:</span>
+            <span class=pi>-</span> <span class=s>heimdall-mcp-demo</span>
+          <span class=na>allowed_algorithms</span><span class=pi>:</span>
+            <span class=pi>-</span> <span class=s>ES256</span>
+          <span class=na>proof_of_possession</span><span class=pi>:</span>
+            <span class=na>type</span><span class=pi>:</span> <span class=s>dpop</span>
+            <span class=na>config</span><span class=pi>:</span>
+              <span class=na>max_age</span><span class=pi>:</span> <span class=s>1m</span>
+              <span class=na>nonce_required</span><span class=pi>:</span> <span class=kc>true</span>
+              <span class=na>replay_allowed</span><span class=pi>:</span> <span class=kc>false</span>
+        <span class=na>nonce</span><span class=pi>:</span>
+          <span class=na>master_key</span><span class=pi>:</span>
+            <span class=na>secret</span><span class=pi>:</span>
+              <span class=na>source</span><span class=pi>:</span> <span class=s>inline_secrets</span>
+              <span class=na>selector</span><span class=pi>:</span> <span class=s>dpop_nonce_master_key</span>
+        <span class=na>error_signaling</span><span class=pi>:</span>
+          <span class=na>enabled</span><span class=pi>:</span> <span class=kc>true</span></code></pre></div></div><div class=paragraph><p>With this configuration, heimdall expects a valid <code>DPoP</code> proof in addition to the access token.
+When nonce enforcement is enabled, heimdall can challenge the client with <code>use_dpop_nonce</code> and a <code>DPoP-Nonce</code> response header if the proof does not contain a valid nonce.</p></div><div class="admonitionblock note"><table><tbody><tr><td class=icon><i class="fa icon-note" title=Note></i></td><td class=content><div class=paragraph><p>Nonce generation and validation require a symmetric master key.
+The example uses an inline secret because this is a local demo.
+For production deployments, use a secret source that supports operational secret management and rotation.</p></div></td></tr></tbody></table></div></div></div><div class=sect1><h2 id=_optional_use_http_message_signatures_for_the_upstream_request><a class=anchor href=#_optional_use_http_message_signatures_for_the_upstream_request></a>Optional: Use HTTP Message Signatures for the upstream request</h2><div class=sectionbody><div class=paragraph><p>The main example uses a JWT finalizer to represent the authorized subject to the MCP server.
+Another option is to use HTTP Message Signatures for the upstream request.</p></div><div class=paragraph><p>In that setup, heimdall signs selected HTTP message components before forwarding the request to the MCP server.
+The MCP server verifies the signature and can ensure that the signed components were produced by heimdall and were not modified in transit.</p></div><div class=paragraph><p>Conceptually:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>MCP client -&gt; heimdall
+  external access token is validated here
+
+heimdall -&gt; MCP server
+  selected request components are signed by heimdall</code></pre></div></div><div class=paragraph><p>This can be attractive if the MCP server wants to verify not only who authorized the request, but also that selected headers and the request body are bound to heimdall’s signature.</p></div><div class=paragraph><p>A message-signature based upstream configuration can be modeled as an outbound authentication strategy on the forwarded request.
+The exact mechanism name depends on where the finalizer lands in the 0.18.0 configuration, but the important parts are the same: select the covered components and configure a signer.</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>mechanisms</span><span class=pi>:</span>
+  <span class=na>finalizers</span><span class=pi>:</span>
+    <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>sign_upstream_request</span>
+      <span class=na>type</span><span class=pi>:</span> <span class=s>header</span>
+      <span class=na>config</span><span class=pi>:</span>
+        <span class=na>headers</span><span class=pi>:</span>
+          <span class=na>X-Forwarded-Subject</span><span class=pi>:</span> <span class=s1>&#39;</span><span class=s>{{</span><span class=nv> </span><span class=s>.Subject.ID</span><span class=nv> </span><span class=s>}}&#39;</span>
+          <span class=na>X-Forwarded-Roles</span><span class=pi>:</span> <span class=s1>&#39;</span><span class=s>{{</span><span class=nv> </span><span class=s>.Subject.Attributes.roles</span><span class=nv> </span><span class=s>|</span><span class=nv> </span><span class=s>toJson</span><span class=nv> </span><span class=s>}}&#39;</span>
+
+<span class=c1># Conceptual 0.18.0 shape for an HTTP Message Signatures finalizer.</span>
+<span class=c1># Replace with the final mechanism type if it differs.</span>
+    <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>upstream_http_signature</span>
+      <span class=na>type</span><span class=pi>:</span> <span class=s>http_message_signatures</span>
+      <span class=na>config</span><span class=pi>:</span>
+        <span class=na>ttl</span><span class=pi>:</span> <span class=s>1m</span>
+        <span class=na>label</span><span class=pi>:</span> <span class=s>heimdall</span>
+        <span class=na>components</span><span class=pi>:</span>
+          <span class=pi>-</span> <span class=s2>&#34;</span><span class=s>@method&#34;</span>
+          <span class=pi>-</span> <span class=s2>&#34;</span><span class=s>@target-uri&#34;</span>
+          <span class=pi>-</span> <span class=s2>&#34;</span><span class=s>authorization&#34;</span>
+          <span class=pi>-</span> <span class=s2>&#34;</span><span class=s>content-digest&#34;</span>
+          <span class=pi>-</span> <span class=s2>&#34;</span><span class=s>x-forwarded-subject&#34;</span>
+          <span class=pi>-</span> <span class=s2>&#34;</span><span class=s>x-forwarded-roles&#34;</span>
+        <span class=na>signer</span><span class=pi>:</span>
+          <span class=na>name</span><span class=pi>:</span> <span class=s>heimdall-mcp-gateway</span>
+          <span class=na>secret</span><span class=pi>:</span>
+            <span class=na>source</span><span class=pi>:</span> <span class=s>heimdall_signing_keys</span>
+            <span class=na>selector</span><span class=pi>:</span> <span class=s>heimdall-demo</span></code></pre></div></div><div class=paragraph><p>If <code>content-digest</code> is covered, heimdall computes the digest over the forwarded body and includes it in the signed components.
+That allows the MCP server to verify that the JSON-RPC request body it received is the body heimdall authorized.</p></div></div></div><div class=sect1><h2 id=_optional_combine_user_and_agent_identities><a class=anchor href=#_optional_combine_user_and_agent_identities></a>Optional: Combine user and agent identities</h2><div class=sectionbody><div class=paragraph><p>Agentic systems often have more than one relevant identity.
+For example:</p></div><div class=ulist><ul><li><p>the human or workload owner on whose behalf a request is made</p></li><li><p>the agent runtime that sends the request</p></li></ul></div><div class=paragraph><p>heimdall can compose multiple authenticators into one subject.
+For example, a JWT authenticator can identify the user, while an HTTP Message Signatures authenticator can identify the agent runtime.</p></div><div class=paragraph><p>The authorization policy can then require both:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>Allow deployment.trigger only if:
+
+1. the user has the admin role, and
+2. the agent runtime is trusted, and
+3. the request signature covers the relevant request components.</code></pre></div></div><div class=paragraph><p>This is useful for high-risk MCP tools.
+A user may be allowed to deploy, but only trusted agent runtimes should be allowed to invoke the deployment tool.</p></div><div class=paragraph><p>For example, the rule pipeline could authenticate the user with a JWT and the agent runtime with HTTP Message Signatures:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>execute</span><span class=pi>:</span>
+  <span class=pi>-</span> <span class=na>authenticator</span><span class=pi>:</span> <span class=s>access_token</span>
+    <span class=na>principal</span><span class=pi>:</span> <span class=s>user</span>
+  <span class=pi>-</span> <span class=na>authenticator</span><span class=pi>:</span> <span class=s>agent_signature</span>
+    <span class=na>principal</span><span class=pi>:</span> <span class=s>agent</span>
+  <span class=pi>-</span> <span class=na>authorizer</span><span class=pi>:</span> <span class=s>authorize_mcp_tool_call</span>
+  <span class=pi>-</span> <span class=na>finalizer</span><span class=pi>:</span> <span class=s>upstream_jwt</span></code></pre></div></div><div class=paragraph><p>The CEL policy can then require both identities for privileged tools:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>mechanisms</span><span class=pi>:</span>
+  <span class=na>authorizers</span><span class=pi>:</span>
+    <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>authorize_privileged_agentic_tool_call</span>
+      <span class=na>type</span><span class=pi>:</span> <span class=s>cel</span>
+      <span class=na>config</span><span class=pi>:</span>
+        <span class=na>expressions</span><span class=pi>:</span>
+          <span class=pi>-</span> <span class=na>expression</span><span class=pi>:</span> <span class=pi>|</span>
+              <span class=s>Request.Body().method != &#34;tools/call&#34; ||</span>
+              <span class=s>Request.Body().params.name != &#34;deployment.trigger&#34; ||</span>
+              <span class=s>(</span>
+                <span class=s>has(Subject.Principals.user.Attributes.roles) &amp;&amp;</span>
+                <span class=s>Subject.Principals.user.Attributes.roles.exists(r, r == &#34;admin&#34;) &amp;&amp;</span>
+                <span class=s>has(Subject.Principals.agent.ID) &amp;&amp;</span>
+                <span class=s>Subject.Principals.agent.ID in [&#34;agent-runtime-prod&#34;, &#34;agent-runtime-ci&#34;]</span>
+              <span class=s>)</span>
+            <span class=na>message</span><span class=pi>:</span> <span class=s>deployment.trigger requires an admin user and a trusted agent runtime</span></code></pre></div></div><div class=paragraph><p>This is the main advantage of composing mechanisms in heimdall: the user and the agent runtime do not have to be represented by the same credential.</p></div></div></div><div class=sect1><h2 id=_using_heimdall_in_decision_mode><a class=anchor href=#_using_heimdall_in_decision_mode></a>Using heimdall in decision mode</h2><div class=sectionbody><div class=paragraph><p>The guide uses proxy mode because it keeps the setup compact.
+In production, you may already have an API gateway, ingress controller, or reverse proxy in front of your MCP servers.
+In that case, heimdall can be used in decision mode.</p></div><div class=paragraph><p>The high-level model stays the same:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>MCP client -&gt; API gateway -&gt; MCP server
+                    |
+                    v
+                 heimdall
+              authorization decision</code></pre></div></div><div class=paragraph><p>The same important considerations apply:</p></div><div class=ulist><ul><li><p>heimdall must receive enough request information to evaluate the policy.</p></li><li><p>For MCP over JSON-RPC, this usually includes the request body.</p></li><li><p>The gateway should pass heimdall’s protocol-aware denial response through, or otherwise be configured to preserve JSON-RPC-compatible error semantics.</p></li><li><p>Forwarded headers and trusted proxy settings must be configured carefully.</p></li></ul></div><div class="admonitionblock warning"><table><tbody><tr><td class=icon><i class="fa icon-warning" title=Warning></i></td><td class=content><div class=paragraph><p>If a gateway does not send the request body to heimdall, heimdall cannot authorize individual JSON-RPC methods or MCP tool calls.
+It can only authorize the MCP endpoint as a whole.</p></div></td></tr></tbody></table></div></div></div><div class=sect1><h2 id=_cleanup><a class=anchor href=#_cleanup></a>Cleanup</h2><div class=sectionbody><div class=paragraph><p>Stop the demo environment:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=bash>docker compose down</code></pre></div></div><div class=paragraph><p>If the example creates local volumes, remove them as well:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=bash>docker compose down <span class=nt>-v</span></code></pre></div></div></div></div><div class=sect1><h2 id=_next_steps><a class=anchor href=#_next_steps></a>Next steps</h2><div class=sectionbody><div class=paragraph><p>From here, you can adapt the example in several directions:</p></div><div class=ulist><ul><li><p>replace the local token helper with your identity provider</p></li><li><p>retrieve roles or permissions through a heimdall contextualizer</p></li><li><p>move policy decisions to OPA, OpenFGA, or another authorization system</p></li><li><p>enable DPoP for proof-of-possession access tokens</p></li><li><p>add HTTP Message Signatures to authenticate the agent runtime or sign upstream requests</p></li><li><p>run the same policy in decision mode behind your existing gateway</p></li></ul></div></div></div></linkable-headline-area></div><p class="text-end fst-italic fs-7 pb-3">Last updated on <span class=fw-bold>May 26, 2026</span></p><hr><div class="d-flex justify-content-between py-3"><a href=../../../guides/authn/oidc_first_party_auth/ class="fs-6 fw-bold text-dark link-secondary link-underline-opacity-0"><svg width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.354 1.646a.5.5.0 010 .708L5.707 8l5.647 5.646a.5.5.0 01-.708.708l-6-6a.5.5.0 010-.708l6-6a.5.5.0 01.708.0z"/></svg>
+First-Party Authentication with OpenID Connect
+</a><a class="ms-auto fs-6 fw-bold text-dark link-secondary link-underline-opacity-0" href=../../../guides/authn/protecting_mcp_servers_with_heimdall_adoc_draft2/><svg width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M4.646 1.646a.5.5.0 01.708.0l6 6a.5.5.0 010 .708l-6 6a.5.5.0 01-.708-.708L10.293 8 4.646 2.354a.5.5.0 010-.708z"/></svg></a></div></div></main></div><footer class="footer py-4 py-md-5 px-4 px-md-3 mt-3"><div class=container><div class=row><div class="col-lg-3 mb-3"><p class=fs-5>Heimdall</p><ul class="list-unstyled small text-muted"><li class=mb-2>2022-2024 © Heimdall Project Authors. All rights reserved.</li><li class=mb-2><a href=https://github.com/dadrus/heimdall/blob/master/LICENSE>Apache 2.0 licensed</a></li></ul></div><div class="col-6 col-lg-2 offset-lg-1 mb-3"><h5>Links</h5><ul class=list-unstyled><li class=mb-2><a href=../../../>Home</a></li><li class=mb-2><a href=../../../docs/getting_started/discover_heimdall>Docs</a></li><li class=mb-2><a href=../../../guides/>Guides</a></li><li class=mb-2><a href=../../../openapi/>API</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Guides</h5><ul class=list-unstyled><li class=mb-2><a href=../../../guides/proxies/>API Gateways & Proxies</a></li><li class=mb-2><a href=../../../guides/authz/>Authorization Services</a></li><li class=mb-2><a href=../../../guides/authn/>Authentication Protocols & Services</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Community</h5><ul class=list-unstyled><li class=mb-2><a href=https://github.com/dadrus/heimdall>Github</a></li><li class=mb-2><a href=https://discord.gg/qQgg8xKuyb>Discord</a></li></ul></div></div></div></footer><script src=../../../js/main.js defer></script></body></html>
