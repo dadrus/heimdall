@@ -41,6 +41,13 @@ func createSecretInformers(
 		)
 	}
 
+	if len(refs) != 0 && resolver == nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"secret resolver has not been configured in the given context - this is a bug",
+		)
+	}
+
 	informers := make(map[secrets.Reference]*secrets.SecretInformer[string], len(refs))
 
 	for _, ref := range refs {

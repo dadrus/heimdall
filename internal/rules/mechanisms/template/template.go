@@ -53,13 +53,6 @@ type templateImpl struct { //nolint:recvcheck
 func New(val string, opts ...Option) (Template, error) {
 	cfg := applyOptions(opts...)
 
-	if cfg.secretsForbidden && cfg.resolver != nil {
-		return nil, errorchain.NewWithMessage(
-			pipeline.ErrInternal,
-			"secret template options are inconsistent",
-		)
-	}
-
 	funcMap := sprig.TxtFuncMap()
 	delete(funcMap, "env")
 	delete(funcMap, "expandenv")
