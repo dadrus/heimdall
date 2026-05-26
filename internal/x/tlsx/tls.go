@@ -92,11 +92,13 @@ func newCertificateInformer(
 		secrets.InformerOptions[*tls.Certificate]{
 			Converter:   toTLSCertificate,
 			ResolveMode: secrets.ResolveEager,
-			OnUpdate: func(ctx context.Context, secret secrets.Secret, _ *tls.Certificate) {
+			OnUpdate: func(ctx context.Context, secret secrets.Secret, _ *tls.Certificate) error {
 				ko.Notify(keyregistry.KeyInfo{
 					Key:        secret.(secrets.AsymmetricKeySecret), //nolint:forcetypeassert
 					Exportable: false,
 				})
+
+				return nil
 			},
 		},
 	)

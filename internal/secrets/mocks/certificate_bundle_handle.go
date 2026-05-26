@@ -112,7 +112,7 @@ type CertificateBundleHandleMock_OnUpdate_Call struct {
 }
 
 // OnUpdate is a helper method to define mock.On call
-//   - updateFunc secrets.UpdateFunc[secrets2.CertificateBundle]
+//   - updateFunc secrets.UpdateFunc[secrets.CertificateBundle]
 func (_e *CertificateBundleHandleMock_Expecter) OnUpdate(updateFunc interface{}) *CertificateBundleHandleMock_OnUpdate_Call {
 	return &CertificateBundleHandleMock_OnUpdate_Call{Call: _e.mock.On("OnUpdate", updateFunc)}
 }

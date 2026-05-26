@@ -19,7 +19,6 @@ package secrets_test
 import (
 	"context"
 	"crypto/x509"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -73,7 +72,7 @@ func TestNewSecretInformer(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 			},
@@ -100,7 +99,7 @@ func TestNewSecretInformer(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 			},
@@ -127,7 +126,7 @@ func TestNewSecretInformer(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -287,6 +286,7 @@ func TestSecretInformerGet(t *testing.T) {
 				Return(handle, nil)
 
 			converterCalls := 0
+
 			opts := append([]secrets.InformerOptions[string]{}, tc.opts...)
 
 			if len(opts) == 1 && opts[0].Converter != nil {
@@ -432,6 +432,7 @@ func TestSecretInformerRegistersOnUpdate(t *testing.T) {
 				Return(handle, nil)
 
 			var cbErr error
+
 			wrappedCallbackCalled := false
 
 			tc.setup(t, handle, &cbErr, &wrappedCallbackCalled)
@@ -444,11 +445,13 @@ func TestSecretInformerRegistersOnUpdate(t *testing.T) {
 				secrets.Reference{Source: "src", Selector: "selector"},
 				secrets.InformerOptions[string]{
 					Converter: tc.converter,
-					OnUpdate: func(_ context.Context, got secrets.Secret, value string) {
+					OnUpdate: func(_ context.Context, got secrets.Secret, value string) error {
 						userCallbackCalled = true
 
 						require.Equal(t, secret, got)
 						require.Equal(t, "selector", value)
+
+						return nil
 					},
 				},
 			)
@@ -531,7 +534,7 @@ func TestNewCredentialsInformer(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 			},
@@ -558,7 +561,7 @@ func TestNewCredentialsInformer(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 			},
@@ -585,7 +588,7 @@ func TestNewCredentialsInformer(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -745,6 +748,7 @@ func TestCredentialsInformerGet(t *testing.T) {
 				Return(handle, nil)
 
 			converterCalls := 0
+
 			opts := append([]secrets.CredentialsInformerOptions[string]{}, tc.opts...)
 
 			if len(opts) == 1 && opts[0].Converter != nil {
@@ -871,7 +875,6 @@ func TestCredentialsInformerRegistersOnUpdate(t *testing.T) {
 				require.True(t, wrappedCallbackCalled)
 				require.False(t, userCallbackCalled)
 				require.Error(t, cbErr)
-				require.ErrorIs(t, cbErr, secrets.ErrSecretConversionFailed)
 				require.ErrorIs(t, cbErr, assert.AnError)
 			},
 		},
@@ -890,6 +893,7 @@ func TestCredentialsInformerRegistersOnUpdate(t *testing.T) {
 				Return(handle, nil)
 
 			var cbErr error
+
 			wrappedCallbackCalled := false
 
 			tc.setup(t, handle, &cbErr, &wrappedCallbackCalled)
@@ -902,11 +906,13 @@ func TestCredentialsInformerRegistersOnUpdate(t *testing.T) {
 				secrets.Reference{Source: "src", Selector: "selector"},
 				secrets.CredentialsInformerOptions[string]{
 					Converter: tc.converter,
-					OnUpdate: func(_ context.Context, got secrets.Credentials, value string) {
+					OnUpdate: func(_ context.Context, got secrets.Credentials, value string) error {
 						userCallbackCalled = true
 
 						require.Equal(t, credentials, got)
 						require.Equal(t, "selector", value)
+
+						return nil
 					},
 				},
 			)
@@ -986,7 +992,7 @@ func TestNewCertificateBundleInformer(t *testing.T) {
 					CertificateBundle(
 						mock.Anything,
 						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 			},
@@ -1010,7 +1016,7 @@ func TestNewCertificateBundleInformer(t *testing.T) {
 					CertificateBundle(
 						mock.Anything,
 						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 			},
@@ -1034,7 +1040,7 @@ func TestNewCertificateBundleInformer(t *testing.T) {
 					CertificateBundle(
 						mock.Anything,
 						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -1168,6 +1174,7 @@ func TestCertificateBundleInformerRegistersOnUpdate(t *testing.T) {
 		Return(handle, nil)
 
 	var cbErr error
+
 	wrappedCallbackCalled := false
 
 	handle.EXPECT().
@@ -1185,11 +1192,13 @@ func TestCertificateBundleInformerRegistersOnUpdate(t *testing.T) {
 		resolver,
 		secrets.Reference{Source: "src", Selector: "selector"},
 		secrets.CertificateBundleInformerOptions{
-			OnUpdate: func(_ context.Context, got secrets.CertificateBundle, pool *x509.CertPool) {
+			OnUpdate: func(_ context.Context, got secrets.CertificateBundle, pool *x509.CertPool) error {
 				userCallbackCalled = true
 
 				require.Equal(t, bundle, got)
 				require.NotNil(t, pool)
+
+				return nil
 			},
 		},
 	)
@@ -1222,13 +1231,4 @@ func TestCertificateBundleInformerDoesNotRegisterNilOnUpdate(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, informer)
-}
-
-func TestInformerConversionErrorUsesErrorsJoin(t *testing.T) {
-	t.Parallel()
-
-	joined := errors.Join(secrets.ErrSecretConversionFailed, assert.AnError)
-
-	require.ErrorIs(t, joined, secrets.ErrSecretConversionFailed)
-	require.ErrorIs(t, joined, assert.AnError)
 }

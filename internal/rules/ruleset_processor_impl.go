@@ -19,6 +19,7 @@ package rules
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"github.com/rs/zerolog"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -35,22 +37,35 @@ type ruleSetProcessor struct {
 	r  rule.Repository
 	f  rule.Factory
 	op config2.OperationMode
+
+	sf secrets.ScopedResolverFactory
+
+	scopesMu sync.Mutex
+	scopes   map[string]secrets.ScopedResolver
 }
 
-func NewRuleSetProcessor(repository rule.Repository, factory rule.Factory, op config2.OperationMode) rule.SetProcessor {
+func NewRuleSetProcessor(
+	op config2.OperationMode,
+	repository rule.Repository,
+	ruleFactory rule.Factory,
+	scopedResolverFactory secrets.ScopedResolverFactory,
+) rule.SetProcessor {
 	return &ruleSetProcessor{
-		r:  repository,
-		f:  factory,
-		op: op,
+		r:      repository,
+		f:      ruleFactory,
+		op:     op,
+		sf:     scopedResolverFactory,
+		scopes: make(map[string]secrets.ScopedResolver),
 	}
 }
 
 func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSet) error {
 	logger := zerolog.Ctx(ctx)
 	source := rule.RuleSet{
-		ID:       ruleSet.ID,
-		Name:     ruleSet.Name,
-		Provider: ruleSet.Provider,
+		ID:        ruleSet.ID,
+		Name:      ruleSet.Name,
+		Provider:  ruleSet.Provider,
+		Namespace: ruleSet.Namespace,
 	}
 
 	logger.Info().
@@ -63,8 +78,20 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSe
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
 	}
 
-	rules, err := p.loadRules(ctx, ruleSet)
-	if err != nil {
+	var (
+		rules []rule.Rule
+		err   error
+	)
+
+	resolver, created := p.resolverFor(ruleSet)
+
+	defer func() {
+		if created && err != nil {
+			p.releaseResolver(ruleSet.ID)
+		}
+	}()
+
+	if rules, err = p.loadRules(ctx, ruleSet, resolver); err != nil {
 		return err
 	}
 
@@ -81,21 +108,18 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSe
 		}
 	}
 
-	if err := p.r.AddRuleSet(ctx, source, rules); err != nil {
-		cleanUpRules(ctx, rules)
+	err = p.r.AddRuleSet(ctx, source, rules)
 
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSet) error {
 	logger := zerolog.Ctx(ctx)
 	source := rule.RuleSet{
-		ID:       ruleSet.ID,
-		Name:     ruleSet.Name,
-		Provider: ruleSet.Provider,
+		ID:        ruleSet.ID,
+		Name:      ruleSet.Name,
+		Provider:  ruleSet.Provider,
+		Namespace: ruleSet.Namespace,
 	}
 
 	logger.Info().
@@ -108,8 +132,28 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSe
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
 	}
 
-	rules, err := p.loadRules(ctx, ruleSet)
-	if err != nil {
+	var (
+		rules []rule.Rule
+		err   error
+	)
+
+	resolver, created := p.resolverFor(ruleSet)
+	if created {
+		logger.Warn().
+			Str("_ruleset_id", source.ID).
+			Str("_ruleset_name", source.Name).
+			Str("_provider", source.Provider).
+			Msg("Got RuleSet update without previously seen the RuleSet. " +
+				"This is unexpected and may indicate a bug.")
+	}
+
+	defer func() {
+		if created && err != nil {
+			p.releaseResolver(ruleSet.ID)
+		}
+	}()
+
+	if rules, err = p.loadRules(ctx, ruleSet, resolver); err != nil {
 		return err
 	}
 
@@ -124,24 +168,18 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSe
 		}
 	}
 
-	cleanupCandidates, err := p.r.UpdateRuleSet(ctx, source, rules)
-	if err != nil {
-		cleanUpRules(ctx, rules)
+	err = p.r.UpdateRuleSet(ctx, source, rules)
 
-		return err
-	}
-
-	cleanUpRules(ctx, cleanupCandidates)
-
-	return nil
+	return err
 }
 
 func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet v1beta1.RuleSet) error {
 	logger := zerolog.Ctx(ctx)
 	source := rule.RuleSet{
-		ID:       ruleSet.ID,
-		Name:     ruleSet.Name,
-		Provider: ruleSet.Provider,
+		ID:        ruleSet.ID,
+		Name:      ruleSet.Name,
+		Provider:  ruleSet.Provider,
+		Namespace: ruleSet.Namespace,
 	}
 
 	logger.Info().
@@ -150,12 +188,11 @@ func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet v1beta1.RuleSe
 		Str("_provider", source.Provider).
 		Msg("Deletion of a rule set received")
 
-	cleanupCandidates, err := p.r.DeleteRuleSet(ctx, source)
-	if err != nil {
+	if err := p.r.DeleteRuleSet(ctx, source); err != nil {
 		return err
 	}
 
-	cleanUpRules(ctx, cleanupCandidates)
+	p.releaseResolver(ruleSet.ID)
 
 	return nil
 }
@@ -164,14 +201,16 @@ func (p *ruleSetProcessor) isVersionSupported(version string) bool {
 	return version == v1beta1.Version
 }
 
-func (p *ruleSetProcessor) loadRules(ctx context.Context, ruleSet v1beta1.RuleSet) ([]rule.Rule, error) {
+func (p *ruleSetProcessor) loadRules(
+	ctx context.Context,
+	ruleSet v1beta1.RuleSet,
+	resolver secrets.Resolver,
+) ([]rule.Rule, error) {
 	rules := make([]rule.Rule, 0, len(ruleSet.Rules))
 
 	for _, rc := range ruleSet.Rules {
-		rul, err := p.f.CreateRule(ruleSet, rc)
+		rul, err := p.f.CreateRule(ctx, resolver, ruleSet, rc)
 		if err != nil {
-			cleanUpRules(ctx, rules)
-
 			return nil, errorchain.NewWithMessagef(
 				pipeline.ErrInternal,
 				"loading rule ID='%s' failed", rc.ID,
@@ -184,10 +223,41 @@ func (p *ruleSetProcessor) loadRules(ctx context.Context, ruleSet v1beta1.RuleSe
 	return rules, nil
 }
 
-func cleanUpRules(ctx context.Context, rules []rule.Rule) {
-	for idx := len(rules) - 1; idx >= 0; idx-- {
-		if rules[idx] != nil {
-			rules[idx].CleanUp(ctx)
-		}
+func (p *ruleSetProcessor) resolverFor(ruleSet v1beta1.RuleSet) (secrets.ScopedResolver, bool) {
+	p.scopesMu.Lock()
+	defer p.scopesMu.Unlock()
+
+	resolver := p.scopes[ruleSet.ID]
+	if resolver != nil {
+		return resolver, false
 	}
+
+	resolver = p.sf.Create(
+		ruleSet.ID,
+		secrets.WithNamespace(ruleSet.Namespace),
+	)
+
+	p.scopes[ruleSet.ID] = resolver
+
+	return resolver, true
+}
+
+func (p *ruleSetProcessor) releaseResolver(id string) {
+	var resolver secrets.ScopedResolver
+
+	func() {
+		p.scopesMu.Lock()
+		defer p.scopesMu.Unlock()
+
+		resolver = p.scopes[id]
+		if resolver != nil {
+			delete(p.scopes, id)
+		}
+	}()
+
+	if resolver == nil {
+		return
+	}
+
+	resolver.Release()
 }

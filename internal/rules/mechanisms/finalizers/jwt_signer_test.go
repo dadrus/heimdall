@@ -34,11 +34,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/keyregistry"
 	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -149,20 +150,18 @@ func TestCreateJOSESigner(t *testing.T) {
 func TestNewJWTSigner(t *testing.T) {
 	t.Parallel()
 
-	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	require.NoError(t, err)
-
 	for uc, tc := range map[string]struct {
 		config *SignerConfig
-		setup  func(t *testing.T, sm *secretsmocks.ManagerMock)
+		setup  func(t *testing.T, resolver *secretsmocks.ResolverMock)
 		assert func(t *testing.T, err error, signer *jwtSigner)
 	}{
-		"resolve secret fails": {
+		"creating informer fails": {
 			config: &SignerConfig{Secret: config.Secret{Source: "foo", Selector: "bar"}},
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+			setup: func(t *testing.T, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
-				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
+				resolver.EXPECT().
+					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *jwtSigner) {
@@ -170,22 +169,52 @@ func TestNewJWTSigner(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "failed resolving jwt signing secret")
+				require.ErrorContains(t, err, "failed creating secret informer")
 			},
 		},
-		"successful configuration": {
+		"successful configuration with default issuer": {
+			config: &SignerConfig{
+				Secret: config.Secret{Source: "signer", Selector: "jwt/signing/2026-05"},
+			},
+			setup: func(t *testing.T, resolver *secretsmocks.ResolverMock) {
+				t.Helper()
+
+				shm := secretsmocks.NewSecretHandleMock(t)
+				shm.EXPECT().OnUpdate(mock.Anything)
+
+				resolver.EXPECT().
+					Secret(mock.Anything, secrets.Reference{
+						Source:   "signer",
+						Selector: "jwt/signing/2026-05",
+					}, mock.Anything).
+					Return(shm, nil)
+			},
+			assert: func(t *testing.T, err error, signer *jwtSigner) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				require.NotNil(t, signer)
+				assert.Equal(t, "heimdall", signer.iss)
+			},
+		},
+		"successful configuration with configured issuer": {
 			config: &SignerConfig{
 				Name:   "foo",
 				Secret: config.Secret{Source: "signer", Selector: "jwt/signing/2026-05"},
 			},
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+			setup: func(t *testing.T, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
-				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(
-					secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil),
-					nil,
-				)
-				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				shm := secretsmocks.NewSecretHandleMock(t)
+				shm.EXPECT().OnUpdate(mock.Anything)
+
+				resolver.EXPECT().
+					Secret(mock.Anything, secrets.Reference{
+						Source:   "signer",
+						Selector: "jwt/signing/2026-05",
+					}, mock.Anything).
+					Return(shm, nil)
 			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
 				t.Helper()
@@ -194,18 +223,17 @@ func TestNewJWTSigner(t *testing.T) {
 
 				require.NotNil(t, signer)
 				assert.Equal(t, "foo", signer.iss)
-				assert.NotEmpty(t, signer.Hash())
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			sm := secretsmocks.NewManagerMock(t)
-			tc.setup(t, sm)
+			resolver := secretsmocks.NewResolverMock(t)
+			tc.setup(t, resolver)
 
 			ko := keyregistrymocks.NewKeyObserverMock(t)
-			ko.EXPECT().Notify(mock.Anything).Maybe()
+			ko.EXPECT().Notify(mock.MatchedBy(func(info any) bool { return info != nil })).Maybe()
 
-			signer, err := newJWTSigner(t.Context(), tc.config, sm, ko)
+			signer, err := newJWTSigner(t.Context(), tc.config, resolver, ko)
 			tc.assert(t, err, signer)
 		})
 	}
@@ -217,34 +245,112 @@ func TestJWTSignerSign(t *testing.T) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	ko := keyregistrymocks.NewKeyObserverMock(t)
-	ko.EXPECT().Notify(mock.Anything)
+	secret := secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil)
 
-	sm := secretsmocks.NewManagerMock(t)
-	sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-		Return(
-			secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil),
-			nil,
-		)
-	sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+	for uc, tc := range map[string]struct {
+		setup  func(t *testing.T, hm *secretsmocks.SecretHandleMock)
+		assert func(t *testing.T, err error, rawToken string)
+	}{
+		"signing material not available": {
+			setup: func(t *testing.T, shm *secretsmocks.SecretHandleMock) {
+				t.Helper()
 
-	signer, err := newJWTSigner(
-		t.Context(),
-		&SignerConfig{
-			Name:   "foo",
-			Secret: config.Secret{Source: "signer", Selector: "jwt/signing/2026-05"},
+				shm.EXPECT().Get(mock.Anything).
+					Return(nil, false)
+			},
+			assert: func(t *testing.T, err error, _ string) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "jwt signing material is not available")
+			},
 		},
-		sm,
-		ko,
-	)
+		"signing material available": {
+			setup: func(t *testing.T, shm *secretsmocks.SecretHandleMock) {
+				t.Helper()
+
+				shm.EXPECT().Get(mock.Anything).
+					Return(secret, true)
+			},
+			assert: func(t *testing.T, err error, rawToken string) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				parsed, err := jwt.ParseSigned(rawToken, []jose.SignatureAlgorithm{jose.ES384})
+				require.NoError(t, err)
+
+				assert.Len(t, parsed.Headers, 1)
+				assert.Equal(t, "baz", parsed.Headers[0].KeyID)
+				assert.Equal(t, "ES384", parsed.Headers[0].Algorithm)
+
+				var claims map[string]any
+				require.NoError(t, parsed.Claims(privKey.Public(), &claims))
+
+				assert.Equal(t, "alice", claims["sub"])
+				assert.Equal(t, "foo", claims["iss"])
+				assert.Equal(t, "test", claims["scope"])
+				assert.NotEmpty(t, claims["jti"])
+				assert.NotEmpty(t, claims["iat"])
+				assert.NotEmpty(t, claims["nbf"])
+				assert.NotEmpty(t, claims["exp"])
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			shm := secretsmocks.NewSecretHandleMock(t)
+			shm.EXPECT().OnUpdate(mock.Anything)
+
+			tc.setup(t, shm)
+
+			resolver := secretsmocks.NewResolverMock(t)
+			resolver.EXPECT().
+				Secret(mock.Anything, secrets.Reference{
+					Source:   "signer",
+					Selector: "jwt/signing/2026-05",
+				}, mock.Anything).
+				Return(shm, nil)
+
+			signer, err := newJWTSigner(
+				t.Context(),
+				&SignerConfig{
+					Name:   "foo",
+					Secret: config.Secret{Source: "signer", Selector: "jwt/signing/2026-05"},
+				},
+				resolver,
+				keyregistrymocks.NewKeyObserverMock(t),
+			)
+			require.NoError(t, err)
+
+			rawToken, err := signer.Sign("alice", time.Minute, map[string]any{"scope": "test"})
+
+			tc.assert(t, err, rawToken)
+		})
+	}
+}
+
+func TestJWTSignerOnSecretUpdated(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	rawToken, err := signer.Sign("alice", time.Minute, map[string]any{"scope": "test"})
-	require.NoError(t, err)
+	secret := secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil)
 
-	parsed, err := jwt.ParseSigned(rawToken, []jose.SignatureAlgorithm{jose.ES384})
-	require.NoError(t, err)
-	assert.Len(t, parsed.Headers, 1)
-	assert.Equal(t, "baz", parsed.Headers[0].KeyID)
-	assert.Equal(t, "foo", signer.iss)
+	kr := keyregistrymocks.NewRegistryMock(t)
+	kr.EXPECT().Notify(mock.MatchedBy(func(info keyregistry.KeyInfo) bool {
+		return info.Key == secret && info.Exportable
+	}))
+
+	signer := jwtSigner{ko: kr}
+
+	// WHEN
+	signer.onSecretUpdated(t.Context(), secret, nil)
+
+	// THEN
+	assert.NotEmpty(t, signer.Hash())
 }

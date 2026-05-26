@@ -109,7 +109,9 @@ func NewRepository(
 	df encoding.DecoderFactory,
 	resolver DependenciesResolver,
 ) (Repository, error) {
-	executor, err := task.NewExecutor(4)
+	const numberOfWorkers = 4
+
+	executor, err := task.NewExecutor(numberOfWorkers) //nolint:mnd
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
 			pipeline.ErrInternal,

@@ -30,12 +30,14 @@ import (
 	cfgv1beta1 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/secrets"
 )
 
 var ErrInvalidObject = errors.New("invalid Kind - only RuleSet is supported")
 
 type rulesetValidator struct {
 	f  rule.Factory
+	rf secrets.ScopedResolverFactory
 	ac string
 }
 
@@ -82,8 +84,11 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *request) *response 
 
 	var errs []metav1.StatusCause
 
+	sr := rv.rf.Create(ruleSet.ID, secrets.WithNamespace(ruleSet.Namespace))
+	defer sr.Release()
+
 	for idx, rc := range ruleSet.Rules {
-		_, err = rv.f.CreateRule(ruleSet, rc)
+		_, err = rv.f.CreateRule(ctx, sr, ruleSet, rc)
 		if err != nil {
 			errs = append(errs, metav1.StatusCause{
 				Type:    metav1.CauseTypeFieldValueInvalid,

@@ -27,6 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -67,7 +68,10 @@ func newGenericErrorHandler(app app.Context, name string, rawConfig map[string]a
 	}
 
 	var conf Config
-	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("error_handler."+ErrorHandlerGeneric+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerGeneric, name).
 			CausedBy(err)
@@ -84,14 +88,11 @@ func newGenericErrorHandler(app app.Context, name string, rawConfig map[string]a
 	}, nil
 }
 
-func (eh *genericErrorHandler) Accept(_ pipeline.Visitor) {}
-func (eh *genericErrorHandler) ID() string                { return eh.id }
-func (eh *genericErrorHandler) Name() string              { return eh.name }
-func (*genericErrorHandler) Type() string                 { return ErrorHandlerGeneric }
-func (*genericErrorHandler) Kind() types.Kind             { return types.KindErrorHandler }
-func (*genericErrorHandler) CleanUp(_ context.Context)    {}
-
-func (eh *genericErrorHandler) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (eh *genericErrorHandler) CreateStep(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return eh, nil
 	}
@@ -111,7 +112,10 @@ func (eh *genericErrorHandler) CreateStep(def types.StepDefinition) (pipeline.St
 	}
 
 	var conf Config
-	if err := decodeConfig(eh.app, def.Config, &conf); err != nil {
+	if err := decodeConfig(eh.app, def.Config, &conf,
+		template.WithName("error_handler."+ErrorHandlerGeneric+"."+eh.name),
+		template.WithSecretResolver(resolver),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerGeneric, eh.name).
 			CausedBy(err)
@@ -165,6 +169,12 @@ func (eh *genericErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject)
 
 	return nil
 }
+
+func (eh *genericErrorHandler) Accept(_ pipeline.Visitor) {}
+func (eh *genericErrorHandler) ID() string                { return eh.id }
+func (eh *genericErrorHandler) Name() string              { return eh.name }
+func (eh *genericErrorHandler) Type() string              { return eh.name }
+func (*genericErrorHandler) Kind() types.Kind             { return types.KindErrorHandler }
 
 func (eh *genericErrorHandler) renderHeaders(
 	ctx pipeline.Context,

@@ -1,8 +1,6 @@
 package rules
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -37,12 +35,6 @@ func newExecutePipeline(
 			finalizers:      finalizers,
 		},
 	}
-}
-
-func (p *executePipeline) CleanUp(ctx context.Context) {
-	p.owned.finalizers.CleanUp(ctx)
-	p.owned.subjectHandlers.CleanUp(ctx)
-	p.owned.authenticators.CleanUp(ctx)
 }
 
 func (p *executePipeline) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
@@ -99,8 +91,6 @@ func newErrorPipeline(errorHandlers stage) *errorPipeline {
 	}
 }
 
-func (p *errorPipeline) CleanUp(ctx context.Context) { p.owned.CleanUp(ctx) }
-
 func (p *errorPipeline) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	return p.errorHandlers.Execute(ctx, sub)
 }
@@ -130,16 +120,6 @@ type rulePipeline interface {
 type rulePipelineImpl struct {
 	execute *executePipeline
 	err     *errorPipeline
-}
-
-func (p rulePipelineImpl) CleanUp(ctx context.Context) {
-	if p.err != nil {
-		p.err.CleanUp(ctx)
-	}
-
-	if p.execute != nil {
-		p.execute.CleanUp(ctx)
-	}
 }
 
 func (p rulePipelineImpl) Execute(ctx pipeline.Context, sub pipeline.Subject) error {

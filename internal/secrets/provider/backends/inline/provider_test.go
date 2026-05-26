@@ -168,11 +168,6 @@ func TestProviderResolveSecretSetNonRootUnsupported(t *testing.T) {
 func TestProviderResolveCredentials(t *testing.T) {
 	t.Parallel()
 
-	type oauthCredentials struct {
-		ClientID     string `mapstructure:"client_id"`
-		ClientSecret string `mapstructure:"client_secret"`
-	}
-
 	prv, err := newProvider(provider.Args{
 		Config: map[string]any{
 			"api_token": "secret",
@@ -189,10 +184,10 @@ func TestProviderResolveCredentials(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "github", credentials.Selector())
 
-	var decoded oauthCredentials
-	require.NoError(t, credentials.Decode(&decoded))
-	require.Equal(t, "heimdall", decoded.ClientID)
-	require.Equal(t, "secret", decoded.ClientSecret)
+	require.Equal(t, map[string]any{
+		"client_id":     "heimdall",
+		"client_secret": "secret",
+	}, credentials.Values())
 }
 
 func TestProviderResolveMissing(t *testing.T) {

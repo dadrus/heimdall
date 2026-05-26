@@ -17,8 +17,6 @@
 package rules
 
 import (
-	"context"
-
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
@@ -72,4 +70,3 @@ func (s *telemetryStep) ID() string                      { return s.s.ID() }
 func (s *telemetryStep) Type() string                    { return s.s.Type() }
 func (s *telemetryStep) Kind() pipeline.MechanismKind    { return s.s.Kind() }
 func (s *telemetryStep) Accept(visitor pipeline.Visitor) { s.s.Accept(visitor) }
-func (s *telemetryStep) CleanUp(ctx context.Context)     { s.s.CleanUp(ctx) }

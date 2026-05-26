@@ -16,4 +16,3 @@ func (r Reference) Parent() Reference {
 
 	return r
 }
-

@@ -25,6 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -78,7 +79,11 @@ func (a *unauthorizedAuthenticator) Execute(ctx pipeline.Context, _ pipeline.Sub
 		WithErrorContext(a)
 }
 
-func (a *unauthorizedAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (a *unauthorizedAuthenticator) CreateStep(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	// nothing can be reconfigured
 	if len(def.Config) != 0 {
 		return nil, errorchain.
@@ -97,10 +102,9 @@ func (a *unauthorizedAuthenticator) CreateStep(def types.StepDefinition) (pipeli
 	return &auth, nil
 }
 
-func (a *unauthorizedAuthenticator) Name() string            { return a.name }
-func (a *unauthorizedAuthenticator) ID() string              { return a.id }
-func (a *unauthorizedAuthenticator) Type() string            { return a.name }
-func (a *unauthorizedAuthenticator) PrincipalName() string   { return a.principalName }
-func (*unauthorizedAuthenticator) IsInsecure() bool          { return false }
-func (*unauthorizedAuthenticator) Kind() types.Kind          { return types.KindAuthenticator }
-func (*unauthorizedAuthenticator) CleanUp(_ context.Context) {}
+func (a *unauthorizedAuthenticator) Name() string          { return a.name }
+func (a *unauthorizedAuthenticator) ID() string            { return a.id }
+func (a *unauthorizedAuthenticator) Type() string          { return a.name }
+func (a *unauthorizedAuthenticator) PrincipalName() string { return a.principalName }
+func (*unauthorizedAuthenticator) IsInsecure() bool        { return false }
+func (*unauthorizedAuthenticator) Kind() types.Kind        { return types.KindAuthenticator }

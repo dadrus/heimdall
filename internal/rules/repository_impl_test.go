@@ -779,7 +779,7 @@ func TestRepositoryDeleteRuleSet(t *testing.T) {
 	assert.False(t, impl.index.Empty())
 
 	// WHEN
-	_, err = repo.DeleteRuleSet(t.Context(), source)
+	err = repo.DeleteRuleSet(t.Context(), source)
 
 	// THEN
 	require.NoError(t, err)
@@ -830,7 +830,7 @@ func TestRepositoryDeleteRulesFromDifferentRuleSets(t *testing.T) {
 	assert.False(t, impl.index.Empty())
 
 	// WHEN
-	_, err = repo.DeleteRuleSet(t.Context(), barSource)
+	err = repo.DeleteRuleSet(t.Context(), barSource)
 
 	// THEN
 	require.NoError(t, err)
@@ -853,7 +853,7 @@ func TestRepositoryDeleteRulesFromDifferentRuleSets(t *testing.T) {
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
-	_, err = repo.DeleteRuleSet(t.Context(), fooSource)
+	err = repo.DeleteRuleSet(t.Context(), fooSource)
 
 	// THEN
 	require.NoError(t, err)
@@ -867,7 +867,7 @@ func TestRepositoryDeleteRulesFromDifferentRuleSets(t *testing.T) {
 	assert.NoError(t, err) //nolint:testifylint
 
 	// WHEN
-	_, err = repo.DeleteRuleSet(t.Context(), bazSource)
+	err = repo.DeleteRuleSet(t.Context(), bazSource)
 
 	// THEN
 	require.NoError(t, err)
@@ -915,12 +915,11 @@ func TestRepositoryDeleteRuleSetReturnsCleanupCandidates(t *testing.T) {
 	require.NoError(t, repo.AddRuleSet(t.Context(), keptSource, []rule.Rule{keptRule}))
 
 	// WHEN
-	cleanupCandidates, err := repo.DeleteRuleSet(t.Context(), deletedSource)
+	err = repo.DeleteRuleSet(t.Context(), deletedSource)
 
 	// THEN
 	require.NoError(t, err)
 
-	assert.ElementsMatch(t, deletedRules, cleanupCandidates)
 	assert.ElementsMatch(t, []rule.Rule{keptRule}, impl.knownRules)
 
 	_, err = impl.index.FindEntry("example.com", "/deleted/1",
@@ -983,7 +982,7 @@ func TestRepositoryUpdateRuleSetSingle(t *testing.T) {
 	updatedRules := []rule.Rule{rule1, rule3, rule4}
 
 	// WHEN
-	_, err = repo.UpdateRuleSet(t.Context(), source, updatedRules)
+	err = repo.UpdateRuleSet(t.Context(), source, updatedRules)
 
 	// THEN
 	require.NoError(t, err)
@@ -1214,7 +1213,7 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			_, err = repo.UpdateRuleSet(t.Context(), rule.RuleSet{ID: "2"}, tc.updatedRules)
+			err = repo.UpdateRuleSet(t.Context(), rule.RuleSet{ID: "2"}, tc.updatedRules)
 
 			// THEN
 			tc.assert(t, err, repo.(*repository))
@@ -1275,20 +1274,13 @@ func TestRepositoryUpdateRuleSetReturnsCleanupCandidates(t *testing.T) {
 	})
 
 	// WHEN
-	cleanupCandidates, err := repo.UpdateRuleSet(t.Context(), source, []rule.Rule{
+	err = repo.UpdateRuleSet(t.Context(), source, []rule.Rule{
 		newChangedRule,
 		newUnchangedRule,
 	})
 
 	// THEN
 	require.NoError(t, err)
-
-	require.Len(t, cleanupCandidates, 3)
-	assert.True(t, containsRuleInstance(cleanupCandidates, oldChangedRule))
-	assert.True(t, containsRuleInstance(cleanupCandidates, oldDeletedRule))
-	assert.True(t, containsRuleInstance(cleanupCandidates, newUnchangedRule))
-	assert.False(t, containsRuleInstance(cleanupCandidates, oldUnchangedRule))
-	assert.False(t, containsRuleInstance(cleanupCandidates, newChangedRule))
 
 	require.Len(t, impl.knownRules, 2)
 	assert.True(t, containsRuleInstance(impl.knownRules, newChangedRule))

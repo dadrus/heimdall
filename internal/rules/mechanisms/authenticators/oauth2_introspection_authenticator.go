@@ -39,7 +39,9 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -92,7 +94,10 @@ func newOAuth2IntrospectionAuthenticator(
 	}
 
 	var conf Config
-	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("authenticator."+AuthenticatorOAuth2Introspection+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorOAuth2Introspection, name).
 			CausedBy(err)
@@ -211,7 +216,11 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx pipeline.Context, sub pip
 	return nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (a *oauth2IntrospectionAuthenticator) CreateStep(
+	_ context.Context,
+	_ secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
 	if def.IsEmpty() {
 		return a, nil
@@ -236,7 +245,9 @@ func (a *oauth2IntrospectionAuthenticator) CreateStep(def types.StepDefinition) 
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
+	if err := decodeConfig(a.app, def.Config, &conf,
+		template.WithName("authenticator."+AuthenticatorOAuth2Introspection+"."+a.name),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorOAuth2Introspection, a.name).
 			CausedBy(err)
@@ -260,13 +271,12 @@ func (a *oauth2IntrospectionAuthenticator) DecorateErrorResponse(err error, er *
 	a.ed.Decorate(err, a.a.ScopesMatcher.Scopes(), er)
 }
 
-func (a *oauth2IntrospectionAuthenticator) Name() string            { return a.name }
-func (a *oauth2IntrospectionAuthenticator) ID() string              { return a.id }
-func (a *oauth2IntrospectionAuthenticator) Type() string            { return a.name }
-func (a *oauth2IntrospectionAuthenticator) PrincipalName() string   { return a.principalName }
-func (*oauth2IntrospectionAuthenticator) IsInsecure() bool          { return false }
-func (*oauth2IntrospectionAuthenticator) Kind() types.Kind          { return types.KindAuthenticator }
-func (*oauth2IntrospectionAuthenticator) CleanUp(_ context.Context) {}
+func (a *oauth2IntrospectionAuthenticator) Name() string          { return a.name }
+func (a *oauth2IntrospectionAuthenticator) ID() string            { return a.id }
+func (a *oauth2IntrospectionAuthenticator) Type() string          { return a.name }
+func (a *oauth2IntrospectionAuthenticator) PrincipalName() string { return a.principalName }
+func (*oauth2IntrospectionAuthenticator) IsInsecure() bool        { return false }
+func (*oauth2IntrospectionAuthenticator) Kind() types.Kind        { return types.KindAuthenticator }
 
 func (a *oauth2IntrospectionAuthenticator) serverMetadata(
 	ctx pipeline.Context, claims map[string]any,

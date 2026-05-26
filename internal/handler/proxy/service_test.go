@@ -833,7 +833,7 @@ func TestProxyService(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "proxy", Selector: "server"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(secretHandle, nil)
 
@@ -969,7 +969,7 @@ func TestProxyService(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "proxy", Selector: "server"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(secretHandle, nil)
 

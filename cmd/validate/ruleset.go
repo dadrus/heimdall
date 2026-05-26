@@ -111,6 +111,7 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 	rFactory, err := rules.NewRuleFactory(
 		repo,
+		noopResolver{},
 		conf,
 		opMode,
 		logger,
@@ -122,7 +123,9 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	provider, err := filesystem.NewProvider(appCtx, rules.NewRuleSetProcessor(&noopRepository{}, rFactory, opMode))
+	processor := rules.NewRuleSetProcessor(opMode, noopRepository{}, rFactory, noopScopedResolverFactory{})
+
+	provider, err := filesystem.NewProvider(appCtx, processor)
 	if err != nil {
 		return err
 	}

@@ -31,12 +31,14 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/keyregistry"
 	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/types"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestBaseConfigClientOptions(t *testing.T) {
@@ -80,7 +82,7 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "creds", Selector: "redis"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(credentialsHandle, nil)
 
@@ -118,7 +120,7 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "creds", Selector: "redis"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -147,7 +149,7 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "creds", Selector: "redis"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(credentialsHandle, nil)
 
@@ -189,7 +191,7 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "redis", Selector: "tls"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -222,7 +224,7 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "redis", Selector: "tls"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(secretHandle, nil)
 
@@ -257,10 +259,16 @@ func TestBaseConfigClientOptions(t *testing.T) {
 			credentialsHandle := secretsmocks.NewCredentialsHandleMock(t)
 			secretHandle := secretsmocks.NewSecretHandleMock(t)
 			observer := keyregistrymocks.NewRegistryMock(t)
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(observer)
+			appCtx.EXPECT().DecoderFactory().Maybe().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 			if tc.setup != nil {
 				tc.setup(t, sr, credentialsHandle, secretHandle, observer)

@@ -47,6 +47,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/webhooks"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
@@ -84,7 +85,13 @@ type Provider struct {
 	rsInUse    map[types.UID]bool
 }
 
-func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, factory rule.Factory) (*Provider, error) {
+func NewProvider(
+	app app.Context,
+	k8sCF ConfigFactory,
+	rsp rule.SetProcessor,
+	rf rule.Factory,
+	srf secrets.ScopedResolverFactory,
+) (*Provider, error) {
 	rawConf := app.Config().Providers.Kubernetes
 	logger := app.Logger()
 
@@ -130,10 +137,11 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 	adc := webhooks.New(
 		providerConf.TLS,
 		app.SecretResolver(),
+		srf,
 		app.KeyRegistry(),
 		logger,
 		authClass,
-		factory,
+		rf,
 	)
 
 	logger.Info().Msg("Rule provider configured.")

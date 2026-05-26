@@ -45,8 +45,7 @@ import (
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
-	types2 "github.com/dadrus/heimdall/internal/secrets/types"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -118,11 +117,12 @@ introspection_endpoint:
 
 				require.NoError(t, err)
 
-				// assert endpoint config
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
+
 				md, err := auth.r.Get(t.Context(), nil)
 				require.NoError(t, err)
+
 				assert.Equal(t, "https://foobar.local", md.IntrospectionEndpoint.URL.String())
 				assert.Equal(t, http.MethodPost, md.IntrospectionEndpoint.Method)
 				assert.Len(t, md.IntrospectionEndpoint.Headers, 2)
@@ -133,7 +133,6 @@ introspection_endpoint:
 				assert.Nil(t, md.IntrospectionEndpoint.AuthStrategy)
 				assert.Nil(t, md.IntrospectionEndpoint.Retry)
 
-				// assert assertions
 				assert.Len(t, auth.a.AllowedAlgorithms, len(defaultAllowedAlgorithms()))
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
 				assert.Empty(t, auth.a.TrustedIssuers)
@@ -141,21 +140,19 @@ introspection_endpoint:
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 				assert.Empty(t, auth.a.Audiences)
 
-				// assert ttl
 				assert.Nil(t, auth.ttl)
 
-				// assert token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
-				// assert principal factory
 				assert.NotNil(t, auth.sf)
 				assert.IsType(t, &PrincipalInfo{}, auth.sf)
+
 				sess, ok := auth.sf.(*PrincipalInfo)
-				assert.True(t, ok)
+				require.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
 				assert.Equal(t, auth.Name(), auth.ID())
@@ -178,7 +175,7 @@ introspection_endpoint:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.Contains(t, err.Error(), "'introspection_endpoint'.'url' scheme must be https")
+				require.ErrorContains(t, err, "'introspection_endpoint'.'url' scheme must be https")
 			},
 		},
 		"with valid introspection endpoint based config with overwrites": {
@@ -211,11 +208,12 @@ cache_ttl: 5s
 
 				require.NoError(t, err)
 
-				// assert endpoint config
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.True(t, ok)
+
 				md, err := auth.r.Get(t.Context(), nil)
 				require.NoError(t, err)
+
 				assert.Equal(t, "http://test.com", md.IntrospectionEndpoint.URL.String())
 				assert.Equal(t, http.MethodPatch, md.IntrospectionEndpoint.Method)
 				assert.Len(t, md.IntrospectionEndpoint.Headers, 2)
@@ -226,7 +224,6 @@ cache_ttl: 5s
 				assert.Nil(t, md.IntrospectionEndpoint.AuthStrategy)
 				assert.Nil(t, md.IntrospectionEndpoint.Retry)
 
-				// assert assertions
 				assert.Len(t, auth.a.AllowedAlgorithms, 1)
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{"ES256"})
 				assert.Len(t, auth.a.TrustedIssuers, 1)
@@ -235,21 +232,20 @@ cache_ttl: 5s
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 				assert.Empty(t, auth.a.Audiences)
 
-				// assert ttl
+				require.NotNil(t, auth.ttl)
 				assert.Equal(t, 5*time.Second, *auth.ttl)
 
-				// assert token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
 				assert.Contains(t, auth.ads, &extractors.HeaderValueExtractStrategy{Name: "foo-header", Scheme: "foo"})
 				assert.Contains(t, auth.ads, &extractors.QueryParameterExtractStrategy{Name: "foo_query_param"})
 				assert.Contains(t, auth.ads, &extractors.BodyParameterExtractStrategy{Name: "foo_body_param"})
 
-				// assert principal factory
 				assert.NotNil(t, auth.sf)
 				assert.IsType(t, &PrincipalInfo{}, auth.sf)
+
 				sess, ok := auth.sf.(*PrincipalInfo)
-				assert.True(t, ok)
+				require.True(t, ok)
 				assert.Equal(t, "some_claim", sess.IDFrom)
 
 				assert.Equal(t, auth.Name(), auth.ID())
@@ -285,33 +281,29 @@ metadata_endpoint:
 
 				require.NoError(t, err)
 
-				// assert endpoint config
 				_, ok := auth.r.(oauth2.ResolverAdapterFunc)
 				require.False(t, ok)
 
-				// assert assertions
 				assert.Len(t, auth.a.AllowedAlgorithms, len(defaultAllowedAlgorithms()))
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
-				assert.Empty(t, auth.a.TrustedIssuers, 1)
+				assert.Empty(t, auth.a.TrustedIssuers)
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 				assert.Empty(t, auth.a.Audiences)
 
-				// assert ttl
 				assert.Nil(t, auth.ttl)
 
-				// assert token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
-				// assert principal factory
 				assert.NotNil(t, auth.sf)
 				assert.IsType(t, &PrincipalInfo{}, auth.sf)
+
 				sess, ok := auth.sf.(*PrincipalInfo)
-				assert.True(t, ok)
+				require.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
 				assert.Equal(t, auth.Name(), auth.ID())
@@ -329,7 +321,7 @@ metadata_endpoint:
 metadata_endpoint:
   url: https://test.com
   resolved_endpoints:
-    jwks_uri:
+    introspection_endpoint:
       auth:
         type: oauth2_client_credentials
         config:
@@ -348,14 +340,15 @@ metadata_endpoint:
 
 				require.NoError(t, err)
 
-				// endpoint settings
 				mdep, ok := auth.r.(*oauth2.MetadataEndpoint)
 				require.True(t, ok)
 
 				assert.Equal(t, "https://test.com", mdep.URL.String())
 				require.Len(t, mdep.ResolvedEndpoints, 1)
-				reps, ok := mdep.ResolvedEndpoints["jwks_uri"]
+
+				reps, ok := mdep.ResolvedEndpoints["introspection_endpoint"]
 				require.True(t, ok)
+
 				assert.Equal(t, &endpoint.HTTPCache{
 					Enabled:    true,
 					DefaultTTL: 10 * time.Minute,
@@ -369,29 +362,26 @@ metadata_endpoint:
 				require.True(t, ok)
 				assert.Equal(t, "https://example.com/token", cc.TokenURL)
 
-				// assert assertions
 				assert.Len(t, auth.a.AllowedAlgorithms, len(defaultAllowedAlgorithms()))
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, defaultAllowedAlgorithms())
-				assert.Empty(t, auth.a.TrustedIssuers, 1)
+				assert.Empty(t, auth.a.TrustedIssuers)
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 				assert.Empty(t, auth.a.Audiences)
 
-				// assert ttl
 				assert.Nil(t, auth.ttl)
 
-				// assert token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
 				assert.Len(t, auth.ads, 3)
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
-				// assert principal factory
 				assert.NotNil(t, auth.sf)
 				assert.IsType(t, &PrincipalInfo{}, auth.sf)
+
 				sess, ok := auth.sf.(*PrincipalInfo)
-				assert.True(t, ok)
+				require.True(t, ok)
 				assert.Equal(t, "sub", sess.IDFrom)
 
 				assert.Equal(t, auth.Name(), auth.ID())
@@ -403,7 +393,7 @@ metadata_endpoint:
 				assert.Equal(t, auth.ID(), auth.Type())
 			},
 		},
-		"minimal jwks endpoint based configuration with full error signaling": {
+		"minimal introspection endpoint based configuration with full error signaling": {
 			config: []byte(`
 introspection_endpoint:
   url: http://foobar.local
@@ -436,7 +426,6 @@ error_signaling:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
@@ -447,27 +436,22 @@ error_signaling:
 			)
 			require.NoError(t, err)
 
-			sm := secretsmocks.NewManagerMock(t)
-			sm.EXPECT().Subscribe(mock.Anything, mock.Anything).
+			chm := secretsmocks.NewCredentialsHandleMock(t)
+			chm.EXPECT().OnUpdate(mock.Anything).Maybe()
+
+			sr := secretsmocks.NewResolverMock(t)
+			sr.EXPECT().Credentials(mock.Anything, mock.Anything, mock.Anything).
 				Maybe().
-				Return(func() {}, nil)
-			sm.EXPECT().ResolveCredentials(mock.Anything, mock.Anything).
-				Maybe().
-				Return(types2.NewCredentials("bar", map[string]any{
-					"client_id":     "bar",
-					"client_secret": "baz",
-				}), nil)
+				Return(chm, nil)
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
-			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 
-			// WHEN
 			mech, err := newOAuth2IntrospectionAuthenticator(appCtx, uc, conf)
 
-			// THEN
 			auth, ok := mech.(*oauth2IntrospectionAuthenticator)
 			if err == nil {
 				require.True(t, ok)
@@ -606,6 +590,7 @@ principal:
 				assert.Equal(t, prototype.a, configured.a)
 
 				assert.Nil(t, prototype.ttl)
+				require.NotNil(t, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
 				assert.Equal(t, "without cache, step config with cache overwrite", configured.ID())
 				assert.False(t, configured.IsInsecure())
@@ -653,7 +638,6 @@ metadata_endpoint:
 			assert: func(t *testing.T, err error, prototype, configured *oauth2IntrospectionAuthenticator) {
 				t.Helper()
 
-				// THEN
 				require.NoError(t, err)
 
 				assert.Equal(t, prototype.r, configured.r)
@@ -667,6 +651,7 @@ metadata_endpoint:
 				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
+				require.NotNil(t, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
 
 				assert.Equal(t, "metadata endpoint based config without cache, step config with overwrites incl cache", configured.ID())
@@ -705,6 +690,8 @@ cache_ttl: 5s`),
 				assert.NotEqual(t, prototype.a, configured.a)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
 
+				require.NotNil(t, prototype.ttl)
+				require.NotNil(t, configured.ttl)
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
 				assert.Equal(t, "config with cache, step config with overwrites including cache", configured.ID())
@@ -793,7 +780,6 @@ error_signaling:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
 			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
@@ -802,10 +788,13 @@ error_signaling:
 			)
 			require.NoError(t, err)
 
+			sr := secretsmocks.NewResolverMock(t)
+
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 
 			mech, err := newOAuth2IntrospectionAuthenticator(appCtx, uc, pc)
 			require.NoError(t, err)
@@ -813,10 +802,8 @@ error_signaling:
 			configured, ok := mech.(*oauth2IntrospectionAuthenticator)
 			require.True(t, ok)
 
-			// WHEN
-			step, err := mech.CreateStep(tc.stepDef)
+			step, err := mech.CreateStep(t.Context(), sr, tc.stepDef)
 
-			// THEN
 			auth, ok := step.(*oauth2IntrospectionAuthenticator)
 			if err == nil {
 				require.True(t, ok)
@@ -891,16 +878,19 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		authenticator  *oauth2IntrospectionAuthenticator
 		instructServer func(t *testing.T)
-		configureMocks func(t *testing.T,
+		configureMocks func(
+			t *testing.T,
 			ctx *pipelinemocks.ContextMock,
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
-			auth *oauth2IntrospectionAuthenticator)
+			auth *oauth2IntrospectionAuthenticator,
+		)
 		assert func(t *testing.T, err error, sub pipeline.Subject)
 	}{
 		"with failing auth data source": {
 			authenticator: &oauth2IntrospectionAuthenticator{id: "auth3"},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -935,7 +925,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -968,7 +959,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1004,7 +996,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1049,7 +1042,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1109,7 +1103,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1172,7 +1167,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1243,7 +1239,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1332,7 +1329,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1426,7 +1424,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1522,7 +1521,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1611,7 +1611,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1671,7 +1672,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1710,7 +1712,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1784,7 +1787,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				ttl:           &zeroTTL,
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1793,7 +1797,6 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return(jwtToken, nil)
-				// http cache
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
 					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
@@ -1814,6 +1817,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
 					assert.Equal(t, jwtToken, req.Form.Get("token"))
 				}
+
 				rawIntrospectResponse, err := json.Marshal(map[string]any{
 					"active":     true,
 					"scope":      "foo bar",
@@ -1889,11 +1893,12 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				sf:            &PrincipalInfo{IDFrom: "sub"},
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
-				auth *oauth2IntrospectionAuthenticator,
+				_ *oauth2IntrospectionAuthenticator,
 			) {
 				t.Helper()
 
@@ -1974,7 +1979,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				sf:            &PrincipalInfo{IDFrom: "sub"},
 				principalName: DefaultPrincipalName,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -2039,7 +2045,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				sf:            &PrincipalInfo{IDFrom: "sub"},
 				principalName: "bar",
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -2093,14 +2100,15 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
 			introspectionEndpointCalled = false
 			introspectionResponseContentType = ""
 			introspectionResponseContent = nil
+			introspectionResponseCode = 0
 
 			metadataEndpointCalled = false
 			metadataResponseContentType = ""
 			metadataResponseContent = nil
+			metadataResponseCode = 0
 
 			checkIntrospectionRequest = func(*http.Request) { t.Helper() }
 			checkMetadataRequest = func(*http.Request) { t.Helper() }
@@ -2111,7 +2119,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T,
+				func(
+					t *testing.T,
 					_ *pipelinemocks.ContextMock,
 					_ *mocks.CacheMock,
 					_ *mocks2.AuthDataExtractStrategyMock,
@@ -2133,10 +2142,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 			sub := make(pipeline.Subject)
 
-			// WHEN
 			err := tc.authenticator.Execute(ctx, sub)
 
-			// THEN
 			tc.assert(t, err, sub)
 		})
 	}
@@ -2252,7 +2259,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 			},
 		},
 		"zero ttl settings and exp set to a value response, which would result in 0s ttl with 10s leeway": {
-			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
+			authenticator: &oauth2IntrospectionAuthenticator{ttl: &zeroTTL},
 			response: func() *oauth2.IntrospectionResponse {
 				expiry := oauth2.NumericDate(time.Now().Add(10 * time.Second).Unix())
 				resp := &oauth2.IntrospectionResponse{}
@@ -2267,7 +2274,7 @@ func TestCacheTTLCalculation(t *testing.T) {
 			},
 		},
 		"zero ttl settings and exp set to a value response, which would result in positive ttl with 10s leeway": {
-			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
+			authenticator: &oauth2IntrospectionAuthenticator{ttl: &zeroTTL},
 			response: func() *oauth2.IntrospectionResponse {
 				expiry := oauth2.NumericDate(time.Now().Add(12 * time.Second).Unix())
 				resp := &oauth2.IntrospectionResponse{}
@@ -2313,10 +2320,8 @@ func TestCacheTTLCalculation(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// WHEN
 			ttl := tc.authenticator.getCacheTTL(tc.response())
 
-			// THEN
 			tc.assert(t, ttl)
 		})
 	}
@@ -2325,17 +2330,13 @@ func TestCacheTTLCalculation(t *testing.T) {
 func TestOauth2IntrospectionAuthenticatorAccept(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
 	auth := &oauth2IntrospectionAuthenticator{}
 	visitor := pipelinemocks.NewVisitorMock(t)
 
 	visitor.EXPECT().VisitInsecure(auth)
 	visitor.EXPECT().VisitPrincipalNamer(auth)
 
-	// WHEN
 	auth.Accept(visitor)
-
-	// THEN expected calls are done
 }
 
 func TestOauth2IntrospectionAuthenticatorDecorateErrorResponse(t *testing.T) {
@@ -2405,13 +2406,10 @@ func TestOauth2IntrospectionAuthenticatorDecorateErrorResponse(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			// GIVEN
 			response := pipeline.ErrorResponse{}
 
-			// WHEN
 			tc.authenticator.DecorateErrorResponse(tc.cause, &response)
 
-			// THEN
 			assert.Equal(t, tc.expectedCode, response.Code)
 
 			if len(tc.expectedHeader) == 0 {

@@ -25,6 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -68,7 +69,11 @@ func (f *noopFinalizer) Execute(ctx pipeline.Context, _ pipeline.Subject) error 
 	return nil
 }
 
-func (f *noopFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (f *noopFinalizer) CreateStep(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
@@ -90,4 +95,3 @@ func (f *noopFinalizer) ID() string              { return f.id }
 func (f *noopFinalizer) Type() string            { return f.name }
 func (*noopFinalizer) Accept(_ pipeline.Visitor) {}
 func (*noopFinalizer) Kind() types.Kind          { return types.KindFinalizer }
-func (*noopFinalizer) CleanUp(_ context.Context) {}

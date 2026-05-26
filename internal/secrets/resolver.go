@@ -106,20 +106,6 @@ func newResolver(
 	return res, nil
 }
 
-func (r *resolver) globalResolver() Resolver {
-	return r.appScope
-}
-
-func (r *resolver) scopedResolver(id string, opts ...ScopeOption) ScopedResolver {
-	cfg := applyScopeOptions(opts...)
-
-	return newScope(
-		r,
-		withID(id),
-		withNamespace(cfg.namespace),
-	)
-}
-
 func (r *resolver) Stop() {
 	r.appScope.Release()
 	r.stopBindings()
@@ -136,6 +122,20 @@ func (r *resolver) ResolveCredentials(ctx context.Context, ref Reference) (Crede
 
 func (r *resolver) ResolveCertificateBundle(ctx context.Context, ref Reference) (CertificateBundle, error) {
 	return r.resolveCertificateBundle(ctx, internalRef(ref))
+}
+
+func (r *resolver) globalResolver() Resolver {
+	return r.appScope
+}
+
+func (r *resolver) scopedResolver(id string, opts ...ScopeOption) ScopedResolver {
+	cfg := applyScopeOptions(opts...)
+
+	return newScope(
+		r,
+		withID(id),
+		withNamespace(cfg.namespace),
+	)
 }
 
 func (r *resolver) secretBinding(
@@ -425,17 +425,16 @@ func (r *resolver) handleSourceEvent(evt source.Event) {
 	}
 }
 
+//nolint:cyclop
 func (r *resolver) match(evt source.Event) []task.Task {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
 	tasks := make([]task.Task, 0)
 
-	var namespaceAware bool
-
 	src, err := r.sources.Lookup(evt.Source)
-	if err == nil {
-		namespaceAware = src.IsNamespaceAware()
+	if err != nil {
+		return nil
 	}
 
 	matches := func(key bindingKey) bool {
@@ -449,7 +448,7 @@ func (r *resolver) match(evt source.Event) []task.Task {
 
 		for _, selector := range evt.Selectors {
 			namespace := ""
-			if namespaceAware {
+			if src.IsNamespaceAware() {
 				namespace = selector.Namespace
 			}
 

@@ -17,8 +17,6 @@
 package rule
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
@@ -29,5 +27,4 @@ type Rule interface {
 	Routes() []Route
 	SameAs(other Rule) bool
 	Equals(other Rule) bool
-	CleanUp(ctx context.Context)
 }

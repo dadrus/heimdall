@@ -33,6 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/webhooks/conversion"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/webhooks/validation"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
@@ -46,6 +47,7 @@ func (f errorHandlerFunc) HandleError(rw http.ResponseWriter, req *http.Request,
 func newService(
 	serviceName string,
 	ruleFactory rule.Factory,
+	resolverFactory secrets.ScopedResolverFactory,
 	authClass string,
 	log zerolog.Logger,
 ) *http.Server {
@@ -65,7 +67,7 @@ func newService(
 		),
 		logger.New(log),
 		dump.New(),
-	).Then(newHandler(ruleFactory, authClass))
+	).Then(newHandler(ruleFactory, resolverFactory, authClass))
 
 	return &http.Server{
 		Handler:        hc,
@@ -77,9 +79,13 @@ func newService(
 	}
 }
 
-func newHandler(ruleFactory rule.Factory, authClass string) http.Handler {
+func newHandler(
+	ruleFactory rule.Factory,
+	resolverFactory secrets.ScopedResolverFactory,
+	authClass string,
+) http.Handler {
 	mux := http.NewServeMux()
-	mux.Handle("/validate", validation.NewHandler(ruleFactory, authClass))
+	mux.Handle("/validate", validation.NewHandler(ruleFactory, resolverFactory, authClass))
 	mux.Handle("/convert", conversion.NewHandler())
 
 	return mux

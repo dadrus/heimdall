@@ -136,7 +136,7 @@ func TestControllerLifecycle(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "webhooks", Selector: "server"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -224,7 +224,7 @@ func TestControllerLifecycle(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "webhooks", Selector: "server"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -303,6 +303,7 @@ func TestControllerLifecycle(t *testing.T) {
 
 			sr := secretsmocks.NewResolverMock(t)
 			handle := secretsmocks.NewSecretHandleMock(t)
+			srf := secretsmocks.NewScopedResolverFactoryMock(t)
 
 			setup := x.IfThenElse(
 				tc.setup != nil,
@@ -318,7 +319,7 @@ func TestControllerLifecycle(t *testing.T) {
 			require.NoError(t, err)
 
 			listeningAddress = fmt.Sprintf("127.0.0.1:%d", port)
-			controller := New(tc.tls, sr, ko, log.Logger, "", mocks.NewFactoryMock(t))
+			controller := New(tc.tls, sr, srf, ko, log.Logger, "", mocks.NewFactoryMock(t))
 			baseURL := fmt.Sprintf("%s://%s",
 				x.IfThenElse(tc.tls != nil, "https", "http"),
 				listeningAddress,

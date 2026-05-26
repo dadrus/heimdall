@@ -17,8 +17,11 @@
 package types //nolint: revive
 
 import (
+	"context"
+
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
 )
 
 const (
@@ -44,6 +47,12 @@ func (sd *StepDefinition) IsEmpty() bool {
 
 type Mechanism interface {
 	Name() string
+
 	Kind() Kind
-	CreateStep(def StepDefinition) (pipeline.Step, error)
+
+	CreateStep(
+		ctx context.Context,
+		resolver secrets.Resolver,
+		def StepDefinition,
+	) (pipeline.Step, error)
 }

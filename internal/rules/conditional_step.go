@@ -17,8 +17,6 @@
 package rules
 
 import (
-	"context"
-
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
@@ -36,8 +34,6 @@ func newConditionalStep(s pipeline.Step, c executionCondition) *conditionalStep 
 }
 
 func (s *conditionalStep) Accept(visitor pipeline.Visitor) { s.s.Accept(visitor) }
-
-func (s *conditionalStep) CleanUp(ctx context.Context) { s.s.CleanUp(ctx) }
 
 func (s *conditionalStep) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())

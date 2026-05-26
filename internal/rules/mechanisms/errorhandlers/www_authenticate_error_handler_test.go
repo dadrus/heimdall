@@ -215,7 +215,7 @@ func TestWWWAuthenticateErrorHandlerCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(tc.stepDef)
+			step, err := mech.CreateStep(t.Context(), nil, tc.stepDef)
 
 			// THEN
 			eh, ok := step.(*wwwAuthenticateErrorHandler)
@@ -299,7 +299,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			mech, err := newWWWAuthenticateErrorHandler(appCtx, "foo", conf)
 			require.NoError(t, err)
 
-			step, err := mech.CreateStep(types.StepDefinition{ID: ""})
+			step, err := mech.CreateStep(t.Context(), nil, types.StepDefinition{ID: ""})
 			require.NoError(t, err)
 
 			// WHEN

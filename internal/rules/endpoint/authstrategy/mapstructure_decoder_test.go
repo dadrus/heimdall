@@ -78,7 +78,7 @@ auth:
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -150,7 +150,7 @@ auth:
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			appCtx, sr, _, credentialsHandle, _ := newAuthStrategyDecodeTestContext(t)
+			appCtx, sr, _, credentialsHandle := newAuthStrategyDecodeTestContext(t)
 			x.IfThenElse(
 				tc.setup != nil,
 				tc.setup,
@@ -369,7 +369,7 @@ auth:
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			appCtx, sr, secretHandle, _, _ := newAuthStrategyDecodeTestContext(t)
+			appCtx, sr, secretHandle, _ := newAuthStrategyDecodeTestContext(t)
 			x.IfThenElse(
 				tc.setup != nil,
 				tc.setup,
@@ -489,7 +489,7 @@ auth:
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "oauth", Selector: "client-creds"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -600,7 +600,7 @@ auth:
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			appCtx, sr, _, credentialsHandle, _ := newAuthStrategyDecodeTestContext(
+			appCtx, sr, _, credentialsHandle := newAuthStrategyDecodeTestContext(
 				t,
 				validation.WithTagValidator(config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}),
 				validation.WithErrorTranslator(config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}),
@@ -732,7 +732,7 @@ auth:
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -782,7 +782,7 @@ auth:
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -809,7 +809,7 @@ auth:
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			appCtx, sr, secretHandle, _, _ := newAuthStrategyDecodeTestContext(t)
+			appCtx, sr, secretHandle, _ := newAuthStrategyDecodeTestContext(t)
 			x.IfThenElse(
 				tc.setup != nil,
 				tc.setup,
@@ -882,7 +882,7 @@ func setupAPIKeySecret(
 		Secret(
 			mock.Anything,
 			secrets.Reference{Source: "foo", Selector: "bar"},
-			mock.AnythingOfType("secrets2.ResolveOption"),
+			mock.Anything,
 		).
 		Return(handle, nil)
 
@@ -911,7 +911,7 @@ func setupOAuth2ClientCredentials(
 		Credentials(
 			mock.Anything,
 			secrets.Reference{Source: "foo", Selector: "bar"},
-			mock.AnythingOfType("secrets2.ResolveOption"),
+			mock.Anything,
 		).
 		Return(handle, nil)
 
@@ -932,7 +932,6 @@ func newAuthStrategyDecodeTestContext(
 	*secretsmocks.ResolverMock,
 	*secretsmocks.SecretHandleMock,
 	*secretsmocks.CredentialsHandleMock,
-	*keyregistrymocks.RegistryMock,
 ) {
 	t.Helper()
 
@@ -954,5 +953,5 @@ func newAuthStrategyDecodeTestContext(
 
 	krm.EXPECT().Notify(mock.Anything).Maybe()
 
-	return appCtx, sr, secretHandle, credentialsHandle, krm
+	return appCtx, sr, secretHandle, credentialsHandle
 }

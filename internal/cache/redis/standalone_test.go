@@ -211,7 +211,7 @@ func TestStandaloneCache(t *testing.T) {
 			config: func(
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
-				credentialsHandle *secretsmocks.CredentialsHandleMock,
+				chm *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
 				_ *keyregistrymocks.RegistryMock,
 			) []byte {
@@ -227,11 +227,11 @@ func TestStandaloneCache(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "creds", Selector: "redis"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
-					Return(credentialsHandle, nil)
+					Return(chm, nil)
 
-				credentialsHandle.EXPECT().
+				chm.EXPECT().
 					Get(mock.Anything).
 					Return(creds, true).
 					Maybe()
@@ -267,7 +267,7 @@ func TestStandaloneCache(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "creds", Selector: "redis"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 
@@ -294,7 +294,7 @@ func TestStandaloneCache(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "redis", Selector: "tls"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 
@@ -334,7 +334,7 @@ func TestStandaloneCache(t *testing.T) {
 			config: func(
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
-				credentialsHandle *secretsmocks.CredentialsHandleMock,
+				chm *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
 				_ *keyregistrymocks.RegistryMock,
 			) []byte {
@@ -364,11 +364,11 @@ func TestStandaloneCache(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "creds", Selector: "redis"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
-					Return(credentialsHandle, nil)
+					Return(chm, nil)
 
-				credentialsHandle.EXPECT().
+				chm.EXPECT().
 					Get(mock.Anything).
 					Return(creds, true).
 					Maybe()
@@ -406,7 +406,7 @@ func TestStandaloneCache(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "redis", Selector: "tls"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(secretHandle, nil)
 

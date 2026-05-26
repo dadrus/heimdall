@@ -38,8 +38,9 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	heimdallmocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
-	secretsmocks "github.com/dadrus/heimdall/internal/secrets/types/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -48,15 +49,12 @@ import (
 func TestNewJWTFinalizer(t *testing.T) {
 	t.Parallel()
 
-	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	require.NoError(t, err)
-
 	validator, err := validation.NewValidator()
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
 		config []byte
-		setup  func(t *testing.T, sm *secretsmocks.ManagerMock)
+		setup  func(t *testing.T, resolver *secretsmocks.ResolverMock)
 		assert func(t *testing.T, err error, fin *jwtFinalizer)
 	}{
 		"missing signer": {
@@ -64,6 +62,7 @@ func TestNewJWTFinalizer(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'signer' is a required field")
 			},
 		},
@@ -77,26 +76,30 @@ signer:
 				t.Helper()
 
 				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'signer'.'secret'.'source' is a required field")
 			},
 		},
-		"signer resolution fails": {
+		"signer creation fails": {
 			config: []byte(`
 signer:
   secret:
     source: foo
     selector: bar
 `),
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+			setup: func(t *testing.T, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
-				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(nil, assert.AnError)
+				resolver.EXPECT().
+					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
+					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "failed resolving jwt signing secret")
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "failed creating secret informer")
 			},
 		},
 		"minimal valid config": {
@@ -106,15 +109,15 @@ signer:
     source: foo
     selector: bar
 `),
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+			setup: func(t *testing.T, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
-				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(
-						secrettypes.NewAsymmetricKeySecret("bar", "kid-1", privKey, nil),
-						nil,
-					)
-				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				shm := secretsmocks.NewSecretHandleMock(t)
+				shm.EXPECT().OnUpdate(mock.Anything)
+
+				resolver.EXPECT().
+					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
+					Return(shm, nil)
 			},
 			assert: func(t *testing.T, err error, fin *jwtFinalizer) {
 				t.Helper()
@@ -123,13 +126,13 @@ signer:
 
 				require.NotNil(t, fin)
 				assert.Equal(t, "minimal valid config", fin.ID())
-				assert.Equal(t, pipeline.KindFinalizer, fin.Kind())
+				assert.Equal(t, types.KindFinalizer, fin.Kind())
 				assert.Equal(t, fin.ID(), fin.Name())
 				assert.Equal(t, defaultJWTTTL, fin.ttl)
 				assert.Equal(t, "Authorization", fin.headerName)
 				assert.Equal(t, "Bearer", fin.headerScheme)
 				assert.NotNil(t, fin.signer)
-				assert.Empty(t, fin.claims)
+				assert.Nil(t, fin.claims)
 				assert.Empty(t, fin.v)
 			},
 		},
@@ -148,15 +151,15 @@ header:
 values:
   foo: '{{ .Subject.ID }}'
 `),
-			setup: func(t *testing.T, sm *secretsmocks.ManagerMock) {
+			setup: func(t *testing.T, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
-				sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).
-					Return(
-						secrettypes.NewAsymmetricKeySecret("bar", "kid-1", privKey, nil),
-						nil,
-					)
-				sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+				shm := secretsmocks.NewSecretHandleMock(t)
+				shm.EXPECT().OnUpdate(mock.Anything)
+
+				resolver.EXPECT().
+					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
+					Return(shm, nil)
 			},
 			assert: func(t *testing.T, err error, fin *jwtFinalizer) {
 				t.Helper()
@@ -165,13 +168,15 @@ values:
 
 				require.NotNil(t, fin)
 				assert.Equal(t, "full valid config", fin.ID())
-				assert.Equal(t, pipeline.KindFinalizer, fin.Kind())
+				assert.Equal(t, types.KindFinalizer, fin.Kind())
 				assert.Equal(t, fin.ID(), fin.Name())
 				assert.Equal(t, 10*time.Second, fin.ttl)
 				assert.Equal(t, "X-Test", fin.headerName)
 				assert.Equal(t, "Test", fin.headerScheme)
-				assert.NotEmpty(t, fin.claims)
+				assert.NotNil(t, fin.claims)
 				assert.Len(t, fin.v, 1)
+				assert.NotNil(t, fin.signer)
+				assert.Equal(t, "foo", fin.signer.iss)
 			},
 		},
 	} {
@@ -182,21 +187,21 @@ values:
 			setup := x.IfThenElse(
 				tc.setup != nil,
 				tc.setup,
-				func(t *testing.T, sm *secretsmocks.ManagerMock) { t.Helper() },
+				func(t *testing.T, _ *secretsmocks.ResolverMock) { t.Helper() },
 			)
 
-			sm := secretsmocks.NewManagerMock(t)
-			setup(t, sm)
+			resolver := secretsmocks.NewResolverMock(t)
+			setup(t, resolver)
 
-			kr := keyregistrymocks.NewRegistryMock(t)
-			kr.EXPECT().Notify(mock.Anything).Maybe()
+			ko := keyregistrymocks.NewRegistryMock(t)
+			ko.EXPECT().Notify(mock.Anything).Maybe()
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
-			appCtx.EXPECT().KeyRegistry().Maybe().Return(kr)
-			appCtx.EXPECT().SecretsManager().Maybe().Return(sm)
+			appCtx.EXPECT().SecretResolver().Maybe().Return(resolver)
+			appCtx.EXPECT().KeyRegistry().Maybe().Return(ko)
 
 			mech, err := newJWTFinalizer(appCtx, uc, conf)
 
@@ -208,11 +213,6 @@ values:
 
 func TestJWTFinalizerCreateStep(t *testing.T) {
 	t.Parallel()
-
-	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	require.NoError(t, err)
-
-	secret := secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil)
 
 	const expectedTTL = 5 * time.Second
 
@@ -259,6 +259,7 @@ signer:
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, defaultJWTTTL, configured.ttl)
 				assert.Equal(t, prototype.signer, configured.signer)
+				assert.Equal(t, prototype.v, configured.v)
 			},
 		},
 		"configuration with ttl and step ID": {
@@ -288,6 +289,7 @@ signer:
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, prototype.signer, configured.signer)
+				assert.Equal(t, prototype.v, configured.v)
 			},
 		},
 		"configuration with too short ttl": {
@@ -337,6 +339,7 @@ signer:
 				assert.Equal(t, types.KindFinalizer, configured.Kind())
 				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, prototype.signer, configured.signer)
+				assert.Equal(t, prototype.v, configured.v)
 			},
 		},
 		"configuration with claims and values": {
@@ -348,7 +351,7 @@ signer:
 `),
 			stepDef: types.StepDefinition{
 				Config: config.MechanismConfig{
-					"claims": `{"sub": "{{ quote .Subject.ID }}"}`,
+					"claims": `{"foo": {{ .Values.foo }} }`,
 					"values": map[string]any{"foo": "{{ quote .Subject.ID }}"},
 				},
 			},
@@ -369,6 +372,12 @@ signer:
 				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.NotEmpty(t, configured.v)
 				assert.Equal(t, prototype.signer, configured.signer)
+
+				vals, err := configured.v.Render(map[string]any{
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "bar"}},
+				})
+				require.NoError(t, err)
+				assert.Equal(t, map[string]string{"foo": `"bar"`}, vals)
 			},
 		},
 		"configuration with both ttl and claims provided": {
@@ -418,7 +427,7 @@ values:
 `),
 			stepDef: types.StepDefinition{
 				Config: config.MechanismConfig{
-					"values": map[string]any{"foo": "{{ quote .Subject.ID }}"},
+					"values": map[string]any{"foo": "{{ .Subject.ID }}"},
 				},
 			},
 			assert: func(t *testing.T, err error, prototype, configured *jwtFinalizer) {
@@ -437,6 +446,12 @@ values:
 				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.NotEmpty(t, configured.v)
 				assert.Equal(t, prototype.signer, configured.signer)
+
+				vals, err := configured.v.Render(map[string]any{
+					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "bar"}},
+				})
+				require.NoError(t, err)
+				assert.Equal(t, map[string]string{"foo": "bar"}, vals)
 			},
 		},
 		"with unknown entries in configuration": {
@@ -454,24 +469,65 @@ signer:
 				assert.Equal(t, prototype, configured)
 			},
 		},
+		"signer reconfiguration is not allowed": {
+			config: []byte(`
+signer:
+  secret:
+    source: foo
+    selector: bar
+`),
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{
+				"signer": map[string]any{
+					"secret": map[string]any{"source": "foo", "selector": "baz"},
+				},
+			}},
+			assert: func(t *testing.T, err error, _, _ *jwtFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "'signer' is not allowed")
+			},
+		},
+		"header reconfiguration is not allowed": {
+			config: []byte(`
+signer:
+  secret:
+    source: foo
+    selector: bar
+`),
+			stepDef: types.StepDefinition{Config: config.MechanismConfig{
+				"header": map[string]any{"name": "X-Test", "scheme": "Test"},
+			}},
+			assert: func(t *testing.T, err error, _, _ *jwtFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "'header' is not allowed")
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			protoConf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			sm := secretsmocks.NewManagerMock(t)
-			sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(secret, nil)
-			sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+			shm := secretsmocks.NewSecretHandleMock(t)
+			shm.EXPECT().OnUpdate(mock.Anything)
 
-			krm := keyregistrymocks.NewRegistryMock(t)
-			krm.EXPECT().Notify(mock.Anything)
+			resolver := secretsmocks.NewResolverMock(t)
+			resolver.EXPECT().
+				Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
+				Return(shm, nil)
+
+			ko := keyregistrymocks.NewRegistryMock(t)
 
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().KeyRegistry().Return(krm)
-			appCtx.EXPECT().SecretsManager().Return(sm)
+			appCtx.EXPECT().KeyRegistry().Return(ko)
+			appCtx.EXPECT().SecretResolver().Return(resolver)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
@@ -482,8 +538,10 @@ signer:
 			configured, ok := mech.(*jwtFinalizer)
 			require.True(t, ok)
 
+			stepResolver := secretsmocks.NewResolverMock(t)
+
 			// WHEN
-			step, err := mech.CreateStep(tc.stepDef)
+			step, err := mech.CreateStep(t.Context(), stepResolver, tc.stepDef)
 
 			// THEN
 			fin, ok := step.(*jwtFinalizer)
@@ -513,6 +571,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 			fin *jwtFinalizer,
 			ctx *heimdallmocks.ContextMock,
 			cch *mocks.CacheMock,
+			ssh *secretsmocks.SecretHandleMock,
 			sub pipeline.Subject)
 		assert func(t *testing.T, err error)
 	}{
@@ -549,12 +608,13 @@ signer:
 				},
 			},
 			configureMocks: func(t *testing.T, fin *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, sub pipeline.Subject,
+				cch *mocks.CacheMock, shm *secretsmocks.SecretHandleMock, sub pipeline.Subject,
 			) {
 				t.Helper()
 
+				outputs := map[string]any{"foo": "bar"}
+				ctx.EXPECT().Outputs().Return(outputs)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer TestToken")
-				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 
 				cacheKey := fin.calculateCacheKey(ctx, sub)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return([]byte("TestToken"), nil)
@@ -580,16 +640,49 @@ ttl: 1m
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ pipeline.Subject,
+				cch *mocks.CacheMock, shm *secretsmocks.SecretHandleMock, _ pipeline.Subject,
 			) {
 				t.Helper()
 
+				shm.EXPECT().Get(mock.Anything).Return(secret, true)
+
+				ctx.EXPECT().Outputs().Return(map[string]any{})
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
-				ctx.EXPECT().Outputs().Return(map[string]any{})
-
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, configuredTTL-defaultCacheLeeway).Return(nil)
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+		"with no cache hit and ttl too short for caching": {
+			config: []byte(`
+signer:
+  secret:
+    source: foo
+    selector: bar
+ttl: 2s
+`),
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
+					ID:         "foo",
+					Attributes: map[string]any{"baz": "bar"},
+				},
+			},
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
+				cch *mocks.CacheMock, shm *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+			) {
+				t.Helper()
+
+				shm.EXPECT().Get(mock.Anything).Return(secret, true)
+
+				ctx.EXPECT().Outputs().Return(map[string]any{})
+				ctx.EXPECT().AddHeaderForUpstream("Authorization",
+					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -619,13 +712,15 @@ claims: '{
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ pipeline.Subject,
+				cch *mocks.CacheMock, shm *secretsmocks.SecretHandleMock, _ pipeline.Subject,
 			) {
 				t.Helper()
 
+				shm.EXPECT().Get(mock.Anything).Return(secret, true)
+
+				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 				ctx.EXPECT().AddHeaderForUpstream("X-Token",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bar ") }))
-				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, defaultJWTTTL-defaultCacheLeeway).Return(nil)
@@ -654,13 +749,15 @@ values:
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ pipeline.Subject,
+				cch *mocks.CacheMock, shm *secretsmocks.SecretHandleMock, _ pipeline.Subject,
 			) {
 				t.Helper()
 
+				shm.EXPECT().Get(mock.Anything).Return(secret, true)
+
+				ctx.EXPECT().Outputs().Return(map[string]any{"bar": "baz"})
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
-				ctx.EXPECT().Outputs().Return(map[string]any{"bar": "baz"})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, defaultJWTTTL-defaultCacheLeeway).Return(nil)
@@ -686,12 +783,11 @@ claims: "foo: bar"
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ pipeline.Subject,
+				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
 			) {
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
-
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
@@ -721,12 +817,11 @@ claims: "{{ len .foobar }}"
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ pipeline.Subject,
+				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
 			) {
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
-
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
@@ -758,12 +853,11 @@ values:
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ pipeline.Subject,
+				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
 			) {
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
-
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
@@ -778,12 +872,48 @@ values:
 				assert.Equal(t, "with values template, which fails during rendering", identifier.ID())
 			},
 		},
+		"fails signing": {
+			config: []byte(`
+signer:
+  secret:
+    source: foo
+    selector: bar
+`),
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
+					ID: "foo",
+				},
+			},
+			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
+				cch *mocks.CacheMock, shm *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+			) {
+				t.Helper()
+
+				shm.EXPECT().Get(mock.Anything).Return(nil, false)
+
+				ctx.EXPECT().Outputs().Return(map[string]any{})
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "jwt signing material is not available")
+
+				var identifier interface{ ID() string }
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "fails signing", identifier.ID())
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.ContextMock, _ *mocks.CacheMock, _ pipeline.Subject) {
+				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.ContextMock,
+					_ *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+				) {
 					t.Helper()
 				})
 
@@ -793,19 +923,23 @@ values:
 			cch := mocks.NewCacheMock(t)
 			mctx := heimdallmocks.NewContextMock(t)
 
-			sm := secretsmocks.NewManagerMock(t)
-			sm.EXPECT().ResolveSecret(mock.Anything, mock.Anything).Return(secret, nil)
-			sm.EXPECT().Subscribe(mock.Anything, mock.Anything).Return(func() {}, nil)
+			shm := secretsmocks.NewSecretHandleMock(t)
+			shm.EXPECT().OnUpdate(mock.Anything)
 
-			krm := keyregistrymocks.NewRegistryMock(t)
-			krm.EXPECT().Notify(mock.Anything)
+			resolver := secretsmocks.NewResolverMock(t)
+			resolver.EXPECT().
+				Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
+				Return(shm, nil)
+
+			ko := keyregistrymocks.NewRegistryMock(t)
+			ko.EXPECT().Notify(mock.Anything).Maybe()
 
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().KeyRegistry().Return(krm)
-			appCtx.EXPECT().SecretsManager().Return(sm)
+			appCtx.EXPECT().KeyRegistry().Return(ko)
+			appCtx.EXPECT().SecretResolver().Return(resolver)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
@@ -818,10 +952,10 @@ values:
 			configured, ok := mech.(*jwtFinalizer)
 			require.True(t, ok)
 
-			step, err := mech.CreateStep(types.StepDefinition{ID: ""})
+			step, err := mech.CreateStep(t.Context(), secretsmocks.NewResolverMock(t), types.StepDefinition{})
 			require.NoError(t, err)
 
-			configureMocks(t, configured, mctx, cch, tc.subject)
+			configureMocks(t, configured, mctx, cch, shm, tc.subject)
 
 			// WHEN
 			err = step.Execute(mctx, tc.subject)

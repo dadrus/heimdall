@@ -1561,7 +1561,12 @@ func TestResolverReleaseBinding(t *testing.T) {
 
 			res := newEmptyTestResolver(t)
 
-			key := testResolverBindingKey(bindingKindSecret)
+			key := bindingKey{
+				kind:     bindingKindSecret,
+				source:   "src",
+				selector: "selector",
+				scope:    referenceScopeInternal,
+			}
 			bdg := newTestBinding[Secret](t, nil)
 
 			res.secretBindings[key] = &leasedBinding[Secret]{
@@ -1680,7 +1685,12 @@ func TestResolverReleaseBindingForAllKinds(t *testing.T) {
 			t.Parallel()
 
 			res := newEmptyTestResolver(t)
-			key := testResolverBindingKey(tc.kind)
+			key := bindingKey{
+				kind:     tc.kind,
+				source:   "src",
+				selector: "selector",
+				scope:    referenceScopeInternal,
+			}
 
 			marker := tc.setup(t, res, key)
 
@@ -1703,7 +1713,12 @@ func TestResolverMatch(t *testing.T) {
 		"matches source wide event": {
 			event: source.Event{Source: "src"},
 			keys: []bindingKey{
-				testResolverBindingKey(bindingKindSecret),
+				{
+					kind:     bindingKindSecret,
+					source:   "src",
+					selector: "selector",
+					scope:    referenceScopeInternal,
+				},
 				{
 					kind:     bindingKindSecret,
 					source:   "other",
@@ -1721,7 +1736,12 @@ func TestResolverMatch(t *testing.T) {
 				},
 			},
 			keys: []bindingKey{
-				testResolverBindingKey(bindingKindSecret),
+				{
+					kind:     bindingKindSecret,
+					source:   "src",
+					selector: "selector",
+					scope:    referenceScopeInternal,
+				},
 				{
 					kind:     bindingKindSecret,
 					source:   "src",
@@ -1760,10 +1780,30 @@ func TestResolverMatch(t *testing.T) {
 		"matches across binding kinds": {
 			event: source.Event{Source: "src"},
 			keys: []bindingKey{
-				testResolverBindingKey(bindingKindSecret),
-				testResolverBindingKey(bindingKindSecretSet),
-				testResolverBindingKey(bindingKindCredentials),
-				testResolverBindingKey(bindingKindCertificateBundle),
+				{
+					kind:     bindingKindSecret,
+					source:   "src",
+					selector: "selector",
+					scope:    referenceScopeInternal,
+				},
+				{
+					kind:     bindingKindSecretSet,
+					source:   "src",
+					selector: "selector",
+					scope:    referenceScopeInternal,
+				},
+				{
+					kind:     bindingKindCredentials,
+					source:   "src",
+					selector: "selector",
+					scope:    referenceScopeInternal,
+				},
+				{
+					kind:     bindingKindCertificateBundle,
+					source:   "src",
+					selector: "selector",
+					scope:    referenceScopeInternal,
+				},
 			},
 			wantMatches: 4,
 		},
@@ -1781,7 +1821,7 @@ func TestResolverMatch(t *testing.T) {
 				Return(src, nil)
 
 			src.EXPECT().
-				IsNamespaceAware().
+				IsNamespaceAware().Maybe().
 				Return(tc.namespaceAware)
 
 			res := newTestResolver(t, repository)
@@ -1828,13 +1868,14 @@ func TestResolverHandleSourceEvent(t *testing.T) {
 		Lookup("src").
 		Return(src, nil)
 
-	src.EXPECT().
-		IsNamespaceAware().
-		Return(false)
-
 	res := newTestResolver(t, repository)
 
-	key := testResolverBindingKey(bindingKindSecret)
+	key := bindingKey{
+		kind:     bindingKindSecret,
+		source:   "src",
+		selector: "selector",
+		scope:    referenceScopeInternal,
+	}
 	bdg := newTestBinding[Secret](t, func(context.Context) (Secret, error) {
 		calls.Add(1)
 
@@ -1867,7 +1908,12 @@ func TestResolverStop(t *testing.T) {
 	}
 	res.appScope.leases[appKey] = 1
 
-	secretKey := testResolverBindingKey(bindingKindSecret)
+	secretKey := bindingKey{
+		kind:     bindingKindSecret,
+		source:   "src",
+		selector: "selector",
+		scope:    referenceScopeInternal,
+	}
 	certKey := bindingKey{
 		kind:     bindingKindCertificateBundle,
 		source:   "src",
@@ -1978,15 +2024,6 @@ func newEmptyTestResolver(t *testing.T) *resolver {
 	t.Cleanup(res.Stop)
 
 	return res
-}
-
-func testResolverBindingKey(kind bindingKind) bindingKey {
-	return bindingKey{
-		kind:     kind,
-		source:   "src",
-		selector: "selector",
-		scope:    referenceScopeInternal,
-	}
 }
 
 type bindingMarker struct {

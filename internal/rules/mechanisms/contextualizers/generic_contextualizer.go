@@ -40,6 +40,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -95,7 +96,10 @@ func newGenericContextualizer(app app.Context, name string, rawConfig map[string
 	}
 
 	var conf Config
-	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("contextualizer."+ContextualizerGeneric+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for generic contextualizer '%s'", name).CausedBy(err)
 	}
@@ -181,7 +185,11 @@ func (c *genericContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subje
 	return nil
 }
 
-func (c *genericContextualizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (c *genericContextualizer) CreateStep(
+	_ context.Context,
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return c, nil
 	}
@@ -203,7 +211,10 @@ func (c *genericContextualizer) CreateStep(def types.StepDefinition) (pipeline.S
 	}
 
 	var conf Config
-	if err := decodeConfig(c.app, def.Config, &conf); err != nil {
+	if err := decodeConfig(c.app, def.Config, &conf,
+		template.WithName("contextualizer."+ContextualizerGeneric+"."+c.name),
+		template.WithSecretResolver(resolver),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for generic contextualizer '%s'", c.name).CausedBy(err)
 	}
@@ -228,7 +239,6 @@ func (c *genericContextualizer) ID() string              { return c.id }
 func (c *genericContextualizer) Type() string            { return c.name }
 func (*genericContextualizer) Kind() types.Kind          { return types.KindContextualizer }
 func (*genericContextualizer) Accept(_ pipeline.Visitor) {}
-func (*genericContextualizer) CleanUp(_ context.Context) {}
 
 func (c *genericContextualizer) callEndpoint(
 	ctx pipeline.Context,

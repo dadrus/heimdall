@@ -101,11 +101,13 @@ func (s *HTTPMessageSignatures) init(ctx context.Context, appCtx app.Context) er
 		secrets.InformerOptions[httpsig.Signer]{
 			Converter:   s.createSigner,
 			ResolveMode: secrets.ResolveEager,
-			OnUpdate: func(_ context.Context, secret secrets.Secret, _ httpsig.Signer) {
+			OnUpdate: func(_ context.Context, secret secrets.Secret, _ httpsig.Signer) error {
 				aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
 
 				appCtx.KeyRegistry().Notify(keyregistry.KeyInfo{Key: aks, Exportable: true})
 				s.updateHash(aks)
+
+				return nil
 			},
 		},
 	)

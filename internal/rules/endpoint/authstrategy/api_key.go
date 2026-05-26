@@ -86,7 +86,7 @@ func (c *APIKey) init(ctx context.Context, appCtx app.Context) error {
 		secrets.InformerOptions[string]{
 			Converter:   toStringSecret,
 			ResolveMode: secrets.ResolveEager,
-			OnUpdate: func(_ context.Context, _ secrets.Secret, value string) {
+			OnUpdate: func(_ context.Context, _ secrets.Secret, value string) error {
 				hash := sha256.New()
 
 				hash.Write(stringx.ToBytes(c.In))
@@ -96,6 +96,8 @@ func (c *APIKey) init(ctx context.Context, appCtx app.Context) error {
 				var result [sha256.Size]byte
 
 				c.hash.Store(hash.Sum(result[:0]))
+
+				return nil
 			},
 		},
 	)

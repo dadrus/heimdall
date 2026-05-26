@@ -5,8 +5,11 @@
 package mocks
 
 import (
+	"context"
+
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,8 +41,8 @@ func (_m *MechanismMock) EXPECT() *MechanismMock_Expecter {
 }
 
 // CreateStep provides a mock function for the type MechanismMock
-func (_mock *MechanismMock) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
-	ret := _mock.Called(def)
+func (_mock *MechanismMock) CreateStep(ctx context.Context, resolver secrets.Resolver, def types.StepDefinition) (pipeline.Step, error) {
+	ret := _mock.Called(ctx, resolver, def)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateStep")
@@ -47,18 +50,18 @@ func (_mock *MechanismMock) CreateStep(def types.StepDefinition) (pipeline.Step,
 
 	var r0 pipeline.Step
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(types.StepDefinition) (pipeline.Step, error)); ok {
-		return returnFunc(def)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Resolver, types.StepDefinition) (pipeline.Step, error)); ok {
+		return returnFunc(ctx, resolver, def)
 	}
-	if returnFunc, ok := ret.Get(0).(func(types.StepDefinition) pipeline.Step); ok {
-		r0 = returnFunc(def)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Resolver, types.StepDefinition) pipeline.Step); ok {
+		r0 = returnFunc(ctx, resolver, def)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(pipeline.Step)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(types.StepDefinition) error); ok {
-		r1 = returnFunc(def)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, secrets.Resolver, types.StepDefinition) error); ok {
+		r1 = returnFunc(ctx, resolver, def)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -71,19 +74,31 @@ type MechanismMock_CreateStep_Call struct {
 }
 
 // CreateStep is a helper method to define mock.On call
+//   - ctx context.Context
+//   - resolver secrets.Resolver
 //   - def types.StepDefinition
-func (_e *MechanismMock_Expecter) CreateStep(def interface{}) *MechanismMock_CreateStep_Call {
-	return &MechanismMock_CreateStep_Call{Call: _e.mock.On("CreateStep", def)}
+func (_e *MechanismMock_Expecter) CreateStep(ctx interface{}, resolver interface{}, def interface{}) *MechanismMock_CreateStep_Call {
+	return &MechanismMock_CreateStep_Call{Call: _e.mock.On("CreateStep", ctx, resolver, def)}
 }
 
-func (_c *MechanismMock_CreateStep_Call) Run(run func(def types.StepDefinition)) *MechanismMock_CreateStep_Call {
+func (_c *MechanismMock_CreateStep_Call) Run(run func(ctx context.Context, resolver secrets.Resolver, def types.StepDefinition)) *MechanismMock_CreateStep_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 types.StepDefinition
+		var arg0 context.Context
 		if args[0] != nil {
-			arg0 = args[0].(types.StepDefinition)
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 secrets.Resolver
+		if args[1] != nil {
+			arg1 = args[1].(secrets.Resolver)
+		}
+		var arg2 types.StepDefinition
+		if args[2] != nil {
+			arg2 = args[2].(types.StepDefinition)
 		}
 		run(
 			arg0,
+			arg1,
+			arg2,
 		)
 	})
 	return _c
@@ -94,7 +109,7 @@ func (_c *MechanismMock_CreateStep_Call) Return(step pipeline.Step, err error) *
 	return _c
 }
 
-func (_c *MechanismMock_CreateStep_Call) RunAndReturn(run func(def types.StepDefinition) (pipeline.Step, error)) *MechanismMock_CreateStep_Call {
+func (_c *MechanismMock_CreateStep_Call) RunAndReturn(run func(ctx context.Context, resolver secrets.Resolver, def types.StepDefinition) (pipeline.Step, error)) *MechanismMock_CreateStep_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -40,7 +40,7 @@ func (_m *ResolverMock) EXPECT() *ResolverMock_Expecter {
 
 // CertificateBundle provides a mock function for the type ResolverMock
 func (_mock *ResolverMock) CertificateBundle(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption) (secrets.CertificateBundleHandle, error) {
-	// secrets2.ResolveOption
+	// secrets.ResolveOption
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -127,7 +127,7 @@ func (_c *ResolverMock_CertificateBundle_Call) RunAndReturn(run func(ctx context
 
 // Credentials provides a mock function for the type ResolverMock
 func (_mock *ResolverMock) Credentials(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption) (secrets.CredentialsHandle, error) {
-	// secrets2.ResolveOption
+	// secrets.ResolveOption
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -214,7 +214,7 @@ func (_c *ResolverMock_Credentials_Call) RunAndReturn(run func(ctx context.Conte
 
 // Secret provides a mock function for the type ResolverMock
 func (_mock *ResolverMock) Secret(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption) (secrets.SecretHandle, error) {
-	// secrets2.ResolveOption
+	// secrets.ResolveOption
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -301,7 +301,7 @@ func (_c *ResolverMock_Secret_Call) RunAndReturn(run func(ctx context.Context, r
 
 // SecretSet provides a mock function for the type ResolverMock
 func (_mock *ResolverMock) SecretSet(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption) (secrets.SecretSetHandle, error) {
-	// secrets2.ResolveOption
+	// secrets.ResolveOption
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]

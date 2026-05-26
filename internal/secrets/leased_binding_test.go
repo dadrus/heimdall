@@ -237,8 +237,10 @@ func TestLeasedBindingRun(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			var logs bytes.Buffer
-			var calls atomic.Int32
+			var (
+				logs  bytes.Buffer
+				calls atomic.Int32
+			)
 
 			entry := tc.setup(t, &logs, &calls)
 

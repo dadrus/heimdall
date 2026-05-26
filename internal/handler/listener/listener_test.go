@@ -106,7 +106,7 @@ func TestNew(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "listener", Selector: "tls"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -139,7 +139,7 @@ func TestNew(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "listener", Selector: "tls"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 

@@ -96,6 +96,7 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 
 	rFactory, err := rules.NewRuleFactory(
 		repo,
+		noopResolver{},
 		conf,
 		config.DecisionMode,
 		logger,
@@ -112,7 +113,12 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	rProcessor := rules.NewRuleSetProcessor(&noopRepository{}, rFactory, config.DecisionMode)
+	rProcessor := rules.NewRuleSetProcessor(
+		config.DecisionMode,
+		noopRepository{},
+		rFactory,
+		noopScopedResolverFactory{},
+	)
 
 	_, err = filesystem.NewProvider(appCtx, rProcessor)
 	if err != nil {

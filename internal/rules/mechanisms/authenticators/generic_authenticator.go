@@ -37,6 +37,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -87,9 +88,14 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 	}
 
 	var conf Config
-	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for %s authenticator '%s'", AuthenticatorGeneric, name).CausedBy(err)
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("authenticator."+AuthenticatorGeneric+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s authenticator '%s'", AuthenticatorGeneric, name,
+		).CausedBy(err)
 	}
 
 	if strings.HasPrefix(conf.Endpoint.URL.String(), "http://") {
@@ -156,7 +162,11 @@ func (a *genericAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subjec
 	return nil
 }
 
-func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (a *genericAuthenticator) CreateStep(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	// this authenticator allows ttl to be redefined on the rule level
 	if def.IsEmpty() {
 		return a, nil
@@ -183,7 +193,9 @@ func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (pipeline.St
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
+	if err := decodeConfig(a.app, def.Config, &conf,
+		template.WithName("authenticator."+AuthenticatorGeneric+"."+a.name),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorGeneric, a.name).CausedBy(err)
 	}
@@ -206,13 +218,12 @@ func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (pipeline.St
 	}, nil
 }
 
-func (a *genericAuthenticator) Name() string            { return a.name }
-func (a *genericAuthenticator) ID() string              { return a.id }
-func (a *genericAuthenticator) Type() string            { return a.name }
-func (a *genericAuthenticator) PrincipalName() string   { return a.principalName }
-func (*genericAuthenticator) IsInsecure() bool          { return false }
-func (*genericAuthenticator) Kind() types.Kind          { return types.KindAuthenticator }
-func (*genericAuthenticator) CleanUp(_ context.Context) {}
+func (a *genericAuthenticator) Name() string          { return a.name }
+func (a *genericAuthenticator) ID() string            { return a.id }
+func (a *genericAuthenticator) Type() string          { return a.name }
+func (a *genericAuthenticator) PrincipalName() string { return a.principalName }
+func (*genericAuthenticator) IsInsecure() bool        { return false }
+func (*genericAuthenticator) Kind() types.Kind        { return types.KindAuthenticator }
 
 func (a *genericAuthenticator) getPrincipalInformation(ctx pipeline.Context, authData string) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.Context())

@@ -64,7 +64,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -89,7 +89,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -199,7 +199,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 		Secret(
 			mock.Anything,
 			secrets.Reference{Source: "foo", Selector: "bar"},
-			mock.AnythingOfType("secrets2.ResolveOption"),
+			mock.Anything,
 		).
 		Return(handle, nil)
 

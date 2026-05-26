@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"errors"
+	"maps"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
@@ -88,9 +89,7 @@ func New(val string, opts ...Option) (Template, error) {
 		return nil, err
 	}
 
-	for ref, informer := range createdInformers {
-		informers[ref] = informer
-	}
+	maps.Copy(informers, createdInformers)
 
 	hash := sha256.New()
 	hash.Write(stringx.ToBytes(val))

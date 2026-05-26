@@ -112,7 +112,7 @@ type CredentialsHandleMock_OnUpdate_Call struct {
 }
 
 // OnUpdate is a helper method to define mock.On call
-//   - updateFunc secrets.UpdateFunc[secrets2.Credentials]
+//   - updateFunc secrets.UpdateFunc[secrets.Credentials]
 func (_e *CredentialsHandleMock_Expecter) OnUpdate(updateFunc interface{}) *CredentialsHandleMock_OnUpdate_Call {
 	return &CredentialsHandleMock_OnUpdate_Call{Call: _e.mock.On("OnUpdate", updateFunc)}
 }

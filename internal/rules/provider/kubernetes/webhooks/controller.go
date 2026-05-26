@@ -45,7 +45,8 @@ func (noopController) Stop(context.Context) error  { return nil }
 
 func New(
 	tlsConf *config.TLS,
-	sm secrets.Resolver,
+	sr secrets.Resolver,
+	srf secrets.ScopedResolverFactory,
 	ko keyregistry.KeyObserver,
 	logger zerolog.Logger,
 	authClass string,
@@ -58,10 +59,10 @@ func New(
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Kubernetes Admission Controller",
 		ServiceAddress: listeningAddress,
-		Server:         newService(listeningAddress, ruleFactory, authClass, logger),
+		Server:         newService(listeningAddress, ruleFactory, srf, authClass, logger),
 		Logger:         logger,
 		TLSConf:        tlsConf,
-		SecretResolver: sm,
+		SecretResolver: sr,
 		KeyObserver:    ko,
 	}
 }

@@ -130,7 +130,7 @@ func TestScopeSecret(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(bdg, key, nil)
 
@@ -162,7 +162,7 @@ func TestScopeSecret(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, bindingKey{}, assert.AnError)
 
@@ -191,7 +191,7 @@ func TestScopeSecret(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(bdg, key, nil)
 
@@ -254,7 +254,7 @@ func TestScopeSecretSet(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(bdg, key, nil)
 
@@ -286,7 +286,7 @@ func TestScopeSecretSet(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, bindingKey{}, assert.AnError)
 
@@ -319,7 +319,7 @@ func TestScopeSecretSet(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(bdg, key, nil)
 
@@ -500,7 +500,7 @@ func TestScopeCertificateBundle(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(bdg, key, nil)
 
@@ -532,7 +532,7 @@ func TestScopeCertificateBundle(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, bindingKey{}, assert.AnError)
 
@@ -565,7 +565,7 @@ func TestScopeCertificateBundle(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(bdg, key, nil)
 

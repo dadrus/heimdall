@@ -17,12 +17,12 @@ func (noopRepository) FindRule(_ pipeline.Context) (rule.Rule, error) {
 	return nil, errFunctionNotSupported
 }
 func (noopRepository) AddRuleSet(_ context.Context, _ rule.RuleSet, _ []rule.Rule) error { return nil }
-func (noopRepository) UpdateRuleSet(_ context.Context, _ rule.RuleSet, _ []rule.Rule) ([]rule.Rule, error) {
-	return nil, errFunctionNotSupported
+func (noopRepository) UpdateRuleSet(_ context.Context, _ rule.RuleSet, _ []rule.Rule) error {
+	return errFunctionNotSupported
 }
 
-func (noopRepository) DeleteRuleSet(_ context.Context, _ rule.RuleSet) ([]rule.Rule, error) {
-	return nil, errFunctionNotSupported
+func (noopRepository) DeleteRuleSet(_ context.Context, _ rule.RuleSet) error {
+	return errFunctionNotSupported
 }
 
 type noopRegistry struct{}
@@ -62,6 +62,18 @@ func (noopResolver) CertificateBundle(
 	...secrets.ResolveOption,
 ) (secrets.CertificateBundleHandle, error) {
 	return noopHandle[secrets.CertificateBundle]{}, nil
+}
+
+type noopScopedResolver struct {
+	noopResolver
+}
+
+func (noopScopedResolver) Release() {}
+
+type noopScopedResolverFactory struct{}
+
+func (noopScopedResolverFactory) Create(id string, opts ...secrets.ScopeOption) secrets.ScopedResolver {
+	return noopScopedResolver{}
 }
 
 type noopHandle[T any] struct{}

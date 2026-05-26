@@ -215,22 +215,3 @@ func TestConditionalStepAccept(t *testing.T) {
 	// THEN
 	// all expecations are met
 }
-
-func TestConditionalStepCleanUp(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	step := mocks.NewStepMock(t)
-	step.EXPECT().CleanUp(t.Context())
-
-	cs := &conditionalStep{
-		c: rulemocks.NewExecutionConditionMock(t),
-		s: step,
-	}
-
-	// WHEN
-	cs.CleanUp(t.Context())
-
-	// THEN
-	// all expecations are met
-}

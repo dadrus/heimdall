@@ -25,6 +25,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
@@ -46,8 +47,8 @@ func init() {
 }
 
 type oauth2ClientCredentials struct {
-	ClientID     string `mapstructure:"client_id"     validate:"required"`
-	ClientSecret string `mapstructure:"client_secret" validate:"required"`
+	ClientID     string `json:"client_id"     validate:"required"`
+	ClientSecret string `json:"client_secret" validate:"required"`
 }
 
 type oauth2ClientCredentialsHeaderConfig struct {
@@ -60,7 +61,7 @@ type oauth2ClientCredentialsFinalizer struct {
 	id           string
 	app          app.Context
 	cfg          cc.Config
-	resolver     *secrets.CredentialsInformer[oauth2ClientCredentials]
+	informer     *secrets.CredentialsInformer[oauth2ClientCredentials]
 	headerName   string
 	headerScheme string
 }
@@ -94,16 +95,19 @@ func newOAuth2ClientCredentialsFinalizer(
 		).CausedBy(err)
 	}
 
-	resolver := &secrets.CredentialsInformer[oauth2ClientCredentials]{
-		Manager:   app.SecretsManager(),
-		Reference: secrets.InternalRef(conf.Credentials.Source, conf.Credentials.Selector),
-		Converter: toOAuth2ClientCredentials,
-	}
-
-	if err := resolver.Start(context.Background()); err != nil {
+	informer, err := secrets.NewCredentialsInformer(
+		context.Background(),
+		app.SecretResolver(),
+		secrets.Reference{Source: conf.Credentials.Source, Selector: conf.Credentials.Selector},
+		secrets.CredentialsInformerOptions[oauth2ClientCredentials]{
+			Converter:   toOAuth2ClientCredentials(app.DecoderFactory()),
+			ResolveMode: secrets.ResolveLazy,
+		},
+	)
+	if err != nil {
 		return nil, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
-			"failed resolving oauth2 client credentials",
+			"failed creating informer for client credentials",
 		).CausedBy(err)
 	}
 
@@ -124,7 +128,7 @@ func newOAuth2ClientCredentialsFinalizer(
 			Scopes:     conf.Scopes,
 			TTL:        conf.TTL,
 		},
-		resolver: resolver,
+		informer: informer,
 		headerName: x.IfThenElseExec(
 			conf.Header != nil,
 			func() string { return conf.Header.Name },
@@ -143,9 +147,12 @@ func (f *oauth2ClientCredentialsFinalizer) ID() string              { return f.i
 func (f *oauth2ClientCredentialsFinalizer) Type() string            { return f.name }
 func (*oauth2ClientCredentialsFinalizer) Accept(_ pipeline.Visitor) {}
 func (*oauth2ClientCredentialsFinalizer) Kind() types.Kind          { return types.KindFinalizer }
-func (*oauth2ClientCredentialsFinalizer) CleanUp(_ context.Context) {}
 
-func (f *oauth2ClientCredentialsFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (f *oauth2ClientCredentialsFinalizer) CreateStep(
+	_ context.Context,
+	_ secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
@@ -183,7 +190,7 @@ func (f *oauth2ClientCredentialsFinalizer) CreateStep(def types.StepDefinition) 
 		name:     f.name,
 		id:       x.IfThenElse(len(def.ID) == 0, f.id, def.ID),
 		app:      f.app,
-		resolver: f.resolver,
+		informer: f.informer,
 		cfg:      cfg,
 		headerName: x.IfThenElseExec(
 			conf.Header != nil,
@@ -206,7 +213,7 @@ func (f *oauth2ClientCredentialsFinalizer) Execute(ctx pipeline.Context, _ pipel
 		Str("_id", f.id).
 		Msg("Executing finalizer")
 
-	creds, ok := f.resolver.Get()
+	creds, ok := f.informer.Get(ctx.Context())
 	if !ok {
 		return errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
@@ -233,11 +240,21 @@ func (f *oauth2ClientCredentialsFinalizer) Execute(ctx pipeline.Context, _ pipel
 	return nil
 }
 
-func toOAuth2ClientCredentials(creds secrets.Credentials) (oauth2ClientCredentials, error) {
-	var data oauth2ClientCredentials
-	if err := creds.Decode(&data); err != nil {
-		return oauth2ClientCredentials{}, err
-	}
+func toOAuth2ClientCredentials(
+	df encoding.DecoderFactory,
+) func(creds secrets.Credentials) (oauth2ClientCredentials, error) {
+	return func(creds secrets.Credentials) (oauth2ClientCredentials, error) {
+		var data oauth2ClientCredentials
 
-	return data, nil
+		dec := df.Decoder()
+
+		if err := dec.DecodeMap(&data, creds.Values()); err != nil {
+			return oauth2ClientCredentials{}, errorchain.NewWithMessage(
+				pipeline.ErrConfiguration,
+				"failed decoding oauth2 client credentials",
+			).CausedBy(err)
+		}
+
+		return data, nil
+	}
 }

@@ -18,6 +18,7 @@ package authenticators
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -43,6 +44,7 @@ import (
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -164,10 +166,12 @@ principal:
 				require.NotNil(t, auth)
 				assert.Equal(t, "http://test.com", auth.e.URL.String())
 				assert.Equal(t, http.MethodGet, auth.e.Method)
+
 				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.HeaderValueExtractStrategy{Name: "foo-header"})
+
 				assert.NotNil(t, auth.payload)
 				assert.Empty(t, auth.fwdCookies)
 				assert.Empty(t, auth.fwdHeaders)
@@ -201,10 +205,12 @@ cache_ttl: 5s`),
 				require.NotNil(t, auth)
 				assert.Equal(t, "https://test.com", auth.e.URL.String())
 				assert.Equal(t, http.MethodPost, auth.e.Method)
+
 				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
+
 				assert.Nil(t, auth.payload)
 				assert.Empty(t, auth.fwdCookies)
 				assert.Empty(t, auth.fwdHeaders)
@@ -245,10 +251,12 @@ session_lifespan:
 				require.NotNil(t, auth)
 				assert.Equal(t, "http://test.com", auth.e.URL.String())
 				assert.Equal(t, http.MethodPatch, auth.e.Method)
+
 				ces, ok := auth.ads.(extractors.CompositeExtractStrategy)
 				assert.True(t, ok)
 				assert.Len(t, ces, 1)
 				assert.Contains(t, ces, &extractors.CookieValueExtractStrategy{Name: "foo-cookie"})
+
 				assert.Nil(t, auth.payload)
 				assert.Len(t, auth.fwdHeaders, 1)
 				assert.Contains(t, auth.fwdHeaders, "X-My-Header")
@@ -291,7 +299,8 @@ principal:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
+			t.Parallel()
+
 			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
 			validator, err := validation.NewValidator(
 				validation.WithTagValidator(es),
@@ -299,18 +308,19 @@ principal:
 			)
 			require.NoError(t, err)
 
+			sr := secretsmocks.NewResolverMock(t)
+
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
-			// WHEN
 			mech, err := newGenericAuthenticator(appCtx, "auth1", conf)
 
-			// THEN
 			auth, ok := mech.(*genericAuthenticator)
 			if err == nil {
 				require.True(t, ok)
@@ -408,7 +418,7 @@ principal:
 				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
-		"prototype config with cache ttl, config with cache tll": {
+		"prototype config with cache ttl, config with cache ttl": {
 			config: []byte(`
 identity_info_endpoint:
   url: http://test.com
@@ -440,7 +450,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.sessionLifespanConf, configured.sessionLifespanConf)
 				assert.Equal(t, prototype.Name(), configured.Name())
 				assert.Equal(t, prototype.ID(), configured.ID())
-				assert.Equal(t, "prototype config with cache ttl, config with cache tll", configured.ID())
+				assert.Equal(t, "prototype config with cache ttl, config with cache ttl", configured.ID())
 				assert.False(t, configured.IsInsecure())
 				assert.Equal(t, prototype.PrincipalName(), configured.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, configured.Kind())
@@ -710,7 +720,8 @@ principal:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
+			t.Parallel()
+
 			pc, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
@@ -719,10 +730,13 @@ principal:
 			)
 			require.NoError(t, err)
 
+			sr := secretsmocks.NewResolverMock(t)
+
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 
 			mech, err := newGenericAuthenticator(appCtx, uc, pc)
 			require.NoError(t, err)
@@ -730,10 +744,8 @@ principal:
 			configured, ok := mech.(*genericAuthenticator)
 			require.True(t, ok)
 
-			// WHEN
-			step, err := mech.CreateStep(tc.stepDef)
+			step, err := mech.CreateStep(context.Background(), sr, tc.stepDef)
 
-			// THEN
 			auth, ok := step.(*genericAuthenticator)
 			if err == nil {
 				require.True(t, ok)
@@ -1028,7 +1040,6 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					assert.Equal(t, http.MethodGet, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 					assert.Equal(t, "session_token", req.Header.Get("X-Auth-Data"))
-
 					assert.Equal(t, "session_token", req.URL.Query().Get("foo"))
 
 					res, err := io.ReadAll(req.Body)
@@ -1384,11 +1395,11 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
 			endpointCalled = false
 			responseHeaders = nil
 			responseContentType = ""
 			responseContent = nil
+			responseCode = http.StatusOK
 
 			checkRequest = func(*http.Request) { t.Helper() }
 
@@ -1419,10 +1430,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 			sub := make(pipeline.Subject)
 
-			// WHEN
 			err := tc.authenticator.Execute(ctx, sub)
 
-			// THEN
 			tc.assert(t, err, sub)
 		})
 	}
@@ -1491,10 +1500,10 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// WHEN
+			t.Parallel()
+
 			ttl := tc.authenticator.getCacheTTL(tc.sessionLifespan)
 
-			// THEN
 			tc.assert(t, ttl)
 		})
 	}
@@ -1503,17 +1512,13 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 func TestGenericAuthenticatorAccept(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
 	auth := &genericAuthenticator{}
 	visitor := pipelinemocks.NewVisitorMock(t)
 
 	visitor.EXPECT().VisitInsecure(auth)
 	visitor.EXPECT().VisitPrincipalNamer(auth)
 
-	// WHEN
 	auth.Accept(visitor)
-
-	// THEN expected calls are done
 }
 
 func TestGenericAuthenticatorReadResponse(t *testing.T) {
@@ -1531,17 +1536,16 @@ func TestGenericAuthenticatorReadResponse(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(http.StatusText(tc.status), func(t *testing.T) {
-			// GIVEN
+			t.Parallel()
+
 			auth := &genericAuthenticator{}
 			resp := &http.Response{
 				StatusCode: tc.status,
 				Body:       io.NopCloser(bytes.NewBufferString("{}")),
 			}
 
-			// WHEN
 			_, err := auth.readResponse(resp)
 
-			// THEN
 			if tc.err != nil {
 				require.ErrorIs(t, err, tc.err)
 			} else {

@@ -71,23 +71,6 @@ func TestTelemetryStepAccept(t *testing.T) {
 	ts.Accept(vm)
 }
 
-func TestTelemetryStepCleanUp(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	sm := mocks.NewStepMock(t)
-	sm.EXPECT().ID().Return("test id")
-	sm.EXPECT().Type().Return("test type")
-	sm.EXPECT().Kind().Return(pipeline.KindAuthenticator)
-	sm.EXPECT().CleanUp(t.Context())
-
-	ts := newTelemetryStep(sm, noop.Tracer{})
-	require.NotNil(t, ts)
-
-	// WHEN & THEN
-	ts.CleanUp(t.Context())
-}
-
 func TestTelemetryStepExecute(t *testing.T) {
 	t.Parallel()
 

@@ -46,7 +46,7 @@ func TestUnauthorizedAuthenticatorExecute(t *testing.T) {
 
 	mechanisms, err := newUnauthorizedAuthenticator(appCtx, "unauth", nil)
 	require.NoError(t, err)
-	step, err := mechanisms.CreateStep(types.StepDefinition{})
+	step, err := mechanisms.CreateStep(t.Context(), nil, types.StepDefinition{})
 	require.NoError(t, err)
 
 	// WHEN
@@ -132,7 +132,7 @@ func TestUnauthorizedAuthenticatorCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mechanism.CreateStep(tc.stepDef)
+			step, err := mechanism.CreateStep(t.Context(), nil, tc.stepDef)
 
 			// THEN
 			auth, ok := step.(*unauthorizedAuthenticator)

@@ -34,6 +34,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -49,6 +50,7 @@ type StepDefinition struct {
 
 func NewRuleFactory(
 	repo mechanisms.Repository,
+	resolver secrets.Resolver,
 	conf *config.Configuration,
 	mode config.OperationMode,
 	logger zerolog.Logger,
@@ -59,8 +61,9 @@ func NewRuleFactory(
 	logger.Debug().Msg("Creating rule factory")
 
 	rf := &ruleFactory{
-		r: repo,
-		l: logger,
+		r:  repo,
+		l:  logger,
+		sr: resolver,
 		t: x.IfThenElseExec(conf.Tracing.CoverRules,
 			func() trace.Tracer { return tracer },
 			func() trace.Tracer { return nooptrace.Tracer{} },
@@ -90,6 +93,7 @@ type ruleFactory struct {
 	l                 zerolog.Logger
 	t                 trace.Tracer
 	m                 metric.Meter
+	sr                secrets.Resolver
 	templateRule      *ruleImpl
 	defaultRule       rule.Rule
 	hasDefaultRule    bool
@@ -100,9 +104,17 @@ type ruleFactory struct {
 func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
 func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
-func (f *ruleFactory) CreateRule(source v1beta1.RuleSet, rul v1beta1.Rule) (rule.Rule, error) { //nolint:cyclop,funlen
+func (f *ruleFactory) CreateRule(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	source v1beta1.RuleSet,
+	rul v1beta1.Rule,
+) (rule.Rule, error) { //nolint:cyclop,funlen
 	if f.mode == config.ProxyMode && rul.Backend == nil {
-		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration, "proxy mode requires forward_to definition")
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"proxy mode requires forward_to definition",
+		)
 	}
 
 	slashesHandling := x.IfThenElse(len(rul.EncodedSlashesHandling) != 0,
@@ -110,18 +122,10 @@ func (f *ruleFactory) CreateRule(source v1beta1.RuleSet, rul v1beta1.Rule) (rule
 		v1beta1.EncodedSlashesOff,
 	)
 
-	createdPipelines, err := f.createPipelines(rul.Execute, rul.ErrorHandler)
+	createdPipelines, err := f.createPipelines(ctx, resolver, rul.Execute, rul.ErrorHandler)
 	if err != nil {
 		return nil, err
 	}
-
-	defer func() {
-		// err is intentionally used as the cleanup signal. Keep later error returns
-		// assigned to this variable so partially built pipelines are released.
-		if err != nil {
-			createdPipelines.CleanUp(context.Background())
-		}
-	}()
 
 	rulPipeline := f.applyTemplateFallback(createdPipelines)
 	if err = rulPipeline.validate(); err != nil {
@@ -206,24 +210,25 @@ func (f *ruleFactory) addRoutes(
 	return nil
 }
 
-func (f *ruleFactory) createPipelines(executeSteps, errorSteps []v1beta1.Step) (rulePipelineImpl, error) {
+func (f *ruleFactory) createPipelines(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	executeSteps,
+	errorSteps []v1beta1.Step,
+) (rulePipelineImpl, error) {
 	execPipeline, err := createPipeline[*executePipeline](
-		context.Background(),
 		executeSteps,
-		newExecutePipelineBuilder(f, len(executeSteps)),
+		newExecutePipelineBuilder(ctx, f, resolver, len(executeSteps)),
 	)
 	if err != nil {
 		return rulePipelineImpl{}, err
 	}
 
 	errPipeline, err := createPipeline[*errorPipeline](
-		context.Background(),
 		errorSteps,
-		newErrorPipelineBuilder(f, len(errorSteps)),
+		newErrorPipelineBuilder(ctx, f, resolver, len(errorSteps)),
 	)
 	if err != nil {
-		execPipeline.CleanUp(context.Background())
-
 		return rulePipelineImpl{}, err
 	}
 
@@ -273,18 +278,10 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return err
 	}
 
-	createdPipelines, err := f.createPipelines(executeSteps, ehSteps)
+	createdPipelines, err := f.createPipelines(context.Background(), f.sr, executeSteps, ehSteps)
 	if err != nil {
 		return err
 	}
-
-	defer func() {
-		// err is intentionally used as the cleanup signal. Keep later error returns
-		// assigned to this variable so partially built pipelines are released.
-		if err != nil {
-			createdPipelines.CleanUp(context.Background())
-		}
-	}()
 
 	if err = createdPipelines.validate(); err != nil {
 		return err
@@ -348,13 +345,20 @@ func (f *ruleFactory) convertToSteps(rawSteps []config.MechanismConfig) ([]v1bet
 	return executeSteps, nil
 }
 
-func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinition) (pipeline.Step, error) {
+func (f *ruleFactory) createStep(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	ref v1beta1.MechanismReference,
+	def StepDefinition,
+) (pipeline.Step, error) {
 	mechanism, err := f.lookupMechanism(ref)
 	if err != nil {
 		return nil, errorchain.New(ErrStepCreation).CausedBy(err)
 	}
 
 	step, err := mechanism.CreateStep(
+		ctx,
+		resolver,
 		mechanisms.StepDefinition{
 			ID:        def.ID,
 			Config:    def.Config,
@@ -368,8 +372,6 @@ func (f *ruleFactory) createStep(ref v1beta1.MechanismReference, def StepDefinit
 	if def.Condition != nil {
 		condition, err := newCelExecutionCondition(*def.Condition)
 		if err != nil {
-			step.CleanUp(context.Background())
-
 			return nil, err
 		}
 

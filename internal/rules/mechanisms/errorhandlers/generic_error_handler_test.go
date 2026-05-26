@@ -32,6 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -104,7 +105,7 @@ foo: bar
 				assert.Nil(t, eh.body)
 				assert.Nil(t, eh.values)
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
-				assert.Equal(t, ErrorHandlerGeneric, eh.Type())
+				assert.Equal(t, "with unsupported fields", eh.Type())
 			},
 		},
 		"with full valid configuration": {
@@ -129,7 +130,7 @@ values:
 				assert.NotNil(t, eh.body)
 				assert.Len(t, eh.values, 1)
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
-				assert.Equal(t, ErrorHandlerGeneric, eh.Type())
+				assert.Equal(t, "with full valid configuration", eh.Type())
 
 				reqURL, err := url.Parse("https://foo.bar/baz")
 				require.NoError(t, err)
@@ -160,10 +161,13 @@ values:
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			sr := secretsmocks.NewResolverMock(t)
+
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Return(sr)
 
 			// WHEN
 			mech, err := newGenericErrorHandler(appCtx, uc, conf)
@@ -364,10 +368,13 @@ values:
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			sr := secretsmocks.NewResolverMock(t)
+
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Return(sr)
 
 			mech, err := newGenericErrorHandler(appCtx, uc, pc)
 			require.NoError(t, err)
@@ -376,7 +383,7 @@ values:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(tc.stepDef)
+			step, err := mech.CreateStep(t.Context(), sr, tc.stepDef)
 
 			// THEN
 			eh, ok := step.(*genericErrorHandler)
@@ -663,14 +670,17 @@ values:
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			sr := secretsmocks.NewResolverMock(t)
+
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Return(sr)
 
 			mech, err := newGenericErrorHandler(appCtx, "foo", conf)
 			require.NoError(t, err)
-			step, err := mech.CreateStep(types.StepDefinition{ID: ""})
+			step, err := mech.CreateStep(t.Context(), sr, types.StepDefinition{ID: ""})
 			require.NoError(t, err)
 
 			// WHEN

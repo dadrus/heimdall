@@ -155,7 +155,7 @@ func (r *repository) AddRuleSet(_ context.Context, _ rule.RuleSet, rules []rule.
 	return nil
 }
 
-func (r *repository) UpdateRuleSet(_ context.Context, src rule.RuleSet, rules []rule.Rule) ([]rule.Rule, error) {
+func (r *repository) UpdateRuleSet(_ context.Context, src rule.RuleSet, rules []rule.Rule) error {
 	// create rules
 	r.knownRulesMutex.Lock()
 	defer r.knownRulesMutex.Unlock()
@@ -174,12 +174,6 @@ func (r *repository) UpdateRuleSet(_ context.Context, src rule.RuleSet, rules []
 		})
 
 		return ruleIsNew || ruleChanged
-	})
-
-	// find newly loaded rules that will not become active because an equivalent
-	// already active rule is kept
-	unusedNewRules := slicex.Filter(rules, func(newRule rule.Rule) bool {
-		return !slices.Contains(toBeAdded, newRule)
 	})
 
 	// find deleted rules, as well as those, which have been changed.
@@ -211,13 +205,13 @@ func (r *repository) UpdateRuleSet(_ context.Context, src rule.RuleSet, rules []
 			return len(oldValues) == 0 || oldValues[0].Rule().Source().Equals(newValue.Rule().Source())
 		}))
 	if err := r.addRulesTo(tmp, toBeAdded); err != nil {
-		return nil, err
+		return err
 	}
 
 	// Check if adding existing rules would result in the violation of the constraint, that
 	// more specific and more generic rules must be defined in the same rule set
 	if err := r.addRulesTo(tmp, knownRules); err != nil {
-		return nil, err
+		return err
 	}
 
 	// Try updating the existing index now.
@@ -225,12 +219,12 @@ func (r *repository) UpdateRuleSet(_ context.Context, src rule.RuleSet, rules []
 
 	// delete rules
 	if err := r.removeRulesFrom(tmp, toBeDeleted); err != nil {
-		return nil, err
+		return err
 	}
 
 	// add rules
 	if err := r.addRulesTo(tmp, toBeAdded); err != nil {
-		return nil, err
+		return err
 	}
 
 	knownRules = append(knownRules, toBeAdded...)
@@ -242,13 +236,10 @@ func (r *repository) UpdateRuleSet(_ context.Context, src rule.RuleSet, rules []
 	r.index = tmp
 	r.rulesTrieMutex.Unlock()
 
-	// collect rules that became inactive or were loaded but not activated
-	cleanupCandidates := append(slices.Clone(toBeDeleted), unusedNewRules...)
-
-	return cleanupCandidates, nil
+	return nil
 }
 
-func (r *repository) DeleteRuleSet(_ context.Context, src rule.RuleSet) ([]rule.Rule, error) {
+func (r *repository) DeleteRuleSet(_ context.Context, src rule.RuleSet) error {
 	r.knownRulesMutex.Lock()
 	defer r.knownRulesMutex.Unlock()
 
@@ -259,7 +250,7 @@ func (r *repository) DeleteRuleSet(_ context.Context, src rule.RuleSet) ([]rule.
 
 	// remove them
 	if err := r.removeRulesFrom(tmp, applicable); err != nil {
-		return nil, err
+		return err
 	}
 
 	r.knownRules = slices.DeleteFunc(r.knownRules, func(r rule.Rule) bool {
@@ -272,7 +263,7 @@ func (r *repository) DeleteRuleSet(_ context.Context, src rule.RuleSet) ([]rule.
 	r.index = tmp
 	r.rulesTrieMutex.Unlock()
 
-	return applicable, nil
+	return nil
 }
 
 func (r *repository) prepareMetrics() {

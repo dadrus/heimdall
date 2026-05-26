@@ -68,7 +68,7 @@ func TestToServerTLSConfig(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "tls", Selector: "server"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -98,7 +98,7 @@ func TestToServerTLSConfig(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "tls", Selector: "server"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -195,7 +195,7 @@ func TestToClientTLSConfig(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "tls", Selector: "client"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -224,7 +224,7 @@ func TestToClientTLSConfig(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "tls", Selector: "client"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 

@@ -39,7 +39,9 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -96,15 +98,22 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 	}
 
 	var conf Config
-	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for %s authenticator '%s'", AuthenticatorJWT, name).CausedBy(err)
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("authenticator."+AuthenticatorJWT+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s authenticator '%s'", AuthenticatorJWT, name,
+		).CausedBy(err)
 	}
 
 	if conf.JWKSEndpoint != nil {
 		if len(conf.Assertions.TrustedIssuers) == 0 {
-			return nil, errorchain.
-				NewWithMessage(pipeline.ErrConfiguration, "'issuers' is a required field if JWKS endpoint is used")
+			return nil, errorchain.NewWithMessage(
+				pipeline.ErrConfiguration,
+				"'issuers' is a required field if JWKS endpoint is used",
+			)
 		}
 
 		if strings.HasPrefix(conf.JWKSEndpoint.URL.String(), "http://") {
@@ -199,16 +208,14 @@ func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 
 	jwtAd, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "no JWT present").
+		return errorchain.NewWithMessage(pipeline.ErrAuthentication, "no JWT present").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
 	token, err := jwt.ParseSigned(jwtAd, supportedAlgorithms())
 	if err != nil {
-		return errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
+		return errorchain.NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
 			WithErrorContext(a).
 			CausedBy(errorchain.NewWithMessage(pipeline.ErrMalformedRequest, "invalid JWT format").
 				CausedBy(err))
@@ -232,7 +239,11 @@ func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 	return nil
 }
 
-func (a *jwtAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (a *jwtAuthenticator) CreateStep(
+	_ context.Context,
+	_ secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
 	if def.IsEmpty() {
 		return a, nil
@@ -259,9 +270,13 @@ func (a *jwtAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, 
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for %s authenticator '%s'", AuthenticatorJWT, a.name).CausedBy(err)
+	if err := decodeConfig(a.app, def.Config, &conf,
+		template.WithName("authenticator."+AuthenticatorJWT+"."+a.name),
+	); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s authenticator '%s'", AuthenticatorJWT, a.name,
+		).CausedBy(err)
 	}
 
 	return &jwtAuthenticator{
@@ -284,13 +299,12 @@ func (a *jwtAuthenticator) DecorateErrorResponse(err error, er *pipeline.ErrorRe
 	a.ed.Decorate(err, a.a.ScopesMatcher.Scopes(), er)
 }
 
-func (a *jwtAuthenticator) Name() string            { return a.name }
-func (a *jwtAuthenticator) ID() string              { return a.id }
-func (a *jwtAuthenticator) Type() string            { return a.name }
-func (a *jwtAuthenticator) PrincipalName() string   { return a.principalName }
-func (*jwtAuthenticator) IsInsecure() bool          { return false }
-func (*jwtAuthenticator) Kind() types.Kind          { return types.KindAuthenticator }
-func (*jwtAuthenticator) CleanUp(_ context.Context) {}
+func (a *jwtAuthenticator) Name() string          { return a.name }
+func (a *jwtAuthenticator) ID() string            { return a.id }
+func (a *jwtAuthenticator) Type() string          { return a.name }
+func (a *jwtAuthenticator) PrincipalName() string { return a.principalName }
+func (*jwtAuthenticator) IsInsecure() bool        { return false }
+func (*jwtAuthenticator) Kind() types.Kind        { return types.KindAuthenticator }
 
 func (a *jwtAuthenticator) isCacheEnabled() bool {
 	// cache is enabled if ttl is not configured (in that case the ttl value from either

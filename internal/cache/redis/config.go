@@ -29,6 +29,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -39,8 +40,8 @@ import (
 var rootCertPool *x509.CertPool //nolint:gochecknoglobals
 
 type redisCredentials struct {
-	Username string `mapstructure:"username" validate:"required"`
-	Password string `mapstructure:"password" validate:"required"`
+	Username string `json:"username"`
+	Password string `json:"password" validate:"required"`
 }
 
 type clientCache struct {
@@ -120,7 +121,7 @@ func (c baseConfig) credentialsInformer(
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
 		secrets.CredentialsInformerOptions[rueidis.AuthCredentials]{
-			Converter:   toRedisCredentials,
+			Converter:   toRedisCredentials(appCtx.DecoderFactory()),
 			ResolveMode: secrets.ResolveEager,
 		},
 	)
@@ -134,20 +135,22 @@ func (c baseConfig) credentialsInformer(
 	return informer, nil
 }
 
-func toRedisCredentials(creds secrets.Credentials) (rueidis.AuthCredentials, error) {
-	var data redisCredentials
+func toRedisCredentials(df encoding.DecoderFactory) func(creds secrets.Credentials) (rueidis.AuthCredentials, error) {
+	return func(creds secrets.Credentials) (rueidis.AuthCredentials, error) {
+		var data redisCredentials
 
-	if err := creds.Decode(&data); err != nil {
-		return rueidis.AuthCredentials{}, errorchain.NewWithMessage(
-			pipeline.ErrConfiguration,
-			"failed decoding redis credentials",
-		).CausedBy(err)
+		if err := df.Decoder().DecodeMap(&data, creds.Values()); err != nil {
+			return rueidis.AuthCredentials{}, errorchain.NewWithMessage(
+				pipeline.ErrConfiguration,
+				"failed decoding redis credentials",
+			).CausedBy(err)
+		}
+
+		return rueidis.AuthCredentials{
+			Username: data.Username,
+			Password: data.Password,
+		}, nil
 	}
-
-	return rueidis.AuthCredentials{
-		Username: data.Username,
-		Password: data.Password,
-	}, nil
 }
 
 func authCredentials(

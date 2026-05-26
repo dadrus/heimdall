@@ -19,9 +19,6 @@ package types //nolint:revive
 import (
 	"crypto"
 	"crypto/x509"
-	"fmt"
-
-	"github.com/go-viper/mapstructure/v2"
 )
 
 type SecretKind string
@@ -64,7 +61,7 @@ type CertificateBundle interface {
 
 type Credentials interface {
 	Secret
-	Decode(out any) error
+	Values() map[string]any
 }
 
 type baseSecret struct {
@@ -181,20 +178,5 @@ func NewCredentials(selector string, values map[string]any) Credentials {
 	}
 }
 
-func (p *credentials) Selector() string { return p.selector }
-
-func (p *credentials) Decode(out any) error {
-	dec, err := mapstructure.NewDecoder(&mapstructure.DecoderConfig{
-		Result:      out,
-		ErrorUnused: true,
-	})
-	if err != nil {
-		return fmt.Errorf("%w: %w", ErrInvalidCredentialsPayload, err)
-	}
-
-	if err = dec.Decode(p.values); err != nil {
-		return fmt.Errorf("%w: %w", ErrInvalidCredentialsPayload, err)
-	}
-
-	return nil
-}
+func (p *credentials) Selector() string       { return p.selector }
+func (p *credentials) Values() map[string]any { return p.values }

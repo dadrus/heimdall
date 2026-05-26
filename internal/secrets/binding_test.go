@@ -306,6 +306,7 @@ func TestBindingResolveOnceDeduplicatesConcurrentCachedResolves(t *testing.T) {
 	})
 
 	var wg sync.WaitGroup
+
 	results := make(chan string, goroutines)
 
 	for range goroutines {
@@ -568,8 +569,10 @@ func TestBindingPublish(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			var logs bytes.Buffer
-			var calls guardedCalls
+			var (
+				logs  bytes.Buffer
+				calls guardedCalls
+			)
 
 			bdg := tc.setup(t, &logs, &calls)
 			bdg.logger = zerolog.New(&logs)
@@ -629,8 +632,10 @@ func TestBindingRun(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			var logs bytes.Buffer
-			var calls guardedCalls
+			var (
+				logs  bytes.Buffer
+				calls guardedCalls
+			)
 
 			bdg := tc.setup(t, &logs, &calls)
 			bdg.logger = zerolog.New(&logs)

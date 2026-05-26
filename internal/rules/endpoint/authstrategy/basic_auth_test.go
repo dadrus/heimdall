@@ -27,10 +27,12 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/types"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestBasicAuthCredentialsHash(t *testing.T) {
@@ -42,7 +44,6 @@ func TestBasicAuthCredentialsHash(t *testing.T) {
 	}
 
 	require.NotEmpty(t, creds.Hash())
-	require.Equal(t, creds.Hash(), creds.Hash())
 }
 
 func TestBasicAuthInit(t *testing.T) {
@@ -60,7 +61,7 @@ func TestBasicAuthInit(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -88,7 +89,7 @@ func TestBasicAuthInit(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -128,12 +129,19 @@ func TestBasicAuthInit(t *testing.T) {
 
 			tc.setup(t, sr, handle)
 
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().SecretResolver().Return(sr)
+			appCtx.EXPECT().DecoderFactory().Maybe().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 			ba := &BasicAuth{Credentials: secret}
 
-			err := ba.init(t.Context(), appCtx)
+			err = ba.init(t.Context(), appCtx)
 
 			tc.assert(t, err, ba)
 		})
@@ -157,7 +165,7 @@ func TestBasicAuthApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -190,7 +198,7 @@ func TestBasicAuthApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -223,7 +231,7 @@ func TestBasicAuthApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -254,6 +262,11 @@ func TestBasicAuthApply(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
 			req, err := http.NewRequestWithContext(
 				t.Context(),
 				http.MethodPost,
@@ -272,6 +285,8 @@ func TestBasicAuthApply(t *testing.T) {
 			if tc.credentials.Source != "" || tc.credentials.Selector != "" {
 				appCtx := app.NewContextMock(t)
 				appCtx.EXPECT().SecretResolver().Return(sr)
+				appCtx.EXPECT().DecoderFactory().Maybe().
+					Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 				err = ba.init(t.Context(), appCtx)
 				require.NoError(t, err)
@@ -321,7 +336,14 @@ func TestToBasicAuthCredentials(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			got, err := toBasicAuthCredentials(tc.credentials)
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
+			got, err := toBasicAuthCredentials(df)(tc.credentials)
 
 			tc.assert(t, got, err)
 		})

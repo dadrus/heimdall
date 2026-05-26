@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -122,25 +121,4 @@ func TestStageExecution(t *testing.T) {
 			tc.assert(t, err)
 		})
 	}
-}
-
-func TestStageCleanUp(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	var order []string
-
-	step1 := mocks.NewStepMock(t)
-	step1.EXPECT().CleanUp(t.Context()).Run(func(_ context.Context) { order = append(order, "step1") })
-
-	step2 := mocks.NewStepMock(t)
-	step2.EXPECT().CleanUp(t.Context()).Run(func(_ context.Context) { order = append(order, "step2") })
-
-	handler := stage{step1, step2}
-
-	// WHEN
-	handler.CleanUp(t.Context())
-
-	// THEN
-	assert.Equal(t, []string{"step2", "step1"}, order)
 }

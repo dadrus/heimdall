@@ -206,6 +206,7 @@ type (
 	}
 )
 
+//nolint:gochecknoglobals
 var (
 	NewStringSecret        = types.NewStringSecret
 	NewSymmetricKeySecret  = types.NewSymmetricKeySecret

@@ -34,7 +34,7 @@ type (
 
 	Handle[T any] interface {
 		Get(ctx context.Context) (T, bool)
-		OnUpdate(UpdateFunc[T])
+		OnUpdate(callback UpdateFunc[T])
 	}
 
 	SecretHandle interface {

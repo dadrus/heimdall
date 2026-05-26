@@ -45,6 +45,7 @@ type OAuth2ClientCredentials struct {
 	TTL         *time.Duration               `mapstructure:"cache_ttl"`
 	Header      *headerConfig                `mapstructure:"header"`
 
+	appCtx   app.Context
 	informer *secrets.CredentialsInformer[clientcredentials.Config]
 	hash     atomic.Value
 }
@@ -82,6 +83,8 @@ func (c *OAuth2ClientCredentials) Hash() []byte {
 }
 
 func (c *OAuth2ClientCredentials) init(ctx context.Context, appCtx app.Context) error {
+	c.appCtx = appCtx
+
 	if c.Header == nil {
 		c.Header = &headerConfig{Name: "Authorization", Scheme: "Bearer"}
 	}
@@ -97,8 +100,10 @@ func (c *OAuth2ClientCredentials) init(ctx context.Context, appCtx app.Context) 
 		secrets.CredentialsInformerOptions[clientcredentials.Config]{
 			Converter:   c.createClientCredentialsConfig,
 			ResolveMode: secrets.ResolveEager,
-			OnUpdate: func(_ context.Context, _ secrets.Credentials, cfg clientcredentials.Config) {
+			OnUpdate: func(_ context.Context, _ secrets.Credentials, cfg clientcredentials.Config) error {
 				c.hash.Store(cfg.Hash())
+
+				return nil
 			},
 		},
 	)
@@ -118,13 +123,14 @@ func (c *OAuth2ClientCredentials) createClientCredentialsConfig(
 	creds secrets.Credentials,
 ) (clientcredentials.Config, error) {
 	type credentials struct {
-		ClientID     string `mapstructure:"client_id"     validate:"required"`
-		ClientSecret string `mapstructure:"client_secret" validate:"required"`
+		ClientID     string `json:"client_id"     validate:"required"`
+		ClientSecret string `json:"client_secret" validate:"required"`
 	}
 
 	var data credentials
 
-	if err := creds.Decode(&data); err != nil {
+	dec := c.appCtx.DecoderFactory().Decoder()
+	if err := dec.DecodeMap(&data, creds.Values()); err != nil {
 		return clientcredentials.Config{}, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
 			"failed decoding oauth2 client credentials",

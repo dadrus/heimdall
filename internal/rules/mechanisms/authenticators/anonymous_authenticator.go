@@ -25,6 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -97,7 +98,11 @@ func (a *anonymousAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 	return nil
 }
 
-func (a *anonymousAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (a *anonymousAuthenticator) CreateStep(
+	_ context.Context,
+	_ secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if def.IsEmpty() {
 		return a, nil
 	}
@@ -130,10 +135,9 @@ func (a *anonymousAuthenticator) CreateStep(def types.StepDefinition) (pipeline.
 	}, nil
 }
 
-func (a *anonymousAuthenticator) Name() string            { return a.name }
-func (a *anonymousAuthenticator) ID() string              { return a.id }
-func (a *anonymousAuthenticator) Type() string            { return a.name }
-func (a *anonymousAuthenticator) PrincipalName() string   { return a.principalName }
-func (*anonymousAuthenticator) IsInsecure() bool          { return true }
-func (*anonymousAuthenticator) Kind() types.Kind          { return types.KindAuthenticator }
-func (*anonymousAuthenticator) CleanUp(_ context.Context) {}
+func (a *anonymousAuthenticator) Name() string          { return a.name }
+func (a *anonymousAuthenticator) ID() string            { return a.id }
+func (a *anonymousAuthenticator) Type() string          { return a.name }
+func (a *anonymousAuthenticator) PrincipalName() string { return a.principalName }
+func (*anonymousAuthenticator) IsInsecure() bool        { return true }
+func (*anonymousAuthenticator) Kind() types.Kind        { return types.KindAuthenticator }

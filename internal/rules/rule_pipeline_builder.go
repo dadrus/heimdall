@@ -7,6 +7,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -14,56 +15,62 @@ import (
 type pipelineBuilder[T any] interface {
 	add(step v1beta1.Step) error
 	build() (T, error)
-	cleanUp(ctx context.Context)
 }
 
 func createPipeline[T any](
-	ctx context.Context,
 	steps []v1beta1.Step,
 	builder pipelineBuilder[T],
 ) (T, error) {
-	var (
-		err error
-		res T
-	)
-
-	defer func() {
-		if err != nil {
-			builder.cleanUp(ctx)
-		}
-	}()
+	var res T
 
 	for _, step := range steps {
-		if err = builder.add(step); err != nil {
+		if err := builder.add(step); err != nil {
 			return res, err
 		}
 	}
 
-	res, err = builder.build()
-
-	return res, err
+	return builder.build()
 }
 
 type stepCreator interface {
-	createStep(ref v1beta1.MechanismReference, def StepDefinition) (pipeline.Step, error)
+	createStep(
+		ctx context.Context,
+		resolver secrets.Resolver,
+		ref v1beta1.MechanismReference,
+		def StepDefinition,
+	) (pipeline.Step, error)
 }
 
 type stepBuilder struct {
-	sc      stepCreator
-	stepIDs []string
+	ctx      context.Context
+	resolver secrets.Resolver
+	sc       stepCreator
+	stepIDs  []string
 }
 
-func newStepBuilder(sc stepCreator, capacity int) *stepBuilder {
+func newStepBuilder(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	sc stepCreator,
+	capacity int,
+) *stepBuilder {
 	return &stepBuilder{
-		sc:      sc,
-		stepIDs: make([]string, 0, capacity),
+		ctx:      ctx,
+		resolver: resolver,
+		sc:       sc,
+		stepIDs:  make([]string, 0, capacity),
 	}
 }
 
 func (b *stepBuilder) create(step v1beta1.Step, def StepDefinition) (pipeline.Step, error) {
 	b.stepIDs = append(b.stepIDs, step.ID)
 
-	return b.sc.createStep(step.MechanismReference(), def)
+	return b.sc.createStep(
+		b.ctx,
+		b.resolver,
+		step.MechanismReference(),
+		def,
+	)
 }
 
 func (b *stepBuilder) ensureUniqueIDs(pipelineName string) error {
@@ -101,9 +108,14 @@ type executePipelineBuilder struct {
 	finalizerStage      stage
 }
 
-func newExecutePipelineBuilder(factory *ruleFactory, capacity int) *executePipelineBuilder {
+func newExecutePipelineBuilder(
+	ctx context.Context,
+	factory *ruleFactory,
+	resolver secrets.Resolver,
+	capacity int,
+) *executePipelineBuilder {
 	return &executePipelineBuilder{
-		steps:          newStepBuilder(factory, capacity),
+		steps:          newStepBuilder(ctx, resolver, factory, capacity),
 		authenticators: make(map[string]compositePrincipalCreator),
 		principalOrder: make([]string, 0, capacity),
 	}
@@ -144,15 +156,6 @@ func (b *executePipelineBuilder) build() (*executePipeline, error) {
 	}
 
 	return newExecutePipeline(authenticators, b.subjectHandlerStage, b.finalizerStage), nil
-}
-
-func (b *executePipelineBuilder) cleanUp(ctx context.Context) {
-	b.finalizerStage.CleanUp(ctx)
-	b.subjectHandlerStage.CleanUp(ctx)
-
-	for idx := len(b.principalOrder) - 1; idx >= 0; idx-- {
-		b.authenticators[b.principalOrder[idx]].CleanUp(ctx)
-	}
 }
 
 func (b *executePipelineBuilder) addAuthenticator(def StepDefinition, step pipeline.Step) {
@@ -252,9 +255,14 @@ type errorPipelineBuilder struct {
 	errorHandlers stage
 }
 
-func newErrorPipelineBuilder(factory *ruleFactory, capacity int) *errorPipelineBuilder {
+func newErrorPipelineBuilder(
+	ctx context.Context,
+	factory *ruleFactory,
+	resolver secrets.Resolver,
+	capacity int,
+) *errorPipelineBuilder {
 	return &errorPipelineBuilder{
-		steps:         newStepBuilder(factory, capacity),
+		steps:         newStepBuilder(ctx, resolver, factory, capacity),
 		errorHandlers: make(stage, 0, capacity),
 	}
 }
@@ -284,10 +292,6 @@ func (b *errorPipelineBuilder) build() (*errorPipeline, error) {
 	}
 
 	return newErrorPipeline(b.errorHandlers), nil
-}
-
-func (b *errorPipelineBuilder) cleanUp(ctx context.Context) {
-	b.errorHandlers.CleanUp(ctx)
 }
 
 func newExecuteStepDefinition(step v1beta1.Step) StepDefinition {

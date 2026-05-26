@@ -26,6 +26,6 @@ type Repository interface {
 	FindRule(ctx pipeline.Context) (Rule, error)
 
 	AddRuleSet(ctx context.Context, src RuleSet, rules []Rule) error
-	UpdateRuleSet(ctx context.Context, src RuleSet, rules []Rule) ([]Rule, error)
-	DeleteRuleSet(ctx context.Context, src RuleSet) ([]Rule, error)
+	UpdateRuleSet(ctx context.Context, src RuleSet, rules []Rule) error
+	DeleteRuleSet(ctx context.Context, src RuleSet) error
 }

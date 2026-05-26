@@ -35,11 +35,13 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	cachemocks "github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/types"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -61,7 +63,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -88,7 +90,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -143,7 +145,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -192,11 +194,17 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 
 			sr := secretsmocks.NewResolverMock(t)
 			handle := secretsmocks.NewCredentialsHandleMock(t)
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
 
 			tc.setup(t, sr, handle)
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().SecretResolver().Return(sr)
+			appCtx.EXPECT().DecoderFactory().Maybe().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 			cc := &OAuth2ClientCredentials{
 				TokenURL:    "https://example.com/token",
@@ -207,7 +215,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 				TTL:         &ttl,
 			}
 
-			err := cc.init(t.Context(), appCtx)
+			err = cc.init(t.Context(), appCtx)
 
 			tc.assert(t, err, cc)
 		})
@@ -255,7 +263,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -294,7 +302,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -339,7 +347,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -385,7 +393,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -420,7 +428,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 			},
 		},
 		"full configuration, no cache hit and token has expires_in claim": {
-			ttl:    durationPtr(3 * time.Minute),
+			ttl:    new(3 * time.Minute),
 			header: &headerConfig{Name: "X-My-Header", Scheme: "Foo"},
 			configureMocks: func(
 				t *testing.T,
@@ -439,7 +447,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.AnythingOfType("secrets2.ResolveOption"),
+						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -557,6 +565,11 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 			}))
 			t.Cleanup(srv.Close)
 
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
 			cc := &OAuth2ClientCredentials{
 				TokenURL:    srv.URL,
 				Credentials: config.Secret{Source: "foo", Selector: "bar"},
@@ -576,8 +589,10 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().SecretResolver().Return(sr)
+			appCtx.EXPECT().DecoderFactory().Maybe().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
-			err := cc.init(t.Context(), appCtx)
+			err = cc.init(t.Context(), appCtx)
 			require.NoError(t, err)
 
 			req, err := http.NewRequestWithContext(
@@ -639,11 +654,21 @@ func TestOAuth2ClientCredentialsCreateClientCredentialsConfig(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().DecoderFactory().Maybe().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
+
 			cc := &OAuth2ClientCredentials{
 				TokenURL:   "https://example.com/token",
 				AuthMethod: clientcredentials.AuthMethodBasicAuth,
 				Scopes:     []string{"foo", "bar"},
 				TTL:        &ttl,
+				appCtx:     appCtx,
 			}
 
 			got, err := cc.createClientCredentialsConfig(tc.credentials)
@@ -651,8 +676,4 @@ func TestOAuth2ClientCredentialsCreateClientCredentialsConfig(t *testing.T) {
 			tc.assert(t, got, err)
 		})
 	}
-}
-
-func durationPtr(value time.Duration) *time.Duration {
-	return &value
 }

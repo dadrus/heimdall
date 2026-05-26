@@ -18,7 +18,6 @@ package rules
 
 import (
 	"bytes"
-	"context"
 	"net/url"
 	"sync"
 
@@ -87,10 +86,9 @@ func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 	return r.createBackend(request), nil
 }
 
-func (r *ruleImpl) CleanUp(ctx context.Context) { r.p.CleanUp(ctx) }
-func (r *ruleImpl) ID() string                  { return r.id }
-func (r *ruleImpl) Source() rule.RuleSet        { return r.source }
-func (r *ruleImpl) Routes() []rule.Route        { return r.routes }
+func (r *ruleImpl) ID() string           { return r.id }
+func (r *ruleImpl) Source() rule.RuleSet { return r.source }
+func (r *ruleImpl) Routes() []rule.Route { return r.routes }
 
 func (r *ruleImpl) SameAs(other rule.Rule) bool {
 	return r.ID() == other.ID() && r.Source().Equals(other.Source())

@@ -47,39 +47,38 @@ type SignerConfig struct {
 
 type jwtSigner struct {
 	iss      string
-	resolver *secrets.SecretInformer[jose.Signer]
+	ko       keyregistry.KeyObserver
+	informer *secrets.SecretInformer[jose.Signer]
 	hash     atomic.Value
 }
 
 func newJWTSigner(
 	ctx context.Context,
 	conf *SignerConfig,
-	sm secrets.Manager,
+	sm secrets.Resolver,
 	ko keyregistry.KeyObserver,
 ) (*jwtSigner, error) {
 	signer := &jwtSigner{
 		iss: x.IfThenElse(len(conf.Name) == 0, "heimdall", conf.Name),
+		ko:  ko,
 	}
 
-	signer.resolver = &secrets.SecretInformer[jose.Signer]{
-		Manager:   sm,
-		Reference: secrets.InternalRef(conf.Secret.Source, conf.Secret.Selector),
-		Converter: createJOSESigner,
-		OnUpdate: func(ctx context.Context, secret secrets.Secret, _ jose.Signer) {
-			aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
+	var err error
 
-			signer.updateHash(aks)
-			ko.Notify(keyregistry.KeyInfo{
-				Key:        aks,
-				Exportable: true,
-			})
+	signer.informer, err = secrets.NewSecretInformer(
+		ctx, sm, secrets.Reference{
+			Source:   conf.Secret.Source,
+			Selector: conf.Secret.Selector,
 		},
-	}
-
-	if err := signer.resolver.Start(ctx); err != nil {
+		secrets.InformerOptions[jose.Signer]{
+			Converter: createJOSESigner,
+			OnUpdate:  signer.onSecretUpdated,
+		},
+	)
+	if err != nil {
 		return nil, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
-			"failed resolving jwt signing secret",
+			"failed creating secret informer for jwt signing material",
 		).CausedBy(err)
 	}
 
@@ -95,7 +94,7 @@ func (s *jwtSigner) Hash() []byte {
 }
 
 func (s *jwtSigner) Sign(sub string, ttl time.Duration, customClaims map[string]any) (string, error) {
-	signer, ok := s.resolver.Get()
+	signer, ok := s.informer.Get(context.Background())
 	if !ok {
 		return "", errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
@@ -144,6 +143,18 @@ func (s *jwtSigner) updateHash(secret secrets.AsymmetricKeySecret) {
 	hash.Write(stringx.ToBytes(secret.KeyID()))
 
 	s.hash.Store(hash.Sum(nil))
+}
+
+func (s *jwtSigner) onSecretUpdated(_ context.Context, secret secrets.Secret, _ jose.Signer) error {
+	aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
+
+	s.updateHash(aks)
+	s.ko.Notify(keyregistry.KeyInfo{
+		Key:        aks,
+		Exportable: true,
+	})
+
+	return nil
 }
 
 func createJOSESigner(secret secrets.Secret) (jose.Signer, error) {

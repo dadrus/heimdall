@@ -2,7 +2,6 @@ package contextualizers
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/rs/zerolog"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -40,9 +40,14 @@ func newMapContextualizer(app app.Context, name string, rawConfig map[string]any
 	}
 
 	var conf Config
-	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for map contextualizer '%s'", name).CausedBy(err)
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("contextualizer."+ContextualizerMap+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s contextualizer '%s'", ContextualizerMap, name,
+		).CausedBy(err)
 	}
 
 	return &mapContextualizer{
@@ -84,14 +89,11 @@ func (c *mapContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subject) 
 	return nil
 }
 
-func (c *mapContextualizer) Name() string            { return c.name }
-func (c *mapContextualizer) ID() string              { return c.id }
-func (c *mapContextualizer) Type() string            { return c.name }
-func (*mapContextualizer) Kind() types.Kind          { return types.KindContextualizer }
-func (*mapContextualizer) Accept(_ pipeline.Visitor) {}
-func (*mapContextualizer) CleanUp(_ context.Context) {}
-
-func (c *mapContextualizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (c *mapContextualizer) CreateStep(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return c, nil
 	}
@@ -109,7 +111,10 @@ func (c *mapContextualizer) CreateStep(def types.StepDefinition) (pipeline.Step,
 	}
 
 	var conf Config
-	if err := decodeConfig(c.app, def.Config, &conf); err != nil {
+	if err := decodeConfig(c.app, def.Config, &conf,
+		template.WithName("contextualizer."+ContextualizerMap+"."+c.name),
+		template.WithSecretResolver(resolver),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for map contextualizer '%s'", c.name).CausedBy(err)
 	}
@@ -122,6 +127,12 @@ func (c *mapContextualizer) CreateStep(def types.StepDefinition) (pipeline.Step,
 		values: c.values.Merge(conf.Values),
 	}, nil
 }
+
+func (c *mapContextualizer) Name() string            { return c.name }
+func (c *mapContextualizer) ID() string              { return c.id }
+func (c *mapContextualizer) Type() string            { return c.name }
+func (*mapContextualizer) Kind() types.Kind          { return types.KindContextualizer }
+func (*mapContextualizer) Accept(_ pipeline.Visitor) {}
 
 func (c *mapContextualizer) renderTemplates(
 	ctx pipeline.Context,
@@ -150,8 +161,8 @@ func (c *mapContextualizer) renderTemplates(
 			"Values":  vals,
 			"Outputs": ctx.Outputs(),
 		}); err != nil {
-			return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
-				fmt.Sprintf("failed to render item %s for the map contextualizer", key)).
+			return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
+				"failed to render item %s for the map contextualizer", key).
 				WithErrorContext(c).
 				CausedBy(err)
 		}

@@ -20,6 +20,8 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
+
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var ErrTooManyInformerOptions = errors.New("too many informer options provided")
@@ -30,9 +32,9 @@ type (
 )
 
 type (
-	SecretUpdateFunc[T any]      func(context.Context, Secret, T)
-	CredentialsUpdateFunc[T any] func(context.Context, Credentials, T)
-	CertificateBundleUpdateFunc  func(context.Context, CertificateBundle, *x509.CertPool)
+	SecretUpdateFunc[T any]      func(context.Context, Secret, T) error
+	CredentialsUpdateFunc[T any] func(context.Context, Credentials, T) error
+	CertificateBundleUpdateFunc  func(context.Context, CertificateBundle, *x509.CertPool) error
 )
 
 type InformerOptions[T any] struct {
@@ -76,12 +78,10 @@ func NewSecretInformer[T any](
 		hdl.OnUpdate(func(ctx context.Context, secret Secret) error {
 			value, err := converter(secret)
 			if err != nil {
-				return errors.Join(ErrSecretConversionFailed, err)
+				return errorchain.New(ErrSecretConversionFailed).CausedBy(err)
 			}
 
-			cfg.OnUpdate(ctx, secret, value)
-
-			return nil
+			return cfg.OnUpdate(ctx, secret, value)
 		})
 	}
 
@@ -147,12 +147,10 @@ func NewCredentialsInformer[T any](
 		hdl.OnUpdate(func(ctx context.Context, credentials Credentials) error {
 			value, err := converter(credentials)
 			if err != nil {
-				return errors.Join(ErrSecretConversionFailed, err)
+				return errorchain.New(ErrSecretConversionFailed).CausedBy(err)
 			}
 
-			cfg.OnUpdate(ctx, credentials, value)
-
-			return nil
+			return cfg.OnUpdate(ctx, credentials, value)
 		})
 	}
 
@@ -208,9 +206,7 @@ func NewCertificateBundleInformer(
 
 	if cfg.OnUpdate != nil {
 		hdl.OnUpdate(func(ctx context.Context, bundle CertificateBundle) error {
-			cfg.OnUpdate(ctx, bundle, bundle.CertPool())
-
-			return nil
+			return cfg.OnUpdate(ctx, bundle, bundle.CertPool())
 		})
 	}
 

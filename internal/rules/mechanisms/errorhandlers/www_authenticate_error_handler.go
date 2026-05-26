@@ -25,6 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -78,7 +79,6 @@ func (eh *wwwAuthenticateErrorHandler) ID() string             { return eh.id }
 func (eh *wwwAuthenticateErrorHandler) Type() string           { return eh.name }
 func (*wwwAuthenticateErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }
 func (*wwwAuthenticateErrorHandler) Accept(_ pipeline.Visitor) {}
-func (*wwwAuthenticateErrorHandler) CleanUp(_ context.Context) {}
 
 func (eh *wwwAuthenticateErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
@@ -94,7 +94,11 @@ func (eh *wwwAuthenticateErrorHandler) Execute(ctx pipeline.Context, _ pipeline.
 	return nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (eh *wwwAuthenticateErrorHandler) CreateStep(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return eh, nil
 	}

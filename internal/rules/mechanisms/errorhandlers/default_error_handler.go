@@ -25,6 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -70,7 +71,11 @@ func (eh *defaultErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject)
 	return nil
 }
 
-func (eh *defaultErrorHandler) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (eh *defaultErrorHandler) CreateStep(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return eh, nil
 	}
@@ -91,4 +96,3 @@ func (eh *defaultErrorHandler) ID() string             { return eh.id }
 func (eh *defaultErrorHandler) Type() string           { return eh.name }
 func (*defaultErrorHandler) Accept(_ pipeline.Visitor) {}
 func (*defaultErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }
-func (*defaultErrorHandler) CleanUp(_ context.Context) {}

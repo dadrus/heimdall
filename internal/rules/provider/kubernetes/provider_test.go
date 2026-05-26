@@ -125,7 +125,13 @@ func TestNewProvider(t *testing.T) {
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(ko)
 
 			// WHEN
-			prov, err := NewProvider(appCtx, k8sCF, mocks.NewRuleSetProcessorMock(t), mocks.NewFactoryMock(t))
+			prov, err := NewProvider(
+				appCtx,
+				k8sCF,
+				mocks.NewRuleSetProcessorMock(t),
+				mocks.NewFactoryMock(t),
+				secretsmocks.NewScopedResolverFactoryMock(t),
+			)
 
 			// THEN
 			tc.assert(t, err, prov)
@@ -1151,7 +1157,13 @@ func TestProviderLifecycle(t *testing.T) {
 			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(ko)
 
-			prov, err := NewProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))
+			prov, err := NewProvider(
+				appCtx,
+				k8sCF,
+				processor,
+				mocks.NewFactoryMock(t),
+				secretsmocks.NewScopedResolverFactoryMock(t),
+			)
 			require.NoError(t, err)
 
 			ctx := t.Context()
@@ -1206,7 +1218,13 @@ func TestReconciliationLoopKeepsRunningAfterContextTimeout(t *testing.T) {
 	appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 	appCtx.EXPECT().KeyRegistry().Maybe().Return(ko)
 
-	prov, err := NewProvider(appCtx, k8sCF, processor, mocks.NewFactoryMock(t))
+	prov, err := NewProvider(
+		appCtx,
+		k8sCF,
+		processor,
+		mocks.NewFactoryMock(t),
+		secretsmocks.NewScopedResolverFactoryMock(t),
+	)
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithTimeout(t.Context(), 150*time.Millisecond)

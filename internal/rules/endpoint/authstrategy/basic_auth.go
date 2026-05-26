@@ -26,6 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -33,8 +34,8 @@ import (
 )
 
 type basicAuthCredentials struct {
-	UserID   string `mapstructure:"user_id"  validate:"required"`
-	Password string `mapstructure:"password" validate:"required"`
+	UserID   string `json:"user_id"  validate:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 func (c basicAuthCredentials) Hash() []byte {
@@ -86,10 +87,12 @@ func (c *BasicAuth) init(ctx context.Context, appCtx app.Context) error {
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
 		secrets.CredentialsInformerOptions[basicAuthCredentials]{
-			Converter:   toBasicAuthCredentials,
+			Converter:   toBasicAuthCredentials(appCtx.DecoderFactory()),
 			ResolveMode: secrets.ResolveEager,
-			OnUpdate: func(_ context.Context, _ secrets.Credentials, creds basicAuthCredentials) {
+			OnUpdate: func(_ context.Context, _ secrets.Credentials, creds basicAuthCredentials) error {
 				c.hash.Store(creds.Hash())
+
+				return nil
 			},
 		},
 	)
@@ -105,10 +108,19 @@ func (c *BasicAuth) init(ctx context.Context, appCtx app.Context) error {
 	return nil
 }
 
-func toBasicAuthCredentials(creds secrets.Credentials) (basicAuthCredentials, error) {
-	var data basicAuthCredentials
+func toBasicAuthCredentials(df encoding.DecoderFactory) func(creds secrets.Credentials) (basicAuthCredentials, error) {
+	return func(creds secrets.Credentials) (basicAuthCredentials, error) {
+		var data basicAuthCredentials
 
-	err := creds.Decode(&data)
+		dec := df.Decoder()
 
-	return data, err
+		if err := dec.DecodeMap(&data, creds.Values()); err != nil {
+			return basicAuthCredentials{}, errorchain.NewWithMessage(
+				pipeline.ErrConfiguration,
+				"failed decoding basic auth credentials",
+			).CausedBy(err)
+		}
+
+		return data, nil
+	}
 }

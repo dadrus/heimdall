@@ -373,7 +373,7 @@ expressions:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(tc.stepDef)
+			step, err := mech.CreateStep(t.Context(), nil, tc.stepDef)
 
 			// THEN
 			auth, ok := step.(*celAuthorizer)
@@ -534,7 +534,7 @@ expressions:
 			mech, err := newCELAuthorizer(appCtx, uc, conf)
 			require.NoError(t, err)
 
-			step, err := mech.CreateStep(types.StepDefinition{ID: ""})
+			step, err := mech.CreateStep(t.Context(), nil, types.StepDefinition{ID: ""})
 			require.NoError(t, err)
 
 			// WHEN

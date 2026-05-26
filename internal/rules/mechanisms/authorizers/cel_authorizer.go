@@ -28,6 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -119,7 +120,11 @@ func (a *celAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) erro
 	}, a)
 }
 
-func (a *celAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (a *celAuthorizer) CreateStep(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
@@ -162,4 +167,3 @@ func (a *celAuthorizer) ID() string              { return a.id }
 func (a *celAuthorizer) Type() string            { return a.name }
 func (*celAuthorizer) Accept(_ pipeline.Visitor) {}
 func (*celAuthorizer) Kind() types.Kind          { return types.KindAuthorizer }
-func (*celAuthorizer) CleanUp(_ context.Context) {}

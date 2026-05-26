@@ -27,6 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 )
 
@@ -98,11 +99,14 @@ func TestRepositoryNew(t *testing.T) {
 			)
 			require.NoError(t, err)
 
+			srm := secretsmocks.NewResolverMock(t)
+
 			ctx := app.NewContextMock(t)
 			ctx.EXPECT().Logger().Return(log.Logger)
 			ctx.EXPECT().Config().Return(&config.Configuration{Catalogue: tc.catalogue})
 			ctx.EXPECT().DecoderFactory().Maybe().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
+			ctx.EXPECT().SecretResolver().Maybe().Return(srm)
 
 			// WHEN
 			repo, err := New(ctx)
@@ -218,11 +222,14 @@ func TestRepositoryContextualizer(t *testing.T) {
 	)
 	require.NoError(t, err)
 
+	srm := secretsmocks.NewResolverMock(t)
+
 	ctx := app.NewContextMock(t)
 	ctx.EXPECT().Logger().Return(log.Logger)
 	ctx.EXPECT().Config().Return(conf)
 	ctx.EXPECT().DecoderFactory().
 		Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
+	ctx.EXPECT().SecretResolver().Return(srm)
 
 	repo, err := New(ctx)
 	require.NoError(t, err)

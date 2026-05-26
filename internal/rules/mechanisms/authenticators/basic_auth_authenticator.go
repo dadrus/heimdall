@@ -28,6 +28,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
@@ -106,12 +107,11 @@ type basicAuthAuthenticator struct {
 	id                    string
 	principalName         string
 	app                   app.Context
-	resolver              *secrets.CredentialsInformer[credentialsChecker]
-	ownsResolver          bool
 	realm                 string
 	errorSignalingEnabled bool
 	emptyAttributes       map[string]any
 	ads                   extractors.HeaderValueExtractStrategy
+	informer              *secrets.CredentialsInformer[credentialsChecker]
 }
 
 func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
@@ -129,19 +129,30 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 		).CausedBy(err)
 	}
 
-	resolver, err := createResolver(app, conf.Credentials)
+	informer, err := secrets.NewCredentialsInformer(
+		context.Background(),
+		app.SecretResolver(),
+		secrets.Reference{Source: conf.Credentials.Source, Selector: conf.Credentials.Selector},
+		secrets.CredentialsInformerOptions[credentialsChecker]{
+			Converter:   toCredentialsChecker(app.DecoderFactory()),
+			ResolveMode: secrets.ResolveLazy,
+		},
+	)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed creating credentials informer",
+		).CausedBy(err)
 	}
 
 	auth := basicAuthAuthenticator{
 		name:            name,
 		id:              name,
 		app:             app,
-		resolver:        resolver,
 		principalName:   DefaultPrincipalName,
 		emptyAttributes: make(map[string]any),
 		ads:             extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Basic"},
+		informer:        informer,
 		errorSignalingEnabled: x.IfThenElseExec(
 			conf.ErrorSignaling.Enabled != nil,
 			func() bool { return *conf.ErrorSignaling.Enabled },
@@ -155,33 +166,6 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 	}
 
 	return &auth, nil
-}
-
-func createResolver(
-	app app.Context,
-	credentials *config.Secret,
-) (*secrets.CredentialsInformer[credentialsChecker], error) {
-	if credentials == nil {
-		return nil, errorchain.NewWithMessage(
-			pipeline.ErrConfiguration,
-			"credentials are required",
-		)
-	}
-
-	resolver := &secrets.CredentialsInformer[credentialsChecker]{
-		Manager:   app.SecretsManager(),
-		Reference: secrets.InternalRef(credentials.Source, credentials.Selector),
-		Converter: toCredentialsChecker,
-	}
-
-	if err := resolver.Start(context.Background()); err != nil {
-		return nil, errorchain.NewWithMessage(
-			pipeline.ErrConfiguration,
-			"failed resolving basic auth credentials",
-		).CausedBy(err)
-	}
-
-	return resolver, nil
 }
 
 func (a *basicAuthAuthenticator) Accept(visitor pipeline.Visitor) {
@@ -228,11 +212,11 @@ func (a *basicAuthAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 			WithErrorContext(a)
 	}
 
-	checker, ok := a.resolver.Get()
+	checker, ok := a.informer.Get(ctx.Context())
 	if !ok {
 		return errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
-			"oauth2 client credentials are not available",
+			"basic auth credentials are not available",
 		)
 	}
 
@@ -253,7 +237,11 @@ func (a *basicAuthAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 	return nil
 }
 
-func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (a *basicAuthAuthenticator) CreateStep(
+	ctx context.Context,
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if def.IsEmpty() {
 		return a, nil
 	}
@@ -266,22 +254,33 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.
 		return &auth, nil
 	}
 
-	var (
-		conf authenticatorConfig
-		err  error
-	)
-
-	if err = decodeConfig(a.app, def.Config, &conf); err != nil {
+	var conf authenticatorConfig
+	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(
 			pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorBasicAuth, a.name,
 		).CausedBy(err)
 	}
 
-	resolver := a.resolver
+	informer := a.informer
+
 	if conf.Credentials != nil {
-		if resolver, err = createResolver(a.app, conf.Credentials); err != nil {
-			return nil, err
+		var err error
+
+		informer, err = secrets.NewCredentialsInformer(
+			ctx,
+			resolver,
+			secrets.Reference{Source: conf.Credentials.Source, Selector: conf.Credentials.Selector},
+			secrets.CredentialsInformerOptions[credentialsChecker]{
+				Converter:   toCredentialsChecker(a.app.DecoderFactory()),
+				ResolveMode: secrets.ResolveLazy,
+			},
+		)
+		if err != nil {
+			return nil, errorchain.NewWithMessage(
+				pipeline.ErrConfiguration,
+				"failed creating credentials informer",
+			).CausedBy(err)
 		}
 	}
 
@@ -292,8 +291,7 @@ func (a *basicAuthAuthenticator) CreateStep(def types.StepDefinition) (pipeline.
 		principalName:   x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal),
 		emptyAttributes: a.emptyAttributes,
 		ads:             a.ads,
-		resolver:        resolver,
-		ownsResolver:    conf.Credentials != nil,
+		informer:        informer,
 		errorSignalingEnabled: x.IfThenElseExec(
 			conf.ErrorSignaling.Enabled != nil,
 			func() bool { return *conf.ErrorSignaling.Enabled },
@@ -322,14 +320,6 @@ func (a *basicAuthAuthenticator) DecorateErrorResponse(_ error, er *pipeline.Err
 	)
 }
 
-func (a *basicAuthAuthenticator) CleanUp(_ context.Context) {
-	if !a.ownsResolver {
-		return
-	}
-
-	a.resolver.Stop()
-}
-
 func (a *basicAuthAuthenticator) Name() string          { return a.name }
 func (a *basicAuthAuthenticator) ID() string            { return a.id }
 func (a *basicAuthAuthenticator) Type() string          { return a.name }
@@ -337,16 +327,18 @@ func (a *basicAuthAuthenticator) PrincipalName() string { return a.principalName
 func (*basicAuthAuthenticator) Kind() types.Kind        { return types.KindAuthenticator }
 func (*basicAuthAuthenticator) IsInsecure() bool        { return false }
 
-func toCredentialsChecker(creds secrets.Credentials) (credentialsChecker, error) {
-	type credentials struct {
-		UserID   string `mapstructure:"user_id"  validate:"required"`
-		Password string `mapstructure:"password" validate:"required"`
-	}
+func toCredentialsChecker(df encoding.DecoderFactory) func(creds secrets.Credentials) (credentialsChecker, error) {
+	return func(creds secrets.Credentials) (credentialsChecker, error) {
+		type credentials struct {
+			UserID   string `json:"user_id"  validate:"required"`
+			Password string `json:"password" validate:"required"`
+		}
 
-	var data credentials
-	if err := creds.Decode(&data); err != nil {
-		return credentialsChecker{}, err
-	}
+		var data credentials
+		if err := df.Decoder().DecodeMap(&data, creds.Values()); err != nil {
+			return credentialsChecker{}, err
+		}
 
-	return newCredentialsChecker(data.UserID, data.Password), nil
+		return newCredentialsChecker(data.UserID, data.Password), nil
+	}
 }

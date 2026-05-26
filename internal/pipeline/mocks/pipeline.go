@@ -5,8 +5,6 @@
 package mocks
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/pipeline"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -36,46 +34,6 @@ type PipelineMock_Expecter struct {
 
 func (_m *PipelineMock) EXPECT() *PipelineMock_Expecter {
 	return &PipelineMock_Expecter{mock: &_m.Mock}
-}
-
-// CleanUp provides a mock function for the type PipelineMock
-func (_mock *PipelineMock) CleanUp(ctx context.Context) {
-	_mock.Called(ctx)
-	return
-}
-
-// PipelineMock_CleanUp_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CleanUp'
-type PipelineMock_CleanUp_Call struct {
-	*mock.Call
-}
-
-// CleanUp is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *PipelineMock_Expecter) CleanUp(ctx interface{}) *PipelineMock_CleanUp_Call {
-	return &PipelineMock_CleanUp_Call{Call: _e.mock.On("CleanUp", ctx)}
-}
-
-func (_c *PipelineMock_CleanUp_Call) Run(run func(ctx context.Context)) *PipelineMock_CleanUp_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
-	})
-	return _c
-}
-
-func (_c *PipelineMock_CleanUp_Call) Return() *PipelineMock_CleanUp_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *PipelineMock_CleanUp_Call) RunAndReturn(run func(ctx context.Context)) *PipelineMock_CleanUp_Call {
-	_c.Run(run)
-	return _c
 }
 
 // Execute provides a mock function for the type PipelineMock
