@@ -54,14 +54,7 @@ packages:
       KeyObserver: {}
       JWKSProvider: {}
       Registry: {}
-  github.com/dadrus/heimdall/internal/secrets:
-    interfaces:
-      secretSource:
-        config:
-          dir: "{{ .InterfaceDir }}"
-          filename: "mock_{{ snakecase .InterfaceName | lower }}.go"
-          pkgname: "{{ .SrcPackageName }}"
-  github.com/dadrus/heimdall/internal/secrets2/source:
+  github.com/dadrus/heimdall/internal/secrets/source:
     interfaces:
       Observer:
         config:
@@ -71,11 +64,11 @@ packages:
       Source: {}
       DependenciesResolver: {}
       Repository: {}
-  github.com/dadrus/heimdall/internal/secrets2/provider:
+  github.com/dadrus/heimdall/internal/secrets/provider:
     interfaces:
       Provider: {}
       DependenciesResolver: {}
-  github.com/dadrus/heimdall/internal/secrets2:
+  github.com/dadrus/heimdall/internal/secrets:
     interfaces:
       handleBinding:
         config:
@@ -97,13 +90,8 @@ packages:
       SecretSetHandle: {}
       CredentialsHandle: {}
       CertificateBundleHandle: {}
-  github.com/dadrus/heimdall/internal/secrets/types:
-    interfaces:
-      Provider: {}
-      ChangeObserver: {}
-      SecretsResolver: {}
-      Manager: {}
-      Store: {}
+      ScopedResolver: {}
+      ScopedResolverFactory: {}
   github.com/dadrus/heimdall/internal/rules:
     interfaces:
       executionCondition: {}
