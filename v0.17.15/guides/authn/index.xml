@@ -1,72 +1,37 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Authentication Protocols &amp; Services on Heimdall</title><link>https://dadrus.github.io/guides/authn/</link><description>Recent content in Authentication Protocols &amp; Services on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Tue, 26 May 2026 15:32:46 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/guides/authn/index.xml" rel="self" type="application/rss+xml"/><item><title>First-Party Authentication with OpenID Connect</title><link>https://dadrus.github.io/guides/authn/oidc_first_party_auth/</link><pubDate>Fri, 04 Nov 2022 09:00:41 +0200</pubDate><guid>https://dadrus.github.io/guides/authn/oidc_first_party_auth/</guid><description>&lt;div class="paragraph"&gt;
-&lt;p&gt;By the end of this guide, you’ll have a functional setup where heimdall uses &lt;a href="https://www.keycloak.org/"&gt;Keycloak&lt;/a&gt; to authenticate users and route requests based on their authentication status and roles for role-based access control.&lt;/p&gt;
-&lt;/div&gt;
-&lt;div class="paragraph"&gt;
-&lt;p&gt;Although this guide uses Keycloak as identity provider (IDP), you can achieve the same results with &lt;a href="https://zitadel.com"&gt;Zitadel&lt;/a&gt;, &lt;a href="https://github.com/malach-it/boruta-server"&gt;Boruta&lt;/a&gt;, or any other OpenID Connect compatible IDP.&lt;/p&gt;
-&lt;/div&gt;
-&lt;div class="sect1"&gt;
-&lt;h2 id="_overview"&gt;Overview&lt;/h2&gt;
-&lt;div class="sectionbody"&gt;
-&lt;div class="paragraph"&gt;
-&lt;p&gt;In this guide, we’ll set up a Docker Compose environment where heimdall secures services and controls access for specific endpoints:&lt;/p&gt;
-&lt;/div&gt;</description></item><item><title/><link>https://dadrus.github.io/guides/authn/protecting_mcp_servers_with_heimdall_adoc_draft/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://dadrus.github.io/guides/authn/protecting_mcp_servers_with_heimdall_adoc_draft/</guid><description>&lt;div class="sect1"&gt;
-&lt;h2 id="_introduction"&gt;&lt;a class="anchor" href="#_introduction"&gt;&lt;/a&gt;Introduction&lt;/h2&gt;
-&lt;div class="sectionbody"&gt;
-&lt;div class="paragraph"&gt;
-&lt;p&gt;Model Context Protocol (MCP) makes it easy to expose tools, resources, and prompts to agentic systems.
-That is powerful, but it also turns MCP servers into security-sensitive HTTP endpoints: an MCP client can discover available capabilities and invoke tools that may read data, create tickets, or trigger operational actions.&lt;/p&gt;
-&lt;/div&gt;
-&lt;div class="paragraph"&gt;
-&lt;p&gt;This guide shows how to protect a remote MCP server with heimdall.
-Instead of implementing authentication, authorization, JSON-RPC-aware error handling, and upstream identity handling inside the MCP server, you place heimdall in front of it.
-heimdall validates the caller, authorizes JSON-RPC methods and MCP tool calls, and forwards a trusted upstream identity to the MCP server.&lt;/p&gt;
-&lt;/div&gt;</description></item><item><title/><link>https://dadrus.github.io/guides/authn/protecting_mcp_servers_with_heimdall_adoc_draft2/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://dadrus.github.io/guides/authn/protecting_mcp_servers_with_heimdall_adoc_draft2/</guid><description>&lt;div id="preamble"&gt;
-&lt;div class="sectionbody"&gt;
-&lt;div class="paragraph"&gt;
-&lt;p&gt;This guide explains how to protect a remote MCP server with heimdall.&lt;/p&gt;
-&lt;/div&gt;
-&lt;div class="paragraph"&gt;
-&lt;p&gt;By the end of this guide, you’ll have a local setup where MCP Inspector connects to a FastMCP server through heimdall.
-heimdall validates client access tokens, authorizes MCP tool calls based on roles, returns JSON-RPC-compatible error responses, and forwards a heimdall-issued JWT to the MCP server.&lt;/p&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;/div&gt;
-&lt;div class="sect1"&gt;
-&lt;h2 id="_overview"&gt;&lt;a class="anchor" href="#_overview"&gt;&lt;/a&gt;Overview&lt;/h2&gt;
-&lt;div class="sectionbody"&gt;
-&lt;div class="paragraph"&gt;
-&lt;p&gt;The setup consists of four components:&lt;/p&gt;
-&lt;/div&gt;
-&lt;table class="tableblock frame-all grid-all stretch"&gt;
-&lt;colgroup&gt;
-&lt;col style="width: 33.3333%;"/&gt;
-&lt;col style="width: 66.6667%;"/&gt;
-&lt;/colgroup&gt;
-&lt;thead&gt;
-&lt;tr&gt;
-&lt;th class="tableblock halign-left valign-top"&gt;Component&lt;/th&gt;
-&lt;th class="tableblock halign-left valign-top"&gt;Purpose&lt;/th&gt;
-&lt;/tr&gt;
-&lt;/thead&gt;
-&lt;tbody&gt;
-&lt;tr&gt;
-&lt;td class="tableblock halign-left valign-top"&gt;&lt;p class="tableblock"&gt;MCP Inspector&lt;/p&gt;&lt;/td&gt;
-&lt;td class="tableblock halign-left valign-top"&gt;&lt;p class="tableblock"&gt;Browser-based MCP client used to connect to the protected MCP endpoint and call tools.&lt;/p&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td class="tableblock halign-left valign-top"&gt;&lt;p class="tableblock"&gt;heimdall&lt;/p&gt;&lt;/td&gt;
-&lt;td class="tableblock halign-left valign-top"&gt;&lt;p class="tableblock"&gt;Runs in proxy mode and protects the MCP server.&lt;/p&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td class="tableblock halign-left valign-top"&gt;&lt;p class="tableblock"&gt;FastMCP demo server&lt;/p&gt;&lt;/td&gt;
-&lt;td class="tableblock halign-left valign-top"&gt;&lt;p class="tableblock"&gt;Provides a small MCP server with tools requiring different roles.&lt;/p&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;tr&gt;
-&lt;td class="tableblock halign-left valign-top"&gt;&lt;p class="tableblock"&gt;Token helper&lt;/p&gt;&lt;/td&gt;
-&lt;td class="tableblock halign-left valign-top"&gt;&lt;p class="tableblock"&gt;Issues local demo access tokens for &lt;code&gt;viewer&lt;/code&gt;, &lt;code&gt;operator&lt;/code&gt;, and &lt;code&gt;admin&lt;/code&gt; users.&lt;/p&gt;&lt;/td&gt;
-&lt;/tr&gt;
-&lt;/tbody&gt;
-&lt;/table&gt;
-&lt;div class="paragraph"&gt;
-&lt;p&gt;The request flow is:&lt;/p&gt;
-&lt;/div&gt;</description></item></channel></rss>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>Authentication Protocols &amp; Services on Heimdall</title>
+        <link>https://dadrus.github.io/guides/authn/</link>
+        <description>Recent content in Authentication Protocols &amp; Services on Heimdall</description>
+        <generator>Hugo</generator>
+        <language>en-us</language>
+        <lastBuildDate>Tue, 26 May 2026 15:32:46 +0000</lastBuildDate>
+        <atom:link href="https://dadrus.github.io/guides/authn/index.xml" rel="self" type="application/rss+xml"/>
+        <item>
+            <title>First-Party Authentication with OpenID Connect</title>
+            <link>https://dadrus.github.io/guides/authn/oidc_first_party_auth/</link>
+            <pubDate>Fri, 04 Nov 2022 09:00:41 +0200</pubDate>
+            <guid>https://dadrus.github.io/guides/authn/oidc_first_party_auth/</guid>
+            <description>&lt;div class="paragraph"&gt;
+                &lt;p&gt;By the end of this guide, you’ll have a functional setup where heimdall uses &lt;a
+                href="https://www.keycloak.org/"&gt;Keycloak&lt;/a&gt; to authenticate users and route requests based on
+                their authentication status and roles for role-based access control.&lt;/p&gt;
+                &lt;/div&gt;
+                &lt;div class="paragraph"&gt;
+                &lt;p&gt;Although this guide uses Keycloak as identity provider (IDP), you can achieve the same results
+                with &lt;a href="https://zitadel.com"&gt;Zitadel&lt;/a&gt;, &lt;a
+                href="https://github.com/malach-it/boruta-server"&gt;Boruta&lt;/a&gt;, or any other OpenID Connect
+                compatible IDP.&lt;/p&gt;
+                &lt;/div&gt;
+                &lt;div class="sect1"&gt;
+                &lt;h2 id="_overview"&gt;Overview&lt;/h2&gt;
+                &lt;div class="sectionbody"&gt;
+                &lt;div class="paragraph"&gt;
+                &lt;p&gt;In this guide, we’ll set up a Docker Compose environment where heimdall secures services and
+                controls access for specific endpoints:&lt;/p&gt;
+                &lt;/div&gt;
+            </description>
+        </item>
+    </channel>
+</rss>
