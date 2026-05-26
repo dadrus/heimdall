@@ -240,6 +240,19 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				assert.NotNil(t, auth.informer)
 			},
 		},
+		"without credentials configuration": {
+			config: config.MechanismConfig{},
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.CredentialsHandleMock) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, err error, _ *basicAuthAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "'credentials'.'source' is a required field")
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()

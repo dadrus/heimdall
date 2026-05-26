@@ -94,14 +94,6 @@ func hash(userID, password string) [sha512.Size]byte {
 	return result
 }
 
-type authenticatorConfig struct {
-	Credentials    *config.Secret `mapstructure:"credentials"`
-	ErrorSignaling struct {
-		Enabled *bool  `mapstructure:"enabled"`
-		Realm   string `mapstructure:"realm"`
-	} `mapstructure:"error_signaling"`
-}
-
 type basicAuthAuthenticator struct {
 	name                  string
 	id                    string
@@ -120,6 +112,14 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 		Str("_type", AuthenticatorBasicAuth).
 		Str("_name", name).
 		Msg("Creating authenticator")
+
+	type authenticatorConfig struct {
+		Credentials    config.Secret `mapstructure:"credentials"`
+		ErrorSignaling struct {
+			Enabled *bool  `mapstructure:"enabled"`
+			Realm   string `mapstructure:"realm"`
+		} `mapstructure:"error_signaling"`
+	}
 
 	var conf authenticatorConfig
 	if err := decodeConfig(app, rawConfig, &conf); err != nil {
@@ -252,6 +252,14 @@ func (a *basicAuthAuthenticator) CreateStep(
 		auth.principalName = x.IfThenElse(len(def.Principal) == 0, a.principalName, def.Principal)
 
 		return &auth, nil
+	}
+
+	type authenticatorConfig struct {
+		Credentials    *config.Secret `mapstructure:"credentials"`
+		ErrorSignaling struct {
+			Enabled *bool  `mapstructure:"enabled"`
+			Realm   string `mapstructure:"realm"`
+		} `mapstructure:"error_signaling"`
 	}
 
 	var conf authenticatorConfig
