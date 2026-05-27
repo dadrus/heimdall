@@ -102,7 +102,7 @@ func NewSecretInformer[T any](
 	}
 
 	state := newInformerState[T]()
-	hdl.(readinessRegistrar).registerReadiness(state.awaitReady) //nolint:forcetypeassert
+	registerReadiness(hdl, state.awaitReady)
 
 	hdl.OnUpdate(func(ctx context.Context, secret Secret) error {
 		value, err := cfg.converter(secret)
@@ -144,7 +144,7 @@ func NewCredentialsInformer[T any](
 	}
 
 	state := newInformerState[T]()
-	hdl.(readinessRegistrar).registerReadiness(state.awaitReady) //nolint:forcetypeassert
+	registerReadiness(hdl, state.awaitReady)
 
 	hdl.OnUpdate(func(ctx context.Context, credentials Credentials) error {
 		value, err := cfg.converter(credentials)
@@ -186,7 +186,7 @@ func NewCertificateBundleInformer[T any](
 	}
 
 	state := newInformerState[T]()
-	hdl.(readinessRegistrar).registerReadiness(state.awaitReady) //nolint:forcetypeassert
+	registerReadiness(hdl, state.awaitReady)
 
 	hdl.OnUpdate(func(ctx context.Context, bundle CertificateBundle) error {
 		value, err := cfg.converter(bundle)
@@ -301,4 +301,10 @@ func identityConverter[S, T any](source S) (T, error) {
 	}
 
 	return value, nil
+}
+
+func registerReadiness[T any](hdl Handle[T], await func(context.Context) error) {
+	if rr, ok := hdl.(readinessRegistrar); ok {
+		rr.registerReadiness(await)
+	}
 }
