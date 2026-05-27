@@ -78,7 +78,6 @@ auth:
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -489,7 +488,6 @@ auth:
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "oauth", Selector: "client-creds"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -732,7 +730,6 @@ auth:
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -782,7 +779,6 @@ auth:
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -882,7 +878,6 @@ func setupAPIKeySecret(
 		Secret(
 			mock.Anything,
 			secrets.Reference{Source: "foo", Selector: "bar"},
-			mock.Anything,
 		).
 		Return(handle, nil)
 
@@ -911,7 +906,6 @@ func setupOAuth2ClientCredentials(
 		Credentials(
 			mock.Anything,
 			secrets.Reference{Source: "foo", Selector: "bar"},
-			mock.Anything,
 		).
 		Return(handle, nil)
 

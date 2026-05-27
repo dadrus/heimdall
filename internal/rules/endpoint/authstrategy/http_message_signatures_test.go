@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
@@ -64,7 +63,6 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -89,21 +87,16 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						err := cb(context.Background(), secret)
+						err := cb(t.Context(), secret)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true)
 			},
 			assert: func(t *testing.T, err error, hms *HTTPMessageSignatures) {
 				t.Helper()
@@ -111,7 +104,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				require.NoError(t, err)
 				assert.NotEmpty(t, hms.Hash())
 
-				_, ok := hms.informer.Get(t.Context())
+				_, ok := hms.informer.Get()
 				require.True(t, ok)
 			},
 		},
@@ -199,21 +192,16 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 		Secret(
 			mock.Anything,
 			secrets.Reference{Source: "foo", Selector: "bar"},
-			mock.Anything,
 		).
 		Return(handle, nil)
 
 	handle.EXPECT().
 		OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-			err := cb(context.Background(), secret)
+			err := cb(t.Context(), secret)
 			require.NoError(t, err)
 
 			return true
 		}))
-
-	handle.EXPECT().
-		Get(mock.Anything).
-		Return(secret, true)
 
 	reg := keyregistrymocks.NewRegistryMock(t)
 	reg.EXPECT().Notify(mock.Anything).Maybe()

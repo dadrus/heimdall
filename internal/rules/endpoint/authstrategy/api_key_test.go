@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"net/http"
 	"testing"
 
@@ -48,7 +47,6 @@ func TestAPIKeyInit(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -73,21 +71,16 @@ func TestAPIKeyInit(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						err := cb(context.Background(), secret)
+						err := cb(t.Context(), secret)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true)
 			},
 			assert: func(t *testing.T, err error, ak *APIKey) {
 				t.Helper()
@@ -98,7 +91,7 @@ func TestAPIKeyInit(t *testing.T) {
 				require.Equal(t, "foo", ak.Name)
 				require.NotNil(t, ak.informer)
 
-				val, ok := ak.informer.Get(t.Context())
+				val, ok := ak.informer.Get()
 				require.True(t, ok)
 				assert.Equal(t, "baz", val)
 				assert.NotEmpty(t, ak.Hash())
@@ -152,16 +145,10 @@ func TestAPIKeyApply(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
-				handle.EXPECT().
-					OnUpdate(mock.Anything)
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(nil, false)
+				handle.EXPECT().OnUpdate(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, _ *http.Request) {
 				t.Helper()
@@ -186,21 +173,16 @@ func TestAPIKeyApply(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						err := cb(context.Background(), secret)
+						err := cb(t.Context(), secret)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true)
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -224,21 +206,16 @@ func TestAPIKeyApply(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						err := cb(context.Background(), secret)
+						err := cb(t.Context(), secret)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true)
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -265,21 +242,16 @@ func TestAPIKeyApply(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						err := cb(context.Background(), secret)
+						err := cb(t.Context(), secret)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true)
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -307,21 +279,16 @@ func TestAPIKeyApply(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						err := cb(context.Background(), secret)
+						err := cb(t.Context(), secret)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true)
 			},
 			assert: func(t *testing.T, err error, _ *http.Request) {
 				t.Helper()
@@ -346,16 +313,17 @@ func TestAPIKeyApply(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					OnUpdate(mock.Anything)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.Error(t, err)
+						require.ErrorIs(t, err, secrets.ErrSecretKindMismatch)
 
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true)
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, _ *http.Request) {
 				t.Helper()

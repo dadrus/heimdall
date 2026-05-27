@@ -60,7 +60,7 @@ func (c *BasicAuth) Apply(req *http.Request) error {
 	logger := zerolog.Ctx(req.Context())
 	logger.Debug().Msg("Applying basic_auth strategy to authenticate request")
 
-	creds, ok := c.informer.Get(req.Context())
+	creds, ok := c.informer.Get()
 	if !ok {
 		return errorchain.NewWithMessage(
 			pipeline.ErrInternal,
@@ -86,14 +86,12 @@ func (c *BasicAuth) init(ctx context.Context, appCtx app.Context) error {
 		ctx,
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
-		secrets.CredentialsInformerOptions[basicAuthCredentials]{
-			Converter: toBasicAuthCredentials(appCtx.DecoderFactory()),
-			OnUpdate: func(_ context.Context, _ secrets.Credentials, creds basicAuthCredentials) error {
-				c.hash.Store(creds.Hash())
+		secrets.WithConverter(toBasicAuthCredentials(appCtx.DecoderFactory())),
+		secrets.WithUpdateCallback(func(_ context.Context, _ secrets.Credentials, creds basicAuthCredentials) error {
+			c.hash.Store(creds.Hash())
 
-				return nil
-			},
-		},
+			return nil
+		}),
 	)
 	if err != nil {
 		return errorchain.NewWithMessage(

@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
@@ -63,7 +62,6 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -90,21 +88,16 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
-						err := cb(context.Background(), creds)
+						err := cb(t.Context(), creds)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(creds, true)
 			},
 			assert: func(t *testing.T, err error, cc *OAuth2ClientCredentials) {
 				t.Helper()
@@ -125,7 +118,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 					TTL:          &ttl,
 				}
 
-				val, ok := cc.informer.Get(t.Context())
+				val, ok := cc.informer.Get()
 				require.True(t, ok)
 				assert.Equal(t, exp, val)
 				assert.NotEmpty(t, cc.Hash())
@@ -145,21 +138,16 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
-						err := cb(context.Background(), creds)
+						err := cb(t.Context(), creds)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(creds, true)
 			},
 			assert: func(t *testing.T, err error, cc *OAuth2ClientCredentials) {
 				t.Helper()
@@ -180,7 +168,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 					TTL:          &ttl,
 				}
 
-				val, ok := cc.informer.Get(t.Context())
+				val, ok := cc.informer.Get()
 				require.True(t, ok)
 				assert.Equal(t, exp, val)
 				assert.NotEmpty(t, cc.Hash())
@@ -263,16 +251,10 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
-				handle.EXPECT().
-					OnUpdate(mock.Anything)
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(nil, false)
+				handle.EXPECT().OnUpdate(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool, req *http.Request) {
 				t.Helper()
@@ -302,16 +284,18 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					OnUpdate(mock.Anything)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), creds)
+						require.Error(t, err)
+						require.ErrorIs(t, err, pipeline.ErrConfiguration)
+						require.ErrorContains(t, err, "failed decoding oauth2 client credentials")
 
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(creds, true)
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool, req *http.Request) {
 				t.Helper()
@@ -347,21 +331,16 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
-						err := cb(context.Background(), creds)
+						err := cb(t.Context(), creds)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(creds, true)
 
 				cch.EXPECT().
 					Get(mock.Anything, mock.Anything).
@@ -393,21 +372,16 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
-						err := cb(context.Background(), creds)
+						err := cb(t.Context(), creds)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(creds, true)
 
 				cch.EXPECT().
 					Get(mock.Anything, mock.Anything).
@@ -447,21 +421,16 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
-						err := cb(context.Background(), creds)
+						err := cb(t.Context(), creds)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(creds, true)
 
 				cch.EXPECT().
 					Get(mock.Anything, mock.Anything).

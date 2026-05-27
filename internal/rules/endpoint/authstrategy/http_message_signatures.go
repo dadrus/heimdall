@@ -67,7 +67,7 @@ func (s *HTTPMessageSignatures) Apply(req *http.Request) error {
 	logger := zerolog.Ctx(req.Context())
 	logger.Debug().Msg("Applying http_message_signatures strategy to authenticate request")
 
-	signer, ok := s.informer.Get(req.Context())
+	signer, ok := s.informer.Get()
 	if !ok {
 		return errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
@@ -98,17 +98,15 @@ func (s *HTTPMessageSignatures) init(ctx context.Context, appCtx app.Context) er
 		ctx,
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: s.Signer.Secret.Source, Selector: s.Signer.Secret.Selector},
-		secrets.InformerOptions[httpsig.Signer]{
-			Converter: s.createSigner,
-			OnUpdate: func(_ context.Context, secret secrets.Secret, _ httpsig.Signer) error {
-				aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
+		secrets.WithConverter(s.createSigner),
+		secrets.WithUpdateCallback(func(_ context.Context, secret secrets.Secret, _ httpsig.Signer) error {
+			aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
 
-				appCtx.KeyRegistry().Notify(keyregistry.KeyInfo{Key: aks, Exportable: true})
-				s.updateHash(aks)
+			appCtx.KeyRegistry().Notify(keyregistry.KeyInfo{Key: aks, Exportable: true})
+			s.updateHash(aks)
 
-				return nil
-			},
-		},
+			return nil
+		}),
 	)
 	if err != nil {
 		return errorchain.NewWithMessage(

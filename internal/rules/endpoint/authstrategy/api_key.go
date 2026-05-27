@@ -45,7 +45,7 @@ func (c *APIKey) Apply(req *http.Request) error {
 	logger := zerolog.Ctx(req.Context())
 	logger.Debug().Msg("Applying api_key strategy to authenticate request")
 
-	creds, ok := c.informer.Get(req.Context())
+	creds, ok := c.informer.Get()
 	if !ok {
 		return errorchain.NewWithMessage(
 			pipeline.ErrInternal,
@@ -83,22 +83,20 @@ func (c *APIKey) init(ctx context.Context, appCtx app.Context) error {
 		ctx,
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: c.Secret.Source, Selector: c.Secret.Selector},
-		secrets.InformerOptions[string]{
-			Converter: toStringSecret,
-			OnUpdate: func(_ context.Context, _ secrets.Secret, value string) error {
-				hash := sha256.New()
+		secrets.WithConverter(toStringSecret),
+		secrets.WithUpdateCallback(func(_ context.Context, _ secrets.Secret, value string) error {
+			hash := sha256.New()
 
-				hash.Write(stringx.ToBytes(c.In))
-				hash.Write(stringx.ToBytes(c.Name))
-				hash.Write(stringx.ToBytes(value))
+			hash.Write(stringx.ToBytes(c.In))
+			hash.Write(stringx.ToBytes(c.Name))
+			hash.Write(stringx.ToBytes(value))
 
-				var result [sha256.Size]byte
+			var result [sha256.Size]byte
 
-				c.hash.Store(hash.Sum(result[:0]))
+			c.hash.Store(hash.Sum(result[:0]))
 
-				return nil
-			},
-		},
+			return nil
+		}),
 	)
 	if err != nil {
 		return errorchain.NewWithMessage(

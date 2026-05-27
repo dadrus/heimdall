@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"net/http"
 	"testing"
 
@@ -61,7 +60,6 @@ func TestBasicAuthInit(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -89,21 +87,16 @@ func TestBasicAuthInit(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
-						err := cb(context.Background(), creds)
+						err := cb(t.Context(), creds)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(creds, true)
 			},
 			assert: func(t *testing.T, err error, ba *BasicAuth) {
 				t.Helper()
@@ -111,7 +104,7 @@ func TestBasicAuthInit(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, ba.informer)
 
-				val, ok := ba.informer.Get(t.Context())
+				val, ok := ba.informer.Get()
 				require.True(t, ok)
 				assert.Equal(t, "baz", val.UserID)
 				assert.Equal(t, "foo", val.Password)
@@ -165,16 +158,10 @@ func TestBasicAuthApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
-				handle.EXPECT().
-					OnUpdate(mock.Anything)
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(nil, false)
+				handle.EXPECT().OnUpdate(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, _ *http.Request) {
 				t.Helper()
@@ -198,16 +185,18 @@ func TestBasicAuthApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					OnUpdate(mock.Anything)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), creds)
+						require.Error(t, err)
+						require.ErrorIs(t, err, pipeline.ErrConfiguration)
+						require.ErrorContains(t, err, "failed decoding basic auth credentials")
 
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(creds, true)
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, _ *http.Request) {
 				t.Helper()
@@ -231,21 +220,16 @@ func TestBasicAuthApply(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
-						err := cb(context.Background(), creds)
+						err := cb(t.Context(), creds)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(creds, true)
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()

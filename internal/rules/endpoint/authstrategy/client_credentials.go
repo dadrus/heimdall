@@ -56,7 +56,7 @@ func (c *OAuth2ClientCredentials) Apply(req *http.Request) error {
 
 	logger.Debug().Msg("Applying oauth2_client_credentials strategy to authenticate request")
 
-	cfg, ok := c.informer.Get(ctx)
+	cfg, ok := c.informer.Get()
 	if !ok {
 		return errorchain.NewWithMessage(
 			pipeline.ErrInternal,
@@ -97,14 +97,12 @@ func (c *OAuth2ClientCredentials) init(ctx context.Context, appCtx app.Context) 
 		ctx,
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
-		secrets.CredentialsInformerOptions[clientcredentials.Config]{
-			Converter: c.createClientCredentialsConfig,
-			OnUpdate: func(_ context.Context, _ secrets.Credentials, cfg clientcredentials.Config) error {
-				c.hash.Store(cfg.Hash())
+		secrets.WithConverter(c.createClientCredentialsConfig),
+		secrets.WithUpdateCallback(func(_ context.Context, _ secrets.Credentials, cfg clientcredentials.Config) error {
+			c.hash.Store(cfg.Hash())
 
-				return nil
-			},
-		},
+			return nil
+		}),
 	)
 	if err != nil {
 		return errorchain.NewWithMessage(
