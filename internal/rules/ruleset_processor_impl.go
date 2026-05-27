@@ -33,6 +33,17 @@ import (
 
 var ErrUnsupportedRuleSetVersion = errors.New("unsupported rule set version")
 
+type ruleSetScope struct {
+	ctx      context.Context
+	cancel   context.CancelFunc
+	resolver secrets.ScopedResolver
+}
+
+func (s ruleSetScope) release() {
+	s.cancel()
+	s.resolver.Release()
+}
+
 type ruleSetProcessor struct {
 	r  rule.Repository
 	f  rule.Factory
@@ -41,7 +52,7 @@ type ruleSetProcessor struct {
 	sf secrets.ScopedResolverFactory
 
 	scopesMu sync.Mutex
-	scopes   map[string]secrets.ScopedResolver
+	scopes   map[string]ruleSetScope
 }
 
 func NewRuleSetProcessor(
@@ -55,7 +66,7 @@ func NewRuleSetProcessor(
 		f:      ruleFactory,
 		op:     op,
 		sf:     scopedResolverFactory,
-		scopes: make(map[string]secrets.ScopedResolver),
+		scopes: make(map[string]ruleSetScope),
 	}
 }
 
@@ -71,7 +82,6 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSe
 	logger.Info().
 		Str("_ruleset_id", source.ID).
 		Str("_ruleset_name", source.Name).
-		Str("_provider", source.Provider).
 		Msg("New rule set received")
 
 	if !p.isVersionSupported(ruleSet.Version) {
@@ -83,15 +93,14 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSe
 		err   error
 	)
 
-	resolver, created := p.resolverFor(ruleSet)
-
+	scope := p.newScope(ctx, ruleSet)
 	defer func() {
-		if created && err != nil {
-			p.releaseResolver(ruleSet.ID)
+		if err != nil {
+			scope.release()
 		}
 	}()
 
-	if rules, err = p.loadRules(ctx, ruleSet, resolver); err != nil {
+	if rules, err = p.loadRules(scope, ruleSet); err != nil {
 		return err
 	}
 
@@ -101,16 +110,19 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSe
 				logger.Warn().
 					Str("_ruleset_id", source.ID).
 					Str("_ruleset_name", source.Name).
-					Str("_provider", source.Provider).
 					Str("_rule", rul.ID).
 					Msg("Rule contains insecure forward_to configuration")
 			}
 		}
 	}
 
-	err = p.r.AddRuleSet(ctx, source, rules)
+	if err = p.r.AddRuleSet(ctx, source, rules); err != nil {
+		return err
+	}
 
-	return err
+	p.storeScope(ruleSet.ID, scope)
+
+	return nil
 }
 
 func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSet) error {
@@ -125,7 +137,6 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSe
 	logger.Info().
 		Str("_ruleset_id", source.ID).
 		Str("_ruleset_name", source.Name).
-		Str("_provider", source.Provider).
 		Msg("RuleSet update received")
 
 	if !p.isVersionSupported(ruleSet.Version) {
@@ -137,23 +148,14 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSe
 		err   error
 	)
 
-	resolver, created := p.resolverFor(ruleSet)
-	if created {
-		logger.Warn().
-			Str("_ruleset_id", source.ID).
-			Str("_ruleset_name", source.Name).
-			Str("_provider", source.Provider).
-			Msg("Got RuleSet update without previously seen the RuleSet. " +
-				"This is unexpected and may indicate a bug.")
-	}
-
+	scope := p.newScope(ctx, ruleSet)
 	defer func() {
-		if created && err != nil {
-			p.releaseResolver(ruleSet.ID)
+		if err != nil {
+			scope.release()
 		}
 	}()
 
-	if rules, err = p.loadRules(ctx, ruleSet, resolver); err != nil {
+	if rules, err = p.loadRules(scope, ruleSet); err != nil {
 		return err
 	}
 
@@ -161,16 +163,32 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSe
 		for _, rul := range ruleSet.Rules {
 			if rul.Backend.IsInsecure() {
 				logger.Warn().
-					Str("_rule_set", ruleSet.Name).
+					Str("_ruleset_id", source.ID).
+					Str("_ruleset_name", source.Name).
 					Str("_rule", rul.ID).
 					Msg("Rule contains insecure forward_to configuration")
 			}
 		}
 	}
 
-	err = p.r.UpdateRuleSet(ctx, source, rules)
+	if err = p.r.UpdateRuleSet(ctx, source, rules); err != nil {
+		return err
+	}
 
-	return err
+	old, ok := p.replaceScope(ruleSet.ID, scope)
+	if !ok {
+		logger.Error().
+			Str("_ruleset_id", source.ID).
+			Str("_ruleset_name", source.Name).
+			Msg("Got RuleSet update without previously seeing the RuleSet. " +
+				"This is unexpected and may indicate a bug.")
+
+		return nil
+	}
+
+	old.release()
+
+	return nil
 }
 
 func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet v1beta1.RuleSet) error {
@@ -185,14 +203,15 @@ func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet v1beta1.RuleSe
 	logger.Info().
 		Str("_ruleset_id", source.ID).
 		Str("_ruleset_name", source.Name).
-		Str("_provider", source.Provider).
 		Msg("Deletion of a rule set received")
 
 	if err := p.r.DeleteRuleSet(ctx, source); err != nil {
 		return err
 	}
 
-	p.releaseResolver(ruleSet.ID)
+	if scope, ok := p.deleteScope(ruleSet.ID); ok {
+		scope.release()
+	}
 
 	return nil
 }
@@ -202,14 +221,13 @@ func (p *ruleSetProcessor) isVersionSupported(version string) bool {
 }
 
 func (p *ruleSetProcessor) loadRules(
-	ctx context.Context,
+	scope ruleSetScope,
 	ruleSet v1beta1.RuleSet,
-	resolver secrets.Resolver,
 ) ([]rule.Rule, error) {
 	rules := make([]rule.Rule, 0, len(ruleSet.Rules))
 
 	for _, rc := range ruleSet.Rules {
-		rul, err := p.f.CreateRule(ctx, resolver, ruleSet, rc)
+		rul, err := p.f.CreateRule(scope.ctx, scope.resolver, ruleSet, rc)
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(
 				pipeline.ErrInternal,
@@ -223,41 +241,44 @@ func (p *ruleSetProcessor) loadRules(
 	return rules, nil
 }
 
-func (p *ruleSetProcessor) resolverFor(ruleSet v1beta1.RuleSet) (secrets.ScopedResolver, bool) {
+func (p *ruleSetProcessor) newScope(parent context.Context, ruleSet v1beta1.RuleSet) ruleSetScope {
+	ctx, cancel := context.WithCancel(parent)
+
+	return ruleSetScope{
+		ctx:    ctx,
+		cancel: cancel,
+		resolver: p.sf.Create(
+			ruleSet.ID,
+			secrets.WithNamespace(ruleSet.Namespace),
+		),
+	}
+}
+
+func (p *ruleSetProcessor) storeScope(id string, scope ruleSetScope) {
 	p.scopesMu.Lock()
 	defer p.scopesMu.Unlock()
 
-	resolver := p.scopes[ruleSet.ID]
-	if resolver != nil {
-		return resolver, false
-	}
-
-	resolver = p.sf.Create(
-		ruleSet.ID,
-		secrets.WithNamespace(ruleSet.Namespace),
-	)
-
-	p.scopes[ruleSet.ID] = resolver
-
-	return resolver, true
+	p.scopes[id] = scope
 }
 
-func (p *ruleSetProcessor) releaseResolver(id string) {
-	var resolver secrets.ScopedResolver
+func (p *ruleSetProcessor) replaceScope(id string, scope ruleSetScope) (ruleSetScope, bool) {
+	p.scopesMu.Lock()
+	defer p.scopesMu.Unlock()
 
-	func() {
-		p.scopesMu.Lock()
-		defer p.scopesMu.Unlock()
+	old, ok := p.scopes[id]
+	p.scopes[id] = scope
 
-		resolver = p.scopes[id]
-		if resolver != nil {
-			delete(p.scopes, id)
-		}
-	}()
+	return old, ok
+}
 
-	if resolver == nil {
-		return
+func (p *ruleSetProcessor) deleteScope(id string) (ruleSetScope, bool) {
+	p.scopesMu.Lock()
+	defer p.scopesMu.Unlock()
+
+	scope, ok := p.scopes[id]
+	if ok {
+		delete(p.scopes, id)
 	}
 
-	resolver.Release()
+	return scope, ok
 }

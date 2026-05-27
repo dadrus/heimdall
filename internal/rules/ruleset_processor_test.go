@@ -17,6 +17,7 @@
 package rules
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,7 +43,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			scopeFactory *secretsmocks.ScopedResolverFactoryMock,
 			resolver *secretsmocks.ScopedResolverMock,
 		)
-		assert func(t *testing.T, err error)
+		assert func(t *testing.T, processor *ruleSetProcessor, err error)
 	}{
 		"unsupported version": {
 			ruleset: v1beta1.RuleSet{Version: "foo"},
@@ -55,7 +56,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			) {
 				t.Helper()
 			},
-			assert: func(t *testing.T, err error) {
+			assert: func(t *testing.T, _ *ruleSetProcessor, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -97,12 +98,13 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 					Release().
 					Once()
 			},
-			assert: func(t *testing.T, err error) {
+			assert: func(t *testing.T, processor *ruleSetProcessor, err error) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorContains(t, err, "loading rule ID='foo' failed")
 				require.ErrorIs(t, err, assert.AnError)
+				require.NotContains(t, processor.scopes, "test")
 			},
 		},
 		"error while adding rule set releases newly created resolver": {
@@ -156,11 +158,12 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 					Release().
 					Once()
 			},
-			assert: func(t *testing.T, err error) {
+			assert: func(t *testing.T, processor *ruleSetProcessor, err error) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, assert.AnError)
+				require.NotContains(t, processor.scopes, "test")
 			},
 		},
 		"successful": {
@@ -210,10 +213,16 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 					).
 					Return(nil)
 			},
-			assert: func(t *testing.T, err error) {
+			assert: func(t *testing.T, processor *ruleSetProcessor, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
+
+				scope, ok := processor.scopes["test"]
+				require.True(t, ok)
+				require.NotNil(t, scope.ctx)
+				require.NotNil(t, scope.cancel)
+				require.NotNil(t, scope.resolver)
 			},
 		},
 	} {
@@ -232,11 +241,11 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 				repo,
 				factory,
 				scopeFactory,
-			)
+			).(*ruleSetProcessor)
 
 			err := processor.OnCreated(t.Context(), tc.ruleset)
 
-			tc.assert(t, err)
+			tc.assert(t, processor, err)
 		})
 	}
 }
@@ -248,25 +257,41 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 		ruleset   v1beta1.RuleSet
 		configure func(
 			t *testing.T,
+			processor *ruleSetProcessor,
 			factory *mocks.FactoryMock,
 			repo *mocks.RepositoryMock,
 			scopeFactory *secretsmocks.ScopedResolverFactoryMock,
-			resolver *secretsmocks.ScopedResolverMock,
+			oldResolver *secretsmocks.ScopedResolverMock,
+			newResolver *secretsmocks.ScopedResolverMock,
 		)
-		assert func(t *testing.T, err error)
+		assert func(
+			t *testing.T,
+			processor *ruleSetProcessor,
+			oldResolver *secretsmocks.ScopedResolverMock,
+			newResolver *secretsmocks.ScopedResolverMock,
+			err error,
+		)
 	}{
 		"unsupported version": {
 			ruleset: v1beta1.RuleSet{Version: "foo"},
 			configure: func(
 				t *testing.T,
+				_ *ruleSetProcessor,
 				_ *mocks.FactoryMock,
 				_ *mocks.RepositoryMock,
 				_ *secretsmocks.ScopedResolverFactoryMock,
 				_ *secretsmocks.ScopedResolverMock,
+				_ *secretsmocks.ScopedResolverMock,
 			) {
 				t.Helper()
 			},
-			assert: func(t *testing.T, err error) {
+			assert: func(
+				t *testing.T,
+				_ *ruleSetProcessor,
+				_ *secretsmocks.ScopedResolverMock,
+				_ *secretsmocks.ScopedResolverMock,
+				err error,
+			) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -282,21 +307,30 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			},
 			configure: func(
 				t *testing.T,
+				processor *ruleSetProcessor,
 				factory *mocks.FactoryMock,
 				_ *mocks.RepositoryMock,
 				scopeFactory *secretsmocks.ScopedResolverFactoryMock,
-				resolver *secretsmocks.ScopedResolverMock,
+				oldResolver *secretsmocks.ScopedResolverMock,
+				newResolver *secretsmocks.ScopedResolverMock,
 			) {
 				t.Helper()
 
+				_, cancel := context.WithCancel(t.Context())
+				processor.scopes["test"] = ruleSetScope{
+					ctx:      t.Context(),
+					cancel:   cancel,
+					resolver: oldResolver,
+				}
+
 				scopeFactory.EXPECT().
 					Create("test", mock.Anything).
-					Return(resolver)
+					Return(newResolver)
 
 				factory.EXPECT().
 					CreateRule(
 						mock.Anything,
-						resolver,
+						newResolver,
 						mock.MatchedBy(func(rs v1beta1.RuleSet) bool {
 							return rs.ID == "test" && rs.Namespace == "team-a"
 						}),
@@ -304,16 +338,26 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 					).
 					Return(nil, assert.AnError)
 
-				resolver.EXPECT().
+				newResolver.EXPECT().
 					Release().
 					Once()
 			},
-			assert: func(t *testing.T, err error) {
+			assert: func(
+				t *testing.T,
+				processor *ruleSetProcessor,
+				oldResolver *secretsmocks.ScopedResolverMock,
+				_ *secretsmocks.ScopedResolverMock,
+				err error,
+			) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorContains(t, err, "loading rule ID='foo' failed")
 				require.ErrorIs(t, err, assert.AnError)
+
+				scope, ok := processor.scopes["test"]
+				require.True(t, ok)
+				require.Same(t, oldResolver, scope.resolver)
 			},
 		},
 		"error while updating rule set releases newly created resolver": {
@@ -325,23 +369,32 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			},
 			configure: func(
 				t *testing.T,
+				processor *ruleSetProcessor,
 				factory *mocks.FactoryMock,
 				repo *mocks.RepositoryMock,
 				scopeFactory *secretsmocks.ScopedResolverFactoryMock,
-				resolver *secretsmocks.ScopedResolverMock,
+				oldResolver *secretsmocks.ScopedResolverMock,
+				newResolver *secretsmocks.ScopedResolverMock,
 			) {
 				t.Helper()
 
 				rul := mocks.NewRuleMock(t)
 
+				_, cancel := context.WithCancel(t.Context())
+				processor.scopes["test"] = ruleSetScope{
+					ctx:      t.Context(),
+					cancel:   cancel,
+					resolver: oldResolver,
+				}
+
 				scopeFactory.EXPECT().
 					Create("test", mock.Anything).
-					Return(resolver)
+					Return(newResolver)
 
 				factory.EXPECT().
 					CreateRule(
 						mock.Anything,
-						resolver,
+						newResolver,
 						mock.MatchedBy(func(rs v1beta1.RuleSet) bool {
 							return rs.ID == "test" && rs.Namespace == "team-a"
 						}),
@@ -363,18 +416,28 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 					).
 					Return(assert.AnError)
 
-				resolver.EXPECT().
+				newResolver.EXPECT().
 					Release().
 					Once()
 			},
-			assert: func(t *testing.T, err error) {
+			assert: func(
+				t *testing.T,
+				processor *ruleSetProcessor,
+				oldResolver *secretsmocks.ScopedResolverMock,
+				_ *secretsmocks.ScopedResolverMock,
+				err error,
+			) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, assert.AnError)
+
+				scope, ok := processor.scopes["test"]
+				require.True(t, ok)
+				require.Same(t, oldResolver, scope.resolver)
 			},
 		},
-		"successful": {
+		"successful replaces previous resolver": {
 			ruleset: v1beta1.RuleSet{
 				MetaData: v1beta1.MetaData{ID: "test", Namespace: "team-a"},
 				Version:  v1beta1.Version,
@@ -383,23 +446,32 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			},
 			configure: func(
 				t *testing.T,
+				processor *ruleSetProcessor,
 				factory *mocks.FactoryMock,
 				repo *mocks.RepositoryMock,
 				scopeFactory *secretsmocks.ScopedResolverFactoryMock,
-				resolver *secretsmocks.ScopedResolverMock,
+				oldResolver *secretsmocks.ScopedResolverMock,
+				newResolver *secretsmocks.ScopedResolverMock,
 			) {
 				t.Helper()
 
 				rul := mocks.NewRuleMock(t)
 
+				_, cancel := context.WithCancel(t.Context())
+				processor.scopes["test"] = ruleSetScope{
+					ctx:      t.Context(),
+					cancel:   cancel,
+					resolver: oldResolver,
+				}
+
 				scopeFactory.EXPECT().
 					Create("test", mock.Anything).
-					Return(resolver)
+					Return(newResolver)
 
 				factory.EXPECT().
 					CreateRule(
 						mock.Anything,
-						resolver,
+						newResolver,
 						mock.MatchedBy(func(rs v1beta1.RuleSet) bool {
 							return rs.ID == "test" && rs.Namespace == "team-a"
 						}),
@@ -420,11 +492,25 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 						}),
 					).
 					Return(nil)
+
+				oldResolver.EXPECT().
+					Release().
+					Once()
 			},
-			assert: func(t *testing.T, err error) {
+			assert: func(
+				t *testing.T,
+				processor *ruleSetProcessor,
+				_ *secretsmocks.ScopedResolverMock,
+				newResolver *secretsmocks.ScopedResolverMock,
+				err error,
+			) {
 				t.Helper()
 
 				require.NoError(t, err)
+
+				scope, ok := processor.scopes["test"]
+				require.True(t, ok)
+				require.Same(t, newResolver, scope.resolver)
 			},
 		},
 	} {
@@ -434,33 +520,33 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			factory := mocks.NewFactoryMock(t)
 			repo := mocks.NewRepositoryMock(t)
 			scopeFactory := secretsmocks.NewScopedResolverFactoryMock(t)
-			resolver := secretsmocks.NewScopedResolverMock(t)
-
-			tc.configure(t, factory, repo, scopeFactory, resolver)
+			oldResolver := secretsmocks.NewScopedResolverMock(t)
+			newResolver := secretsmocks.NewScopedResolverMock(t)
 
 			processor := NewRuleSetProcessor(
 				config.DecisionMode,
 				repo,
 				factory,
 				scopeFactory,
-			)
+			).(*ruleSetProcessor)
+
+			tc.configure(t, processor, factory, repo, scopeFactory, oldResolver, newResolver)
 
 			err := processor.OnUpdated(t.Context(), tc.ruleset)
 
-			tc.assert(t, err)
+			tc.assert(t, processor, oldResolver, newResolver, err)
 		})
 	}
 }
 
-func TestRuleSetProcessorOnUpdatedReusesExistingResolver(t *testing.T) {
+func TestRuleSetProcessorOnUpdatedWithoutPreviousRuleSet(t *testing.T) {
 	t.Parallel()
 
 	ruleSet := v1beta1.RuleSet{
 		MetaData: v1beta1.MetaData{ID: "test", Namespace: "team-a"},
 		Version:  v1beta1.Version,
 		Name:     "foobar",
-
-		Rules: []v1beta1.Rule{{ID: "foo"}},
+		Rules:    []v1beta1.Rule{{ID: "foo"}},
 	}
 
 	factory := mocks.NewFactoryMock(t)
@@ -476,7 +562,9 @@ func TestRuleSetProcessorOnUpdatedReusesExistingResolver(t *testing.T) {
 		scopeFactory,
 	).(*ruleSetProcessor)
 
-	processor.scopes[ruleSet.ID] = resolver
+	scopeFactory.EXPECT().
+		Create("test", mock.Anything).
+		Return(resolver)
 
 	factory.EXPECT().
 		CreateRule(
@@ -501,13 +589,15 @@ func TestRuleSetProcessorOnUpdatedReusesExistingResolver(t *testing.T) {
 				return len(rules) == 1 && rules[0] == rul
 			}),
 		).
-		Return(assert.AnError)
+		Return(nil)
 
 	err := processor.OnUpdated(t.Context(), ruleSet)
 
-	require.Error(t, err)
-	require.ErrorIs(t, err, assert.AnError)
-	require.Same(t, resolver, processor.scopes[ruleSet.ID])
+	require.NoError(t, err)
+
+	scope, ok := processor.scopes["test"]
+	require.True(t, ok)
+	require.Same(t, resolver, scope.resolver)
 }
 
 func TestRuleSetProcessorOnDeleted(t *testing.T) {
@@ -537,7 +627,12 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			) {
 				t.Helper()
 
-				processor.scopes["test"] = resolver
+				_, cancel := context.WithCancel(t.Context())
+				processor.scopes["test"] = ruleSetScope{
+					ctx:      t.Context(),
+					cancel:   cancel,
+					resolver: resolver,
+				}
 
 				repo.EXPECT().
 					DeleteRuleSet(
@@ -572,7 +667,12 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			) {
 				t.Helper()
 
-				processor.scopes["test"] = resolver
+				_, cancel := context.WithCancel(t.Context())
+				processor.scopes["test"] = ruleSetScope{
+					ctx:      t.Context(),
+					cancel:   cancel,
+					resolver: resolver,
+				}
 
 				repo.EXPECT().
 					DeleteRuleSet(
@@ -653,7 +753,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 	}
 }
 
-func TestRuleSetProcessorResolverFor(t *testing.T) {
+func TestRuleSetProcessorNewScope(t *testing.T) {
 	t.Parallel()
 
 	ruleSet := v1beta1.RuleSet{
@@ -675,22 +775,20 @@ func TestRuleSetProcessorResolverFor(t *testing.T) {
 		scopeFactory,
 	).(*ruleSetProcessor)
 
-	first, created := processor.resolverFor(ruleSet)
-	require.True(t, created)
-	require.Same(t, resolver, first)
+	scope := processor.newScope(t.Context(), ruleSet)
 
-	second, created := processor.resolverFor(ruleSet)
-	require.False(t, created)
-	require.Same(t, resolver, second)
+	require.NotNil(t, scope.ctx)
+	require.NotNil(t, scope.cancel)
+	require.Same(t, resolver, scope.resolver)
+
+	scope.cancel()
 }
 
-func TestRuleSetProcessorReleaseResolver(t *testing.T) {
+func TestRuleSetProcessorStoreReplaceAndDeleteScope(t *testing.T) {
 	t.Parallel()
 
-	resolver := secretsmocks.NewScopedResolverMock(t)
-	resolver.EXPECT().
-		Release().
-		Once()
+	oldResolver := secretsmocks.NewScopedResolverMock(t)
+	newResolver := secretsmocks.NewScopedResolverMock(t)
 
 	processor := NewRuleSetProcessor(
 		config.DecisionMode,
@@ -699,10 +797,39 @@ func TestRuleSetProcessorReleaseResolver(t *testing.T) {
 		secretsmocks.NewScopedResolverFactoryMock(t),
 	).(*ruleSetProcessor)
 
-	processor.scopes["test"] = resolver
+	_, oldCancel := context.WithCancel(t.Context())
+	oldScope := ruleSetScope{
+		ctx:      t.Context(),
+		cancel:   oldCancel,
+		resolver: oldResolver,
+	}
 
-	processor.releaseResolver("test")
-	processor.releaseResolver("test")
+	_, newCancel := context.WithCancel(t.Context())
+	newScope := ruleSetScope{
+		ctx:      t.Context(),
+		cancel:   newCancel,
+		resolver: newResolver,
+	}
 
+	processor.storeScope("test", oldScope)
+
+	stored, ok := processor.scopes["test"]
+	require.True(t, ok)
+	require.Same(t, oldResolver, stored.resolver)
+
+	replaced, ok := processor.replaceScope("test", newScope)
+	require.True(t, ok)
+	require.Same(t, oldResolver, replaced.resolver)
+
+	stored, ok = processor.scopes["test"]
+	require.True(t, ok)
+	require.Same(t, newResolver, stored.resolver)
+
+	deleted, ok := processor.deleteScope("test")
+	require.True(t, ok)
+	require.Same(t, newResolver, deleted.resolver)
 	require.NotContains(t, processor.scopes, "test")
+
+	_, ok = processor.deleteScope("test")
+	require.False(t, ok)
 }
