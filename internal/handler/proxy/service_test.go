@@ -17,7 +17,6 @@
 package proxy
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -833,22 +832,16 @@ func TestProxyService(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "proxy", Selector: "server"},
-						mock.Anything,
 					).
 					Return(secretHandle, nil)
 
 				secretHandle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						err := cb(context.Background(), secret)
+						err := cb(t.Context(), secret)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				secretHandle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true).
-					Maybe()
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
@@ -969,22 +962,16 @@ func TestProxyService(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "proxy", Selector: "server"},
-						mock.Anything,
 					).
 					Return(secretHandle, nil)
 
 				secretHandle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						err := cb(context.Background(), secret)
+						err := cb(t.Context(), secret)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				secretHandle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true).
-					Maybe()
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
