@@ -99,9 +99,7 @@ func newOAuth2ClientCredentialsFinalizer(
 		context.Background(),
 		app.SecretResolver(),
 		secrets.Reference{Source: conf.Credentials.Source, Selector: conf.Credentials.Selector},
-		secrets.CredentialsInformerOptions[oauth2ClientCredentials]{
-			Converter: toOAuth2ClientCredentials(app.DecoderFactory()),
-		},
+		secrets.WithConverter(toOAuth2ClientCredentials(app.DecoderFactory())),
 	)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
@@ -212,7 +210,7 @@ func (f *oauth2ClientCredentialsFinalizer) Execute(ctx pipeline.Context, _ pipel
 		Str("_id", f.id).
 		Msg("Executing finalizer")
 
-	creds, ok := f.informer.Get(ctx.Context())
+	creds, ok := f.informer.Get()
 	if !ok {
 		return errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,

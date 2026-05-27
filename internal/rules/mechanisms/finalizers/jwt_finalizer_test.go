@@ -52,6 +52,11 @@ func TestNewJWTFinalizer(t *testing.T) {
 	validator, err := validation.NewValidator()
 	require.NoError(t, err)
 
+	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	secret := secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil)
+
 	for uc, tc := range map[string]struct {
 		config []byte
 		setup  func(t *testing.T, resolver *secretsmocks.ResolverMock)
@@ -91,7 +96,7 @@ signer:
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
+					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
@@ -113,10 +118,16 @@ signer:
 				t.Helper()
 
 				shm := secretsmocks.NewSecretHandleMock(t)
-				shm.EXPECT().OnUpdate(mock.Anything)
+				shm.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
 
 				resolver.EXPECT().
-					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
+					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(shm, nil)
 			},
 			assert: func(t *testing.T, err error, fin *jwtFinalizer) {
@@ -155,10 +166,16 @@ values:
 				t.Helper()
 
 				shm := secretsmocks.NewSecretHandleMock(t)
-				shm.EXPECT().OnUpdate(mock.Anything)
+				shm.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
 
 				resolver.EXPECT().
-					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
+					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(shm, nil)
 			},
 			assert: func(t *testing.T, err error, fin *jwtFinalizer) {
@@ -215,6 +232,11 @@ func TestJWTFinalizerCreateStep(t *testing.T) {
 	t.Parallel()
 
 	const expectedTTL = 5 * time.Second
+
+	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	secret := secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil)
 
 	for uc, tc := range map[string]struct {
 		config  []byte
@@ -330,6 +352,7 @@ signer:
 				assert.Equal(t, "Bearer", configured.headerScheme)
 				assert.NotEqual(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
+
 				val, err := configured.claims.Render(map[string]any{
 					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "bar"}},
 				})
@@ -404,6 +427,7 @@ signer:
 				assert.Equal(t, expectedTTL, configured.ttl)
 				assert.NotEqual(t, prototype.claims, configured.claims)
 				require.NotNil(t, configured.claims)
+
 				val, err := configured.claims.Render(map[string]any{
 					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "bar"}},
 				})
@@ -513,14 +537,21 @@ signer:
 			require.NoError(t, err)
 
 			shm := secretsmocks.NewSecretHandleMock(t)
-			shm.EXPECT().OnUpdate(mock.Anything)
+			shm.EXPECT().
+				OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+					err := cb(t.Context(), secret)
+					require.NoError(t, err)
+
+					return true
+				}))
 
 			resolver := secretsmocks.NewResolverMock(t)
 			resolver.EXPECT().
-				Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
+				Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
 				Return(shm, nil)
 
 			ko := keyregistrymocks.NewRegistryMock(t)
+			ko.EXPECT().Notify(mock.Anything).Maybe()
 
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
@@ -540,10 +571,8 @@ signer:
 
 			stepResolver := secretsmocks.NewResolverMock(t)
 
-			// WHEN
 			step, err := mech.CreateStep(t.Context(), stepResolver, tc.stepDef)
 
-			// THEN
 			fin, ok := step.(*jwtFinalizer)
 			if err == nil {
 				require.True(t, ok)
@@ -567,6 +596,7 @@ func TestJWTFinalizerExecute(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		config         []byte
 		subject        pipeline.Subject
+		signingSecret  secrets.Secret
 		configureMocks func(t *testing.T,
 			fin *jwtFinalizer,
 			ctx *heimdallmocks.ContextMock,
@@ -608,7 +638,7 @@ signer:
 				},
 			},
 			configureMocks: func(t *testing.T, fin *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, shm *secretsmocks.SecretHandleMock, sub pipeline.Subject,
+				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, sub pipeline.Subject,
 			) {
 				t.Helper()
 
@@ -633,6 +663,7 @@ signer:
     selector: bar
 ttl: 1m
 `),
+			signingSecret: secret,
 			subject: pipeline.Subject{
 				"default": &pipeline.Principal{
 					ID:         "foo",
@@ -640,11 +671,9 @@ ttl: 1m
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, shm *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
 			) {
 				t.Helper()
-
-				shm.EXPECT().Get(mock.Anything).Return(secret, true)
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
@@ -666,6 +695,7 @@ signer:
     selector: bar
 ttl: 2s
 `),
+			signingSecret: secret,
 			subject: pipeline.Subject{
 				"default": &pipeline.Principal{
 					ID:         "foo",
@@ -673,11 +703,9 @@ ttl: 2s
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, shm *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
 			) {
 				t.Helper()
-
-				shm.EXPECT().Get(mock.Anything).Return(secret, true)
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
@@ -705,6 +733,7 @@ claims: '{
   {{ quote $val }}: "baz",
   "foo": {{ .Outputs.foo | quote }}
 }'`),
+			signingSecret: secret,
 			subject: pipeline.Subject{
 				"default": &pipeline.Principal{
 					ID:         "foo",
@@ -712,11 +741,9 @@ claims: '{
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, shm *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
 			) {
 				t.Helper()
-
-				shm.EXPECT().Get(mock.Anything).Return(secret, true)
 
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 				ctx.EXPECT().AddHeaderForUpstream("X-Token",
@@ -742,6 +769,7 @@ values:
   foo: '{{ .Subject.ID | quote }}'
   bar: '{{ .Outputs.bar | quote }}'
 `),
+			signingSecret: secret,
 			subject: pipeline.Subject{
 				"default": &pipeline.Principal{
 					ID:         "foo",
@@ -749,11 +777,9 @@ values:
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, shm *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
 			) {
 				t.Helper()
-
-				shm.EXPECT().Get(mock.Anything).Return(secret, true)
 
 				ctx.EXPECT().Outputs().Return(map[string]any{"bar": "baz"})
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
@@ -885,11 +911,9 @@ signer:
 				},
 			},
 			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, shm *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
 			) {
 				t.Helper()
-
-				shm.EXPECT().Get(mock.Anything).Return(nil, false)
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
@@ -908,7 +932,6 @@ signer:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.ContextMock,
@@ -924,11 +947,21 @@ signer:
 			mctx := heimdallmocks.NewContextMock(t)
 
 			shm := secretsmocks.NewSecretHandleMock(t)
-			shm.EXPECT().OnUpdate(mock.Anything)
+			if tc.signingSecret != nil {
+				shm.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), tc.signingSecret)
+						require.NoError(t, err)
+
+						return true
+					}))
+			} else {
+				shm.EXPECT().OnUpdate(mock.Anything)
+			}
 
 			resolver := secretsmocks.NewResolverMock(t)
 			resolver.EXPECT().
-				Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
+				Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
 				Return(shm, nil)
 
 			ko := keyregistrymocks.NewRegistryMock(t)
@@ -957,10 +990,8 @@ signer:
 
 			configureMocks(t, configured, mctx, cch, shm, tc.subject)
 
-			// WHEN
 			err = step.Execute(mctx, tc.subject)
 
-			// THEN
 			tc.assert(t, err)
 		})
 	}

@@ -66,14 +66,11 @@ func newJWTSigner(
 	var err error
 
 	signer.informer, err = secrets.NewSecretInformer(
-		ctx, sm, secrets.Reference{
-			Source:   conf.Secret.Source,
-			Selector: conf.Secret.Selector,
-		},
-		secrets.InformerOptions[jose.Signer]{
-			Converter: createJOSESigner,
-			OnUpdate:  signer.onSecretUpdated,
-		},
+		ctx,
+		sm,
+		secrets.Reference{Source: conf.Secret.Source, Selector: conf.Secret.Selector},
+		secrets.WithConverter(createJOSESigner),
+		secrets.WithUpdateCallback(signer.onSecretUpdated),
 	)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
@@ -94,7 +91,7 @@ func (s *jwtSigner) Hash() []byte {
 }
 
 func (s *jwtSigner) Sign(sub string, ttl time.Duration, customClaims map[string]any) (string, error) {
-	signer, ok := s.informer.Get(context.Background())
+	signer, ok := s.informer.Get()
 	if !ok {
 		return "", errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,

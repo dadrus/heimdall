@@ -80,8 +80,10 @@ foo: bar
 
 				ch := secretsmocks.NewCredentialsHandleMock(t)
 
-				resolver.EXPECT().Credentials(mock.Anything, mock.Anything, mock.Anything).
+				resolver.EXPECT().Credentials(mock.Anything, mock.Anything).
 					Return(ch, nil)
+
+				ch.EXPECT().OnUpdate(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
@@ -120,8 +122,10 @@ credentials:
 
 				ch := secretsmocks.NewCredentialsHandleMock(t)
 
-				resolver.EXPECT().Credentials(mock.Anything, mock.Anything, mock.Anything).
+				resolver.EXPECT().Credentials(mock.Anything, mock.Anything).
 					Return(ch, nil)
+
+				ch.EXPECT().OnUpdate(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
@@ -178,8 +182,10 @@ header:
 
 				ch := secretsmocks.NewCredentialsHandleMock(t)
 
-				resolver.EXPECT().Credentials(mock.Anything, mock.Anything, mock.Anything).
+				resolver.EXPECT().Credentials(mock.Anything, mock.Anything).
 					Return(ch, nil)
+
+				ch.EXPECT().OnUpdate(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
@@ -484,9 +490,10 @@ header:
 			require.NoError(t, err)
 
 			ch := secretsmocks.NewCredentialsHandleMock(t)
+			ch.EXPECT().OnUpdate(mock.Anything)
 
 			resolver := secretsmocks.NewResolverMock(t)
-			resolver.EXPECT().Credentials(mock.Anything, mock.Anything, mock.Anything).
+			resolver.EXPECT().Credentials(mock.Anything, mock.Anything).
 				Return(ch, nil)
 
 			appCtx := app.NewContextMock(t)
@@ -589,11 +596,12 @@ token_url: ` + srv.URL + `
 				t.Helper()
 
 				ch := secretsmocks.NewCredentialsHandleMock(t)
-				ch.EXPECT().Get(mock.Anything).Return(nil, false)
 
 				rm.EXPECT().
-					Credentials(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
+					Credentials(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(ch, nil)
+
+				ch.EXPECT().OnUpdate(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
 				t.Helper()
@@ -615,18 +623,21 @@ token_url: ` + srv.URL + `
 				t.Helper()
 
 				chm := secretsmocks.NewCredentialsHandleMock(t)
-				chm.EXPECT().Get(mock.Anything).Return(
-					secrettypes.NewCredentials("bar",
-						map[string]any{
-							"client-id":     "foo",
-							"client_secret": "bar",
-						}),
-					true,
-				)
 
 				rm.EXPECT().
-					Credentials(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
+					Credentials(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(chm, nil)
+
+				chm.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+							"client-id":     "foo",
+							"client_secret": "bar",
+						}))
+						require.Error(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
 				t.Helper()
@@ -653,9 +664,16 @@ token_url: ` + srv.URL + `
 				})
 
 				chm := secretsmocks.NewCredentialsHandleMock(t)
-				chm.EXPECT().Get(mock.Anything).Return(credentials, true)
 
-				rm.EXPECT().Credentials(mock.Anything, mock.Anything, mock.Anything).Return(chm, nil)
+				rm.EXPECT().Credentials(mock.Anything, mock.Anything).Return(chm, nil)
+
+				chm.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), credentials)
+						require.NoError(t, err)
+
+						return true
+					}))
 
 				rawData, err := json.Marshal(clientcredentials.TokenInfo{AccessToken: "foobar", TokenType: "Bearer"})
 				require.NoError(t, err)
@@ -680,22 +698,27 @@ token_url: ` + srv.URL + `
 			configureMocks: func(t *testing.T, _ *pipelinemocks.ContextMock, cch *cachemocks.CacheMock, rm *secretsmocks.ResolverMock) {
 				t.Helper()
 
-				chm := secretsmocks.NewCredentialsHandleMock(t)
-				chm.EXPECT().Get(mock.Anything).Return(
-					secrettypes.NewCredentials("bar",
-						map[string]any{
-							"client_id":     "foo",
-							"client_secret": "bar",
-						}),
-					true,
-				)
+				credentials := secrettypes.NewCredentials("bar", map[string]any{
+					"client_id":     "foo",
+					"client_secret": "bar",
+				})
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
+				chm := secretsmocks.NewCredentialsHandleMock(t)
+
 				rm.EXPECT().Credentials(
 					mock.Anything,
 					secrets.Reference{Source: "foo", Selector: "bar"},
-					mock.Anything,
 				).Return(chm, nil)
+
+				chm.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), credentials)
+						require.NoError(t, err)
+
+						return true
+					}))
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assertRequest: func(t *testing.T, _ *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
@@ -726,17 +749,22 @@ cache_ttl: 3m
 			configureMocks: func(t *testing.T, ctx *pipelinemocks.ContextMock, cch *cachemocks.CacheMock, rm *secretsmocks.ResolverMock) {
 				t.Helper()
 
-				chm := secretsmocks.NewCredentialsHandleMock(t)
-				chm.EXPECT().Get(mock.Anything).Return(
-					secrettypes.NewCredentials("bar",
-						map[string]any{
-							"client_id":     "bar",
-							"client_secret": "baz",
-						}),
-					true,
-				)
+				credentials := secrettypes.NewCredentials("bar", map[string]any{
+					"client_id":     "bar",
+					"client_secret": "baz",
+				})
 
-				rm.EXPECT().Credentials(mock.Anything, mock.Anything, mock.Anything).Return(chm, nil)
+				chm := secretsmocks.NewCredentialsHandleMock(t)
+
+				rm.EXPECT().Credentials(mock.Anything, mock.Anything).Return(chm, nil)
+
+				chm.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), credentials)
+						require.NoError(t, err)
+
+						return true
+					}))
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return(nil)

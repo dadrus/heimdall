@@ -161,7 +161,7 @@ func TestNewJWTSigner(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}, mock.Anything).
+					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *jwtSigner) {
@@ -186,7 +186,7 @@ func TestNewJWTSigner(t *testing.T) {
 					Secret(mock.Anything, secrets.Reference{
 						Source:   "signer",
 						Selector: "jwt/signing/2026-05",
-					}, mock.Anything).
+					}).
 					Return(shm, nil)
 			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
@@ -213,7 +213,7 @@ func TestNewJWTSigner(t *testing.T) {
 					Secret(mock.Anything, secrets.Reference{
 						Source:   "signer",
 						Selector: "jwt/signing/2026-05",
-					}, mock.Anything).
+					}).
 					Return(shm, nil)
 			},
 			assert: func(t *testing.T, err error, signer *jwtSigner) {
@@ -255,8 +255,7 @@ func TestJWTSignerSign(t *testing.T) {
 			setup: func(t *testing.T, shm *secretsmocks.SecretHandleMock) {
 				t.Helper()
 
-				shm.EXPECT().Get(mock.Anything).
-					Return(nil, false)
+				shm.EXPECT().OnUpdate(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, _ string) {
 				t.Helper()
@@ -270,8 +269,13 @@ func TestJWTSignerSign(t *testing.T) {
 			setup: func(t *testing.T, shm *secretsmocks.SecretHandleMock) {
 				t.Helper()
 
-				shm.EXPECT().Get(mock.Anything).
-					Return(secret, true)
+				shm.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, rawToken string) {
 				t.Helper()
@@ -302,7 +306,6 @@ func TestJWTSignerSign(t *testing.T) {
 			t.Parallel()
 
 			shm := secretsmocks.NewSecretHandleMock(t)
-			shm.EXPECT().OnUpdate(mock.Anything)
 
 			tc.setup(t, shm)
 
@@ -311,8 +314,15 @@ func TestJWTSignerSign(t *testing.T) {
 				Secret(mock.Anything, secrets.Reference{
 					Source:   "signer",
 					Selector: "jwt/signing/2026-05",
-				}, mock.Anything).
+				}).
 				Return(shm, nil)
+
+			ko := keyregistrymocks.NewKeyObserverMock(t)
+			ko.EXPECT().
+				Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
+					return ki.Key == secret && ki.Exportable
+				})).
+				Maybe()
 
 			signer, err := newJWTSigner(
 				t.Context(),
@@ -321,7 +331,7 @@ func TestJWTSignerSign(t *testing.T) {
 					Secret: config.Secret{Source: "signer", Selector: "jwt/signing/2026-05"},
 				},
 				resolver,
-				keyregistrymocks.NewKeyObserverMock(t),
+				ko,
 			)
 			require.NoError(t, err)
 
