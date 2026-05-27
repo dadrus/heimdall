@@ -146,7 +146,7 @@ func (p *Provider) Start(ctx context.Context) error {
 		return err
 	}
 
-	go p.watchFiles(context.WithoutCancel(ctx))
+	go p.watchFiles(p.l.WithContext(context.WithoutCancel(ctx)))
 
 	return nil
 }
@@ -166,34 +166,36 @@ func (p *Provider) Stop(_ context.Context) error {
 }
 
 func (p *Provider) watchFiles(ctx context.Context) {
-	p.l.Debug().Msg("Watching rule files for changes")
+	logger := zerolog.Ctx(ctx)
+	logger.Debug().Msg("Watching rule files for changes")
 
 	for {
 		select {
 		case evt, ok := <-p.w.Events:
 			if !ok {
-				p.l.Debug().Msg("Watcher closed")
+				logger.Debug().Msg("Watcher closed")
 
 				return
 			}
 
 			if err := p.ruleSetsChanged(ctx, evt); err != nil {
-				p.l.Warn().Err(err).Str("_src", evt.Name).Msg("Failed to apply rule set changes")
+				logger.Warn().Err(err).Str("_src", evt.Name).Msg("Failed to apply rule set changes")
 			}
 		case err, ok := <-p.w.Errors:
 			if !ok {
-				p.l.Debug().Msg("Watcher error channel closed")
+				logger.Debug().Msg("Watcher error channel closed")
 
 				return
 			}
 
-			p.l.Warn().Err(err).Msg("Watcher error received")
+			logger.Warn().Err(err).Msg("Watcher error received")
 		}
 	}
 }
 
 func (p *Provider) ruleSetsChanged(ctx context.Context, evt fsnotify.Event) error {
-	p.l.Debug().
+	logger := zerolog.Ctx(ctx)
+	logger.Debug().
 		Str("_event", evt.String()).
 		Str("_src", evt.Name).
 		Msg("Rule update event received")
