@@ -37,11 +37,23 @@ type ruleSetScope struct {
 	ctx      context.Context
 	cancel   context.CancelFunc
 	resolver secrets.ScopedResolver
+	id       string
 }
 
 func (s ruleSetScope) release() {
 	s.cancel()
 	s.resolver.Release()
+}
+
+func (s ruleSetScope) awaitReady(ctx context.Context) error {
+	if err := s.resolver.AwaitReady(ctx); err != nil {
+		return errorchain.NewWithMessagef(
+			pipeline.ErrInternal,
+			"waiting for rule set ID='%s' readiness failed", s.id,
+		).CausedBy(err)
+	}
+
+	return nil
 }
 
 type ruleSetProcessor struct {
@@ -93,7 +105,7 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSe
 		err   error
 	)
 
-	scope := p.newScope(ctx, ruleSet)
+	scope := p.newScope(context.WithoutCancel(ctx), ruleSet)
 
 	defer func() {
 		if err != nil {
@@ -102,6 +114,10 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSe
 	}()
 
 	if rules, err = p.loadRules(scope, ruleSet); err != nil {
+		return err
+	}
+
+	if err = scope.awaitReady(ctx); err != nil {
 		return err
 	}
 
@@ -149,7 +165,7 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSe
 		err   error
 	)
 
-	scope := p.newScope(ctx, ruleSet)
+	scope := p.newScope(context.WithoutCancel(ctx), ruleSet)
 
 	defer func() {
 		if err != nil {
@@ -158,6 +174,10 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSe
 	}()
 
 	if rules, err = p.loadRules(scope, ruleSet); err != nil {
+		return err
+	}
+
+	if err = scope.awaitReady(ctx); err != nil {
 		return err
 	}
 
@@ -249,6 +269,7 @@ func (p *ruleSetProcessor) newScope(parent context.Context, ruleSet v1beta1.Rule
 	return ruleSetScope{
 		ctx:    ctx,
 		cancel: cancel,
+		id:     ruleSet.ID,
 		resolver: p.sf.Create(
 			ruleSet.ID,
 			secrets.WithNamespace(ruleSet.Namespace),
