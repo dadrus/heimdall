@@ -17,7 +17,6 @@
 package tlsx
 
 import (
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -68,16 +67,16 @@ func TestToServerTLSConfig(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "tls", Selector: "server"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, cfg *tls.Config) {
 				t.Helper()
 
-				assert.Nil(t, cfg)
+				require.Nil(t, cfg)
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorIs(t, err, assert.AnError)
 				require.ErrorContains(t, err, "failed resolving TLS secret")
 			},
 		},
@@ -98,7 +97,6 @@ func TestToServerTLSConfig(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "tls", Selector: "server"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -112,7 +110,7 @@ func TestToServerTLSConfig(t *testing.T) {
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						err := cb(context.Background(), secret)
+						err := cb(t.Context(), secret)
 						require.NoError(t, err)
 
 						return true
@@ -123,11 +121,46 @@ func TestToServerTLSConfig(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, cfg)
-				assert.NotNil(t, cfg.GetCertificate)
-				assert.Nil(t, cfg.GetClientCertificate)
-				assert.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
-				assert.NotEmpty(t, cfg.CipherSuites)
-				assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
+				require.NotNil(t, cfg.GetCertificate)
+				require.Nil(t, cfg.GetClientCertificate)
+				require.Equal(t, uint16(tls.VersionTLS12), cfg.MinVersion)
+				require.NotEmpty(t, cfg.CipherSuites)
+				require.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
+			},
+		},
+		"get certificate fails before first successful update": {
+			conf: config.TLS{
+				Secret: config.Secret{Source: "tls", Selector: "server"},
+			},
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				handle *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.KeyObserverMock,
+			) {
+				t.Helper()
+
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "tls", Selector: "server"},
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.Anything)
+			},
+			assert: func(t *testing.T, err error, cfg *tls.Config) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, cfg)
+				require.NotNil(t, cfg.GetCertificate)
+
+				cert, err := cfg.GetCertificate(&tls.ClientHelloInfo{})
+				require.Nil(t, cert)
+				require.Error(t, err)
+				require.ErrorIs(t, err, errNoCertificatePresent)
 			},
 		},
 	} {
@@ -172,11 +205,11 @@ func TestToClientTLSConfig(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, cfg)
-				assert.Nil(t, cfg.GetCertificate)
-				assert.Nil(t, cfg.GetClientCertificate)
-				assert.Equal(t, uint16(tls.VersionTLS13), cfg.MinVersion)
-				assert.Empty(t, cfg.CipherSuites)
-				assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
+				require.Nil(t, cfg.GetCertificate)
+				require.Nil(t, cfg.GetClientCertificate)
+				require.Equal(t, uint16(tls.VersionTLS13), cfg.MinVersion)
+				require.Empty(t, cfg.CipherSuites)
+				require.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
 			},
 		},
 		"fails if secret resolution fails": {
@@ -195,16 +228,16 @@ func TestToClientTLSConfig(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "tls", Selector: "client"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, cfg *tls.Config) {
 				t.Helper()
 
-				assert.Nil(t, cfg)
+				require.Nil(t, cfg)
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorIs(t, err, assert.AnError)
 				require.ErrorContains(t, err, "failed resolving TLS secret")
 			},
 		},
@@ -224,7 +257,6 @@ func TestToClientTLSConfig(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "tls", Selector: "client"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
@@ -238,7 +270,7 @@ func TestToClientTLSConfig(t *testing.T) {
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						err := cb(context.Background(), secret)
+						err := cb(t.Context(), secret)
 						require.NoError(t, err)
 
 						return true
@@ -249,11 +281,41 @@ func TestToClientTLSConfig(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, cfg)
-				assert.Nil(t, cfg.GetCertificate)
-				assert.NotNil(t, cfg.GetClientCertificate)
-				assert.Equal(t, uint16(tls.VersionTLS13), cfg.MinVersion)
-				assert.Empty(t, cfg.CipherSuites)
-				assert.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
+				require.Nil(t, cfg.GetCertificate)
+				require.NotNil(t, cfg.GetClientCertificate)
+				require.Equal(t, uint16(tls.VersionTLS13), cfg.MinVersion)
+				require.Empty(t, cfg.CipherSuites)
+				require.Equal(t, []string{"h2", "http/1.1"}, cfg.NextProtos)
+			},
+		},
+		"get client certificate fails before first successful update": {
+			conf: config.TLS{
+				Secret: config.Secret{Source: "tls", Selector: "client"},
+			},
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				handle *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.KeyObserverMock,
+			) {
+				t.Helper()
+
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "tls", Selector: "client"},
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.Anything)
+			},
+			assert: func(t *testing.T, err error, cfg *tls.Config) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, cfg)
+				require.NotNil(t, cfg.GetClientCertificate)
 			},
 		},
 	} {
@@ -287,7 +349,7 @@ func TestGetCertificate(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				handle *secretsmocks.SecretHandleMock,
-				req *certificateRequestMock,
+				_ *certificateRequestMock,
 			) {
 				t.Helper()
 
@@ -298,17 +360,13 @@ func TestGetCertificate(t *testing.T) {
 					).
 					Return(handle, nil)
 
-				req.EXPECT().
-					Context().
-					Return(context.Background())
-
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(nil, false)
+					OnUpdate(mock.Anything)
 			},
-			assert: func(t *testing.T, err error, _ *tls.Certificate) {
+			assert: func(t *testing.T, err error, cert *tls.Certificate) {
 				t.Helper()
 
+				require.Nil(t, cert)
 				require.Error(t, err)
 				require.ErrorIs(t, err, errNoCertificatePresent)
 			},
@@ -329,23 +387,28 @@ func TestGetCertificate(t *testing.T) {
 					).
 					Return(handle, nil)
 
-				req.EXPECT().
-					Context().
-					Return(context.Background())
-
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
 
 				req.EXPECT().
-					SupportsCertificate(mock.Anything).
+					SupportsCertificate(mock.MatchedBy(func(cert *tls.Certificate) bool {
+						return cert != nil &&
+							cert.PrivateKey == secret.PrivateKey() &&
+							cert.Leaf == secret.CertChain()[0]
+					})).
 					Return(assert.AnError)
 			},
 			assert: func(t *testing.T, err error, cert *tls.Certificate) {
 				t.Helper()
 
-				assert.Nil(t, cert)
-				require.ErrorContains(t, err, assert.AnError.Error())
+				require.Nil(t, cert)
+				require.Error(t, err)
+				require.ErrorIs(t, err, assert.AnError)
 			},
 		},
 		"returns cached certificate": {
@@ -364,25 +427,30 @@ func TestGetCertificate(t *testing.T) {
 					).
 					Return(handle, nil)
 
-				req.EXPECT().
-					Context().
-					Return(context.Background())
-
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
 
 				req.EXPECT().
-					SupportsCertificate(mock.Anything).
+					SupportsCertificate(mock.MatchedBy(func(cert *tls.Certificate) bool {
+						return cert != nil &&
+							cert.PrivateKey == secret.PrivateKey() &&
+							cert.Leaf == secret.CertChain()[0]
+					})).
 					Return(nil)
 			},
-			assert: func(t *testing.T, err error, actual *tls.Certificate) {
+			assert: func(t *testing.T, err error, cert *tls.Certificate) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.NotNil(t, actual)
-				assert.NotNil(t, actual.PrivateKey)
-				assert.NotNil(t, actual.Leaf)
+				require.NotNil(t, cert)
+				require.NotNil(t, cert.PrivateKey)
+				require.NotNil(t, cert.Leaf)
+				require.Len(t, cert.Certificate, 1)
 			},
 		},
 	} {
@@ -399,15 +467,118 @@ func TestGetCertificate(t *testing.T) {
 				t.Context(),
 				sr,
 				secrets.Reference{Source: "tls", Selector: "server"},
-				secrets.InformerOptions[*tls.Certificate]{
-					Converter: toTLSCertificate,
-				},
+				secrets.WithConverter(toTLSCertificate),
 			)
 			require.NoError(t, err)
 
-			actual, err := getCertificate(informer, req)
+			cert, err := getCertificate(informer, req)
 
-			tc.assert(t, err, actual)
+			tc.assert(t, err, cert)
+		})
+	}
+}
+
+func TestNewCertificateInformer(t *testing.T) {
+	t.Parallel()
+
+	secret := newTLSSecret(t)
+
+	for uc, tc := range map[string]struct {
+		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock, ko *keyregistrymocks.KeyObserverMock)
+		assert func(t *testing.T, informer *secrets.SecretInformer[*tls.Certificate], err error)
+	}{
+		"wraps resolver error as configuration error": {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.KeyObserverMock,
+			) {
+				t.Helper()
+
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "tls", Selector: "server"},
+					).
+					Return(nil, assert.AnError)
+			},
+			assert: func(t *testing.T, informer *secrets.SecretInformer[*tls.Certificate], err error) {
+				t.Helper()
+
+				require.Nil(t, informer)
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorIs(t, err, assert.AnError)
+				require.ErrorContains(t, err, "failed resolving TLS secret")
+			},
+		},
+		"creates informer and notifies key observer on update": {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				handle *secretsmocks.SecretHandleMock,
+				ko *keyregistrymocks.KeyObserverMock,
+			) {
+				t.Helper()
+
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "tls", Selector: "server"},
+					).
+					Return(handle, nil)
+
+				ko.EXPECT().
+					Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
+						return ki.Key.KeyID() == secret.KeyID() &&
+							ki.Key.PrivateKey() == secret.PrivateKey() &&
+							assert.ObjectsAreEqual(ki.Key.CertChain(), secret.CertChain()) &&
+							!ki.Exportable
+					}))
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
+			},
+			assert: func(t *testing.T, informer *secrets.SecretInformer[*tls.Certificate], err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, informer)
+
+				cert, ok := informer.Get()
+				require.True(t, ok)
+				require.NotNil(t, cert)
+				require.NotNil(t, cert.PrivateKey)
+				require.NotNil(t, cert.Leaf)
+				require.Len(t, cert.Certificate, 1)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			sr := secretsmocks.NewResolverMock(t)
+			handle := secretsmocks.NewSecretHandleMock(t)
+			ko := keyregistrymocks.NewKeyObserverMock(t)
+
+			tc.setup(t, sr, handle, ko)
+
+			informer, err := newCertificateInformer(
+				t.Context(),
+				&config.TLS{
+					Secret: config.Secret{Source: "tls", Selector: "server"},
+				},
+				sr,
+				ko,
+			)
+
+			tc.assert(t, informer, err)
 		})
 	}
 }
@@ -435,18 +606,20 @@ func TestToTLSCertificate(t *testing.T) {
 	}{
 		"fails for wrong secret type": {
 			secret: types.NewStringSecret("server", "key1"),
-			assert: func(t *testing.T, err error, _ *tls.Certificate) {
+			assert: func(t *testing.T, err error, cert *tls.Certificate) {
 				t.Helper()
 
+				require.Nil(t, cert)
 				require.Error(t, err)
 				require.ErrorContains(t, err, "secret is not suitable for TLS")
 			},
 		},
 		"fails without certificate chain": {
 			secret: types.NewAsymmetricKeySecret("server", "key1", key, nil),
-			assert: func(t *testing.T, err error, _ *tls.Certificate) {
+			assert: func(t *testing.T, err error, cert *tls.Certificate) {
 				t.Helper()
 
+				require.Nil(t, cert)
 				require.Error(t, err)
 				require.ErrorContains(t, err, "secret is not suitable for TLS")
 			},
@@ -463,9 +636,11 @@ func TestToTLSCertificate(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, cert)
-				assert.NotNil(t, cert.PrivateKey)
-				assert.NotNil(t, cert.Leaf)
-				assert.Len(t, cert.Certificate, 2)
+				require.Same(t, key, cert.PrivateKey)
+				require.Same(t, leaf, cert.Leaf)
+				require.Len(t, cert.Certificate, 2)
+				require.Equal(t, leaf.Raw, cert.Certificate[0])
+				require.Equal(t, rootCA.Certificate.Raw, cert.Certificate[1])
 			},
 		},
 	} {
@@ -477,6 +652,332 @@ func TestToTLSCertificate(t *testing.T) {
 			tc.assert(t, err, cert)
 		})
 	}
+}
+
+func TestServerTLSConfigGetCertificate(t *testing.T) {
+	t.Parallel()
+
+	secret := newTLSSecret(t)
+
+	for uc, tc := range map[string]struct {
+		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock, ko *keyregistrymocks.KeyObserverMock, req *tls.ClientHelloInfo)
+		assert func(t *testing.T, cert *tls.Certificate, err error)
+	}{
+		"fails if no certificate is available": {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				handle *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.KeyObserverMock,
+				_ *tls.ClientHelloInfo,
+			) {
+				t.Helper()
+
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "tls", Selector: "server"},
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.Anything)
+			},
+			assert: func(t *testing.T, cert *tls.Certificate, err error) {
+				t.Helper()
+
+				require.Nil(t, cert)
+				require.Error(t, err)
+				require.ErrorIs(t, err, errNoCertificatePresent)
+			},
+		},
+		"fails if certificate is incompatible": {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				handle *secretsmocks.SecretHandleMock,
+				ko *keyregistrymocks.KeyObserverMock,
+				req *tls.ClientHelloInfo,
+			) {
+				t.Helper()
+
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "tls", Selector: "server"},
+					).
+					Return(handle, nil)
+
+				expectKeyRegistration(t, ko, secret)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
+
+				req.SupportedVersions = []uint16{tls.VersionTLS12}
+				req.SignatureSchemes = []tls.SignatureScheme{
+					tls.PKCS1WithSHA256,
+				}
+				req.CipherSuites = []uint16{
+					tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+				}
+			},
+			assert: func(t *testing.T, cert *tls.Certificate, err error) {
+				t.Helper()
+
+				require.Nil(t, cert)
+				require.Error(t, err)
+			},
+		},
+		"returns cached certificate": {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				handle *secretsmocks.SecretHandleMock,
+				ko *keyregistrymocks.KeyObserverMock,
+				req *tls.ClientHelloInfo,
+			) {
+				t.Helper()
+
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "tls", Selector: "server"},
+					).
+					Return(handle, nil)
+
+				expectKeyRegistration(t, ko, secret)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
+
+				req.SupportedVersions = []uint16{
+					tls.VersionTLS13,
+					tls.VersionTLS12,
+				}
+				req.SignatureSchemes = []tls.SignatureScheme{
+					tls.ECDSAWithP384AndSHA384,
+					tls.ECDSAWithP256AndSHA256,
+					tls.ECDSAWithP521AndSHA512,
+				}
+				req.CipherSuites = []uint16{
+					tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+					tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+				}
+			},
+			assert: func(t *testing.T, cert *tls.Certificate, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, cert)
+				require.Same(t, secret.PrivateKey(), cert.PrivateKey)
+				require.Same(t, secret.CertChain()[0], cert.Leaf)
+				require.Len(t, cert.Certificate, 1)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			sr := secretsmocks.NewResolverMock(t)
+			handle := secretsmocks.NewSecretHandleMock(t)
+			ko := keyregistrymocks.NewKeyObserverMock(t)
+			req := &tls.ClientHelloInfo{}
+
+			tc.setup(t, sr, handle, ko, req)
+
+			cfg, err := ToServerTLSConfig(
+				t.Context(),
+				sr,
+				&config.TLS{
+					Secret: config.Secret{Source: "tls", Selector: "server"},
+				},
+				ko,
+			)
+			require.NoError(t, err)
+			require.NotNil(t, cfg)
+			require.NotNil(t, cfg.GetCertificate)
+
+			cert, err := cfg.GetCertificate(req)
+
+			tc.assert(t, cert, err)
+		})
+	}
+}
+
+func TestClientTLSConfigGetClientCertificate(t *testing.T) {
+	t.Parallel()
+
+	secret := newTLSSecret(t)
+
+	for uc, tc := range map[string]struct {
+		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock, ko *keyregistrymocks.KeyObserverMock, req *tls.CertificateRequestInfo)
+		assert func(t *testing.T, cert *tls.Certificate, err error)
+	}{
+		"fails if no certificate is available": {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				handle *secretsmocks.SecretHandleMock,
+				_ *keyregistrymocks.KeyObserverMock,
+				_ *tls.CertificateRequestInfo,
+			) {
+				t.Helper()
+
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "tls", Selector: "client"},
+					).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.Anything)
+			},
+			assert: func(t *testing.T, cert *tls.Certificate, err error) {
+				t.Helper()
+
+				require.Nil(t, cert)
+				require.Error(t, err)
+				require.ErrorIs(t, err, errNoCertificatePresent)
+			},
+		},
+		"fails if certificate is incompatible": {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				handle *secretsmocks.SecretHandleMock,
+				ko *keyregistrymocks.KeyObserverMock,
+				req *tls.CertificateRequestInfo,
+			) {
+				t.Helper()
+
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "tls", Selector: "client"},
+					).
+					Return(handle, nil)
+
+				expectKeyRegistration(t, ko, secret)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
+
+				req.Version = tls.VersionTLS12
+				req.SignatureSchemes = []tls.SignatureScheme{
+					tls.PKCS1WithSHA256,
+				}
+			},
+			assert: func(t *testing.T, cert *tls.Certificate, err error) {
+				t.Helper()
+
+				require.Nil(t, cert)
+				require.Error(t, err)
+			},
+		},
+		"returns cached certificate": {
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				handle *secretsmocks.SecretHandleMock,
+				ko *keyregistrymocks.KeyObserverMock,
+				req *tls.CertificateRequestInfo,
+			) {
+				t.Helper()
+
+				sr.EXPECT().
+					Secret(
+						mock.Anything,
+						secrets.Reference{Source: "tls", Selector: "client"},
+					).
+					Return(handle, nil)
+
+				expectKeyRegistration(t, ko, secret)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
+
+				req.Version = tls.VersionTLS13
+				req.SignatureSchemes = []tls.SignatureScheme{
+					tls.ECDSAWithP384AndSHA384,
+					tls.ECDSAWithP256AndSHA256,
+					tls.ECDSAWithP521AndSHA512,
+				}
+			},
+			assert: func(t *testing.T, cert *tls.Certificate, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, cert)
+				require.Same(t, secret.PrivateKey(), cert.PrivateKey)
+				require.Same(t, secret.CertChain()[0], cert.Leaf)
+				require.Len(t, cert.Certificate, 1)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			sr := secretsmocks.NewResolverMock(t)
+			handle := secretsmocks.NewSecretHandleMock(t)
+			ko := keyregistrymocks.NewKeyObserverMock(t)
+			req := &tls.CertificateRequestInfo{}
+
+			tc.setup(t, sr, handle, ko, req)
+
+			cfg, err := ToClientTLSConfig(
+				t.Context(),
+				sr,
+				&config.TLS{
+					Secret: config.Secret{Source: "tls", Selector: "client"},
+				},
+				ko,
+			)
+			require.NoError(t, err)
+			require.NotNil(t, cfg)
+			require.NotNil(t, cfg.GetClientCertificate)
+
+			cert, err := cfg.GetClientCertificate(req)
+
+			tc.assert(t, cert, err)
+		})
+	}
+}
+
+func expectKeyRegistration(
+	t *testing.T,
+	ko *keyregistrymocks.KeyObserverMock,
+	secret secrets.AsymmetricKeySecret,
+) {
+	t.Helper()
+
+	ko.EXPECT().
+		Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
+			return ki.Key.KeyID() == secret.KeyID() &&
+				ki.Key.PrivateKey() == secret.PrivateKey() &&
+				assert.ObjectsAreEqual(ki.Key.CertChain(), secret.CertChain()) &&
+				!ki.Exportable
+		}))
 }
 
 func newTLSSecret(t *testing.T) secrets.AsymmetricKeySecret {

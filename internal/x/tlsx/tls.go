@@ -23,7 +23,7 @@ func getCertificate(
 	w *secrets.SecretInformer[*tls.Certificate],
 	cr certificateRequest,
 ) (*tls.Certificate, error) {
-	cert, ok := w.Get(cr.Context())
+	cert, ok := w.Get()
 	if !ok {
 		return nil, errNoCertificatePresent
 	}
@@ -89,17 +89,15 @@ func newCertificateInformer(
 		ctx,
 		sr,
 		secrets.Reference{Source: tlsCfg.Secret.Source, Selector: tlsCfg.Secret.Selector},
-		secrets.InformerOptions[*tls.Certificate]{
-			Converter: toTLSCertificate,
-			OnUpdate: func(ctx context.Context, secret secrets.Secret, _ *tls.Certificate) error {
-				ko.Notify(keyregistry.KeyInfo{
-					Key:        secret.(secrets.AsymmetricKeySecret), //nolint:forcetypeassert
-					Exportable: false,
-				})
+		secrets.WithConverter(toTLSCertificate),
+		secrets.WithUpdateCallback(func(ctx context.Context, secret secrets.Secret, _ *tls.Certificate) error {
+			ko.Notify(keyregistry.KeyInfo{
+				Key:        secret.(secrets.AsymmetricKeySecret), //nolint:forcetypeassert
+				Exportable: false,
+			})
 
-				return nil
-			},
-		},
+			return nil
+		}),
 	)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
