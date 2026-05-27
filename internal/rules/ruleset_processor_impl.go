@@ -94,6 +94,7 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSe
 	)
 
 	scope := p.newScope(ctx, ruleSet)
+
 	defer func() {
 		if err != nil {
 			scope.release()
@@ -149,6 +150,7 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSe
 	)
 
 	scope := p.newScope(ctx, ruleSet)
+
 	defer func() {
 		if err != nil {
 			scope.release()

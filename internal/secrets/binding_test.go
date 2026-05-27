@@ -143,6 +143,7 @@ func TestBindingResolveOnceDeduplicatesConcurrentCachedResolves(t *testing.T) {
 	release := make(chan struct{})
 
 	var closeRelease sync.Once
+
 	t.Cleanup(func() {
 		closeRelease.Do(func() {
 			close(release)
@@ -204,6 +205,7 @@ func TestBindingResolveOnceHonorsContextWhileWaitingForRunningResolve(t *testing
 	releaseResolve := make(chan struct{})
 
 	var closeRelease sync.Once
+
 	t.Cleanup(func() {
 		closeRelease.Do(func() {
 			close(releaseResolve)

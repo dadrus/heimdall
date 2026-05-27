@@ -33,7 +33,7 @@ type handleOwner interface {
 
 type noopHandleOwner struct{}
 
-func (noopHandleOwner) registerCleanup(func())                              {}
+func (noopHandleOwner) registerCleanup(func())                          {}
 func (noopHandleOwner) registerReadiness(_ func(context.Context) error) {}
 
 type handle[T any] struct {
