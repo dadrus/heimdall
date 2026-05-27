@@ -82,13 +82,16 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "creds", Selector: "redis"},
-						mock.Anything,
 					).
 					Return(credentialsHandle, nil)
 
 				credentialsHandle.EXPECT().
-					Get(mock.Anything).
-					Return(creds, true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), creds)
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, opts rueidis.ClientOption) {
 				t.Helper()
@@ -120,7 +123,6 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "creds", Selector: "redis"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -149,13 +151,10 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "creds", Selector: "redis"},
-						mock.Anything,
 					).
 					Return(credentialsHandle, nil)
 
-				credentialsHandle.EXPECT().
-					Get(mock.Anything).
-					Return(nil, false)
+				credentialsHandle.EXPECT().OnUpdate(mock.Anything)
 			},
 			assert: func(t *testing.T, err error, opts rueidis.ClientOption) {
 				t.Helper()
@@ -191,7 +190,6 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "redis", Selector: "tls"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -224,7 +222,6 @@ func TestBaseConfigClientOptions(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "redis", Selector: "tls"},
-						mock.Anything,
 					).
 					Return(secretHandle, nil)
 

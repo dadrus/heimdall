@@ -120,10 +120,7 @@ func (c baseConfig) credentialsInformer(
 		context.Background(),
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
-		secrets.CredentialsInformerOptions[rueidis.AuthCredentials]{
-			Converter:   toRedisCredentials(appCtx.DecoderFactory()),
-			ResolveMode: secrets.ResolveEager,
-		},
+		secrets.WithConverter(toRedisCredentials(appCtx.DecoderFactory())),
 	)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
@@ -161,7 +158,7 @@ func authCredentials(
 			return rueidis.AuthCredentials{}, nil
 		}
 
-		creds, ok := cr.Get(context.Background())
+		creds, ok := cr.Get()
 		if !ok {
 			return rueidis.AuthCredentials{}, errorchain.NewWithMessage(
 				pipeline.ErrConfiguration,

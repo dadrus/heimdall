@@ -227,14 +227,16 @@ func TestStandaloneCache(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "creds", Selector: "redis"},
-						mock.Anything,
 					).
 					Return(chm, nil)
 
 				chm.EXPECT().
-					Get(mock.Anything).
-					Return(creds, true).
-					Maybe()
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), creds)
+						require.NoError(t, err)
+
+						return true
+					}))
 
 				return []byte("{address: " + db.Addr() + ", client_cache: {disabled: true}, tls: {disabled: true}, credentials: {source: creds, selector: redis}}")
 			},
@@ -267,7 +269,6 @@ func TestStandaloneCache(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "creds", Selector: "redis"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 
@@ -294,7 +295,6 @@ func TestStandaloneCache(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "redis", Selector: "tls"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 
@@ -364,14 +364,16 @@ func TestStandaloneCache(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "creds", Selector: "redis"},
-						mock.Anything,
 					).
 					Return(chm, nil)
 
 				chm.EXPECT().
-					Get(mock.Anything).
-					Return(creds, true).
-					Maybe()
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), creds)
+						require.NoError(t, err)
+
+						return true
+					}))
 
 				return []byte("{address: " + db.Addr() + ", client_cache: {disabled: true}, credentials: { source: creds, selector: redis }}")
 			},
@@ -406,7 +408,6 @@ func TestStandaloneCache(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "redis", Selector: "tls"},
-						mock.Anything,
 					).
 					Return(secretHandle, nil)
 
@@ -421,8 +422,12 @@ func TestStandaloneCache(t *testing.T) {
 					}))
 
 				secretHandle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
 
 				rootCertPool = x509.NewCertPool()
 				rootCertPool.AddCert(cert)

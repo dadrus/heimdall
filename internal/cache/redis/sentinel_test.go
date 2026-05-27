@@ -166,7 +166,6 @@ func TestSentinelCache(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "redis", Selector: "tls"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 
