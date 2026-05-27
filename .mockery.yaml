@@ -75,7 +75,7 @@ packages:
           dir: "{{ .InterfaceDir }}"
           filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
           pkgname: "{{ .SrcPackageName }}"
-      cleanupRegistry:
+      handleOwner:
         config:
           dir: "{{ .InterfaceDir }}"
           filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"

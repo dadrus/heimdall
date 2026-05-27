@@ -21,35 +21,40 @@ import (
 )
 
 type handleBinding[T any] interface {
-	get(ctx context.Context) (T, bool)
+	awaitReady(ctx context.Context) error
+	peek() (T, bool)
 	subscribe(cb UpdateFunc[T]) func()
 }
 
-type cleanupRegistry interface {
+type handleOwner interface {
 	registerCleanup(cleanup func())
+	registerReadiness(await func(context.Context) error)
 }
 
-type noopCleanupRegistry struct{}
+type noopHandleOwner struct{}
 
-func (noopCleanupRegistry) registerCleanup(func()) {}
+func (noopHandleOwner) registerCleanup(func())                              {}
+func (noopHandleOwner) registerReadiness(_ func(context.Context) error) {}
 
 type handle[T any] struct {
-	binding  handleBinding[T]
-	cleanups cleanupRegistry
+	b handleBinding[T]
+	o handleOwner
 }
 
 func newHandle[T any](
 	binding handleBinding[T],
-	cleanups cleanupRegistry,
+	ho handleOwner,
 ) *handle[T] {
+	ho.registerReadiness(binding.awaitReady)
+
 	return &handle[T]{
-		binding:  binding,
-		cleanups: cleanups,
+		b: binding,
+		o: ho,
 	}
 }
 
-func (h *handle[T]) Get(ctx context.Context) (T, bool) {
-	return h.binding.get(ctx)
+func (h *handle[T]) Get() (T, bool) {
+	return h.b.peek()
 }
 
 func (h *handle[T]) OnUpdate(cb UpdateFunc[T]) {
@@ -57,7 +62,11 @@ func (h *handle[T]) OnUpdate(cb UpdateFunc[T]) {
 		return
 	}
 
-	h.cleanups.registerCleanup(h.binding.subscribe(cb))
+	h.o.registerCleanup(h.b.subscribe(cb))
+}
+
+func (h *handle[T]) registerReadiness(await func(context.Context) error) {
+	h.o.registerReadiness(await)
 }
 
 var (

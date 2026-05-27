@@ -36,9 +36,7 @@ func TestHandleGet(t *testing.T) {
 			setup: func(t *testing.T, binding *HandleBindingMock[string]) {
 				t.Helper()
 
-				binding.EXPECT().
-					get(mock.Anything).
-					Return("secret", true)
+				binding.EXPECT().peek().Return("secret", true)
 			},
 			wantValue: "secret",
 			wantOK:    true,
@@ -47,9 +45,7 @@ func TestHandleGet(t *testing.T) {
 			setup: func(t *testing.T, binding *HandleBindingMock[string]) {
 				t.Helper()
 
-				binding.EXPECT().
-					get(mock.Anything).
-					Return("", false)
+				binding.EXPECT().peek().Return("", false)
 			},
 			wantOK: false,
 		},
@@ -58,13 +54,14 @@ func TestHandleGet(t *testing.T) {
 			t.Parallel()
 
 			binding := NewHandleBindingMock[string](t)
-			cleanups := NewCleanupRegistryMock(t)
+			owner := NewHandleOwnerMock(t)
+			owner.EXPECT().registerReadiness(mock.Anything)
 
 			tc.setup(t, binding)
 
-			handle := newHandle[string](binding, cleanups)
+			handle := newHandle[string](binding, owner)
 
-			got, ok := handle.Get(context.Background())
+			got, ok := handle.Get()
 
 			require.Equal(t, tc.wantOK, ok)
 			require.Equal(t, tc.wantValue, got)
@@ -77,13 +74,13 @@ func TestHandleOnUpdate(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		callback UpdateFunc[string]
-		setup    func(t *testing.T, binding *HandleBindingMock[string], cleanups *CleanupRegistryMock)
+		setup    func(t *testing.T, binding *HandleBindingMock[string], owner *HandleOwnerMock)
 	}{
 		"registers callback and cleanup": {
 			callback: func(context.Context, string) error {
 				return nil
 			},
-			setup: func(t *testing.T, binding *HandleBindingMock[string], cleanups *CleanupRegistryMock) {
+			setup: func(t *testing.T, binding *HandleBindingMock[string], owner *HandleOwnerMock) {
 				t.Helper()
 
 				cleanup := func() {}
@@ -94,7 +91,7 @@ func TestHandleOnUpdate(t *testing.T) {
 					})).
 					Return(cleanup)
 
-				cleanups.EXPECT().
+				owner.EXPECT().
 					registerCleanup(mock.MatchedBy(func(got func()) bool {
 						return got != nil
 					})).
@@ -105,7 +102,7 @@ func TestHandleOnUpdate(t *testing.T) {
 		},
 		"ignores nil callback": {
 			callback: nil,
-			setup: func(t *testing.T, _ *HandleBindingMock[string], _ *CleanupRegistryMock) {
+			setup: func(t *testing.T, _ *HandleBindingMock[string], _ *HandleOwnerMock) {
 				t.Helper()
 			},
 		},
@@ -114,25 +111,14 @@ func TestHandleOnUpdate(t *testing.T) {
 			t.Parallel()
 
 			binding := NewHandleBindingMock[string](t)
-			cleanups := NewCleanupRegistryMock(t)
+			owner := NewHandleOwnerMock(t)
+			owner.EXPECT().registerReadiness(mock.Anything)
 
-			tc.setup(t, binding, cleanups)
+			tc.setup(t, binding, owner)
 
-			handle := newHandle[string](binding, cleanups)
+			handle := newHandle[string](binding, owner)
 
 			handle.OnUpdate(tc.callback)
 		})
 	}
-}
-
-func TestNoopCleanupRegistry(t *testing.T) {
-	t.Parallel()
-
-	called := false
-
-	noopCleanupRegistry{}.registerCleanup(func() {
-		called = true
-	})
-
-	require.False(t, called)
 }

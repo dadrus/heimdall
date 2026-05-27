@@ -51,6 +51,10 @@ type bindingKey struct {
 	scope     referenceScope
 }
 
+type storedError struct {
+	err error
+}
+
 type binding[T any] struct {
 	task.StateMachine
 	bindingKey
@@ -58,13 +62,17 @@ type binding[T any] struct {
 	logger  zerolog.Logger
 	resolve func(context.Context) (T, error)
 
-	value atomic.Value // stores T
+	value   atomic.Value                // stores T
+	lastErr atomic.Pointer[storedError] // stores last error
 
 	resolveGroup singleflight.Group
 
 	callbacksMu      sync.RWMutex
 	nextSubscriberID uint64
 	callbacks        map[uint64]UpdateFunc[T]
+
+	readyOnce sync.Once
+	readyCh   chan struct{}
 }
 
 func (b *binding[T]) log(err error, msg string) {
@@ -86,22 +94,8 @@ func newBinding[T any](
 		logger:     logger,
 		resolve:    resolve,
 		callbacks:  make(map[uint64]UpdateFunc[T]),
+		readyCh:    make(chan struct{}),
 	}
-}
-
-func (b *binding[T]) get(ctx context.Context) (T, bool) {
-	if value, ok := b.peek(); ok {
-		return value, true
-	}
-
-	value, err := b.resolveOnce(ctx, resolveGroupCached)
-	if err != nil {
-		var zero T
-
-		return zero, false
-	}
-
-	return value, true
 }
 
 func (b *binding[T]) refresh(ctx context.Context) error {
@@ -128,10 +122,12 @@ func (b *binding[T]) resolveOnce(ctx context.Context, groupKey resolveGroupKey) 
 		if err != nil {
 			var zero T
 
+			b.setLastErr(err)
+
 			return zero, err
 		}
 
-		b.publish(value)
+		b.publish(ctx, value)
 
 		return value, nil
 	})
@@ -170,7 +166,7 @@ func (b *binding[T]) subscribe(cb UpdateFunc[T]) func() {
 	b.callbacksMu.Unlock()
 
 	if ok {
-		b.runCallback(cb, value)
+		b.runCallback(context.Background(), cb, value)
 	}
 
 	return func() {
@@ -181,10 +177,15 @@ func (b *binding[T]) subscribe(cb UpdateFunc[T]) func() {
 	}
 }
 
-func (b *binding[T]) publish(value T) {
-	b.callbacksMu.RLock()
-
+func (b *binding[T]) publish(ctx context.Context, value T) {
 	b.value.Store(value)
+	b.setLastErr(nil)
+
+	b.readyOnce.Do(func() {
+		close(b.readyCh)
+	})
+
+	b.callbacksMu.RLock()
 
 	callbacks := make([]UpdateFunc[T], 0, len(b.callbacks))
 	for _, cb := range b.callbacks {
@@ -193,13 +194,33 @@ func (b *binding[T]) publish(value T) {
 
 	b.callbacksMu.RUnlock()
 
-	b.runCallbacks(value, callbacks)
+	b.runCallbacks(ctx, value, callbacks)
 }
 
 func (b *binding[T]) peek() (T, bool) {
 	value, ok := b.value.Load().(T)
 
 	return value, ok
+}
+
+func (b *binding[T]) awaitReady(ctx context.Context) error {
+	select {
+	case <-b.readyCh:
+		return nil
+	default:
+	}
+
+	select {
+	case <-b.readyCh:
+		return nil
+
+	case <-ctx.Done():
+		if err := b.getLastErr(); err != nil {
+			return err
+		}
+
+		return ctx.Err()
+	}
 }
 
 func (b *binding[T]) Unschedule(reason error) {
@@ -225,16 +246,35 @@ func (b *binding[T]) stop() {
 	clear(b.callbacks)
 }
 
-func (b *binding[T]) runCallbacks(value T, callbacks []UpdateFunc[T]) {
+func (b *binding[T]) runCallbacks(ctx context.Context, value T, callbacks []UpdateFunc[T]) {
 	for _, cb := range callbacks {
-		b.runCallback(cb, value)
+		b.runCallback(ctx, cb, value)
 	}
 }
 
-func (b *binding[T]) runCallback(cb UpdateFunc[T], value T) {
-	if err := cb(context.Background(), value); err != nil {
+func (b *binding[T]) runCallback(ctx context.Context, cb UpdateFunc[T], value T) {
+	if err := cb(ctx, value); err != nil {
 		b.log(err, "Secret binding update callback failed")
 	}
+}
+
+func (b *binding[T]) setLastErr(err error) {
+	if err == nil {
+		b.lastErr.Store(nil)
+
+		return
+	}
+
+	b.lastErr.Store(&storedError{err: err})
+}
+
+func (b *binding[T]) getLastErr() error {
+	stored := b.lastErr.Load()
+	if stored == nil {
+		return nil
+	}
+
+	return stored.err
 }
 
 var _ task.Task = (*binding[Secret])(nil)

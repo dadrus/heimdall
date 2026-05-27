@@ -18,249 +18,282 @@ package secrets
 
 import (
 	"context"
-	"crypto/x509"
-	"errors"
-
-	"github.com/dadrus/heimdall/internal/x/errorchain"
-)
-
-var ErrTooManyInformerOptions = errors.New("too many informer options provided")
-
-type (
-	SecretConverter[T any]      func(Secret) (T, error)
-	CredentialsConverter[T any] func(Credentials) (T, error)
+	"sync"
+	"sync/atomic"
 )
 
 type (
-	SecretUpdateFunc[T any]      func(context.Context, Secret, T) error
-	CredentialsUpdateFunc[T any] func(context.Context, Credentials, T) error
-	CertificateBundleUpdateFunc  func(context.Context, CertificateBundle, *x509.CertPool) error
+	Converter[S, T any] func(S) (T, error)
+
+	UpdateCallback[S, T any] func(context.Context, S, T) error
+
+	InformerOption[S, T any] func(*informerOptions[S, T])
+
+	SecretConverter[T any]            = Converter[Secret, T]
+	CredentialsConverter[T any]       = Converter[Credentials, T]
+	CertificateBundleConverter[T any] = Converter[CertificateBundle, T]
+
+	SecretUpdateFunc[T any]            = UpdateCallback[Secret, T]
+	CredentialsUpdateFunc[T any]       = UpdateCallback[Credentials, T]
+	CertificateBundleUpdateFunc[T any] = UpdateCallback[CertificateBundle, T]
+
+	SecretInformerOption[T any]            = InformerOption[Secret, T]
+	CredentialsInformerOption[T any]       = InformerOption[Credentials, T]
+	CertificateBundleInformerOption[T any] = InformerOption[CertificateBundle, T]
+
+	readinessRegistrar interface {
+		registerReadiness(await func(context.Context) error)
+	}
 )
 
-type InformerOptions[T any] struct {
-	Converter   SecretConverter[T]
-	ResolveMode ResolveMode
-	OnUpdate    SecretUpdateFunc[T]
+type informerOptions[S, T any] struct {
+	converter Converter[S, T]
+	onUpdate  UpdateCallback[S, T]
+}
+
+type informerState[T any] struct {
+	value atomic.Value // stores T
+
+	lastErr atomic.Pointer[storedError]
+
+	readyOnce sync.Once
+	readyCh   chan struct{}
 }
 
 type SecretInformer[T any] struct {
-	handle    SecretHandle
-	converter SecretConverter[T]
+	state *informerState[T]
+}
+
+type CredentialsInformer[T any] struct {
+	state *informerState[T]
+}
+
+type CertificateBundleInformer[T any] struct {
+	state *informerState[T]
+}
+
+func WithConverter[S, T any](
+	converter Converter[S, T],
+) InformerOption[S, T] {
+	return func(opts *informerOptions[S, T]) {
+		opts.converter = converter
+	}
+}
+
+func WithUpdateCallback[S, T any](
+	callback UpdateCallback[S, T],
+) InformerOption[S, T] {
+	return func(opts *informerOptions[S, T]) {
+		opts.onUpdate = callback
+	}
 }
 
 func NewSecretInformer[T any](
 	ctx context.Context,
 	resolver Resolver,
 	reference Reference,
-	opts ...InformerOptions[T],
+	opts ...SecretInformerOption[T],
 ) (*SecretInformer[T], error) {
-	cfg, err := singleInformerOption(opts)
+	cfg := applyInformerOptions(opts...)
+
+	hdl, err := resolver.Secret(ctx, reference)
 	if err != nil {
 		return nil, err
 	}
 
-	converter := cfg.Converter
-	if converter == nil {
-		converter = identitySecretConverter[T]
-	}
+	state := newInformerState[T]()
+	hdl.(readinessRegistrar).registerReadiness(state.awaitReady) //nolint:forcetypeassert
 
-	hdl, err := resolver.Secret(ctx, reference, resolveOptionsForMode(cfg.ResolveMode)...)
-	if err != nil {
-		return nil, err
-	}
+	hdl.OnUpdate(func(ctx context.Context, secret Secret) error {
+		value, err := cfg.converter(secret)
+		if err != nil {
+			state.setLastErr(err)
 
-	informer := &SecretInformer[T]{
-		handle:    hdl,
-		converter: converter,
-	}
+			return err
+		}
 
-	if cfg.OnUpdate != nil {
-		hdl.OnUpdate(func(ctx context.Context, secret Secret) error {
-			value, err := converter(secret)
-			if err != nil {
-				return errorchain.New(ErrSecretConversionFailed).CausedBy(err)
-			}
+		state.store(value)
 
-			return cfg.OnUpdate(ctx, secret, value)
-		})
-	}
+		if cfg.onUpdate != nil {
+			return cfg.onUpdate(ctx, secret, value)
+		}
 
-	return informer, nil
+		return nil
+	})
+
+	return &SecretInformer[T]{
+		state: state,
+	}, nil
 }
 
-func (i *SecretInformer[T]) Get(ctx context.Context) (T, bool) {
-	secret, ok := i.handle.Get(ctx)
-	if !ok {
-		var zero T
-
-		return zero, false
-	}
-
-	value, err := i.converter(secret)
-	if err != nil {
-		var zero T
-
-		return zero, false
-	}
-
-	return value, true
-}
-
-type CredentialsInformerOptions[T any] struct {
-	Converter   CredentialsConverter[T]
-	ResolveMode ResolveMode
-	OnUpdate    CredentialsUpdateFunc[T]
-}
-
-type CredentialsInformer[T any] struct {
-	handle    CredentialsHandle
-	converter CredentialsConverter[T]
+func (i *SecretInformer[T]) Get() (T, bool) {
+	return i.state.get()
 }
 
 func NewCredentialsInformer[T any](
 	ctx context.Context,
 	resolver Resolver,
 	reference Reference,
-	opts ...CredentialsInformerOptions[T],
+	opts ...CredentialsInformerOption[T],
 ) (*CredentialsInformer[T], error) {
-	cfg, err := singleInformerOption(opts)
+	cfg := applyInformerOptions(opts...)
+
+	hdl, err := resolver.Credentials(ctx, reference)
 	if err != nil {
 		return nil, err
 	}
 
-	converter := cfg.Converter
-	if converter == nil {
-		converter = identityCredentialsConverter[T]
-	}
+	state := newInformerState[T]()
+	hdl.(readinessRegistrar).registerReadiness(state.awaitReady) //nolint:forcetypeassert
 
-	hdl, err := resolver.Credentials(ctx, reference, resolveOptionsForMode(cfg.ResolveMode)...)
-	if err != nil {
-		return nil, err
-	}
+	hdl.OnUpdate(func(ctx context.Context, credentials Credentials) error {
+		value, err := cfg.converter(credentials)
+		if err != nil {
+			state.setLastErr(err)
 
-	informer := &CredentialsInformer[T]{
-		handle:    hdl,
-		converter: converter,
-	}
+			return err
+		}
 
-	if cfg.OnUpdate != nil {
-		hdl.OnUpdate(func(ctx context.Context, credentials Credentials) error {
-			value, err := converter(credentials)
-			if err != nil {
-				return errorchain.New(ErrSecretConversionFailed).CausedBy(err)
-			}
+		state.store(value)
 
-			return cfg.OnUpdate(ctx, credentials, value)
-		})
-	}
+		if cfg.onUpdate != nil {
+			return cfg.onUpdate(ctx, credentials, value)
+		}
 
-	return informer, nil
+		return nil
+	})
+
+	return &CredentialsInformer[T]{
+		state: state,
+	}, nil
 }
 
-func (i *CredentialsInformer[T]) Get(ctx context.Context) (T, bool) {
-	credentials, ok := i.handle.Get(ctx)
-	if !ok {
-		var zero T
-
-		return zero, false
-	}
-
-	value, err := i.converter(credentials)
-	if err != nil {
-		var zero T
-
-		return zero, false
-	}
-
-	return value, true
+func (i *CredentialsInformer[T]) Get() (T, bool) {
+	return i.state.get()
 }
 
-type CertificateBundleInformerOptions struct {
-	ResolveMode ResolveMode
-	OnUpdate    CertificateBundleUpdateFunc
-}
-
-type CertificateBundleInformer struct {
-	handle CertificateBundleHandle
-}
-
-func NewCertificateBundleInformer(
+func NewCertificateBundleInformer[T any](
 	ctx context.Context,
 	resolver Resolver,
 	reference Reference,
-	opts ...CertificateBundleInformerOptions,
-) (*CertificateBundleInformer, error) {
-	cfg, err := singleInformerOption(opts)
+	opts ...CertificateBundleInformerOption[T],
+) (*CertificateBundleInformer[T], error) {
+	cfg := applyInformerOptions(opts...)
+
+	hdl, err := resolver.CertificateBundle(ctx, reference)
 	if err != nil {
 		return nil, err
 	}
 
-	hdl, err := resolver.CertificateBundle(ctx, reference, resolveOptionsForMode(cfg.ResolveMode)...)
-	if err != nil {
-		return nil, err
-	}
+	state := newInformerState[T]()
+	hdl.(readinessRegistrar).registerReadiness(state.awaitReady) //nolint:forcetypeassert
 
-	informer := &CertificateBundleInformer{
-		handle: hdl,
-	}
+	hdl.OnUpdate(func(ctx context.Context, bundle CertificateBundle) error {
+		value, err := cfg.converter(bundle)
+		if err != nil {
+			state.setLastErr(err)
 
-	if cfg.OnUpdate != nil {
-		hdl.OnUpdate(func(ctx context.Context, bundle CertificateBundle) error {
-			return cfg.OnUpdate(ctx, bundle, bundle.CertPool())
-		})
-	}
+			return err
+		}
 
-	return informer, nil
+		state.store(value)
+
+		if cfg.onUpdate != nil {
+			return cfg.onUpdate(ctx, bundle, value)
+		}
+
+		return nil
+	})
+
+	return &CertificateBundleInformer[T]{
+		state: state,
+	}, nil
 }
 
-func (i *CertificateBundleInformer) Get(ctx context.Context) (*x509.CertPool, bool) {
-	bundle, ok := i.handle.Get(ctx)
-	if !ok {
-		return nil, false
-	}
-
-	return bundle.CertPool(), true
+func (i *CertificateBundleInformer[T]) Get() (T, bool) {
+	return i.state.get()
 }
 
-func singleInformerOption[T any](opts []T) (T, error) {
-	switch len(opts) {
-	case 0:
-		var zero T
+func applyInformerOptions[S, T any](
+	opts ...InformerOption[S, T],
+) informerOptions[S, T] {
+	var cfg informerOptions[S, T]
 
-		return zero, nil
-	case 1:
-		return opts[0], nil
+	for _, opt := range opts {
+		if opt != nil {
+			opt(&cfg)
+		}
+	}
+
+	if cfg.converter == nil {
+		cfg.converter = identityConverter[S, T]
+	}
+
+	return cfg
+}
+
+func newInformerState[T any]() *informerState[T] {
+	return &informerState[T]{
+		readyCh: make(chan struct{}),
+	}
+}
+
+func (s *informerState[T]) store(value T) {
+	s.value.Store(value)
+	s.setLastErr(nil)
+
+	s.readyOnce.Do(func() {
+		close(s.readyCh)
+	})
+}
+
+func (s *informerState[T]) get() (T, bool) {
+	value, ok := s.value.Load().(T)
+
+	return value, ok
+}
+
+func (s *informerState[T]) awaitReady(ctx context.Context) error {
+	select {
+	case <-s.readyCh:
+		return nil
 	default:
-		var zero T
+	}
 
-		return zero, ErrTooManyInformerOptions
+	select {
+	case <-s.readyCh:
+		return nil
+
+	case <-ctx.Done():
+		if err := s.getLastErr(); err != nil {
+			return err
+		}
+
+		return ctx.Err()
 	}
 }
 
-func resolveOptionsForMode(mode ResolveMode) []ResolveOption {
-	switch mode {
-	case ResolveLazy:
-		return []ResolveOption{Lazy()}
-	case ResolveEager:
-		return []ResolveOption{Eager()}
-	default:
+func (s *informerState[T]) setLastErr(err error) {
+	if err == nil {
+		s.lastErr.Store(nil)
+
+		return
+	}
+
+	s.lastErr.Store(&storedError{err: err})
+}
+
+func (s *informerState[T]) getLastErr() error {
+	stored := s.lastErr.Load()
+	if stored == nil {
 		return nil
 	}
+
+	return stored.err
 }
 
-func identitySecretConverter[T any](secret Secret) (T, error) {
-	value, ok := any(secret).(T)
-	if !ok {
-		var zero T
-
-		return zero, ErrSecretConversionFailed
-	}
-
-	return value, nil
-}
-
-func identityCredentialsConverter[T any](credentials Credentials) (T, error) {
-	value, ok := any(credentials).(T)
+func identityConverter[S, T any](source S) (T, error) {
+	value, ok := any(source).(T)
 	if !ok {
 		var zero T
 

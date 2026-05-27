@@ -35,22 +35,6 @@ func newLeasedBinding[T any](binding *binding[T]) *leasedBinding[T] {
 	}
 }
 
-func (e *leasedBinding[T]) resolveInitial(
-	ctx context.Context,
-	executor *task.Executor,
-	mode ResolveMode,
-) error {
-	if mode == ResolveLazy {
-		executor.Schedule(e)
-
-		return nil
-	}
-
-	_, err := e.binding.resolveOnce(ctx, resolveGroupCached)
-
-	return err
-}
-
 func (e *leasedBinding[T]) Unschedule(reason error) {
 	e.CancelSchedule()
 

@@ -10,25 +10,21 @@ type bindingProvider interface {
 	secretBinding(
 		ctx context.Context,
 		reference scopedReference,
-		opts ...ResolveOption,
 	) (*binding[Secret], bindingKey, error)
 
 	secretSetBinding(
 		ctx context.Context,
 		reference scopedReference,
-		opts ...ResolveOption,
 	) (*binding[[]Secret], bindingKey, error)
 
 	credentialsBinding(
 		ctx context.Context,
 		reference scopedReference,
-		opts ...ResolveOption,
 	) (*binding[Credentials], bindingKey, error)
 
 	certificateBundleBinding(
 		ctx context.Context,
 		reference scopedReference,
-		opts ...ResolveOption,
 	) (*binding[CertificateBundle], bindingKey, error)
 
 	releaseBinding(key bindingKey, count int)
@@ -56,10 +52,12 @@ type scope struct {
 	id        string
 	namespace string
 
-	mu       sync.Mutex
-	leases   map[bindingKey]int
-	cleanups []func()
-	closed   bool
+	mu        sync.Mutex
+	leases    map[bindingKey]int
+	cleanups  []func()
+	readiness []func(context.Context) error
+
+	closed bool
 }
 
 func newScope(
@@ -84,9 +82,8 @@ func newScope(
 func (s *scope) Secret(
 	ctx context.Context,
 	ref Reference,
-	opts ...ResolveOption,
 ) (SecretHandle, error) {
-	bdg, key, err := s.bindings.secretBinding(ctx, s.refFactory(ref), opts...)
+	bdg, key, err := s.bindings.secretBinding(ctx, s.refFactory(ref))
 	if err != nil {
 		return nil, err
 	}
@@ -103,9 +100,8 @@ func (s *scope) Secret(
 func (s *scope) SecretSet(
 	ctx context.Context,
 	ref Reference,
-	opts ...ResolveOption,
 ) (SecretSetHandle, error) {
-	bdg, key, err := s.bindings.secretSetBinding(ctx, s.refFactory(ref), opts...)
+	bdg, key, err := s.bindings.secretSetBinding(ctx, s.refFactory(ref))
 	if err != nil {
 		return nil, err
 	}
@@ -122,9 +118,8 @@ func (s *scope) SecretSet(
 func (s *scope) Credentials(
 	ctx context.Context,
 	ref Reference,
-	opts ...ResolveOption,
 ) (CredentialsHandle, error) {
-	bdg, key, err := s.bindings.credentialsBinding(ctx, s.refFactory(ref), opts...)
+	bdg, key, err := s.bindings.credentialsBinding(ctx, s.refFactory(ref))
 	if err != nil {
 		return nil, err
 	}
@@ -141,9 +136,8 @@ func (s *scope) Credentials(
 func (s *scope) CertificateBundle(
 	ctx context.Context,
 	ref Reference,
-	opts ...ResolveOption,
 ) (CertificateBundleHandle, error) {
-	bdg, key, err := s.bindings.certificateBundleBinding(ctx, s.refFactory(ref), opts...)
+	bdg, key, err := s.bindings.certificateBundleBinding(ctx, s.refFactory(ref))
 	if err != nil {
 		return nil, err
 	}
@@ -171,8 +165,8 @@ func (s *scope) Release() {
 
 	cleanups := append([]func(){}, s.cleanups...)
 	s.cleanups = nil
-
 	s.closed = true
+	s.readiness = nil
 
 	s.mu.Unlock()
 
@@ -183,6 +177,28 @@ func (s *scope) Release() {
 	for key, count := range leases {
 		s.bindings.releaseBinding(key, count)
 	}
+}
+
+func (s *scope) AwaitReady(ctx context.Context) error {
+	s.mu.Lock()
+
+	if s.closed {
+		s.mu.Unlock()
+
+		return ErrResolverScopeClosed
+	}
+
+	waiters := append([]func(context.Context) error(nil), s.readiness...)
+
+	s.mu.Unlock()
+
+	for _, await := range waiters {
+		if err := await(ctx); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *scope) trackLease(key bindingKey) bool {
@@ -212,8 +228,23 @@ func (s *scope) registerCleanup(cleanup func()) {
 	s.mu.Unlock()
 }
 
+func (s *scope) registerReadiness(await func(context.Context) error) {
+	if await == nil {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.closed {
+		return
+	}
+
+	s.readiness = append(s.readiness, await)
+}
+
 var (
-	_ Resolver        = (*scope)(nil)
-	_ ScopedResolver  = (*scope)(nil)
-	_ cleanupRegistry = (*scope)(nil)
+	_ Resolver       = (*scope)(nil)
+	_ ScopedResolver = (*scope)(nil)
+	_ handleOwner    = (*scope)(nil)
 )

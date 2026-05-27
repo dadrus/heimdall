@@ -5,8 +5,6 @@
 package mocks
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/secrets"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -39,8 +37,8 @@ func (_m *CertificateBundleHandleMock) EXPECT() *CertificateBundleHandleMock_Exp
 }
 
 // Get provides a mock function for the type CertificateBundleHandleMock
-func (_mock *CertificateBundleHandleMock) Get(ctx context.Context) (secrets.CertificateBundle, bool) {
-	ret := _mock.Called(ctx)
+func (_mock *CertificateBundleHandleMock) Get() (secrets.CertificateBundle, bool) {
+	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
@@ -48,18 +46,18 @@ func (_mock *CertificateBundleHandleMock) Get(ctx context.Context) (secrets.Cert
 
 	var r0 secrets.CertificateBundle
 	var r1 bool
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (secrets.CertificateBundle, bool)); ok {
-		return returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func() (secrets.CertificateBundle, bool)); ok {
+		return returnFunc()
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) secrets.CertificateBundle); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func() secrets.CertificateBundle); ok {
+		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(secrets.CertificateBundle)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) bool); ok {
-		r1 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(1).(func() bool); ok {
+		r1 = returnFunc()
 	} else {
 		r1 = ret.Get(1).(bool)
 	}
@@ -72,20 +70,13 @@ type CertificateBundleHandleMock_Get_Call struct {
 }
 
 // Get is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *CertificateBundleHandleMock_Expecter) Get(ctx interface{}) *CertificateBundleHandleMock_Get_Call {
-	return &CertificateBundleHandleMock_Get_Call{Call: _e.mock.On("Get", ctx)}
+func (_e *CertificateBundleHandleMock_Expecter) Get() *CertificateBundleHandleMock_Get_Call {
+	return &CertificateBundleHandleMock_Get_Call{Call: _e.mock.On("Get")}
 }
 
-func (_c *CertificateBundleHandleMock_Get_Call) Run(run func(ctx context.Context)) *CertificateBundleHandleMock_Get_Call {
+func (_c *CertificateBundleHandleMock_Get_Call) Run(run func()) *CertificateBundleHandleMock_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
+		run()
 	})
 	return _c
 }
@@ -95,14 +86,14 @@ func (_c *CertificateBundleHandleMock_Get_Call) Return(v secrets.CertificateBund
 	return _c
 }
 
-func (_c *CertificateBundleHandleMock_Get_Call) RunAndReturn(run func(ctx context.Context) (secrets.CertificateBundle, bool)) *CertificateBundleHandleMock_Get_Call {
+func (_c *CertificateBundleHandleMock_Get_Call) RunAndReturn(run func() (secrets.CertificateBundle, bool)) *CertificateBundleHandleMock_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // OnUpdate provides a mock function for the type CertificateBundleHandleMock
-func (_mock *CertificateBundleHandleMock) OnUpdate(updateFunc secrets.UpdateFunc[secrets.CertificateBundle]) {
-	_mock.Called(updateFunc)
+func (_mock *CertificateBundleHandleMock) OnUpdate(callback secrets.UpdateFunc[secrets.CertificateBundle]) {
+	_mock.Called(callback)
 	return
 }
 
@@ -112,12 +103,12 @@ type CertificateBundleHandleMock_OnUpdate_Call struct {
 }
 
 // OnUpdate is a helper method to define mock.On call
-//   - updateFunc secrets.UpdateFunc[secrets.CertificateBundle]
-func (_e *CertificateBundleHandleMock_Expecter) OnUpdate(updateFunc interface{}) *CertificateBundleHandleMock_OnUpdate_Call {
-	return &CertificateBundleHandleMock_OnUpdate_Call{Call: _e.mock.On("OnUpdate", updateFunc)}
+//   - callback secrets.UpdateFunc[secrets.CertificateBundle]
+func (_e *CertificateBundleHandleMock_Expecter) OnUpdate(callback interface{}) *CertificateBundleHandleMock_OnUpdate_Call {
+	return &CertificateBundleHandleMock_OnUpdate_Call{Call: _e.mock.On("OnUpdate", callback)}
 }
 
-func (_c *CertificateBundleHandleMock_OnUpdate_Call) Run(run func(updateFunc secrets.UpdateFunc[secrets.CertificateBundle])) *CertificateBundleHandleMock_OnUpdate_Call {
+func (_c *CertificateBundleHandleMock_OnUpdate_Call) Run(run func(callback secrets.UpdateFunc[secrets.CertificateBundle])) *CertificateBundleHandleMock_OnUpdate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 secrets.UpdateFunc[secrets.CertificateBundle]
 		if args[0] != nil {
@@ -135,7 +126,7 @@ func (_c *CertificateBundleHandleMock_OnUpdate_Call) Return() *CertificateBundle
 	return _c
 }
 
-func (_c *CertificateBundleHandleMock_OnUpdate_Call) RunAndReturn(run func(updateFunc secrets.UpdateFunc[secrets.CertificateBundle])) *CertificateBundleHandleMock_OnUpdate_Call {
+func (_c *CertificateBundleHandleMock_OnUpdate_Call) RunAndReturn(run func(callback secrets.UpdateFunc[secrets.CertificateBundle])) *CertificateBundleHandleMock_OnUpdate_Call {
 	_c.Run(run)
 	return _c
 }

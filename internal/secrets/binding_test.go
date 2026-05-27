@@ -30,165 +30,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBindingGet(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		setup      func(t *testing.T, calls *atomic.Int32) *binding[string]
-		wantValue  string
-		wantOK     bool
-		wantCalls  int32
-		wantCached bool
-	}{
-		"returns cached value without resolving": {
-			setup: func(t *testing.T, calls *atomic.Int32) *binding[string] {
-				t.Helper()
-
-				bdg := newTestBinding(t, func(context.Context) (string, error) {
-					calls.Add(1)
-
-					return "resolved", nil
-				})
-				bdg.value.Store("cached")
-
-				return bdg
-			},
-			wantValue:  "cached",
-			wantOK:     true,
-			wantCalls:  0,
-			wantCached: true,
-		},
-		"resolves missing value and publishes it": {
-			setup: func(t *testing.T, calls *atomic.Int32) *binding[string] {
-				t.Helper()
-
-				return newTestBinding(t, func(context.Context) (string, error) {
-					calls.Add(1)
-
-					return "resolved", nil
-				})
-			},
-			wantValue:  "resolved",
-			wantOK:     true,
-			wantCalls:  1,
-			wantCached: true,
-		},
-		"returns false if resolve fails": {
-			setup: func(t *testing.T, calls *atomic.Int32) *binding[string] {
-				t.Helper()
-
-				return newTestBinding(t, func(context.Context) (string, error) {
-					calls.Add(1)
-
-					return "", assert.AnError
-				})
-			},
-			wantOK:    false,
-			wantCalls: 1,
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
-
-			var calls atomic.Int32
-
-			bdg := tc.setup(t, &calls)
-
-			got, ok := bdg.get(context.Background())
-
-			require.Equal(t, tc.wantOK, ok)
-			require.Equal(t, tc.wantValue, got)
-			require.Equal(t, tc.wantCalls, calls.Load())
-
-			if tc.wantCached {
-				cached, ok := bdg.peek()
-				require.True(t, ok)
-				require.Equal(t, tc.wantValue, cached)
-			}
-		})
-	}
-}
-
-func TestBindingGetReturnsFalseIfContextAwareResolveFails(t *testing.T) {
-	t.Parallel()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-
-	bdg := newTestBinding(t, func(ctx context.Context) (string, error) {
-		return "", ctx.Err()
-	})
-
-	got, ok := bdg.get(ctx)
-
-	require.False(t, ok)
-	require.Empty(t, got)
-}
-
-func TestBindingGetHonorsContextWhileWaitingForRunningResolve(t *testing.T) {
-	t.Parallel()
-
-	resolveStarted := make(chan struct{})
-	releaseResolve := make(chan struct{})
-
-	var (
-		calls atomic.Int32
-		once  sync.Once
-	)
-
-	bdg := newTestBinding(t, func(context.Context) (string, error) {
-		calls.Add(1)
-		once.Do(func() {
-			close(resolveStarted)
-		})
-
-		<-releaseResolve
-
-		return "resolved", nil
-	})
-
-	resolveDone := make(chan struct{})
-
-	go func() {
-		_, _ = bdg.resolveOnce(context.Background(), resolveGroupCached)
-
-		close(resolveDone)
-	}()
-
-	require.Eventually(t, func() bool {
-		select {
-		case <-resolveStarted:
-			return true
-		default:
-			return false
-		}
-	}, time.Second, 10*time.Millisecond)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
-	defer cancel()
-
-	got, ok := bdg.get(ctx)
-
-	require.False(t, ok)
-	require.Empty(t, got)
-	require.EqualValues(t, 1, calls.Load())
-
-	close(releaseResolve)
-
-	require.Eventually(t, func() bool {
-		select {
-		case <-resolveDone:
-			return true
-		default:
-			return false
-		}
-	}, time.Second, 10*time.Millisecond)
-
-	value, ok := bdg.peek()
-	require.True(t, ok)
-	require.Equal(t, "resolved", value)
-}
-
 func TestBindingResolveOnce(t *testing.T) {
 	t.Parallel()
 
@@ -266,14 +107,15 @@ func TestBindingResolveOnce(t *testing.T) {
 
 			bdg := newTestBinding(t, tc.setup(t, &calls))
 			if tc.initialValue != "" {
-				bdg.value.Store(tc.initialValue)
+				bdg.publish(t.Context(), tc.initialValue)
 			}
 
-			got, err := bdg.resolveOnce(context.Background(), tc.groupKey)
+			got, err := bdg.resolveOnce(t.Context(), tc.groupKey)
 
 			if tc.wantErr != nil {
 				require.Error(t, err)
 				require.ErrorIs(t, err, tc.wantErr)
+				require.ErrorIs(t, bdg.getLastErr(), tc.wantErr)
 				require.Empty(t, got)
 			} else {
 				require.NoError(t, err)
@@ -282,6 +124,8 @@ func TestBindingResolveOnce(t *testing.T) {
 				cached, ok := bdg.peek()
 				require.True(t, ok)
 				require.Equal(t, tc.wantValue, cached)
+				require.NoError(t, bdg.awaitReady(t.Context()))
+				require.NoError(t, bdg.getLastErr())
 			}
 
 			require.Equal(t, tc.wantCalls, calls.Load())
@@ -298,40 +142,145 @@ func TestBindingResolveOnceDeduplicatesConcurrentCachedResolves(t *testing.T) {
 
 	release := make(chan struct{})
 
+	var closeRelease sync.Once
+	t.Cleanup(func() {
+		closeRelease.Do(func() {
+			close(release)
+		})
+	})
+
 	bdg := newTestBinding(t, func(context.Context) (string, error) {
 		calls.Add(1)
+
 		<-release
 
 		return "resolved", nil
 	})
 
-	var wg sync.WaitGroup
+	type result struct {
+		value string
+		err   error
+	}
 
-	results := make(chan string, goroutines)
+	results := make(chan result, goroutines)
 
 	for range goroutines {
-		wg.Go(func() {
-			value, err := bdg.resolveOnce(context.Background(), resolveGroupCached)
-			require.NoError(t, err)
-
-			results <- value
-		})
+		go func() {
+			value, err := bdg.resolveOnce(t.Context(), resolveGroupCached)
+			results <- result{
+				value: value,
+				err:   err,
+			}
+		}()
 	}
 
 	require.Eventually(t, func() bool {
 		return calls.Load() == 1
 	}, time.Second, 10*time.Millisecond)
 
-	close(release)
+	closeRelease.Do(func() {
+		close(release)
+	})
 
-	wg.Wait()
-	close(results)
+	for range goroutines {
+		got := <-results
 
-	for value := range results {
-		require.Equal(t, "resolved", value)
+		require.NoError(t, got.err)
+		require.Equal(t, "resolved", got.value)
 	}
 
+	value, ok := bdg.peek()
+	require.True(t, ok)
+	require.Equal(t, "resolved", value)
+	require.NoError(t, bdg.awaitReady(t.Context()))
+	require.NoError(t, bdg.getLastErr())
 	require.EqualValues(t, 1, calls.Load())
+}
+
+func TestBindingResolveOnceHonorsContextWhileWaitingForRunningResolve(t *testing.T) {
+	t.Parallel()
+
+	resolveStarted := make(chan struct{})
+	releaseResolve := make(chan struct{})
+
+	var closeRelease sync.Once
+	t.Cleanup(func() {
+		closeRelease.Do(func() {
+			close(releaseResolve)
+		})
+	})
+
+	var (
+		calls atomic.Int32
+		once  sync.Once
+	)
+
+	bdg := newTestBinding(t, func(context.Context) (string, error) {
+		calls.Add(1)
+
+		once.Do(func() {
+			close(resolveStarted)
+		})
+
+		<-releaseResolve
+
+		return "resolved", nil
+	})
+
+	_, ok := bdg.peek()
+	require.False(t, ok)
+
+	type result struct {
+		value string
+		err   error
+	}
+
+	resolveDone := make(chan result, 1)
+
+	go func() {
+		value, err := bdg.resolveOnce(t.Context(), resolveGroupCached)
+		resolveDone <- result{
+			value: value,
+			err:   err,
+		}
+	}()
+
+	require.Eventually(t, func() bool {
+		select {
+		case <-resolveStarted:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Millisecond)
+	defer cancel()
+
+	got, err := bdg.resolveOnce(ctx, resolveGroupCached)
+
+	closeRelease.Do(func() {
+		close(releaseResolve)
+	})
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.Empty(t, got)
+	require.EqualValues(t, 1, calls.Load())
+
+	select {
+	case first := <-resolveDone:
+		require.NoError(t, first.err)
+		require.Equal(t, "resolved", first.value)
+	case <-time.After(time.Second):
+		require.Fail(t, "background resolve did not finish")
+	}
+
+	value, ok := bdg.peek()
+	require.True(t, ok)
+	require.Equal(t, "resolved", value)
+	require.NoError(t, bdg.awaitReady(t.Context()))
+	require.NoError(t, bdg.getLastErr())
 }
 
 func TestBindingRefresh(t *testing.T) {
@@ -469,7 +418,7 @@ func TestBindingSubscribe(t *testing.T) {
 				require.Empty(t, calls.All())
 				require.Len(t, bdg.callbacks, 1)
 
-				bdg.publish("published")
+				bdg.publish(t.Context(), "published")
 				require.Equal(t, []string{"callback:published"}, calls.All())
 
 				cleanup()
@@ -534,6 +483,8 @@ func TestBindingPublish(t *testing.T) {
 			assert: func(t *testing.T, bdg *binding[string], _ *bytes.Buffer, calls *guardedCalls) {
 				t.Helper()
 
+				require.NoError(t, bdg.awaitReady(t.Context()))
+
 				value, ok := bdg.peek()
 				require.True(t, ok)
 				require.Equal(t, "published", value)
@@ -577,7 +528,7 @@ func TestBindingPublish(t *testing.T) {
 			bdg := tc.setup(t, &logs, &calls)
 			bdg.logger = zerolog.New(&logs)
 
-			bdg.publish("published")
+			bdg.publish(t.Context(), "published")
 
 			tc.assert(t, bdg, &logs, &calls)
 		})
@@ -603,6 +554,8 @@ func TestBindingRun(t *testing.T) {
 			},
 			assert: func(t *testing.T, bdg *binding[string], _ *bytes.Buffer, calls *guardedCalls) {
 				t.Helper()
+
+				require.NoError(t, bdg.awaitReady(t.Context()))
 
 				require.Equal(t, []string{"resolve"}, calls.All())
 
@@ -675,6 +628,153 @@ func TestBindingStop(t *testing.T) {
 
 	require.Empty(t, bdg.callbacks)
 	require.False(t, bdg.Schedule())
+}
+
+func TestBindingAwaitReady(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		setup  func(t *testing.T) (*binding[string], context.Context)
+		assert func(t *testing.T, err error)
+	}{
+		"returns nil after publish": {
+			setup: func(t *testing.T) (*binding[string], context.Context) {
+				t.Helper()
+
+				bdg := newTestBinding[string](t, nil)
+				bdg.publish(t.Context(), "ready")
+
+				return bdg, t.Context()
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+		"returns context error if no value and no last error": {
+			setup: func(t *testing.T) (*binding[string], context.Context) {
+				t.Helper()
+
+				ctx, cancel := context.WithCancel(t.Context())
+				cancel()
+
+				return newTestBinding[string](t, nil), ctx
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, context.Canceled)
+			},
+		},
+		"returns last error if no value and last error exists": {
+			setup: func(t *testing.T) (*binding[string], context.Context) {
+				t.Helper()
+
+				bdg := newTestBinding(t, func(context.Context) (string, error) {
+					return "", assert.AnError
+				})
+
+				_, err := bdg.resolveOnce(t.Context(), resolveGroupCached)
+				require.Error(t, err)
+				require.ErrorIs(t, err, assert.AnError)
+
+				ctx, cancel := context.WithCancel(t.Context())
+				cancel()
+
+				return bdg, ctx
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, assert.AnError)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			bdg, ctx := tc.setup(t)
+
+			tc.assert(t, bdg.awaitReady(ctx))
+		})
+	}
+}
+
+func TestBindingLastErr(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		setup  func(t *testing.T) *binding[string]
+		assert func(t *testing.T, bdg *binding[string])
+	}{
+		"resolve error stores last error": {
+			setup: func(t *testing.T) *binding[string] {
+				t.Helper()
+
+				bdg := newTestBinding(t, func(context.Context) (string, error) {
+					return "", assert.AnError
+				})
+
+				_, err := bdg.resolveOnce(t.Context(), resolveGroupCached)
+				require.Error(t, err)
+				require.ErrorIs(t, err, assert.AnError)
+
+				return bdg
+			},
+			assert: func(t *testing.T, bdg *binding[string]) {
+				t.Helper()
+
+				require.ErrorIs(t, bdg.getLastErr(), assert.AnError)
+			},
+		},
+		"successful resolve clears last error": {
+			setup: func(t *testing.T) *binding[string] {
+				t.Helper()
+
+				bdg := newTestBinding(t, func(context.Context) (string, error) {
+					return "resolved", nil
+				})
+				bdg.setLastErr(assert.AnError)
+
+				_, err := bdg.resolveOnce(t.Context(), resolveGroupForced)
+				require.NoError(t, err)
+
+				return bdg
+			},
+			assert: func(t *testing.T, bdg *binding[string]) {
+				t.Helper()
+
+				require.NoError(t, bdg.getLastErr())
+			},
+		},
+		"publish clears last error": {
+			setup: func(t *testing.T) *binding[string] {
+				t.Helper()
+
+				bdg := newTestBinding[string](t, nil)
+				bdg.setLastErr(assert.AnError)
+				bdg.publish(t.Context(), "published")
+
+				return bdg
+			},
+			assert: func(t *testing.T, bdg *binding[string]) {
+				t.Helper()
+
+				require.NoError(t, bdg.getLastErr())
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			bdg := tc.setup(t)
+
+			tc.assert(t, bdg)
+		})
+	}
 }
 
 func newTestBinding[T any](

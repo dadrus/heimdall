@@ -130,7 +130,6 @@ func TestScopeSecret(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.Anything,
 					).
 					Return(bdg, key, nil)
 
@@ -142,13 +141,14 @@ func TestScopeSecret(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, handle)
 
-				secret, ok := handle.Get(context.Background())
+				secret, ok := handle.Get()
 				require.True(t, ok)
 				require.Equal(t, "selector", secret.Selector())
 
 				require.Equal(t, map[bindingKey]int{
 					testScopeBindingKey(bindingKindSecret): 1,
 				}, scp.leases)
+				require.Len(t, scp.readiness, 1)
 			},
 		},
 		"returns binding error": {
@@ -162,7 +162,6 @@ func TestScopeSecret(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.Anything,
 					).
 					Return(nil, bindingKey{}, assert.AnError)
 
@@ -175,6 +174,7 @@ func TestScopeSecret(t *testing.T) {
 				require.ErrorIs(t, err, assert.AnError)
 				require.Nil(t, handle)
 				require.Empty(t, scp.leases)
+				require.Empty(t, scp.readiness)
 			},
 		},
 		"releases binding if scope is already closed": {
@@ -191,7 +191,6 @@ func TestScopeSecret(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.Anything,
 					).
 					Return(bdg, key, nil)
 
@@ -219,9 +218,8 @@ func TestScopeSecret(t *testing.T) {
 			scp := tc.setup(t, bindings)
 
 			handle, err := scp.Secret(
-				context.Background(),
+				t.Context(),
 				Reference{Source: "src", Selector: "selector"},
-				Eager(),
 			)
 
 			tc.assert(t, handle, scp, err)
@@ -254,7 +252,6 @@ func TestScopeSecretSet(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.Anything,
 					).
 					Return(bdg, key, nil)
 
@@ -266,13 +263,14 @@ func TestScopeSecretSet(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, handle)
 
-				secrets, ok := handle.Get(context.Background())
+				secrets, ok := handle.Get()
 				require.True(t, ok)
 				require.Len(t, secrets, 2)
 
 				require.Equal(t, map[bindingKey]int{
 					testScopeBindingKey(bindingKindSecretSet): 1,
 				}, scp.leases)
+				require.Len(t, scp.readiness, 1)
 			},
 		},
 		"returns binding error": {
@@ -286,7 +284,6 @@ func TestScopeSecretSet(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.Anything,
 					).
 					Return(nil, bindingKey{}, assert.AnError)
 
@@ -299,6 +296,7 @@ func TestScopeSecretSet(t *testing.T) {
 				require.ErrorIs(t, err, assert.AnError)
 				require.Nil(t, handle)
 				require.Empty(t, scp.leases)
+				require.Empty(t, scp.readiness)
 			},
 		},
 		"releases binding if scope is already closed": {
@@ -319,7 +317,6 @@ func TestScopeSecretSet(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.Anything,
 					).
 					Return(bdg, key, nil)
 
@@ -347,9 +344,8 @@ func TestScopeSecretSet(t *testing.T) {
 			scp := tc.setup(t, bindings)
 
 			handle, err := scp.SecretSet(
-				context.Background(),
+				t.Context(),
 				Reference{Source: "src", Selector: "selector"},
-				Lazy(),
 			)
 
 			tc.assert(t, handle, scp, err)
@@ -390,13 +386,14 @@ func TestScopeCredentials(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, handle)
 
-				creds, ok := handle.Get(context.Background())
+				creds, ok := handle.Get()
 				require.True(t, ok)
 				require.Equal(t, "selector", creds.Selector())
 
 				require.Equal(t, map[bindingKey]int{
 					testScopeBindingKey(bindingKindCredentials): 1,
 				}, scp.leases)
+				require.Len(t, scp.readiness, 1)
 			},
 		},
 		"returns binding error": {
@@ -422,6 +419,7 @@ func TestScopeCredentials(t *testing.T) {
 				require.ErrorIs(t, err, assert.AnError)
 				require.Nil(t, handle)
 				require.Empty(t, scp.leases)
+				require.Empty(t, scp.readiness)
 			},
 		},
 		"releases binding if scope is already closed": {
@@ -469,7 +467,7 @@ func TestScopeCredentials(t *testing.T) {
 			scp := tc.setup(t, bindings)
 
 			handle, err := scp.Credentials(
-				context.Background(),
+				t.Context(),
 				Reference{Source: "src", Selector: "selector"},
 			)
 
@@ -500,7 +498,6 @@ func TestScopeCertificateBundle(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.Anything,
 					).
 					Return(bdg, key, nil)
 
@@ -512,13 +509,14 @@ func TestScopeCertificateBundle(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, handle)
 
-				bundle, ok := handle.Get(context.Background())
+				bundle, ok := handle.Get()
 				require.True(t, ok)
 				require.Equal(t, "selector", bundle.Selector())
 
 				require.Equal(t, map[bindingKey]int{
 					testScopeBindingKey(bindingKindCertificateBundle): 1,
 				}, scp.leases)
+				require.Len(t, scp.readiness, 1)
 			},
 		},
 		"returns binding error": {
@@ -532,7 +530,6 @@ func TestScopeCertificateBundle(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.Anything,
 					).
 					Return(nil, bindingKey{}, assert.AnError)
 
@@ -545,6 +542,7 @@ func TestScopeCertificateBundle(t *testing.T) {
 				require.ErrorIs(t, err, assert.AnError)
 				require.Nil(t, handle)
 				require.Empty(t, scp.leases)
+				require.Empty(t, scp.readiness)
 			},
 		},
 		"releases binding if scope is already closed": {
@@ -565,7 +563,6 @@ func TestScopeCertificateBundle(t *testing.T) {
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
 						},
-						mock.Anything,
 					).
 					Return(bdg, key, nil)
 
@@ -593,9 +590,8 @@ func TestScopeCertificateBundle(t *testing.T) {
 			scp := tc.setup(t, bindings)
 
 			handle, err := scp.CertificateBundle(
-				context.Background(),
+				t.Context(),
 				Reference{Source: "src", Selector: "selector"},
-				Eager(),
 			)
 
 			tc.assert(t, handle, scp, err)
@@ -635,7 +631,7 @@ func TestScopeUsesScopedReferences(t *testing.T) {
 	)
 
 	handle, err := scp.Secret(
-		context.Background(),
+		t.Context(),
 		Reference{Source: "src", Selector: "selector"},
 	)
 
@@ -644,6 +640,7 @@ func TestScopeUsesScopedReferences(t *testing.T) {
 	require.Equal(t, "foo", scp.id)
 	require.Equal(t, "team-a", scp.namespace)
 	require.Equal(t, map[bindingKey]int{key: 1}, scp.leases)
+	require.Len(t, scp.readiness, 1)
 }
 
 func TestScopeRelease(t *testing.T) {
@@ -687,6 +684,11 @@ func TestScopeRelease(t *testing.T) {
 					func() { calls.Add("cleanup:a") },
 					func() { calls.Add("cleanup:b") },
 				)
+				scp.readiness = append(
+					scp.readiness,
+					func(context.Context) error { return nil },
+					func(context.Context) error { return nil },
+				)
 
 				return scp
 			},
@@ -696,6 +698,7 @@ func TestScopeRelease(t *testing.T) {
 				require.True(t, scp.closed)
 				require.Empty(t, scp.leases)
 				require.Empty(t, scp.cleanups)
+				require.Nil(t, scp.readiness)
 
 				require.ElementsMatch(t, []string{
 					"cleanup:a",
@@ -762,6 +765,101 @@ func TestScopeReleaseIsIdempotent(t *testing.T) {
 
 	scp.Release()
 	scp.Release()
+}
+
+func TestScopeAwaitReady(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		setup  func(t *testing.T, calls *guardedScopeCalls) *scope
+		assert func(t *testing.T, calls *guardedScopeCalls, err error)
+	}{
+		"waits for registered readiness callbacks": {
+			setup: func(t *testing.T, calls *guardedScopeCalls) *scope {
+				t.Helper()
+
+				scp := newScope(NewBindingProviderMock(t))
+				scp.registerReadiness(func(context.Context) error {
+					calls.Add("a")
+
+					return nil
+				})
+				scp.registerReadiness(func(context.Context) error {
+					calls.Add("b")
+
+					return nil
+				})
+
+				return scp
+			},
+			assert: func(t *testing.T, calls *guardedScopeCalls, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.Equal(t, []string{"a", "b"}, calls.All())
+			},
+		},
+		"returns first readiness error": {
+			setup: func(t *testing.T, calls *guardedScopeCalls) *scope {
+				t.Helper()
+
+				scp := newScope(NewBindingProviderMock(t))
+				scp.registerReadiness(func(context.Context) error {
+					calls.Add("a")
+
+					return nil
+				})
+				scp.registerReadiness(func(context.Context) error {
+					calls.Add("b")
+
+					return assert.AnError
+				})
+				scp.registerReadiness(func(context.Context) error {
+					calls.Add("c")
+
+					return nil
+				})
+
+				return scp
+			},
+			assert: func(t *testing.T, calls *guardedScopeCalls, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, assert.AnError)
+				require.Equal(t, []string{"a", "b"}, calls.All())
+			},
+		},
+		"returns closed error": {
+			setup: func(t *testing.T, _ *guardedScopeCalls) *scope {
+				t.Helper()
+
+				scp := newScope(NewBindingProviderMock(t))
+				scp.closed = true
+
+				return scp
+			},
+			assert: func(t *testing.T, calls *guardedScopeCalls, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrResolverScopeClosed)
+				require.Empty(t, calls.All())
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			var calls guardedScopeCalls
+
+			scp := tc.setup(t, &calls)
+
+			err := scp.AwaitReady(t.Context())
+
+			tc.assert(t, &calls, err)
+		})
+	}
 }
 
 func TestScopeTrackLease(t *testing.T) {
@@ -851,6 +949,52 @@ func TestScopeRegisterCleanup(t *testing.T) {
 	}
 }
 
+func TestScopeRegisterReadiness(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		closed bool
+		await  func(context.Context) error
+		assert func(t *testing.T, scp *scope)
+	}{
+		"tracks readiness on open scope": {
+			await: func(context.Context) error { return nil },
+			assert: func(t *testing.T, scp *scope) {
+				t.Helper()
+
+				require.Len(t, scp.readiness, 1)
+			},
+		},
+		"ignores nil readiness": {
+			assert: func(t *testing.T, scp *scope) {
+				t.Helper()
+
+				require.Empty(t, scp.readiness)
+			},
+		},
+		"ignores readiness on closed scope": {
+			closed: true,
+			await:  func(context.Context) error { return nil },
+			assert: func(t *testing.T, scp *scope) {
+				t.Helper()
+
+				require.Empty(t, scp.readiness)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			scp := newScope(NewBindingProviderMock(t))
+			scp.closed = tc.closed
+
+			scp.registerReadiness(tc.await)
+
+			tc.assert(t, scp)
+		})
+	}
+}
+
 func testScopeBindingKey(kind bindingKind) bindingKey {
 	return bindingKey{
 		kind:      kind,
@@ -875,7 +1019,7 @@ func newScopeTestBinding[T any](
 			return value, nil
 		},
 	)
-	bdg.publish(value)
+	bdg.publish(t.Context(), value)
 
 	return bdg
 }

@@ -56,7 +56,7 @@ type AsymmetricKeySecret interface {
 
 type CertificateBundle interface {
 	Secret
-	CertPool() *x509.CertPool
+	Certificates() []*x509.Certificate
 }
 
 type Credentials interface {
@@ -142,25 +142,20 @@ func (s *asymmetricKeySecret) CertChain() []*x509.Certificate { return s.certCha
 type certificateBundle struct {
 	baseSecret
 
-	certPool *x509.CertPool
+	certs []*x509.Certificate
 }
 
 func NewCertificateBundle(selector string, certs []*x509.Certificate) CertificateBundle {
-	pool := x509.NewCertPool()
-	for _, cert := range certs {
-		pool.AddCert(cert)
-	}
-
 	return &certificateBundle{
 		baseSecret: baseSecret{
 			selector: selector,
 			kind:     SecretKindCertificateBundle,
 		},
-		certPool: pool,
+		certs: certs,
 	}
 }
 
-func (s *certificateBundle) CertPool() *x509.CertPool { return s.certPool }
+func (s *certificateBundle) Certificates() []*x509.Certificate { return s.certs }
 
 type credentials struct {
 	baseSecret

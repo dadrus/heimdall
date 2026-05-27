@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package secrets_test
+package secrets
 
 import (
 	"context"
@@ -22,11 +22,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 )
 
@@ -34,103 +31,56 @@ func TestNewSecretInformer(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock)
-		opts   []secrets.InformerOptions[string]
-		assert func(t *testing.T, informer *secrets.SecretInformer[string], err error)
+		setup  func(t *testing.T, resolver *testResolver, handle *testHandle[Secret])
+		opts   []SecretInformerOption[string]
+		assert func(
+			t *testing.T,
+			informer *SecretInformer[string],
+			err error,
+			resolver *testResolver,
+			handle *testHandle[Secret],
+		)
 	}{
-		"creates informer without options": {
-			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
+		"creates informer": {
+			opts: []SecretInformerOption[string]{
+				WithConverter(func(secret Secret) (string, error) {
+					return secret.Selector(), nil
+				}),
+			},
+			setup: func(t *testing.T, resolver *testResolver, handle *testHandle[Secret]) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "src", Selector: "selector"},
-					).
-					Return(handle, nil)
+				resolver.secretHandle = handle
 			},
-			assert: func(t *testing.T, informer *secrets.SecretInformer[string], err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, informer)
-			},
-		},
-		"creates informer with eager mode": {
-			opts: []secrets.InformerOptions[string]{
-				{
-					Converter: func(secret secrets.Secret) (string, error) {
-						return secret.Selector(), nil
-					},
-					ResolveMode: secrets.ResolveEager,
-				},
-			},
-			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
-				t.Helper()
-
-				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.Anything,
-					).
-					Return(handle, nil)
-			},
-			assert: func(t *testing.T, informer *secrets.SecretInformer[string], err error) {
+			assert: func(
+				t *testing.T,
+				informer *SecretInformer[string],
+				err error,
+				resolver *testResolver,
+				handle *testHandle[Secret],
+			) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.NotNil(t, informer)
-			},
-		},
-		"creates informer with lazy mode": {
-			opts: []secrets.InformerOptions[string]{
-				{
-					Converter: func(secret secrets.Secret) (string, error) {
-						return secret.Selector(), nil
-					},
-					ResolveMode: secrets.ResolveLazy,
-				},
-			},
-			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
-				t.Helper()
-
-				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.Anything,
-					).
-					Return(handle, nil)
-			},
-			assert: func(t *testing.T, informer *secrets.SecretInformer[string], err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, informer)
+				require.Equal(t, Reference{Source: "src", Selector: "selector"}, resolver.secretRef)
+				require.Len(t, handle.readiness, 1)
+				require.NotNil(t, handle.callback)
 			},
 		},
 		"returns resolver error": {
-			opts: []secrets.InformerOptions[string]{
-				{
-					Converter: func(secret secrets.Secret) (string, error) {
-						return secret.Selector(), nil
-					},
-					ResolveMode: secrets.ResolveEager,
-				},
-			},
-			setup: func(t *testing.T, resolver *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
+			setup: func(t *testing.T, resolver *testResolver, _ *testHandle[Secret]) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.Anything,
-					).
-					Return(nil, assert.AnError)
+				resolver.secretErr = assert.AnError
 			},
-			assert: func(t *testing.T, informer *secrets.SecretInformer[string], err error) {
+			assert: func(
+				t *testing.T,
+				informer *SecretInformer[string],
+				err error,
+				_ *testResolver,
+				_ *testHandle[Secret],
+			) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -138,39 +88,23 @@ func TestNewSecretInformer(t *testing.T) {
 				require.Nil(t, informer)
 			},
 		},
-		"returns error if more than one option is provided": {
-			opts: []secrets.InformerOptions[string]{
-				{},
-				{},
-			},
-			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
-				t.Helper()
-			},
-			assert: func(t *testing.T, informer *secrets.SecretInformer[string], err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, secrets.ErrTooManyInformerOptions)
-				require.Nil(t, informer)
-			},
-		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			resolver := mocks.NewResolverMock(t)
-			handle := mocks.NewSecretHandleMock(t)
+			resolver := &testResolver{}
+			handle := newTestHandle[Secret]()
 
 			tc.setup(t, resolver, handle)
 
-			informer, err := secrets.NewSecretInformer(
-				context.Background(),
+			informer, err := NewSecretInformer(
+				t.Context(),
 				resolver,
-				secrets.Reference{Source: "src", Selector: "selector"},
+				Reference{Source: "src", Selector: "selector"},
 				tc.opts...,
 			)
 
-			tc.assert(t, informer, err)
+			tc.assert(t, informer, err, resolver, handle)
 		})
 	}
 }
@@ -181,138 +115,102 @@ func TestSecretInformerGet(t *testing.T) {
 	secret := types.NewStringSecret("selector", "value")
 
 	for uc, tc := range map[string]struct {
-		setup     func(t *testing.T, handle *mocks.SecretHandleMock)
-		opts      []secrets.InformerOptions[string]
-		wantValue string
-		wantOK    bool
-		assert    func(t *testing.T, converterCalls int)
+		opts               []SecretInformerOption[string]
+		emit               func(t *testing.T, handle *testHandle[Secret]) error
+		wantValue          string
+		wantOK             bool
+		wantConverterCalls int
+		wantErr            error
 	}{
-		"returns converted secret": {
-			setup: func(t *testing.T, handle *mocks.SecretHandleMock) {
-				t.Helper()
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true)
-			},
-			opts: []secrets.InformerOptions[string]{
-				{
-					Converter: func(secret secrets.Secret) (string, error) {
-						return secret.Selector(), nil
-					},
-				},
-			},
-			wantValue: "selector",
-			wantOK:    true,
-			assert: func(t *testing.T, converterCalls int) {
-				t.Helper()
-
-				require.Equal(t, 1, converterCalls)
-			},
-		},
-		"returns false if handle has no value": {
-			setup: func(t *testing.T, handle *mocks.SecretHandleMock) {
-				t.Helper()
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(nil, false)
-			},
-			opts: []secrets.InformerOptions[string]{
-				{
-					Converter: func(secret secrets.Secret) (string, error) {
-						return secret.Selector(), nil
-					},
-				},
+		"returns false before first successful update": {
+			opts: []SecretInformerOption[string]{
+				WithConverter(func(secret Secret) (string, error) {
+					return secret.Selector(), nil
+				}),
 			},
 			wantOK: false,
-			assert: func(t *testing.T, converterCalls int) {
-				t.Helper()
-
-				require.Zero(t, converterCalls)
-			},
 		},
-		"returns false if conversion fails": {
-			setup: func(t *testing.T, handle *mocks.SecretHandleMock) {
+		"returns converted last good value": {
+			opts: []SecretInformerOption[string]{
+				WithConverter(func(secret Secret) (string, error) {
+					return secret.Selector(), nil
+				}),
+			},
+			emit: func(t *testing.T, handle *testHandle[Secret]) error {
 				t.Helper()
 
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true)
+				return handle.emit(t.Context(), secret)
 			},
-			opts: []secrets.InformerOptions[string]{
-				{
-					Converter: func(secrets.Secret) (string, error) {
+			wantValue:          "selector",
+			wantOK:             true,
+			wantConverterCalls: 1,
+		},
+		"keeps last good value after failed conversion": {
+			opts: []SecretInformerOption[string]{
+				WithConverter(func(secret Secret) (string, error) {
+					if secret.Selector() == "bad" {
 						return "", assert.AnError
-					},
-				},
+					}
+
+					return secret.Selector(), nil
+				}),
 			},
-			wantOK: false,
-			assert: func(t *testing.T, converterCalls int) {
+			emit: func(t *testing.T, handle *testHandle[Secret]) error {
 				t.Helper()
 
-				require.Equal(t, 1, converterCalls)
+				if err := handle.emit(t.Context(), secret); err != nil {
+					return err
+				}
+
+				return handle.emit(t.Context(), types.NewStringSecret("bad", "value"))
 			},
+			wantValue:          "selector",
+			wantOK:             true,
+			wantConverterCalls: 2,
+			wantErr:            assert.AnError,
 		},
-		"returns false if identity converter cannot cast": {
-			setup: func(t *testing.T, handle *mocks.SecretHandleMock) {
+		"identity converter cannot cast": {
+			emit: func(t *testing.T, handle *testHandle[Secret]) error {
 				t.Helper()
 
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true)
+				return handle.emit(t.Context(), secret)
 			},
-			wantOK: false,
-			assert: func(t *testing.T, converterCalls int) {
-				t.Helper()
-
-				require.Zero(t, converterCalls)
-			},
+			wantOK:  false,
+			wantErr: ErrSecretConversionFailed,
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			handle := mocks.NewSecretHandleMock(t)
-			resolver := mocks.NewResolverMock(t)
-
-			tc.setup(t, handle)
-
-			resolver.EXPECT().
-				Secret(
-					mock.Anything,
-					secrets.Reference{Source: "src", Selector: "selector"},
-				).
-				Return(handle, nil)
+			handle := newTestHandle[Secret]()
+			resolver := &testResolver{secretHandle: handle}
 
 			converterCalls := 0
+			opts := wrapSecretConverters(tc.opts, &converterCalls)
 
-			opts := append([]secrets.InformerOptions[string]{}, tc.opts...)
-
-			if len(opts) == 1 && opts[0].Converter != nil {
-				converter := opts[0].Converter
-
-				opts[0].Converter = func(secret secrets.Secret) (string, error) {
-					converterCalls++
-
-					return converter(secret)
-				}
-			}
-
-			informer, err := secrets.NewSecretInformer(
-				context.Background(),
+			informer, err := NewSecretInformer(
+				t.Context(),
 				resolver,
-				secrets.Reference{Source: "src", Selector: "selector"},
+				Reference{Source: "src", Selector: "selector"},
 				opts...,
 			)
 			require.NoError(t, err)
 
-			got, ok := informer.Get(context.Background())
+			if tc.emit != nil {
+				err = tc.emit(t, handle)
+				if tc.wantErr != nil {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tc.wantErr)
+				} else {
+					require.NoError(t, err)
+				}
+			}
+
+			got, ok := informer.Get()
 
 			require.Equal(t, tc.wantOK, ok)
 			require.Equal(t, tc.wantValue, got)
-
-			tc.assert(t, converterCalls)
+			require.Equal(t, tc.wantConverterCalls, converterCalls)
 		})
 	}
 }
@@ -321,278 +219,246 @@ func TestSecretInformerGetUsesIdentityConverter(t *testing.T) {
 	t.Parallel()
 
 	secret := types.NewStringSecret("selector", "value")
+	handle := newTestHandle[Secret]()
+	resolver := &testResolver{secretHandle: handle}
 
-	handle := mocks.NewSecretHandleMock(t)
-	resolver := mocks.NewResolverMock(t)
-
-	resolver.EXPECT().
-		Secret(
-			mock.Anything,
-			secrets.Reference{Source: "src", Selector: "selector"},
-		).
-		Return(handle, nil)
-
-	handle.EXPECT().
-		Get(mock.Anything).
-		Return(secret, true)
-
-	informer, err := secrets.NewSecretInformer[secrets.Secret](
-		context.Background(),
+	informer, err := NewSecretInformer[Secret](
+		t.Context(),
 		resolver,
-		secrets.Reference{Source: "src", Selector: "selector"},
+		Reference{Source: "src", Selector: "selector"},
 	)
 	require.NoError(t, err)
 
-	got, ok := informer.Get(context.Background())
+	require.NoError(t, handle.emit(t.Context(), secret))
+
+	got, ok := informer.Get()
 
 	require.True(t, ok)
 	require.Equal(t, secret, got)
 }
 
-func TestSecretInformerRegistersOnUpdate(t *testing.T) {
+func TestSecretInformerAwaitReady(t *testing.T) {
 	t.Parallel()
 
 	secret := types.NewStringSecret("selector", "value")
 
 	for uc, tc := range map[string]struct {
-		setup     func(t *testing.T, handle *mocks.SecretHandleMock, cbErr *error, wrappedCallbackCalled *bool)
-		converter secrets.SecretConverter[string]
-		assert    func(t *testing.T, cbErr error, wrappedCallbackCalled bool, userCallbackCalled bool)
+		converter func(t *testing.T, secret Secret) (string, error)
+		assert    func(t *testing.T, err error)
 	}{
-		"converts secret and calls callback": {
-			setup: func(
-				t *testing.T,
-				handle *mocks.SecretHandleMock,
-				cbErr *error,
-				wrappedCallbackCalled *bool,
-			) {
+		"returns nil after successful conversion": {
+			converter: func(t *testing.T, secret Secret) (string, error) {
 				t.Helper()
 
-				handle.EXPECT().
-					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						*cbErr = cb(context.Background(), secret)
-						*wrappedCallbackCalled = true
-
-						return true
-					}))
-			},
-			converter: func(secret secrets.Secret) (string, error) {
 				return secret.Selector(), nil
 			},
-			assert: func(t *testing.T, cbErr error, wrappedCallbackCalled bool, userCallbackCalled bool) {
+			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				require.True(t, wrappedCallbackCalled)
-				require.True(t, userCallbackCalled)
-				require.NoError(t, cbErr)
+				require.NoError(t, err)
 			},
 		},
-		"returns conversion error": {
-			setup: func(
-				t *testing.T,
-				handle *mocks.SecretHandleMock,
-				cbErr *error,
-				wrappedCallbackCalled *bool,
-			) {
+		"returns last conversion error on context cancellation": {
+			converter: func(t *testing.T, _ Secret) (string, error) {
 				t.Helper()
 
-				handle.EXPECT().
-					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						*cbErr = cb(context.Background(), secret)
-						*wrappedCallbackCalled = true
-
-						return true
-					}))
-			},
-			converter: func(secrets.Secret) (string, error) {
 				return "", assert.AnError
 			},
-			assert: func(t *testing.T, cbErr error, wrappedCallbackCalled bool, userCallbackCalled bool) {
+			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				require.True(t, wrappedCallbackCalled)
-				require.False(t, userCallbackCalled)
-				require.Error(t, cbErr)
-				require.ErrorIs(t, cbErr, secrets.ErrSecretConversionFailed)
-				require.ErrorIs(t, cbErr, assert.AnError)
+				require.Error(t, err)
+				require.ErrorIs(t, err, assert.AnError)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			handle := mocks.NewSecretHandleMock(t)
-			resolver := mocks.NewResolverMock(t)
+			handle := newTestHandle[Secret]()
+			resolver := &testResolver{secretHandle: handle}
 
-			resolver.EXPECT().
-				Secret(
-					mock.Anything,
-					secrets.Reference{Source: "src", Selector: "selector"},
-				).
-				Return(handle, nil)
-
-			var cbErr error
-
-			wrappedCallbackCalled := false
-
-			tc.setup(t, handle, &cbErr, &wrappedCallbackCalled)
-
-			userCallbackCalled := false
-
-			informer, err := secrets.NewSecretInformer(
-				context.Background(),
+			_, err := NewSecretInformer(
+				t.Context(),
 				resolver,
-				secrets.Reference{Source: "src", Selector: "selector"},
-				secrets.InformerOptions[string]{
-					Converter: tc.converter,
-					OnUpdate: func(_ context.Context, got secrets.Secret, value string) error {
-						userCallbackCalled = true
-
-						require.Equal(t, secret, got)
-						require.Equal(t, "selector", value)
-
-						return nil
-					},
-				},
+				Reference{Source: "src", Selector: "selector"},
+				WithConverter(func(secret Secret) (string, error) {
+					return tc.converter(t, secret)
+				}),
 			)
-
 			require.NoError(t, err)
-			require.NotNil(t, informer)
 
-			tc.assert(t, cbErr, wrappedCallbackCalled, userCallbackCalled)
+			_ = handle.emit(t.Context(), secret)
+
+			ctx, cancel := context.WithCancel(t.Context())
+			cancel()
+
+			tc.assert(t, handle.awaitReady(ctx))
 		})
 	}
 }
 
-func TestSecretInformerDoesNotRegisterNilOnUpdate(t *testing.T) {
+func TestSecretInformerRegistersOnUpdateCallback(t *testing.T) {
 	t.Parallel()
 
-	resolver := mocks.NewResolverMock(t)
-	handle := mocks.NewSecretHandleMock(t)
+	secret := types.NewStringSecret("selector", "value")
 
-	resolver.EXPECT().
-		Secret(
-			mock.Anything,
-			secrets.Reference{Source: "src", Selector: "selector"},
-		).
-		Return(handle, nil)
+	for uc, tc := range map[string]struct {
+		converter func(t *testing.T, secret Secret) (string, error)
+		callback  func(t *testing.T, ctx context.Context, secret Secret, value string) error
+		assert    func(t *testing.T, err error, userCallbackCalled bool, informer *SecretInformer[string])
+	}{
+		"calls user callback with converted value": {
+			converter: func(t *testing.T, secret Secret) (string, error) {
+				t.Helper()
 
-	informer, err := secrets.NewSecretInformer(
-		context.Background(),
-		resolver,
-		secrets.Reference{Source: "src", Selector: "selector"},
-		secrets.InformerOptions[string]{
-			Converter: func(secret secrets.Secret) (string, error) {
 				return secret.Selector(), nil
 			},
-		},
-	)
+			callback: func(t *testing.T, _ context.Context, got Secret, value string) error {
+				t.Helper()
 
-	require.NoError(t, err)
-	require.NotNil(t, informer)
+				require.Equal(t, secret, got)
+				require.Equal(t, "selector", value)
+
+				return nil
+			},
+			assert: func(t *testing.T, err error, userCallbackCalled bool, _ *SecretInformer[string]) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.True(t, userCallbackCalled)
+			},
+		},
+		"returns user callback error but keeps converted value": {
+			converter: func(t *testing.T, secret Secret) (string, error) {
+				t.Helper()
+
+				return secret.Selector(), nil
+			},
+			callback: func(t *testing.T, _ context.Context, _ Secret, _ string) error {
+				t.Helper()
+
+				return assert.AnError
+			},
+			assert: func(t *testing.T, err error, userCallbackCalled bool, informer *SecretInformer[string]) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, assert.AnError)
+				require.True(t, userCallbackCalled)
+
+				value, ok := informer.Get()
+				require.True(t, ok)
+				require.Equal(t, "selector", value)
+			},
+		},
+		"returns conversion error and does not call user callback": {
+			converter: func(t *testing.T, _ Secret) (string, error) {
+				t.Helper()
+
+				return "", assert.AnError
+			},
+			callback: func(t *testing.T, _ context.Context, _ Secret, _ string) error {
+				t.Helper()
+
+				return nil
+			},
+			assert: func(t *testing.T, err error, userCallbackCalled bool, informer *SecretInformer[string]) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, assert.AnError)
+				require.False(t, userCallbackCalled)
+
+				_, ok := informer.Get()
+				require.False(t, ok)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			handle := newTestHandle[Secret]()
+			resolver := &testResolver{secretHandle: handle}
+
+			userCallbackCalled := false
+
+			informer, err := NewSecretInformer(
+				t.Context(),
+				resolver,
+				Reference{Source: "src", Selector: "selector"},
+				WithConverter(func(secret Secret) (string, error) {
+					return tc.converter(t, secret)
+				}),
+				WithUpdateCallback(func(ctx context.Context, got Secret, value string) error {
+					userCallbackCalled = true
+
+					return tc.callback(t, ctx, got, value)
+				}),
+			)
+			require.NoError(t, err)
+
+			err = handle.emit(t.Context(), secret)
+
+			tc.assert(t, err, userCallbackCalled, informer)
+		})
+	}
 }
 
 func TestNewCredentialsInformer(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.CredentialsHandleMock)
-		opts   []secrets.CredentialsInformerOptions[string]
-		assert func(t *testing.T, informer *secrets.CredentialsInformer[string], err error)
+		setup  func(t *testing.T, resolver *testResolver, handle *testHandle[Credentials])
+		opts   []CredentialsInformerOption[string]
+		assert func(
+			t *testing.T,
+			informer *CredentialsInformer[string],
+			err error,
+			resolver *testResolver,
+			handle *testHandle[Credentials],
+		)
 	}{
-		"creates informer without options": {
-			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.CredentialsHandleMock) {
+		"creates informer": {
+			opts: []CredentialsInformerOption[string]{
+				WithConverter(func(credentials Credentials) (string, error) {
+					return credentials.Selector(), nil
+				}),
+			},
+			setup: func(t *testing.T, resolver *testResolver, handle *testHandle[Credentials]) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "src", Selector: "selector"},
-					).
-					Return(handle, nil)
+				resolver.credentialsHandle = handle
 			},
-			assert: func(t *testing.T, informer *secrets.CredentialsInformer[string], err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, informer)
-			},
-		},
-		"creates informer with eager mode": {
-			opts: []secrets.CredentialsInformerOptions[string]{
-				{
-					Converter: func(credentials secrets.Credentials) (string, error) {
-						return credentials.Selector(), nil
-					},
-					ResolveMode: secrets.ResolveEager,
-				},
-			},
-			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.CredentialsHandleMock) {
-				t.Helper()
-
-				resolver.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.Anything,
-					).
-					Return(handle, nil)
-			},
-			assert: func(t *testing.T, informer *secrets.CredentialsInformer[string], err error) {
+			assert: func(
+				t *testing.T,
+				informer *CredentialsInformer[string],
+				err error,
+				resolver *testResolver,
+				handle *testHandle[Credentials],
+			) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.NotNil(t, informer)
-			},
-		},
-		"creates informer with lazy mode": {
-			opts: []secrets.CredentialsInformerOptions[string]{
-				{
-					Converter: func(credentials secrets.Credentials) (string, error) {
-						return credentials.Selector(), nil
-					},
-					ResolveMode: secrets.ResolveLazy,
-				},
-			},
-			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.CredentialsHandleMock) {
-				t.Helper()
-
-				resolver.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.Anything,
-					).
-					Return(handle, nil)
-			},
-			assert: func(t *testing.T, informer *secrets.CredentialsInformer[string], err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, informer)
+				require.Equal(t, Reference{Source: "src", Selector: "selector"}, resolver.credentialsRef)
+				require.Len(t, handle.readiness, 1)
+				require.NotNil(t, handle.callback)
 			},
 		},
 		"returns resolver error": {
-			opts: []secrets.CredentialsInformerOptions[string]{
-				{
-					Converter: func(credentials secrets.Credentials) (string, error) {
-						return credentials.Selector(), nil
-					},
-					ResolveMode: secrets.ResolveEager,
-				},
-			},
-			setup: func(t *testing.T, resolver *mocks.ResolverMock, _ *mocks.CredentialsHandleMock) {
+			setup: func(t *testing.T, resolver *testResolver, _ *testHandle[Credentials]) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.Anything,
-					).
-					Return(nil, assert.AnError)
+				resolver.credentialsErr = assert.AnError
 			},
-			assert: func(t *testing.T, informer *secrets.CredentialsInformer[string], err error) {
+			assert: func(
+				t *testing.T,
+				informer *CredentialsInformer[string],
+				err error,
+				_ *testResolver,
+				_ *testHandle[Credentials],
+			) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -600,39 +466,23 @@ func TestNewCredentialsInformer(t *testing.T) {
 				require.Nil(t, informer)
 			},
 		},
-		"returns error if more than one option is provided": {
-			opts: []secrets.CredentialsInformerOptions[string]{
-				{},
-				{},
-			},
-			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.CredentialsHandleMock) {
-				t.Helper()
-			},
-			assert: func(t *testing.T, informer *secrets.CredentialsInformer[string], err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, secrets.ErrTooManyInformerOptions)
-				require.Nil(t, informer)
-			},
-		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			resolver := mocks.NewResolverMock(t)
-			handle := mocks.NewCredentialsHandleMock(t)
+			resolver := &testResolver{}
+			handle := newTestHandle[Credentials]()
 
 			tc.setup(t, resolver, handle)
 
-			informer, err := secrets.NewCredentialsInformer(
-				context.Background(),
+			informer, err := NewCredentialsInformer(
+				t.Context(),
 				resolver,
-				secrets.Reference{Source: "src", Selector: "selector"},
+				Reference{Source: "src", Selector: "selector"},
 				tc.opts...,
 			)
 
-			tc.assert(t, informer, err)
+			tc.assert(t, informer, err, resolver, handle)
 		})
 	}
 }
@@ -643,138 +493,105 @@ func TestCredentialsInformerGet(t *testing.T) {
 	credentials := types.NewCredentials("selector", map[string]any{"client_id": "heimdall"})
 
 	for uc, tc := range map[string]struct {
-		setup     func(t *testing.T, handle *mocks.CredentialsHandleMock)
-		opts      []secrets.CredentialsInformerOptions[string]
-		wantValue string
-		wantOK    bool
-		assert    func(t *testing.T, converterCalls int)
+		opts               []CredentialsInformerOption[string]
+		emit               func(t *testing.T, handle *testHandle[Credentials]) error
+		wantValue          string
+		wantOK             bool
+		wantConverterCalls int
+		wantErr            error
 	}{
-		"returns converted credentials": {
-			setup: func(t *testing.T, handle *mocks.CredentialsHandleMock) {
-				t.Helper()
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(credentials, true)
-			},
-			opts: []secrets.CredentialsInformerOptions[string]{
-				{
-					Converter: func(credentials secrets.Credentials) (string, error) {
-						return credentials.Selector(), nil
-					},
-				},
-			},
-			wantValue: "selector",
-			wantOK:    true,
-			assert: func(t *testing.T, converterCalls int) {
-				t.Helper()
-
-				require.Equal(t, 1, converterCalls)
-			},
-		},
-		"returns false if handle has no value": {
-			setup: func(t *testing.T, handle *mocks.CredentialsHandleMock) {
-				t.Helper()
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(nil, false)
-			},
-			opts: []secrets.CredentialsInformerOptions[string]{
-				{
-					Converter: func(credentials secrets.Credentials) (string, error) {
-						return credentials.Selector(), nil
-					},
-				},
+		"returns false before first successful update": {
+			opts: []CredentialsInformerOption[string]{
+				WithConverter(func(credentials Credentials) (string, error) {
+					return credentials.Selector(), nil
+				}),
 			},
 			wantOK: false,
-			assert: func(t *testing.T, converterCalls int) {
-				t.Helper()
-
-				require.Zero(t, converterCalls)
-			},
 		},
-		"returns false if conversion fails": {
-			setup: func(t *testing.T, handle *mocks.CredentialsHandleMock) {
+		"returns converted last good value": {
+			opts: []CredentialsInformerOption[string]{
+				WithConverter(func(credentials Credentials) (string, error) {
+					return credentials.Selector(), nil
+				}),
+			},
+			emit: func(t *testing.T, handle *testHandle[Credentials]) error {
 				t.Helper()
 
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(credentials, true)
+				return handle.emit(t.Context(), credentials)
 			},
-			opts: []secrets.CredentialsInformerOptions[string]{
-				{
-					Converter: func(secrets.Credentials) (string, error) {
+			wantValue:          "selector",
+			wantOK:             true,
+			wantConverterCalls: 1,
+		},
+		"keeps last good value after failed conversion": {
+			opts: []CredentialsInformerOption[string]{
+				WithConverter(func(credentials Credentials) (string, error) {
+					if credentials.Selector() == "bad" {
 						return "", assert.AnError
-					},
-				},
+					}
+
+					return credentials.Selector(), nil
+				}),
 			},
-			wantOK: false,
-			assert: func(t *testing.T, converterCalls int) {
+			emit: func(t *testing.T, handle *testHandle[Credentials]) error {
 				t.Helper()
 
-				require.Equal(t, 1, converterCalls)
+				if err := handle.emit(t.Context(), credentials); err != nil {
+					return err
+				}
+
+				return handle.emit(
+					t.Context(),
+					types.NewCredentials("bad", map[string]any{"client_id": "heimdall"}),
+				)
 			},
+			wantValue:          "selector",
+			wantOK:             true,
+			wantConverterCalls: 2,
+			wantErr:            assert.AnError,
 		},
-		"returns false if identity converter cannot cast": {
-			setup: func(t *testing.T, handle *mocks.CredentialsHandleMock) {
+		"identity converter cannot cast": {
+			emit: func(t *testing.T, handle *testHandle[Credentials]) error {
 				t.Helper()
 
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(credentials, true)
+				return handle.emit(t.Context(), credentials)
 			},
-			wantOK: false,
-			assert: func(t *testing.T, converterCalls int) {
-				t.Helper()
-
-				require.Zero(t, converterCalls)
-			},
+			wantOK:  false,
+			wantErr: ErrSecretConversionFailed,
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			handle := mocks.NewCredentialsHandleMock(t)
-			resolver := mocks.NewResolverMock(t)
-
-			tc.setup(t, handle)
-
-			resolver.EXPECT().
-				Credentials(
-					mock.Anything,
-					secrets.Reference{Source: "src", Selector: "selector"},
-				).
-				Return(handle, nil)
+			handle := newTestHandle[Credentials]()
+			resolver := &testResolver{credentialsHandle: handle}
 
 			converterCalls := 0
+			opts := wrapCredentialsConverters(tc.opts, &converterCalls)
 
-			opts := append([]secrets.CredentialsInformerOptions[string]{}, tc.opts...)
-
-			if len(opts) == 1 && opts[0].Converter != nil {
-				converter := opts[0].Converter
-
-				opts[0].Converter = func(credentials secrets.Credentials) (string, error) {
-					converterCalls++
-
-					return converter(credentials)
-				}
-			}
-
-			informer, err := secrets.NewCredentialsInformer(
-				context.Background(),
+			informer, err := NewCredentialsInformer(
+				t.Context(),
 				resolver,
-				secrets.Reference{Source: "src", Selector: "selector"},
+				Reference{Source: "src", Selector: "selector"},
 				opts...,
 			)
 			require.NoError(t, err)
 
-			got, ok := informer.Get(context.Background())
+			if tc.emit != nil {
+				err = tc.emit(t, handle)
+				if tc.wantErr != nil {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tc.wantErr)
+				} else {
+					require.NoError(t, err)
+				}
+			}
+
+			got, ok := informer.Get()
 
 			require.Equal(t, tc.wantOK, ok)
 			require.Equal(t, tc.wantValue, got)
-
-			tc.assert(t, converterCalls)
+			require.Equal(t, tc.wantConverterCalls, converterCalls)
 		})
 	}
 }
@@ -783,268 +600,172 @@ func TestCredentialsInformerGetUsesIdentityConverter(t *testing.T) {
 	t.Parallel()
 
 	credentials := types.NewCredentials("selector", map[string]any{"client_id": "heimdall"})
+	handle := newTestHandle[Credentials]()
+	resolver := &testResolver{credentialsHandle: handle}
 
-	handle := mocks.NewCredentialsHandleMock(t)
-	resolver := mocks.NewResolverMock(t)
-
-	resolver.EXPECT().
-		Credentials(
-			mock.Anything,
-			secrets.Reference{Source: "src", Selector: "selector"},
-		).
-		Return(handle, nil)
-
-	handle.EXPECT().
-		Get(mock.Anything).
-		Return(credentials, true)
-
-	informer, err := secrets.NewCredentialsInformer[secrets.Credentials](
-		context.Background(),
+	informer, err := NewCredentialsInformer[Credentials](
+		t.Context(),
 		resolver,
-		secrets.Reference{Source: "src", Selector: "selector"},
+		Reference{Source: "src", Selector: "selector"},
 	)
 	require.NoError(t, err)
 
-	got, ok := informer.Get(context.Background())
+	require.NoError(t, handle.emit(t.Context(), credentials))
+
+	got, ok := informer.Get()
 
 	require.True(t, ok)
 	require.Equal(t, credentials, got)
 }
 
-func TestCredentialsInformerRegistersOnUpdate(t *testing.T) {
+func TestCredentialsInformerAwaitReady(t *testing.T) {
 	t.Parallel()
 
 	credentials := types.NewCredentials("selector", map[string]any{"client_id": "heimdall"})
 
 	for uc, tc := range map[string]struct {
-		setup     func(t *testing.T, handle *mocks.CredentialsHandleMock, cbErr *error, wrappedCallbackCalled *bool)
-		converter secrets.CredentialsConverter[string]
-		assert    func(t *testing.T, cbErr error, wrappedCallbackCalled bool, userCallbackCalled bool)
+		converter func(t *testing.T, credentials Credentials) (string, error)
+		assert    func(t *testing.T, err error)
 	}{
-		"converts credentials and calls callback": {
-			setup: func(
-				t *testing.T,
-				handle *mocks.CredentialsHandleMock,
-				cbErr *error,
-				wrappedCallbackCalled *bool,
-			) {
+		"returns nil after successful conversion": {
+			converter: func(t *testing.T, credentials Credentials) (string, error) {
 				t.Helper()
 
-				handle.EXPECT().
-					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
-						*cbErr = cb(context.Background(), credentials)
-						*wrappedCallbackCalled = true
-
-						return true
-					}))
-			},
-			converter: func(credentials secrets.Credentials) (string, error) {
 				return credentials.Selector(), nil
 			},
-			assert: func(t *testing.T, cbErr error, wrappedCallbackCalled bool, userCallbackCalled bool) {
+			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				require.True(t, wrappedCallbackCalled)
-				require.True(t, userCallbackCalled)
-				require.NoError(t, cbErr)
+				require.NoError(t, err)
 			},
 		},
-		"returns conversion error": {
-			setup: func(
-				t *testing.T,
-				handle *mocks.CredentialsHandleMock,
-				cbErr *error,
-				wrappedCallbackCalled *bool,
-			) {
+		"returns last conversion error on context cancellation": {
+			converter: func(t *testing.T, _ Credentials) (string, error) {
 				t.Helper()
 
-				handle.EXPECT().
-					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
-						*cbErr = cb(context.Background(), credentials)
-						*wrappedCallbackCalled = true
-
-						return true
-					}))
-			},
-			converter: func(secrets.Credentials) (string, error) {
 				return "", assert.AnError
 			},
-			assert: func(t *testing.T, cbErr error, wrappedCallbackCalled bool, userCallbackCalled bool) {
+			assert: func(t *testing.T, err error) {
 				t.Helper()
 
-				require.True(t, wrappedCallbackCalled)
-				require.False(t, userCallbackCalled)
-				require.Error(t, cbErr)
-				require.ErrorIs(t, cbErr, assert.AnError)
+				require.Error(t, err)
+				require.ErrorIs(t, err, assert.AnError)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			handle := mocks.NewCredentialsHandleMock(t)
-			resolver := mocks.NewResolverMock(t)
+			handle := newTestHandle[Credentials]()
+			resolver := &testResolver{credentialsHandle: handle}
 
-			resolver.EXPECT().
-				Credentials(
-					mock.Anything,
-					secrets.Reference{Source: "src", Selector: "selector"},
-				).
-				Return(handle, nil)
-
-			var cbErr error
-
-			wrappedCallbackCalled := false
-
-			tc.setup(t, handle, &cbErr, &wrappedCallbackCalled)
-
-			userCallbackCalled := false
-
-			informer, err := secrets.NewCredentialsInformer(
-				context.Background(),
+			_, err := NewCredentialsInformer(
+				t.Context(),
 				resolver,
-				secrets.Reference{Source: "src", Selector: "selector"},
-				secrets.CredentialsInformerOptions[string]{
-					Converter: tc.converter,
-					OnUpdate: func(_ context.Context, got secrets.Credentials, value string) error {
-						userCallbackCalled = true
-
-						require.Equal(t, credentials, got)
-						require.Equal(t, "selector", value)
-
-						return nil
-					},
-				},
+				Reference{Source: "src", Selector: "selector"},
+				WithConverter(func(credentials Credentials) (string, error) {
+					return tc.converter(t, credentials)
+				}),
 			)
-
 			require.NoError(t, err)
-			require.NotNil(t, informer)
 
-			tc.assert(t, cbErr, wrappedCallbackCalled, userCallbackCalled)
+			_ = handle.emit(t.Context(), credentials)
+
+			ctx, cancel := context.WithCancel(t.Context())
+			cancel()
+
+			tc.assert(t, handle.awaitReady(ctx))
 		})
 	}
 }
 
-func TestCredentialsInformerDoesNotRegisterNilOnUpdate(t *testing.T) {
+func TestCredentialsInformerRegistersOnUpdateCallback(t *testing.T) {
 	t.Parallel()
 
-	resolver := mocks.NewResolverMock(t)
-	handle := mocks.NewCredentialsHandleMock(t)
+	credentials := types.NewCredentials("selector", map[string]any{"client_id": "heimdall"})
+	handle := newTestHandle[Credentials]()
+	resolver := &testResolver{credentialsHandle: handle}
 
-	resolver.EXPECT().
-		Credentials(
-			mock.Anything,
-			secrets.Reference{Source: "src", Selector: "selector"},
-		).
-		Return(handle, nil)
+	userCallbackCalled := false
 
-	informer, err := secrets.NewCredentialsInformer(
-		context.Background(),
+	informer, err := NewCredentialsInformer(
+		t.Context(),
 		resolver,
-		secrets.Reference{Source: "src", Selector: "selector"},
-		secrets.CredentialsInformerOptions[string]{
-			Converter: func(credentials secrets.Credentials) (string, error) {
-				return credentials.Selector(), nil
-			},
-		},
+		Reference{Source: "src", Selector: "selector"},
+		WithConverter(func(credentials Credentials) (string, error) {
+			return credentials.Selector(), nil
+		}),
+		WithUpdateCallback(func(_ context.Context, got Credentials, value string) error {
+			userCallbackCalled = true
+
+			require.Equal(t, credentials, got)
+			require.Equal(t, "selector", value)
+
+			return nil
+		}),
 	)
 
 	require.NoError(t, err)
 	require.NotNil(t, informer)
+
+	require.NoError(t, handle.emit(t.Context(), credentials))
+	require.True(t, userCallbackCalled)
 }
 
 func TestNewCertificateBundleInformer(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.CertificateBundleHandleMock)
-		opts   []secrets.CertificateBundleInformerOptions
-		assert func(t *testing.T, informer *secrets.CertificateBundleInformer, err error)
+		setup  func(t *testing.T, resolver *testResolver, handle *testHandle[CertificateBundle])
+		opts   []CertificateBundleInformerOption[string]
+		assert func(
+			t *testing.T,
+			informer *CertificateBundleInformer[string],
+			err error,
+			resolver *testResolver,
+			handle *testHandle[CertificateBundle],
+		)
 	}{
-		"creates informer without options": {
-			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.CertificateBundleHandleMock) {
+		"creates informer": {
+			opts: []CertificateBundleInformerOption[string]{
+				WithConverter(func(bundle CertificateBundle) (string, error) {
+					return bundle.Selector(), nil
+				}),
+			},
+			setup: func(t *testing.T, resolver *testResolver, handle *testHandle[CertificateBundle]) {
 				t.Helper()
 
-				resolver.EXPECT().
-					CertificateBundle(
-						mock.Anything,
-						secrets.Reference{Source: "src", Selector: "selector"},
-					).
-					Return(handle, nil)
+				resolver.certificateBundleHandle = handle
 			},
-			assert: func(t *testing.T, informer *secrets.CertificateBundleInformer, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, informer)
-			},
-		},
-		"creates informer with eager mode": {
-			opts: []secrets.CertificateBundleInformerOptions{
-				{
-					ResolveMode: secrets.ResolveEager,
-				},
-			},
-			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.CertificateBundleHandleMock) {
-				t.Helper()
-
-				resolver.EXPECT().
-					CertificateBundle(
-						mock.Anything,
-						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.Anything,
-					).
-					Return(handle, nil)
-			},
-			assert: func(t *testing.T, informer *secrets.CertificateBundleInformer, err error) {
+			assert: func(
+				t *testing.T,
+				informer *CertificateBundleInformer[string],
+				err error,
+				resolver *testResolver,
+				handle *testHandle[CertificateBundle],
+			) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.NotNil(t, informer)
-			},
-		},
-		"creates informer with lazy mode": {
-			opts: []secrets.CertificateBundleInformerOptions{
-				{
-					ResolveMode: secrets.ResolveLazy,
-				},
-			},
-			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.CertificateBundleHandleMock) {
-				t.Helper()
-
-				resolver.EXPECT().
-					CertificateBundle(
-						mock.Anything,
-						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.Anything,
-					).
-					Return(handle, nil)
-			},
-			assert: func(t *testing.T, informer *secrets.CertificateBundleInformer, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, informer)
+				require.Equal(t, Reference{Source: "src", Selector: "selector"}, resolver.certificateBundleRef)
+				require.Len(t, handle.readiness, 1)
+				require.NotNil(t, handle.callback)
 			},
 		},
 		"returns resolver error": {
-			opts: []secrets.CertificateBundleInformerOptions{
-				{
-					ResolveMode: secrets.ResolveEager,
-				},
-			},
-			setup: func(t *testing.T, resolver *mocks.ResolverMock, _ *mocks.CertificateBundleHandleMock) {
+			setup: func(t *testing.T, resolver *testResolver, _ *testHandle[CertificateBundle]) {
 				t.Helper()
 
-				resolver.EXPECT().
-					CertificateBundle(
-						mock.Anything,
-						secrets.Reference{Source: "src", Selector: "selector"},
-						mock.Anything,
-					).
-					Return(nil, assert.AnError)
+				resolver.certificateBundleErr = assert.AnError
 			},
-			assert: func(t *testing.T, informer *secrets.CertificateBundleInformer, err error) {
+			assert: func(
+				t *testing.T,
+				informer *CertificateBundleInformer[string],
+				err error,
+				_ *testResolver,
+				_ *testHandle[CertificateBundle],
+			) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -1052,39 +773,23 @@ func TestNewCertificateBundleInformer(t *testing.T) {
 				require.Nil(t, informer)
 			},
 		},
-		"returns error if more than one option is provided": {
-			opts: []secrets.CertificateBundleInformerOptions{
-				{},
-				{},
-			},
-			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.CertificateBundleHandleMock) {
-				t.Helper()
-			},
-			assert: func(t *testing.T, informer *secrets.CertificateBundleInformer, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, secrets.ErrTooManyInformerOptions)
-				require.Nil(t, informer)
-			},
-		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			resolver := mocks.NewResolverMock(t)
-			handle := mocks.NewCertificateBundleHandleMock(t)
+			resolver := &testResolver{}
+			handle := newTestHandle[CertificateBundle]()
 
 			tc.setup(t, resolver, handle)
 
-			informer, err := secrets.NewCertificateBundleInformer(
-				context.Background(),
+			informer, err := NewCertificateBundleInformer(
+				t.Context(),
 				resolver,
-				secrets.Reference{Source: "src", Selector: "selector"},
+				Reference{Source: "src", Selector: "selector"},
 				tc.opts...,
 			)
 
-			tc.assert(t, informer, err)
+			tc.assert(t, informer, err, resolver, handle)
 		})
 	}
 }
@@ -1092,143 +797,414 @@ func TestNewCertificateBundleInformer(t *testing.T) {
 func TestCertificateBundleInformerGet(t *testing.T) {
 	t.Parallel()
 
-	bundle := types.NewCertificateBundle("selector", nil)
+	certificate := &x509.Certificate{}
+	bundle := types.NewCertificateBundle("selector", []*x509.Certificate{certificate})
 
 	for uc, tc := range map[string]struct {
-		setup   func(t *testing.T, handle *mocks.CertificateBundleHandleMock)
-		wantOK  bool
-		wantNil bool
+		opts               []CertificateBundleInformerOption[string]
+		emit               func(t *testing.T, handle *testHandle[CertificateBundle]) error
+		wantValue          string
+		wantOK             bool
+		wantConverterCalls int
+		wantErr            error
 	}{
-		"returns cert pool": {
-			setup: func(t *testing.T, handle *mocks.CertificateBundleHandleMock) {
-				t.Helper()
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(bundle, true)
+		"returns false before first successful update": {
+			opts: []CertificateBundleInformerOption[string]{
+				WithConverter(func(bundle CertificateBundle) (string, error) {
+					return bundle.Selector(), nil
+				}),
 			},
-			wantOK: true,
+			wantOK: false,
 		},
-		"returns false if handle has no value": {
-			setup: func(t *testing.T, handle *mocks.CertificateBundleHandleMock) {
+		"returns converted last good value": {
+			opts: []CertificateBundleInformerOption[string]{
+				WithConverter(func(bundle CertificateBundle) (string, error) {
+					return bundle.Selector(), nil
+				}),
+			},
+			emit: func(t *testing.T, handle *testHandle[CertificateBundle]) error {
 				t.Helper()
 
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(nil, false)
+				return handle.emit(t.Context(), bundle)
+			},
+			wantValue:          "selector",
+			wantOK:             true,
+			wantConverterCalls: 1,
+		},
+		"keeps last good value after failed conversion": {
+			opts: []CertificateBundleInformerOption[string]{
+				WithConverter(func(bundle CertificateBundle) (string, error) {
+					if bundle.Selector() == "bad" {
+						return "", assert.AnError
+					}
+
+					return bundle.Selector(), nil
+				}),
+			},
+			emit: func(t *testing.T, handle *testHandle[CertificateBundle]) error {
+				t.Helper()
+
+				if err := handle.emit(t.Context(), bundle); err != nil {
+					return err
+				}
+
+				return handle.emit(
+					t.Context(),
+					types.NewCertificateBundle("bad", []*x509.Certificate{certificate}),
+				)
+			},
+			wantValue:          "selector",
+			wantOK:             true,
+			wantConverterCalls: 2,
+			wantErr:            assert.AnError,
+		},
+		"identity converter cannot cast": {
+			emit: func(t *testing.T, handle *testHandle[CertificateBundle]) error {
+				t.Helper()
+
+				return handle.emit(t.Context(), bundle)
 			},
 			wantOK:  false,
-			wantNil: true,
+			wantErr: ErrSecretConversionFailed,
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			handle := mocks.NewCertificateBundleHandleMock(t)
-			resolver := mocks.NewResolverMock(t)
+			handle := newTestHandle[CertificateBundle]()
+			resolver := &testResolver{certificateBundleHandle: handle}
 
-			tc.setup(t, handle)
+			converterCalls := 0
+			opts := wrapCertificateBundleConverters(tc.opts, &converterCalls)
 
-			resolver.EXPECT().
-				CertificateBundle(
-					mock.Anything,
-					secrets.Reference{Source: "src", Selector: "selector"},
-				).
-				Return(handle, nil)
-
-			informer, err := secrets.NewCertificateBundleInformer(
-				context.Background(),
+			informer, err := NewCertificateBundleInformer(
+				t.Context(),
 				resolver,
-				secrets.Reference{Source: "src", Selector: "selector"},
+				Reference{Source: "src", Selector: "selector"},
+				opts...,
 			)
 			require.NoError(t, err)
 
-			got, ok := informer.Get(context.Background())
-
-			require.Equal(t, tc.wantOK, ok)
-
-			if tc.wantNil {
-				require.Nil(t, got)
-
-				return
+			if tc.emit != nil {
+				err = tc.emit(t, handle)
+				if tc.wantErr != nil {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tc.wantErr)
+				} else {
+					require.NoError(t, err)
+				}
 			}
 
-			require.NotNil(t, got)
+			got, ok := informer.Get()
+
+			require.Equal(t, tc.wantOK, ok)
+			require.Equal(t, tc.wantValue, got)
+			require.Equal(t, tc.wantConverterCalls, converterCalls)
 		})
 	}
 }
 
-func TestCertificateBundleInformerRegistersOnUpdate(t *testing.T) {
+func TestCertificateBundleInformerGetUsesIdentityConverter(t *testing.T) {
+	t.Parallel()
+
+	bundle := types.NewCertificateBundle("selector", nil)
+	handle := newTestHandle[CertificateBundle]()
+	resolver := &testResolver{certificateBundleHandle: handle}
+
+	informer, err := NewCertificateBundleInformer[CertificateBundle](
+		t.Context(),
+		resolver,
+		Reference{Source: "src", Selector: "selector"},
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, handle.emit(t.Context(), bundle))
+
+	got, ok := informer.Get()
+
+	require.True(t, ok)
+	require.Equal(t, bundle, got)
+}
+
+func TestCertificateBundleInformerAwaitReady(t *testing.T) {
 	t.Parallel()
 
 	bundle := types.NewCertificateBundle("selector", nil)
 
-	handle := mocks.NewCertificateBundleHandleMock(t)
-	resolver := mocks.NewResolverMock(t)
+	for uc, tc := range map[string]struct {
+		converter func(t *testing.T, bundle CertificateBundle) (string, error)
+		assert    func(t *testing.T, err error)
+	}{
+		"returns nil after successful conversion": {
+			converter: func(t *testing.T, bundle CertificateBundle) (string, error) {
+				t.Helper()
 
-	resolver.EXPECT().
-		CertificateBundle(
-			mock.Anything,
-			secrets.Reference{Source: "src", Selector: "selector"},
-		).
-		Return(handle, nil)
+				return bundle.Selector(), nil
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
 
-	var cbErr error
+				require.NoError(t, err)
+			},
+		},
+		"returns last conversion error on context cancellation": {
+			converter: func(t *testing.T, _ CertificateBundle) (string, error) {
+				t.Helper()
 
-	wrappedCallbackCalled := false
+				return "", assert.AnError
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
 
-	handle.EXPECT().
-		OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.CertificateBundle]) bool {
-			cbErr = cb(context.Background(), bundle)
-			wrappedCallbackCalled = true
+				require.Error(t, err)
+				require.ErrorIs(t, err, assert.AnError)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
 
-			return true
-		}))
+			handle := newTestHandle[CertificateBundle]()
+			resolver := &testResolver{certificateBundleHandle: handle}
+
+			_, err := NewCertificateBundleInformer(
+				t.Context(),
+				resolver,
+				Reference{Source: "src", Selector: "selector"},
+				WithConverter(func(bundle CertificateBundle) (string, error) {
+					return tc.converter(t, bundle)
+				}),
+			)
+			require.NoError(t, err)
+
+			_ = handle.emit(t.Context(), bundle)
+
+			ctx, cancel := context.WithCancel(t.Context())
+			cancel()
+
+			tc.assert(t, handle.awaitReady(ctx))
+		})
+	}
+}
+
+func TestCertificateBundleInformerRegistersOnUpdateCallback(t *testing.T) {
+	t.Parallel()
+
+	bundle := types.NewCertificateBundle("selector", nil)
+	handle := newTestHandle[CertificateBundle]()
+	resolver := &testResolver{certificateBundleHandle: handle}
 
 	userCallbackCalled := false
 
-	informer, err := secrets.NewCertificateBundleInformer(
-		context.Background(),
+	informer, err := NewCertificateBundleInformer(
+		t.Context(),
 		resolver,
-		secrets.Reference{Source: "src", Selector: "selector"},
-		secrets.CertificateBundleInformerOptions{
-			OnUpdate: func(_ context.Context, got secrets.CertificateBundle, pool *x509.CertPool) error {
-				userCallbackCalled = true
+		Reference{Source: "src", Selector: "selector"},
+		WithConverter(func(bundle CertificateBundle) (string, error) {
+			return bundle.Selector(), nil
+		}),
+		WithUpdateCallback(func(_ context.Context, got CertificateBundle, value string) error {
+			userCallbackCalled = true
 
-				require.Equal(t, bundle, got)
-				require.NotNil(t, pool)
+			require.Equal(t, bundle, got)
+			require.Equal(t, "selector", value)
 
-				return nil
-			},
-		},
+			return nil
+		}),
 	)
 
 	require.NoError(t, err)
 	require.NotNil(t, informer)
-	require.True(t, wrappedCallbackCalled)
+
+	require.NoError(t, handle.emit(t.Context(), bundle))
 	require.True(t, userCallbackCalled)
-	require.NoError(t, cbErr)
 }
 
-func TestCertificateBundleInformerDoesNotRegisterNilOnUpdate(t *testing.T) {
-	t.Parallel()
+func wrapSecretConverters(
+	opts []SecretInformerOption[string],
+	calls *int,
+) []SecretInformerOption[string] {
+	wrapped := append([]SecretInformerOption[string]{}, opts...)
 
-	resolver := mocks.NewResolverMock(t)
-	handle := mocks.NewCertificateBundleHandleMock(t)
+	for idx, opt := range opts {
+		var cfg informerOptions[Secret, string]
+		opt(&cfg)
 
-	resolver.EXPECT().
-		CertificateBundle(
-			mock.Anything,
-			secrets.Reference{Source: "src", Selector: "selector"},
-		).
-		Return(handle, nil)
+		if cfg.converter == nil {
+			continue
+		}
 
-	informer, err := secrets.NewCertificateBundleInformer(
-		context.Background(),
-		resolver,
-		secrets.Reference{Source: "src", Selector: "selector"},
-	)
+		converter := cfg.converter
+		wrapped[idx] = WithConverter(func(secret Secret) (string, error) {
+			*calls++
 
-	require.NoError(t, err)
-	require.NotNil(t, informer)
+			return converter(secret)
+		})
+	}
+
+	return wrapped
 }
+
+func wrapCredentialsConverters(
+	opts []CredentialsInformerOption[string],
+	calls *int,
+) []CredentialsInformerOption[string] {
+	wrapped := append([]CredentialsInformerOption[string]{}, opts...)
+
+	for idx, opt := range opts {
+		var cfg informerOptions[Credentials, string]
+		opt(&cfg)
+
+		if cfg.converter == nil {
+			continue
+		}
+
+		converter := cfg.converter
+		wrapped[idx] = WithConverter(func(credentials Credentials) (string, error) {
+			*calls++
+
+			return converter(credentials)
+		})
+	}
+
+	return wrapped
+}
+
+func wrapCertificateBundleConverters(
+	opts []CertificateBundleInformerOption[string],
+	calls *int,
+) []CertificateBundleInformerOption[string] {
+	wrapped := append([]CertificateBundleInformerOption[string]{}, opts...)
+
+	for idx, opt := range opts {
+		var cfg informerOptions[CertificateBundle, string]
+		opt(&cfg)
+
+		if cfg.converter == nil {
+			continue
+		}
+
+		converter := cfg.converter
+		wrapped[idx] = WithConverter(func(bundle CertificateBundle) (string, error) {
+			*calls++
+
+			return converter(bundle)
+		})
+	}
+
+	return wrapped
+}
+
+type testResolver struct {
+	secretHandle SecretHandle
+	secretErr    error
+	secretRef    Reference
+
+	credentialsHandle CredentialsHandle
+	credentialsErr    error
+	credentialsRef    Reference
+
+	certificateBundleHandle CertificateBundleHandle
+	certificateBundleErr    error
+	certificateBundleRef    Reference
+}
+
+func (r *testResolver) Secret(
+	_ context.Context,
+	ref Reference,
+) (SecretHandle, error) {
+	r.secretRef = ref
+
+	if r.secretErr != nil {
+		return nil, r.secretErr
+	}
+
+	return r.secretHandle, nil
+}
+
+func (r *testResolver) SecretSet(
+	context.Context,
+	Reference,
+) (SecretSetHandle, error) {
+	panic("not implemented")
+}
+
+func (r *testResolver) Credentials(
+	_ context.Context,
+	ref Reference,
+) (CredentialsHandle, error) {
+	r.credentialsRef = ref
+
+	if r.credentialsErr != nil {
+		return nil, r.credentialsErr
+	}
+
+	return r.credentialsHandle, nil
+}
+
+func (r *testResolver) CertificateBundle(
+	_ context.Context,
+	ref Reference,
+) (CertificateBundleHandle, error) {
+	r.certificateBundleRef = ref
+
+	if r.certificateBundleErr != nil {
+		return nil, r.certificateBundleErr
+	}
+
+	return r.certificateBundleHandle, nil
+}
+
+type testHandle[T any] struct {
+	value T
+	ok    bool
+
+	callback  UpdateFunc[T]
+	readiness []func(context.Context) error
+}
+
+func newTestHandle[T any]() *testHandle[T] {
+	return &testHandle[T]{}
+}
+
+func (h *testHandle[T]) Get() (T, bool) {
+	return h.value, h.ok
+}
+
+func (h *testHandle[T]) OnUpdate(callback UpdateFunc[T]) {
+	h.callback = callback
+}
+
+func (h *testHandle[T]) registerReadiness(await func(context.Context) error) {
+	h.readiness = append(h.readiness, await)
+}
+
+func (h *testHandle[T]) emit(ctx context.Context, value T) error {
+	h.value = value
+	h.ok = true
+
+	if h.callback == nil {
+		return nil
+	}
+
+	return h.callback(ctx, value)
+}
+
+func (h *testHandle[T]) awaitReady(ctx context.Context) error {
+	for _, await := range h.readiness {
+		if err := await(ctx); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+var (
+	_ Resolver                = (*testResolver)(nil)
+	_ SecretHandle            = (*testHandle[Secret])(nil)
+	_ SecretSetHandle         = (*testHandle[[]Secret])(nil)
+	_ CredentialsHandle       = (*testHandle[Credentials])(nil)
+	_ CertificateBundleHandle = (*testHandle[CertificateBundle])(nil)
+	_ readinessRegistrar      = (*testHandle[Secret])(nil)
+)

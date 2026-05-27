@@ -5,8 +5,6 @@
 package mocks
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/secrets"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -39,8 +37,8 @@ func (_m *SecretSetHandleMock) EXPECT() *SecretSetHandleMock_Expecter {
 }
 
 // Get provides a mock function for the type SecretSetHandleMock
-func (_mock *SecretSetHandleMock) Get(ctx context.Context) ([]secrets.Secret, bool) {
-	ret := _mock.Called(ctx)
+func (_mock *SecretSetHandleMock) Get() ([]secrets.Secret, bool) {
+	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
@@ -48,18 +46,18 @@ func (_mock *SecretSetHandleMock) Get(ctx context.Context) ([]secrets.Secret, bo
 
 	var r0 []secrets.Secret
 	var r1 bool
-	if returnFunc, ok := ret.Get(0).(func(context.Context) ([]secrets.Secret, bool)); ok {
-		return returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func() ([]secrets.Secret, bool)); ok {
+		return returnFunc()
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) []secrets.Secret); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func() []secrets.Secret); ok {
+		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).([]secrets.Secret)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) bool); ok {
-		r1 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(1).(func() bool); ok {
+		r1 = returnFunc()
 	} else {
 		r1 = ret.Get(1).(bool)
 	}
@@ -72,20 +70,13 @@ type SecretSetHandleMock_Get_Call struct {
 }
 
 // Get is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *SecretSetHandleMock_Expecter) Get(ctx interface{}) *SecretSetHandleMock_Get_Call {
-	return &SecretSetHandleMock_Get_Call{Call: _e.mock.On("Get", ctx)}
+func (_e *SecretSetHandleMock_Expecter) Get() *SecretSetHandleMock_Get_Call {
+	return &SecretSetHandleMock_Get_Call{Call: _e.mock.On("Get")}
 }
 
-func (_c *SecretSetHandleMock_Get_Call) Run(run func(ctx context.Context)) *SecretSetHandleMock_Get_Call {
+func (_c *SecretSetHandleMock_Get_Call) Run(run func()) *SecretSetHandleMock_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
+		run()
 	})
 	return _c
 }
@@ -95,14 +86,14 @@ func (_c *SecretSetHandleMock_Get_Call) Return(vs []secrets.Secret, b bool) *Sec
 	return _c
 }
 
-func (_c *SecretSetHandleMock_Get_Call) RunAndReturn(run func(ctx context.Context) ([]secrets.Secret, bool)) *SecretSetHandleMock_Get_Call {
+func (_c *SecretSetHandleMock_Get_Call) RunAndReturn(run func() ([]secrets.Secret, bool)) *SecretSetHandleMock_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // OnUpdate provides a mock function for the type SecretSetHandleMock
-func (_mock *SecretSetHandleMock) OnUpdate(updateFunc secrets.UpdateFunc[[]secrets.Secret]) {
-	_mock.Called(updateFunc)
+func (_mock *SecretSetHandleMock) OnUpdate(callback secrets.UpdateFunc[[]secrets.Secret]) {
+	_mock.Called(callback)
 	return
 }
 
@@ -112,12 +103,12 @@ type SecretSetHandleMock_OnUpdate_Call struct {
 }
 
 // OnUpdate is a helper method to define mock.On call
-//   - updateFunc secrets.UpdateFunc[[]secrets.Secret]
-func (_e *SecretSetHandleMock_Expecter) OnUpdate(updateFunc interface{}) *SecretSetHandleMock_OnUpdate_Call {
-	return &SecretSetHandleMock_OnUpdate_Call{Call: _e.mock.On("OnUpdate", updateFunc)}
+//   - callback secrets.UpdateFunc[[]secrets.Secret]
+func (_e *SecretSetHandleMock_Expecter) OnUpdate(callback interface{}) *SecretSetHandleMock_OnUpdate_Call {
+	return &SecretSetHandleMock_OnUpdate_Call{Call: _e.mock.On("OnUpdate", callback)}
 }
 
-func (_c *SecretSetHandleMock_OnUpdate_Call) Run(run func(updateFunc secrets.UpdateFunc[[]secrets.Secret])) *SecretSetHandleMock_OnUpdate_Call {
+func (_c *SecretSetHandleMock_OnUpdate_Call) Run(run func(callback secrets.UpdateFunc[[]secrets.Secret])) *SecretSetHandleMock_OnUpdate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 secrets.UpdateFunc[[]secrets.Secret]
 		if args[0] != nil {
@@ -135,7 +126,7 @@ func (_c *SecretSetHandleMock_OnUpdate_Call) Return() *SecretSetHandleMock_OnUpd
 	return _c
 }
 
-func (_c *SecretSetHandleMock_OnUpdate_Call) RunAndReturn(run func(updateFunc secrets.UpdateFunc[[]secrets.Secret])) *SecretSetHandleMock_OnUpdate_Call {
+func (_c *SecretSetHandleMock_OnUpdate_Call) RunAndReturn(run func(callback secrets.UpdateFunc[[]secrets.Secret])) *SecretSetHandleMock_OnUpdate_Call {
 	_c.Run(run)
 	return _c
 }

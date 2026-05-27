@@ -48,19 +48,13 @@ func applyScopeOptions(opts ...ScopeOption) scopeOptions {
 	return resolved
 }
 
-func applyResolveOptions(opts ...ResolveOption) resolveOptions {
-	resolved := resolveOptions{
-		mode: ResolveLazy,
-	}
+type resolverState int8
 
-	for _, opt := range opts {
-		if opt != nil {
-			opt(&resolved)
-		}
-	}
-
-	return resolved
-}
+const (
+	resolverStateInitial resolverState = iota
+	resolverStateStarted
+	resolverStateStopped
+)
 
 type resolver struct {
 	logger zerolog.Logger
@@ -75,6 +69,9 @@ type resolver struct {
 	secretSetBindings         map[bindingKey]*leasedBinding[[]Secret]
 	credentialsBindings       map[bindingKey]*leasedBinding[Credentials]
 	certificateBundleBindings map[bindingKey]*leasedBinding[CertificateBundle]
+
+	state        resolverState
+	pendingTasks []task.Task
 }
 
 func newResolver(
@@ -106,7 +103,32 @@ func newResolver(
 	return res, nil
 }
 
+func (r *resolver) Start() {
+	r.mu.Lock()
+
+	if r.state == resolverStateStopped {
+		r.mu.Unlock()
+
+		return
+	}
+
+	r.state = resolverStateStarted
+	tasks := append([]task.Task(nil), r.pendingTasks...)
+	r.pendingTasks = nil
+
+	r.mu.Unlock()
+
+	for _, tsk := range tasks {
+		r.executor.Schedule(tsk)
+	}
+}
+
 func (r *resolver) Stop() {
+	r.mu.Lock()
+	r.state = resolverStateStopped
+	r.pendingTasks = nil
+	r.mu.Unlock()
+
 	r.appScope.Release()
 	r.stopBindings()
 	r.executor.Stop()
@@ -122,6 +144,10 @@ func (r *resolver) ResolveCredentials(ctx context.Context, ref Reference) (Crede
 
 func (r *resolver) ResolveCertificateBundle(ctx context.Context, ref Reference) (CertificateBundle, error) {
 	return r.resolveCertificateBundle(ctx, internalRef(ref))
+}
+
+func (r *resolver) AwaitReady(ctx context.Context) error {
+	return r.appScope.AwaitReady(ctx)
 }
 
 func (r *resolver) globalResolver() Resolver {
@@ -141,14 +167,12 @@ func (r *resolver) scopedResolver(id string, opts ...ScopeOption) ScopedResolver
 func (r *resolver) secretBinding(
 	ctx context.Context,
 	reference scopedReference,
-	opts ...ResolveOption,
 ) (*binding[Secret], bindingKey, error) {
 	key, err := r.bindingKey(reference, bindingKindSecret)
 	if err != nil {
 		return nil, bindingKey{}, err
 	}
 
-	cfg := applyResolveOptions(opts...)
 	created := false
 
 	r.mu.Lock()
@@ -170,12 +194,10 @@ func (r *resolver) secretBinding(
 
 	r.mu.Unlock()
 
-	if created || cfg.mode == ResolveEager {
-		if err = entry.resolveInitial(ctx, r.executor, cfg.mode); err != nil {
-			r.releaseBinding(key, 1)
-
-			return nil, bindingKey{}, err
-		}
+	if created {
+		// Schedule an initial cached resolve for newly created bindings.
+		// Source events schedule the binding itself and therefore force a refresh.
+		r.scheduleResolve(entry)
 	}
 
 	return bdg, key, nil
@@ -184,14 +206,12 @@ func (r *resolver) secretBinding(
 func (r *resolver) secretSetBinding(
 	ctx context.Context,
 	reference scopedReference,
-	opts ...ResolveOption,
 ) (*binding[[]Secret], bindingKey, error) {
 	key, err := r.bindingKey(reference, bindingKindSecretSet)
 	if err != nil {
 		return nil, bindingKey{}, err
 	}
 
-	cfg := applyResolveOptions(opts...)
 	created := false
 
 	r.mu.Lock()
@@ -213,12 +233,10 @@ func (r *resolver) secretSetBinding(
 
 	r.mu.Unlock()
 
-	if created || cfg.mode == ResolveEager {
-		if err = entry.resolveInitial(ctx, r.executor, cfg.mode); err != nil {
-			r.releaseBinding(key, 1)
-
-			return nil, bindingKey{}, err
-		}
+	if created {
+		// Schedule an initial cached resolve for newly created bindings.
+		// Source events schedule the binding itself and therefore force a refresh.
+		r.scheduleResolve(entry)
 	}
 
 	return bdg, key, nil
@@ -227,14 +245,12 @@ func (r *resolver) secretSetBinding(
 func (r *resolver) credentialsBinding(
 	ctx context.Context,
 	reference scopedReference,
-	opts ...ResolveOption,
 ) (*binding[Credentials], bindingKey, error) {
 	key, err := r.bindingKey(reference, bindingKindCredentials)
 	if err != nil {
 		return nil, bindingKey{}, err
 	}
 
-	cfg := applyResolveOptions(opts...)
 	created := false
 
 	r.mu.Lock()
@@ -256,12 +272,10 @@ func (r *resolver) credentialsBinding(
 
 	r.mu.Unlock()
 
-	if created || cfg.mode == ResolveEager {
-		if err = entry.resolveInitial(ctx, r.executor, cfg.mode); err != nil {
-			r.releaseBinding(key, 1)
-
-			return nil, bindingKey{}, err
-		}
+	if created {
+		// Schedule an initial cached resolve for newly created bindings.
+		// Source events schedule the binding itself and therefore force a refresh.
+		r.scheduleResolve(entry)
 	}
 
 	return bdg, key, nil
@@ -270,14 +284,12 @@ func (r *resolver) credentialsBinding(
 func (r *resolver) certificateBundleBinding(
 	ctx context.Context,
 	reference scopedReference,
-	opts ...ResolveOption,
 ) (*binding[CertificateBundle], bindingKey, error) {
 	key, err := r.bindingKey(reference, bindingKindCertificateBundle)
 	if err != nil {
 		return nil, bindingKey{}, err
 	}
 
-	cfg := applyResolveOptions(opts...)
 	created := false
 
 	r.mu.Lock()
@@ -299,12 +311,10 @@ func (r *resolver) certificateBundleBinding(
 
 	r.mu.Unlock()
 
-	if created || cfg.mode == ResolveEager {
-		if err = entry.resolveInitial(ctx, r.executor, cfg.mode); err != nil {
-			r.releaseBinding(key, 1)
-
-			return nil, bindingKey{}, err
-		}
+	if created {
+		// Schedule an initial cached resolve for newly created bindings.
+		// Source events schedule the binding itself and therefore force a refresh.
+		r.scheduleResolve(entry)
 	}
 
 	return bdg, key, nil
@@ -419,9 +429,31 @@ func (r *resolver) lookupSource(reference scopedReference) (source.Source, error
 	return src, nil
 }
 
-func (r *resolver) handleSourceEvent(evt source.Event) {
-	for _, tsk := range r.match(evt) {
+func (r *resolver) scheduleResolve(tsk task.Task) {
+	schedule := false
+
+	r.mu.Lock()
+
+	switch r.state {
+	case resolverStateInitial:
+		r.pendingTasks = append(r.pendingTasks, tsk)
+	case resolverStateStarted:
+		schedule = true
+	default:
+		// stopped: ignore
+	}
+
+	r.mu.Unlock()
+
+	if schedule {
 		r.executor.Schedule(tsk)
+	}
+}
+
+func (r *resolver) handleSourceEvent(evt source.Event) {
+	// Source events force a refresh of already known bindings.
+	for _, tsk := range r.match(evt) {
+		r.scheduleResolve(tsk)
 	}
 }
 

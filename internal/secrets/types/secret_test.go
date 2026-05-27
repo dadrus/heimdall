@@ -64,7 +64,7 @@ func TestNewTrustStoreSecret(t *testing.T) {
 
 	assert.Equal(t, "trust", secret.Selector())
 	assert.Equal(t, SecretKindCertificateBundle, secret.Kind())
-	assert.NotNil(t, secret.CertPool())
+	assert.NotEmpty(t, secret.Certificates())
 }
 
 func TestNewCredentials(t *testing.T) {

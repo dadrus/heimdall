@@ -45,6 +45,14 @@ var Module = fx.Options( //nolint:gochecknoglobals
 			return scopedResolverFactoryFunc(rt.resolver.scopedResolver)
 		},
 	),
+	fx.Invoke(
+		fx.Annotate(
+			func(*runtime) {},
+			fx.OnStart(func(ctx context.Context, rt *runtime) error {
+				return rt.resolver.AwaitReady(ctx)
+			}),
+		),
+	),
 )
 
 type scopedResolverFactoryFunc func(id string, opts ...ScopeOption) ScopedResolver
@@ -110,11 +118,19 @@ type runtime struct {
 }
 
 func (r *runtime) Start(ctx context.Context) error {
-	return r.repository.Start(ctx)
+	if err := r.repository.Start(ctx); err != nil {
+		return err
+	}
+
+	r.resolver.Start()
+
+	return nil
 }
 
 func (r *runtime) Stop(ctx context.Context) error {
+	err := r.repository.Stop(ctx)
+
 	r.resolver.Stop()
 
-	return r.repository.Stop(ctx)
+	return err
 }

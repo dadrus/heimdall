@@ -67,39 +67,6 @@ func TestApplyScopeOptions(t *testing.T) {
 	}
 }
 
-func TestApplyResolveOptions(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		opts []ResolveOption
-		want ResolveMode
-	}{
-		"defaults to lazy": {
-			want: ResolveLazy,
-		},
-		"applies lazy": {
-			opts: []ResolveOption{Lazy()},
-			want: ResolveLazy,
-		},
-		"applies eager": {
-			opts: []ResolveOption{Lazy(), Eager()},
-			want: ResolveEager,
-		},
-		"ignores nil options": {
-			opts: []ResolveOption{nil, Lazy()},
-			want: ResolveLazy,
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
-
-			got := applyResolveOptions(tc.opts...)
-
-			require.Equal(t, tc.want, got.mode)
-		})
-	}
-}
-
 func TestSourceObserverFuncNotify(t *testing.T) {
 	t.Parallel()
 
@@ -146,6 +113,138 @@ func TestNewResolver(t *testing.T) {
 	require.NotNil(t, res.secretSetBindings)
 	require.NotNil(t, res.credentialsBindings)
 	require.NotNil(t, res.certificateBundleBindings)
+	require.Equal(t, resolverStateInitial, res.state)
+	require.Empty(t, res.pendingTasks)
+}
+
+func TestResolverStart(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		setup  func(t *testing.T, res *resolver, calls *atomic.Int32)
+		assert func(t *testing.T, res *resolver, calls *atomic.Int32)
+	}{
+		"starts resolver and schedules pending tasks": {
+			setup: func(t *testing.T, res *resolver, calls *atomic.Int32) {
+				t.Helper()
+
+				res.pendingTasks = append(
+					res.pendingTasks,
+					newTestBinding(t, func(context.Context) (string, error) {
+						calls.Add(1)
+
+						return "a", nil
+					}),
+					newTestBinding(t, func(context.Context) (string, error) {
+						calls.Add(1)
+
+						return "b", nil
+					}),
+				)
+			},
+			assert: func(t *testing.T, res *resolver, calls *atomic.Int32) {
+				t.Helper()
+
+				require.Equal(t, resolverStateStarted, res.state)
+				require.Empty(t, res.pendingTasks)
+
+				require.Eventually(t, func() bool {
+					return calls.Load() == 2
+				}, time.Second, 10*time.Millisecond)
+			},
+		},
+		"does nothing when stopped": {
+			setup: func(t *testing.T, res *resolver, calls *atomic.Int32) {
+				t.Helper()
+
+				res.state = resolverStateStopped
+				res.pendingTasks = append(
+					res.pendingTasks,
+					newTestBinding(t, func(context.Context) (string, error) {
+						calls.Add(1)
+
+						return "ignored", nil
+					}),
+				)
+			},
+			assert: func(t *testing.T, res *resolver, calls *atomic.Int32) {
+				t.Helper()
+
+				require.Equal(t, resolverStateStopped, res.state)
+				require.Len(t, res.pendingTasks, 1)
+				require.Zero(t, calls.Load())
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			var calls atomic.Int32
+
+			res := newEmptyTestResolver(t)
+			tc.setup(t, res, &calls)
+
+			res.Start()
+
+			tc.assert(t, res, &calls)
+		})
+	}
+}
+
+func TestResolverScheduleResolve(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		state  resolverState
+		assert func(t *testing.T, res *resolver, calls *atomic.Int32)
+	}{
+		"queues task while initial": {
+			state: resolverStateInitial,
+			assert: func(t *testing.T, res *resolver, calls *atomic.Int32) {
+				t.Helper()
+
+				require.Len(t, res.pendingTasks, 1)
+				require.Zero(t, calls.Load())
+			},
+		},
+		"schedules task while started": {
+			state: resolverStateStarted,
+			assert: func(t *testing.T, res *resolver, calls *atomic.Int32) {
+				t.Helper()
+
+				require.Empty(t, res.pendingTasks)
+				require.Eventually(t, func() bool {
+					return calls.Load() == 1
+				}, time.Second, 10*time.Millisecond)
+			},
+		},
+		"ignores task while stopped": {
+			state: resolverStateStopped,
+			assert: func(t *testing.T, res *resolver, calls *atomic.Int32) {
+				t.Helper()
+
+				require.Empty(t, res.pendingTasks)
+				require.Zero(t, calls.Load())
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			var calls atomic.Int32
+
+			res := newEmptyTestResolver(t)
+			res.state = tc.state
+
+			res.scheduleResolve(newTestBinding(t, func(context.Context) (string, error) {
+				calls.Add(1)
+
+				return "resolved", nil
+			}))
+
+			tc.assert(t, res, &calls)
+		})
+	}
 }
 
 func TestResolverGlobalResolver(t *testing.T) {
@@ -194,6 +293,16 @@ func TestResolverScopedResolver(t *testing.T) {
 	require.Equal(t, referenceScopeRule, ref.scope)
 }
 
+func TestResolverAwaitReady(t *testing.T) {
+	t.Parallel()
+
+	res := newEmptyTestResolver(t)
+
+	err := res.AwaitReady(t.Context())
+
+	require.NoError(t, err)
+}
+
 func TestResolverResolveSecret(t *testing.T) {
 	t.Parallel()
 
@@ -219,7 +328,7 @@ func TestResolverResolveSecret(t *testing.T) {
 	res := newTestResolver(t, repository)
 
 	got, err := res.ResolveSecret(
-		context.Background(),
+		t.Context(),
 		Reference{Source: "src", Selector: "selector"},
 	)
 
@@ -252,7 +361,7 @@ func TestResolverResolveCredentials(t *testing.T) {
 	res := newTestResolver(t, repository)
 
 	got, err := res.ResolveCredentials(
-		context.Background(),
+		t.Context(),
 		Reference{Source: "src", Selector: "selector"},
 	)
 
@@ -285,7 +394,7 @@ func TestResolverResolveCertificateBundle(t *testing.T) {
 	res := newTestResolver(t, repository)
 
 	got, err := res.ResolveCertificateBundle(
-		context.Background(),
+		t.Context(),
 		Reference{Source: "src", Selector: "selector"},
 	)
 
@@ -412,7 +521,7 @@ func TestResolverResolveSecretScoped(t *testing.T) {
 
 			res := newTestResolver(t, repository)
 
-			got, err := res.resolveSecret(context.Background(), tc.reference)
+			got, err := res.resolveSecret(t.Context(), tc.reference)
 
 			tc.assert(t, got, err)
 		})
@@ -541,7 +650,7 @@ func TestResolverResolveSecretSet(t *testing.T) {
 
 			res := newTestResolver(t, repository)
 
-			got, err := res.resolveSecretSet(context.Background(), tc.reference)
+			got, err := res.resolveSecretSet(t.Context(), tc.reference)
 
 			tc.assert(t, got, err)
 		})
@@ -667,7 +776,7 @@ func TestResolverResolveCredentialsScoped(t *testing.T) {
 
 			res := newTestResolver(t, repository)
 
-			got, err := res.resolveCredentials(context.Background(), tc.reference)
+			got, err := res.resolveCredentials(t.Context(), tc.reference)
 
 			tc.assert(t, got, err)
 		})
@@ -793,7 +902,7 @@ func TestResolverResolveCertificateBundleScoped(t *testing.T) {
 
 			res := newTestResolver(t, repository)
 
-			got, err := res.resolveCertificateBundle(context.Background(), tc.reference)
+			got, err := res.resolveCertificateBundle(t.Context(), tc.reference)
 
 			tc.assert(t, got, err)
 		})
@@ -987,7 +1096,7 @@ func TestResolverBindingReturnsBindingKeyError(t *testing.T) {
 			res := newTestResolver(t, repository)
 
 			got, key, err := tc.call(
-				context.Background(),
+				t.Context(),
 				res,
 				internalRef(Reference{Source: "src", Selector: "selector"}),
 			)
@@ -1004,26 +1113,16 @@ func TestResolverSecretBinding(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		mode   ResolveMode
+		start  bool
 		setup  func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32)
 		assert func(t *testing.T, res *resolver, bdg *binding[Secret], key bindingKey, calls *atomic.Int32, err error)
 	}{
-		"creates eager binding and resolves immediately": {
-			mode: ResolveEager,
-			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32) {
+		"creates binding and queues initial resolve before start": {
+			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, _ *atomic.Int32) {
 				t.Helper()
 
 				repository.EXPECT().Lookup("src").Return(src, nil)
 				src.EXPECT().IsNamespaceAware().Return(false)
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-				src.EXPECT().
-					GetSecret(mock.Anything, source.Selector{Value: "selector"}).
-					Run(func(context.Context, source.Selector) {
-						calls.Add(1)
-					}).
-					Return(types.NewStringSecret("selector", "value"), nil)
 			},
 			assert: func(t *testing.T, res *resolver, bdg *binding[Secret], key bindingKey, calls *atomic.Int32, err error) {
 				t.Helper()
@@ -1031,21 +1130,19 @@ func TestResolverSecretBinding(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, bdg)
 				require.Equal(t, bindingKindSecret, key.kind)
-				require.EqualValues(t, 1, calls.Load())
 				require.Len(t, res.secretBindings, 1)
 				require.Equal(t, 1, res.secretBindings[key].leases)
+				require.Len(t, res.pendingTasks, 1)
+				require.Zero(t, calls.Load())
 			},
 		},
-		"creates lazy binding and resolves asynchronously": {
-			mode: ResolveLazy,
+		"creates binding and schedules initial resolve after start": {
+			start: true,
 			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32) {
 				t.Helper()
 
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
+				repository.EXPECT().Lookup("src").Return(src, nil).Twice()
+				src.EXPECT().IsNamespaceAware().Return(false).Twice()
 				src.EXPECT().
 					GetSecret(mock.Anything, source.Selector{Value: "selector"}).
 					Run(func(context.Context, source.Selector) {
@@ -1058,39 +1155,13 @@ func TestResolverSecretBinding(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, bdg)
+				require.Empty(t, res.pendingTasks)
 				require.Len(t, res.secretBindings, 1)
 				require.Equal(t, 1, res.secretBindings[key].leases)
 
 				require.Eventually(t, func() bool {
 					return calls.Load() == 1
 				}, time.Second, 10*time.Millisecond)
-			},
-		},
-		"returns eager resolve error and releases binding": {
-			mode: ResolveEager,
-			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32) {
-				t.Helper()
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-				src.EXPECT().
-					GetSecret(mock.Anything, source.Selector{Value: "selector"}).
-					Run(func(context.Context, source.Selector) {
-						calls.Add(1)
-					}).
-					Return(nil, assert.AnError)
-			},
-			assert: func(t *testing.T, res *resolver, bdg *binding[Secret], _ bindingKey, calls *atomic.Int32, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, assert.AnError)
-				require.Nil(t, bdg)
-				require.EqualValues(t, 1, calls.Load())
-				require.Empty(t, res.secretBindings)
 			},
 		},
 	} {
@@ -1106,13 +1177,13 @@ func TestResolverSecretBinding(t *testing.T) {
 			tc.setup(t, repository, src, &calls)
 
 			res := newTestResolver(t, repository)
+			if tc.start {
+				res.Start()
+			}
 
 			bdg, key, err := res.secretBinding(
-				context.Background(),
+				t.Context(),
 				internalRef(Reference{Source: "src", Selector: "selector"}),
-				func(opts *resolveOptions) {
-					opts.mode = tc.mode
-				},
 			)
 
 			tc.assert(t, res, bdg, key, &calls, err)
@@ -1129,26 +1200,16 @@ func TestResolverSecretSetBinding(t *testing.T) {
 	}
 
 	for uc, tc := range map[string]struct {
-		mode   ResolveMode
+		start  bool
 		setup  func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32)
 		assert func(t *testing.T, res *resolver, bdg *binding[[]Secret], key bindingKey, calls *atomic.Int32, err error)
 	}{
-		"creates eager binding and resolves immediately": {
-			mode: ResolveEager,
-			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32) {
+		"creates binding and queues initial resolve before start": {
+			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, _ *atomic.Int32) {
 				t.Helper()
 
 				repository.EXPECT().Lookup("src").Return(src, nil)
 				src.EXPECT().IsNamespaceAware().Return(false)
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-				src.EXPECT().
-					GetSecretSet(mock.Anything, source.Selector{Value: "selector"}).
-					Run(func(context.Context, source.Selector) {
-						calls.Add(1)
-					}).
-					Return(secrets, nil)
 			},
 			assert: func(t *testing.T, res *resolver, bdg *binding[[]Secret], key bindingKey, calls *atomic.Int32, err error) {
 				t.Helper()
@@ -1156,21 +1217,19 @@ func TestResolverSecretSetBinding(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, bdg)
 				require.Equal(t, bindingKindSecretSet, key.kind)
-				require.EqualValues(t, 1, calls.Load())
 				require.Len(t, res.secretSetBindings, 1)
 				require.Equal(t, 1, res.secretSetBindings[key].leases)
+				require.Len(t, res.pendingTasks, 1)
+				require.Zero(t, calls.Load())
 			},
 		},
-		"creates lazy binding and resolves asynchronously": {
-			mode: ResolveLazy,
+		"creates binding and schedules initial resolve after start": {
+			start: true,
 			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32) {
 				t.Helper()
 
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
+				repository.EXPECT().Lookup("src").Return(src, nil).Twice()
+				src.EXPECT().IsNamespaceAware().Return(false).Twice()
 				src.EXPECT().
 					GetSecretSet(mock.Anything, source.Selector{Value: "selector"}).
 					Run(func(context.Context, source.Selector) {
@@ -1183,39 +1242,13 @@ func TestResolverSecretSetBinding(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, bdg)
+				require.Empty(t, res.pendingTasks)
 				require.Len(t, res.secretSetBindings, 1)
 				require.Equal(t, 1, res.secretSetBindings[key].leases)
 
 				require.Eventually(t, func() bool {
 					return calls.Load() == 1
 				}, time.Second, 10*time.Millisecond)
-			},
-		},
-		"returns eager resolve error and releases binding": {
-			mode: ResolveEager,
-			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32) {
-				t.Helper()
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-				src.EXPECT().
-					GetSecretSet(mock.Anything, source.Selector{Value: "selector"}).
-					Run(func(context.Context, source.Selector) {
-						calls.Add(1)
-					}).
-					Return(nil, assert.AnError)
-			},
-			assert: func(t *testing.T, res *resolver, bdg *binding[[]Secret], _ bindingKey, calls *atomic.Int32, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, assert.AnError)
-				require.Nil(t, bdg)
-				require.EqualValues(t, 1, calls.Load())
-				require.Empty(t, res.secretSetBindings)
 			},
 		},
 	} {
@@ -1231,13 +1264,13 @@ func TestResolverSecretSetBinding(t *testing.T) {
 			tc.setup(t, repository, src, &calls)
 
 			res := newTestResolver(t, repository)
+			if tc.start {
+				res.Start()
+			}
 
 			bdg, key, err := res.secretSetBinding(
-				context.Background(),
+				t.Context(),
 				internalRef(Reference{Source: "src", Selector: "selector"}),
-				func(opts *resolveOptions) {
-					opts.mode = tc.mode
-				},
 			)
 
 			tc.assert(t, res, bdg, key, &calls, err)
@@ -1251,26 +1284,16 @@ func TestResolverCredentialsBinding(t *testing.T) {
 	credentials := types.NewCredentials("selector", map[string]any{"client_id": "heimdall"})
 
 	for uc, tc := range map[string]struct {
-		mode   ResolveMode
+		start  bool
 		setup  func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32)
 		assert func(t *testing.T, res *resolver, bdg *binding[Credentials], key bindingKey, calls *atomic.Int32, err error)
 	}{
-		"creates eager binding and resolves immediately": {
-			mode: ResolveEager,
-			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32) {
+		"creates binding and queues initial resolve before start": {
+			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, _ *atomic.Int32) {
 				t.Helper()
 
 				repository.EXPECT().Lookup("src").Return(src, nil)
 				src.EXPECT().IsNamespaceAware().Return(false)
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-				src.EXPECT().
-					GetCredentials(mock.Anything, source.Selector{Value: "selector"}).
-					Run(func(context.Context, source.Selector) {
-						calls.Add(1)
-					}).
-					Return(credentials, nil)
 			},
 			assert: func(t *testing.T, res *resolver, bdg *binding[Credentials], key bindingKey, calls *atomic.Int32, err error) {
 				t.Helper()
@@ -1278,21 +1301,19 @@ func TestResolverCredentialsBinding(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, bdg)
 				require.Equal(t, bindingKindCredentials, key.kind)
-				require.EqualValues(t, 1, calls.Load())
 				require.Len(t, res.credentialsBindings, 1)
 				require.Equal(t, 1, res.credentialsBindings[key].leases)
+				require.Len(t, res.pendingTasks, 1)
+				require.Zero(t, calls.Load())
 			},
 		},
-		"creates lazy binding and resolves asynchronously": {
-			mode: ResolveLazy,
+		"creates binding and schedules initial resolve after start": {
+			start: true,
 			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32) {
 				t.Helper()
 
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
+				repository.EXPECT().Lookup("src").Return(src, nil).Twice()
+				src.EXPECT().IsNamespaceAware().Return(false).Twice()
 				src.EXPECT().
 					GetCredentials(mock.Anything, source.Selector{Value: "selector"}).
 					Run(func(context.Context, source.Selector) {
@@ -1305,39 +1326,13 @@ func TestResolverCredentialsBinding(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, bdg)
+				require.Empty(t, res.pendingTasks)
 				require.Len(t, res.credentialsBindings, 1)
 				require.Equal(t, 1, res.credentialsBindings[key].leases)
 
 				require.Eventually(t, func() bool {
 					return calls.Load() == 1
 				}, time.Second, 10*time.Millisecond)
-			},
-		},
-		"returns eager resolve error and releases binding": {
-			mode: ResolveEager,
-			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32) {
-				t.Helper()
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-				src.EXPECT().
-					GetCredentials(mock.Anything, source.Selector{Value: "selector"}).
-					Run(func(context.Context, source.Selector) {
-						calls.Add(1)
-					}).
-					Return(nil, assert.AnError)
-			},
-			assert: func(t *testing.T, res *resolver, bdg *binding[Credentials], _ bindingKey, calls *atomic.Int32, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, assert.AnError)
-				require.Nil(t, bdg)
-				require.EqualValues(t, 1, calls.Load())
-				require.Empty(t, res.credentialsBindings)
 			},
 		},
 	} {
@@ -1353,13 +1348,13 @@ func TestResolverCredentialsBinding(t *testing.T) {
 			tc.setup(t, repository, src, &calls)
 
 			res := newTestResolver(t, repository)
+			if tc.start {
+				res.Start()
+			}
 
 			bdg, key, err := res.credentialsBinding(
-				context.Background(),
+				t.Context(),
 				internalRef(Reference{Source: "src", Selector: "selector"}),
-				func(opts *resolveOptions) {
-					opts.mode = tc.mode
-				},
 			)
 
 			tc.assert(t, res, bdg, key, &calls, err)
@@ -1373,26 +1368,16 @@ func TestResolverCertificateBundleBinding(t *testing.T) {
 	bundle := types.NewCertificateBundle("selector", nil)
 
 	for uc, tc := range map[string]struct {
-		mode   ResolveMode
+		start  bool
 		setup  func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32)
 		assert func(t *testing.T, res *resolver, bdg *binding[CertificateBundle], key bindingKey, calls *atomic.Int32, err error)
 	}{
-		"creates eager binding and resolves immediately": {
-			mode: ResolveEager,
-			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32) {
+		"creates binding and queues initial resolve before start": {
+			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, _ *atomic.Int32) {
 				t.Helper()
 
 				repository.EXPECT().Lookup("src").Return(src, nil)
 				src.EXPECT().IsNamespaceAware().Return(false)
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-				src.EXPECT().
-					GetCertificateBundle(mock.Anything, source.Selector{Value: "selector"}).
-					Run(func(context.Context, source.Selector) {
-						calls.Add(1)
-					}).
-					Return(bundle, nil)
 			},
 			assert: func(t *testing.T, res *resolver, bdg *binding[CertificateBundle], key bindingKey, calls *atomic.Int32, err error) {
 				t.Helper()
@@ -1400,21 +1385,19 @@ func TestResolverCertificateBundleBinding(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, bdg)
 				require.Equal(t, bindingKindCertificateBundle, key.kind)
-				require.EqualValues(t, 1, calls.Load())
 				require.Len(t, res.certificateBundleBindings, 1)
 				require.Equal(t, 1, res.certificateBundleBindings[key].leases)
+				require.Len(t, res.pendingTasks, 1)
+				require.Zero(t, calls.Load())
 			},
 		},
-		"creates lazy binding and resolves asynchronously": {
-			mode: ResolveLazy,
+		"creates binding and schedules initial resolve after start": {
+			start: true,
 			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32) {
 				t.Helper()
 
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
+				repository.EXPECT().Lookup("src").Return(src, nil).Twice()
+				src.EXPECT().IsNamespaceAware().Return(false).Twice()
 				src.EXPECT().
 					GetCertificateBundle(mock.Anything, source.Selector{Value: "selector"}).
 					Run(func(context.Context, source.Selector) {
@@ -1427,39 +1410,13 @@ func TestResolverCertificateBundleBinding(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, bdg)
+				require.Empty(t, res.pendingTasks)
 				require.Len(t, res.certificateBundleBindings, 1)
 				require.Equal(t, 1, res.certificateBundleBindings[key].leases)
 
 				require.Eventually(t, func() bool {
 					return calls.Load() == 1
 				}, time.Second, 10*time.Millisecond)
-			},
-		},
-		"returns eager resolve error and releases binding": {
-			mode: ResolveEager,
-			setup: func(t *testing.T, repository *sourcemocks.RepositoryMock, src *sourcemocks.SourceMock, calls *atomic.Int32) {
-				t.Helper()
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-
-				repository.EXPECT().Lookup("src").Return(src, nil)
-				src.EXPECT().IsNamespaceAware().Return(false)
-				src.EXPECT().
-					GetCertificateBundle(mock.Anything, source.Selector{Value: "selector"}).
-					Run(func(context.Context, source.Selector) {
-						calls.Add(1)
-					}).
-					Return(nil, assert.AnError)
-			},
-			assert: func(t *testing.T, res *resolver, bdg *binding[CertificateBundle], _ bindingKey, calls *atomic.Int32, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, assert.AnError)
-				require.Nil(t, bdg)
-				require.EqualValues(t, 1, calls.Load())
-				require.Empty(t, res.certificateBundleBindings)
 			},
 		},
 	} {
@@ -1475,13 +1432,13 @@ func TestResolverCertificateBundleBinding(t *testing.T) {
 			tc.setup(t, repository, src, &calls)
 
 			res := newTestResolver(t, repository)
+			if tc.start {
+				res.Start()
+			}
 
 			bdg, key, err := res.certificateBundleBinding(
-				context.Background(),
+				t.Context(),
 				internalRef(Reference{Source: "src", Selector: "selector"}),
-				func(opts *resolveOptions) {
-					opts.mode = tc.mode
-				},
 			)
 
 			tc.assert(t, res, bdg, key, &calls, err)
@@ -1497,37 +1454,27 @@ func TestResolverSecretBindingReusesExistingBinding(t *testing.T) {
 
 	src := sourcemocks.NewSourceMock(t)
 
-	repository.EXPECT().Lookup("src").Return(src, nil)
-	src.EXPECT().IsNamespaceAware().Return(false)
-
-	repository.EXPECT().Lookup("src").Return(src, nil)
-	src.EXPECT().IsNamespaceAware().Return(false)
-	src.EXPECT().
-		GetSecret(mock.Anything, source.Selector{Value: "selector"}).
-		Return(types.NewStringSecret("selector", "value"), nil)
-
-	repository.EXPECT().Lookup("src").Return(src, nil)
-	src.EXPECT().IsNamespaceAware().Return(false)
+	repository.EXPECT().Lookup("src").Return(src, nil).Twice()
+	src.EXPECT().IsNamespaceAware().Return(false).Twice()
 
 	res := newTestResolver(t, repository)
 
 	first, key, err := res.secretBinding(
-		context.Background(),
+		t.Context(),
 		internalRef(Reference{Source: "src", Selector: "selector"}),
-		Eager(),
 	)
 	require.NoError(t, err)
 
 	second, secondKey, err := res.secretBinding(
-		context.Background(),
+		t.Context(),
 		internalRef(Reference{Source: "src", Selector: "selector"}),
-		Lazy(),
 	)
 	require.NoError(t, err)
 
 	require.Same(t, first, second)
 	require.Equal(t, key, secondKey)
 	require.Equal(t, 2, res.secretBindings[key].leases)
+	require.Len(t, res.pendingTasks, 1)
 }
 
 func TestResolverReleaseBinding(t *testing.T) {
@@ -1866,9 +1813,22 @@ func TestResolverHandleSourceEvent(t *testing.T) {
 
 	repository.EXPECT().
 		Lookup("src").
-		Return(src, nil)
+		Return(src, nil).
+		Twice()
+
+	src.EXPECT().
+		IsNamespaceAware().
+		Return(false)
+
+	src.EXPECT().
+		GetSecret(mock.Anything, source.Selector{Value: "selector"}).
+		Run(func(context.Context, source.Selector) {
+			calls.Add(1)
+		}).
+		Return(types.NewStringSecret("selector", "value"), nil)
 
 	res := newTestResolver(t, repository)
+	res.Start()
 
 	key := bindingKey{
 		kind:     bindingKindSecret,
@@ -1877,9 +1837,7 @@ func TestResolverHandleSourceEvent(t *testing.T) {
 		scope:    referenceScopeInternal,
 	}
 	bdg := newTestBinding[Secret](t, func(context.Context) (Secret, error) {
-		calls.Add(1)
-
-		return types.NewStringSecret("selector", "value"), nil
+		return res.resolveSecret(t.Context(), internalRef(Reference{Source: "src", Selector: "selector"}))
 	})
 	bdg.bindingKey = key
 
@@ -1893,6 +1851,39 @@ func TestResolverHandleSourceEvent(t *testing.T) {
 	require.Eventually(t, func() bool {
 		return calls.Load() == 1
 	}, time.Second, 10*time.Millisecond)
+}
+
+func TestResolverHandleSourceEventQueuesTaskBeforeStart(t *testing.T) {
+	t.Parallel()
+
+	repository := sourcemocks.NewRepositoryMock(t)
+	repository.EXPECT().AddObserver(mock.Anything).Maybe()
+
+	src := sourcemocks.NewSourceMock(t)
+
+	repository.EXPECT().
+		Lookup("src").
+		Return(src, nil)
+
+	res := newTestResolver(t, repository)
+
+	key := bindingKey{
+		kind:     bindingKindSecret,
+		source:   "src",
+		selector: "selector",
+		scope:    referenceScopeInternal,
+	}
+	bdg := newTestBinding[Secret](t, nil)
+	bdg.bindingKey = key
+
+	res.secretBindings[key] = &leasedBinding[Secret]{
+		binding: bdg,
+		leases:  1,
+	}
+
+	res.handleSourceEvent(source.Event{Source: "src"})
+
+	require.Len(t, res.pendingTasks, 1)
 }
 
 func TestResolverStop(t *testing.T) {
@@ -1938,8 +1929,17 @@ func TestResolverStop(t *testing.T) {
 		leases:  1,
 	}
 
+	res.pendingTasks = append(
+		res.pendingTasks,
+		newTestBinding(t, func(context.Context) (string, error) {
+			return "ignored", nil
+		}),
+	)
+
 	res.Stop()
 
+	require.Equal(t, resolverStateStopped, res.state)
+	require.Empty(t, res.pendingTasks)
 	require.Empty(t, res.secretBindings)
 	require.Empty(t, res.credentialsBindings)
 	require.Empty(t, res.certificateBundleBindings)
@@ -2000,7 +2000,11 @@ func newTestResolver(
 	res, err := newResolver(zerolog.Nop(), repository)
 	require.NoError(t, err)
 
-	t.Cleanup(res.Stop)
+	t.Cleanup(func() {
+		if res.state != resolverStateStopped {
+			res.Stop()
+		}
+	})
 
 	return res
 }
@@ -2021,7 +2025,11 @@ func newEmptyTestResolver(t *testing.T) *resolver {
 	}
 	res.appScope = newScope(res)
 
-	t.Cleanup(res.Stop)
+	t.Cleanup(func() {
+		if res.state != resolverStateStopped {
+			res.Stop()
+		}
+	})
 
 	return res
 }

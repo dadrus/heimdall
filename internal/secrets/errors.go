@@ -11,6 +11,7 @@ var (
 	ErrSecretConversionFailed    = errors.New("secret conversion failed")
 	ErrResolverScopeClosed       = errors.New("secret resolver scope closed")
 	ErrSecretKindMismatch        = errors.New("secret kind mismatch")
+	ErrSecretUnavailable         = errors.New("secret binding is not ready")
 	ErrUnsupportedProviderType   = types.ErrUnsupportedProviderType
 	ErrSecretNotFound            = types.ErrSecretNotFound
 	ErrSecretSetNotFound         = types.ErrSecretSetNotFound

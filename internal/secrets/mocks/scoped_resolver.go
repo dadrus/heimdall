@@ -38,17 +38,60 @@ func (_m *ScopedResolverMock) EXPECT() *ScopedResolverMock_Expecter {
 	return &ScopedResolverMock_Expecter{mock: &_m.Mock}
 }
 
-// CertificateBundle provides a mock function for the type ScopedResolverMock
-func (_mock *ScopedResolverMock) CertificateBundle(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption) (secrets.CertificateBundleHandle, error) {
-	// secrets.ResolveOption
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
+// AwaitReady provides a mock function for the type ScopedResolverMock
+func (_mock *ScopedResolverMock) AwaitReady(ctx context.Context) error {
+	ret := _mock.Called(ctx)
+
+	if len(ret) == 0 {
+		panic("no return value specified for AwaitReady")
 	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, ref)
-	_ca = append(_ca, _va...)
-	ret := _mock.Called(_ca...)
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
+		r0 = returnFunc(ctx)
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ScopedResolverMock_AwaitReady_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AwaitReady'
+type ScopedResolverMock_AwaitReady_Call struct {
+	*mock.Call
+}
+
+// AwaitReady is a helper method to define mock.On call
+//   - ctx context.Context
+func (_e *ScopedResolverMock_Expecter) AwaitReady(ctx interface{}) *ScopedResolverMock_AwaitReady_Call {
+	return &ScopedResolverMock_AwaitReady_Call{Call: _e.mock.On("AwaitReady", ctx)}
+}
+
+func (_c *ScopedResolverMock_AwaitReady_Call) Run(run func(ctx context.Context)) *ScopedResolverMock_AwaitReady_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		run(
+			arg0,
+		)
+	})
+	return _c
+}
+
+func (_c *ScopedResolverMock_AwaitReady_Call) Return(err error) *ScopedResolverMock_AwaitReady_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ScopedResolverMock_AwaitReady_Call) RunAndReturn(run func(ctx context.Context) error) *ScopedResolverMock_AwaitReady_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// CertificateBundle provides a mock function for the type ScopedResolverMock
+func (_mock *ScopedResolverMock) CertificateBundle(ctx context.Context, ref secrets.Reference) (secrets.CertificateBundleHandle, error) {
+	ret := _mock.Called(ctx, ref)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CertificateBundle")
@@ -56,18 +99,18 @@ func (_mock *ScopedResolverMock) CertificateBundle(ctx context.Context, ref secr
 
 	var r0 secrets.CertificateBundleHandle
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference, ...secrets.ResolveOption) (secrets.CertificateBundleHandle, error)); ok {
-		return returnFunc(ctx, ref, opts...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) (secrets.CertificateBundleHandle, error)); ok {
+		return returnFunc(ctx, ref)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference, ...secrets.ResolveOption) secrets.CertificateBundleHandle); ok {
-		r0 = returnFunc(ctx, ref, opts...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) secrets.CertificateBundleHandle); ok {
+		r0 = returnFunc(ctx, ref)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(secrets.CertificateBundleHandle)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, secrets.Reference, ...secrets.ResolveOption) error); ok {
-		r1 = returnFunc(ctx, ref, opts...)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, secrets.Reference) error); ok {
+		r1 = returnFunc(ctx, ref)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -82,13 +125,11 @@ type ScopedResolverMock_CertificateBundle_Call struct {
 // CertificateBundle is a helper method to define mock.On call
 //   - ctx context.Context
 //   - ref secrets.Reference
-//   - opts ...secrets.ResolveOption
-func (_e *ScopedResolverMock_Expecter) CertificateBundle(ctx interface{}, ref interface{}, opts ...interface{}) *ScopedResolverMock_CertificateBundle_Call {
-	return &ScopedResolverMock_CertificateBundle_Call{Call: _e.mock.On("CertificateBundle",
-		append([]interface{}{ctx, ref}, opts...)...)}
+func (_e *ScopedResolverMock_Expecter) CertificateBundle(ctx interface{}, ref interface{}) *ScopedResolverMock_CertificateBundle_Call {
+	return &ScopedResolverMock_CertificateBundle_Call{Call: _e.mock.On("CertificateBundle", ctx, ref)}
 }
 
-func (_c *ScopedResolverMock_CertificateBundle_Call) Run(run func(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption)) *ScopedResolverMock_CertificateBundle_Call {
+func (_c *ScopedResolverMock_CertificateBundle_Call) Run(run func(ctx context.Context, ref secrets.Reference)) *ScopedResolverMock_CertificateBundle_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -98,18 +139,9 @@ func (_c *ScopedResolverMock_CertificateBundle_Call) Run(run func(ctx context.Co
 		if args[1] != nil {
 			arg1 = args[1].(secrets.Reference)
 		}
-		var arg2 []secrets.ResolveOption
-		variadicArgs := make([]secrets.ResolveOption, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(secrets.ResolveOption)
-			}
-		}
-		arg2 = variadicArgs
 		run(
 			arg0,
 			arg1,
-			arg2...,
 		)
 	})
 	return _c
@@ -120,22 +152,14 @@ func (_c *ScopedResolverMock_CertificateBundle_Call) Return(certificateBundleHan
 	return _c
 }
 
-func (_c *ScopedResolverMock_CertificateBundle_Call) RunAndReturn(run func(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption) (secrets.CertificateBundleHandle, error)) *ScopedResolverMock_CertificateBundle_Call {
+func (_c *ScopedResolverMock_CertificateBundle_Call) RunAndReturn(run func(ctx context.Context, ref secrets.Reference) (secrets.CertificateBundleHandle, error)) *ScopedResolverMock_CertificateBundle_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // Credentials provides a mock function for the type ScopedResolverMock
-func (_mock *ScopedResolverMock) Credentials(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption) (secrets.CredentialsHandle, error) {
-	// secrets.ResolveOption
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, ref)
-	_ca = append(_ca, _va...)
-	ret := _mock.Called(_ca...)
+func (_mock *ScopedResolverMock) Credentials(ctx context.Context, ref secrets.Reference) (secrets.CredentialsHandle, error) {
+	ret := _mock.Called(ctx, ref)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Credentials")
@@ -143,18 +167,18 @@ func (_mock *ScopedResolverMock) Credentials(ctx context.Context, ref secrets.Re
 
 	var r0 secrets.CredentialsHandle
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference, ...secrets.ResolveOption) (secrets.CredentialsHandle, error)); ok {
-		return returnFunc(ctx, ref, opts...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) (secrets.CredentialsHandle, error)); ok {
+		return returnFunc(ctx, ref)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference, ...secrets.ResolveOption) secrets.CredentialsHandle); ok {
-		r0 = returnFunc(ctx, ref, opts...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) secrets.CredentialsHandle); ok {
+		r0 = returnFunc(ctx, ref)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(secrets.CredentialsHandle)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, secrets.Reference, ...secrets.ResolveOption) error); ok {
-		r1 = returnFunc(ctx, ref, opts...)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, secrets.Reference) error); ok {
+		r1 = returnFunc(ctx, ref)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -169,13 +193,11 @@ type ScopedResolverMock_Credentials_Call struct {
 // Credentials is a helper method to define mock.On call
 //   - ctx context.Context
 //   - ref secrets.Reference
-//   - opts ...secrets.ResolveOption
-func (_e *ScopedResolverMock_Expecter) Credentials(ctx interface{}, ref interface{}, opts ...interface{}) *ScopedResolverMock_Credentials_Call {
-	return &ScopedResolverMock_Credentials_Call{Call: _e.mock.On("Credentials",
-		append([]interface{}{ctx, ref}, opts...)...)}
+func (_e *ScopedResolverMock_Expecter) Credentials(ctx interface{}, ref interface{}) *ScopedResolverMock_Credentials_Call {
+	return &ScopedResolverMock_Credentials_Call{Call: _e.mock.On("Credentials", ctx, ref)}
 }
 
-func (_c *ScopedResolverMock_Credentials_Call) Run(run func(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption)) *ScopedResolverMock_Credentials_Call {
+func (_c *ScopedResolverMock_Credentials_Call) Run(run func(ctx context.Context, ref secrets.Reference)) *ScopedResolverMock_Credentials_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -185,18 +207,9 @@ func (_c *ScopedResolverMock_Credentials_Call) Run(run func(ctx context.Context,
 		if args[1] != nil {
 			arg1 = args[1].(secrets.Reference)
 		}
-		var arg2 []secrets.ResolveOption
-		variadicArgs := make([]secrets.ResolveOption, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(secrets.ResolveOption)
-			}
-		}
-		arg2 = variadicArgs
 		run(
 			arg0,
 			arg1,
-			arg2...,
 		)
 	})
 	return _c
@@ -207,7 +220,7 @@ func (_c *ScopedResolverMock_Credentials_Call) Return(credentialsHandle secrets.
 	return _c
 }
 
-func (_c *ScopedResolverMock_Credentials_Call) RunAndReturn(run func(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption) (secrets.CredentialsHandle, error)) *ScopedResolverMock_Credentials_Call {
+func (_c *ScopedResolverMock_Credentials_Call) RunAndReturn(run func(ctx context.Context, ref secrets.Reference) (secrets.CredentialsHandle, error)) *ScopedResolverMock_Credentials_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -246,16 +259,8 @@ func (_c *ScopedResolverMock_Release_Call) RunAndReturn(run func()) *ScopedResol
 }
 
 // Secret provides a mock function for the type ScopedResolverMock
-func (_mock *ScopedResolverMock) Secret(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption) (secrets.SecretHandle, error) {
-	// secrets.ResolveOption
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, ref)
-	_ca = append(_ca, _va...)
-	ret := _mock.Called(_ca...)
+func (_mock *ScopedResolverMock) Secret(ctx context.Context, ref secrets.Reference) (secrets.SecretHandle, error) {
+	ret := _mock.Called(ctx, ref)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Secret")
@@ -263,18 +268,18 @@ func (_mock *ScopedResolverMock) Secret(ctx context.Context, ref secrets.Referen
 
 	var r0 secrets.SecretHandle
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference, ...secrets.ResolveOption) (secrets.SecretHandle, error)); ok {
-		return returnFunc(ctx, ref, opts...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) (secrets.SecretHandle, error)); ok {
+		return returnFunc(ctx, ref)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference, ...secrets.ResolveOption) secrets.SecretHandle); ok {
-		r0 = returnFunc(ctx, ref, opts...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) secrets.SecretHandle); ok {
+		r0 = returnFunc(ctx, ref)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(secrets.SecretHandle)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, secrets.Reference, ...secrets.ResolveOption) error); ok {
-		r1 = returnFunc(ctx, ref, opts...)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, secrets.Reference) error); ok {
+		r1 = returnFunc(ctx, ref)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -289,13 +294,11 @@ type ScopedResolverMock_Secret_Call struct {
 // Secret is a helper method to define mock.On call
 //   - ctx context.Context
 //   - ref secrets.Reference
-//   - opts ...secrets.ResolveOption
-func (_e *ScopedResolverMock_Expecter) Secret(ctx interface{}, ref interface{}, opts ...interface{}) *ScopedResolverMock_Secret_Call {
-	return &ScopedResolverMock_Secret_Call{Call: _e.mock.On("Secret",
-		append([]interface{}{ctx, ref}, opts...)...)}
+func (_e *ScopedResolverMock_Expecter) Secret(ctx interface{}, ref interface{}) *ScopedResolverMock_Secret_Call {
+	return &ScopedResolverMock_Secret_Call{Call: _e.mock.On("Secret", ctx, ref)}
 }
 
-func (_c *ScopedResolverMock_Secret_Call) Run(run func(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption)) *ScopedResolverMock_Secret_Call {
+func (_c *ScopedResolverMock_Secret_Call) Run(run func(ctx context.Context, ref secrets.Reference)) *ScopedResolverMock_Secret_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -305,18 +308,9 @@ func (_c *ScopedResolverMock_Secret_Call) Run(run func(ctx context.Context, ref 
 		if args[1] != nil {
 			arg1 = args[1].(secrets.Reference)
 		}
-		var arg2 []secrets.ResolveOption
-		variadicArgs := make([]secrets.ResolveOption, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(secrets.ResolveOption)
-			}
-		}
-		arg2 = variadicArgs
 		run(
 			arg0,
 			arg1,
-			arg2...,
 		)
 	})
 	return _c
@@ -327,22 +321,14 @@ func (_c *ScopedResolverMock_Secret_Call) Return(secretHandle secrets.SecretHand
 	return _c
 }
 
-func (_c *ScopedResolverMock_Secret_Call) RunAndReturn(run func(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption) (secrets.SecretHandle, error)) *ScopedResolverMock_Secret_Call {
+func (_c *ScopedResolverMock_Secret_Call) RunAndReturn(run func(ctx context.Context, ref secrets.Reference) (secrets.SecretHandle, error)) *ScopedResolverMock_Secret_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // SecretSet provides a mock function for the type ScopedResolverMock
-func (_mock *ScopedResolverMock) SecretSet(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption) (secrets.SecretSetHandle, error) {
-	// secrets.ResolveOption
-	_va := make([]interface{}, len(opts))
-	for _i := range opts {
-		_va[_i] = opts[_i]
-	}
-	var _ca []interface{}
-	_ca = append(_ca, ctx, ref)
-	_ca = append(_ca, _va...)
-	ret := _mock.Called(_ca...)
+func (_mock *ScopedResolverMock) SecretSet(ctx context.Context, ref secrets.Reference) (secrets.SecretSetHandle, error) {
+	ret := _mock.Called(ctx, ref)
 
 	if len(ret) == 0 {
 		panic("no return value specified for SecretSet")
@@ -350,18 +336,18 @@ func (_mock *ScopedResolverMock) SecretSet(ctx context.Context, ref secrets.Refe
 
 	var r0 secrets.SecretSetHandle
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference, ...secrets.ResolveOption) (secrets.SecretSetHandle, error)); ok {
-		return returnFunc(ctx, ref, opts...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) (secrets.SecretSetHandle, error)); ok {
+		return returnFunc(ctx, ref)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference, ...secrets.ResolveOption) secrets.SecretSetHandle); ok {
-		r0 = returnFunc(ctx, ref, opts...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Reference) secrets.SecretSetHandle); ok {
+		r0 = returnFunc(ctx, ref)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(secrets.SecretSetHandle)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, secrets.Reference, ...secrets.ResolveOption) error); ok {
-		r1 = returnFunc(ctx, ref, opts...)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, secrets.Reference) error); ok {
+		r1 = returnFunc(ctx, ref)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -376,13 +362,11 @@ type ScopedResolverMock_SecretSet_Call struct {
 // SecretSet is a helper method to define mock.On call
 //   - ctx context.Context
 //   - ref secrets.Reference
-//   - opts ...secrets.ResolveOption
-func (_e *ScopedResolverMock_Expecter) SecretSet(ctx interface{}, ref interface{}, opts ...interface{}) *ScopedResolverMock_SecretSet_Call {
-	return &ScopedResolverMock_SecretSet_Call{Call: _e.mock.On("SecretSet",
-		append([]interface{}{ctx, ref}, opts...)...)}
+func (_e *ScopedResolverMock_Expecter) SecretSet(ctx interface{}, ref interface{}) *ScopedResolverMock_SecretSet_Call {
+	return &ScopedResolverMock_SecretSet_Call{Call: _e.mock.On("SecretSet", ctx, ref)}
 }
 
-func (_c *ScopedResolverMock_SecretSet_Call) Run(run func(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption)) *ScopedResolverMock_SecretSet_Call {
+func (_c *ScopedResolverMock_SecretSet_Call) Run(run func(ctx context.Context, ref secrets.Reference)) *ScopedResolverMock_SecretSet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -392,18 +376,9 @@ func (_c *ScopedResolverMock_SecretSet_Call) Run(run func(ctx context.Context, r
 		if args[1] != nil {
 			arg1 = args[1].(secrets.Reference)
 		}
-		var arg2 []secrets.ResolveOption
-		variadicArgs := make([]secrets.ResolveOption, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(secrets.ResolveOption)
-			}
-		}
-		arg2 = variadicArgs
 		run(
 			arg0,
 			arg1,
-			arg2...,
 		)
 	})
 	return _c
@@ -414,7 +389,7 @@ func (_c *ScopedResolverMock_SecretSet_Call) Return(secretSetHandle secrets.Secr
 	return _c
 }
 
-func (_c *ScopedResolverMock_SecretSet_Call) RunAndReturn(run func(ctx context.Context, ref secrets.Reference, opts ...secrets.ResolveOption) (secrets.SecretSetHandle, error)) *ScopedResolverMock_SecretSet_Call {
+func (_c *ScopedResolverMock_SecretSet_Call) RunAndReturn(run func(ctx context.Context, ref secrets.Reference) (secrets.SecretSetHandle, error)) *ScopedResolverMock_SecretSet_Call {
 	_c.Call.Return(run)
 	return _c
 }

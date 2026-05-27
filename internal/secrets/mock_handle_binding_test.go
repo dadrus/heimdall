@@ -37,46 +37,35 @@ func (_m *HandleBindingMock[T]) EXPECT() *HandleBindingMock_Expecter[T] {
 	return &HandleBindingMock_Expecter[T]{mock: &_m.Mock}
 }
 
-// get provides a mock function for the type HandleBindingMock
-func (_mock *HandleBindingMock[T]) get(ctx context.Context) (T, bool) {
+// awaitReady provides a mock function for the type HandleBindingMock
+func (_mock *HandleBindingMock[T]) awaitReady(ctx context.Context) error {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
-		panic("no return value specified for get")
+		panic("no return value specified for awaitReady")
 	}
 
-	var r0 T
-	var r1 bool
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (T, bool)); ok {
-		return returnFunc(ctx)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) T); ok {
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context) error); ok {
 		r0 = returnFunc(ctx)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(T)
-		}
+		r0 = ret.Error(0)
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) bool); ok {
-		r1 = returnFunc(ctx)
-	} else {
-		r1 = ret.Get(1).(bool)
-	}
-	return r0, r1
+	return r0
 }
 
-// HandleBindingMock_get_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'get'
-type HandleBindingMock_get_Call[T any] struct {
+// HandleBindingMock_awaitReady_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'awaitReady'
+type HandleBindingMock_awaitReady_Call[T any] struct {
 	*mock.Call
 }
 
-// get is a helper method to define mock.On call
+// awaitReady is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *HandleBindingMock_Expecter[T]) get(ctx interface{}) *HandleBindingMock_get_Call[T] {
-	return &HandleBindingMock_get_Call[T]{Call: _e.mock.On("get", ctx)}
+func (_e *HandleBindingMock_Expecter[T]) awaitReady(ctx interface{}) *HandleBindingMock_awaitReady_Call[T] {
+	return &HandleBindingMock_awaitReady_Call[T]{Call: _e.mock.On("awaitReady", ctx)}
 }
 
-func (_c *HandleBindingMock_get_Call[T]) Run(run func(ctx context.Context)) *HandleBindingMock_get_Call[T] {
+func (_c *HandleBindingMock_awaitReady_Call[T]) Run(run func(ctx context.Context)) *HandleBindingMock_awaitReady_Call[T] {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -89,12 +78,67 @@ func (_c *HandleBindingMock_get_Call[T]) Run(run func(ctx context.Context)) *Han
 	return _c
 }
 
-func (_c *HandleBindingMock_get_Call[T]) Return(v T, b bool) *HandleBindingMock_get_Call[T] {
+func (_c *HandleBindingMock_awaitReady_Call[T]) Return(err error) *HandleBindingMock_awaitReady_Call[T] {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *HandleBindingMock_awaitReady_Call[T]) RunAndReturn(run func(ctx context.Context) error) *HandleBindingMock_awaitReady_Call[T] {
+	_c.Call.Return(run)
+	return _c
+}
+
+// peek provides a mock function for the type HandleBindingMock
+func (_mock *HandleBindingMock[T]) peek() (T, bool) {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for peek")
+	}
+
+	var r0 T
+	var r1 bool
+	if returnFunc, ok := ret.Get(0).(func() (T, bool)); ok {
+		return returnFunc()
+	}
+	if returnFunc, ok := ret.Get(0).(func() T); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(T)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func() bool); ok {
+		r1 = returnFunc()
+	} else {
+		r1 = ret.Get(1).(bool)
+	}
+	return r0, r1
+}
+
+// HandleBindingMock_peek_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'peek'
+type HandleBindingMock_peek_Call[T any] struct {
+	*mock.Call
+}
+
+// peek is a helper method to define mock.On call
+func (_e *HandleBindingMock_Expecter[T]) peek() *HandleBindingMock_peek_Call[T] {
+	return &HandleBindingMock_peek_Call[T]{Call: _e.mock.On("peek")}
+}
+
+func (_c *HandleBindingMock_peek_Call[T]) Run(run func()) *HandleBindingMock_peek_Call[T] {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *HandleBindingMock_peek_Call[T]) Return(v T, b bool) *HandleBindingMock_peek_Call[T] {
 	_c.Call.Return(v, b)
 	return _c
 }
 
-func (_c *HandleBindingMock_get_Call[T]) RunAndReturn(run func(ctx context.Context) (T, bool)) *HandleBindingMock_get_Call[T] {
+func (_c *HandleBindingMock_peek_Call[T]) RunAndReturn(run func() (T, bool)) *HandleBindingMock_peek_Call[T] {
 	_c.Call.Return(run)
 	return _c
 }

@@ -5,8 +5,6 @@
 package mocks
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/secrets"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -39,8 +37,8 @@ func (_m *CredentialsHandleMock) EXPECT() *CredentialsHandleMock_Expecter {
 }
 
 // Get provides a mock function for the type CredentialsHandleMock
-func (_mock *CredentialsHandleMock) Get(ctx context.Context) (secrets.Credentials, bool) {
-	ret := _mock.Called(ctx)
+func (_mock *CredentialsHandleMock) Get() (secrets.Credentials, bool) {
+	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Get")
@@ -48,18 +46,18 @@ func (_mock *CredentialsHandleMock) Get(ctx context.Context) (secrets.Credential
 
 	var r0 secrets.Credentials
 	var r1 bool
-	if returnFunc, ok := ret.Get(0).(func(context.Context) (secrets.Credentials, bool)); ok {
-		return returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func() (secrets.Credentials, bool)); ok {
+		return returnFunc()
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context) secrets.Credentials); ok {
-		r0 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(0).(func() secrets.Credentials); ok {
+		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(secrets.Credentials)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context) bool); ok {
-		r1 = returnFunc(ctx)
+	if returnFunc, ok := ret.Get(1).(func() bool); ok {
+		r1 = returnFunc()
 	} else {
 		r1 = ret.Get(1).(bool)
 	}
@@ -72,20 +70,13 @@ type CredentialsHandleMock_Get_Call struct {
 }
 
 // Get is a helper method to define mock.On call
-//   - ctx context.Context
-func (_e *CredentialsHandleMock_Expecter) Get(ctx interface{}) *CredentialsHandleMock_Get_Call {
-	return &CredentialsHandleMock_Get_Call{Call: _e.mock.On("Get", ctx)}
+func (_e *CredentialsHandleMock_Expecter) Get() *CredentialsHandleMock_Get_Call {
+	return &CredentialsHandleMock_Get_Call{Call: _e.mock.On("Get")}
 }
 
-func (_c *CredentialsHandleMock_Get_Call) Run(run func(ctx context.Context)) *CredentialsHandleMock_Get_Call {
+func (_c *CredentialsHandleMock_Get_Call) Run(run func()) *CredentialsHandleMock_Get_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		run(
-			arg0,
-		)
+		run()
 	})
 	return _c
 }
@@ -95,14 +86,14 @@ func (_c *CredentialsHandleMock_Get_Call) Return(v secrets.Credentials, b bool) 
 	return _c
 }
 
-func (_c *CredentialsHandleMock_Get_Call) RunAndReturn(run func(ctx context.Context) (secrets.Credentials, bool)) *CredentialsHandleMock_Get_Call {
+func (_c *CredentialsHandleMock_Get_Call) RunAndReturn(run func() (secrets.Credentials, bool)) *CredentialsHandleMock_Get_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // OnUpdate provides a mock function for the type CredentialsHandleMock
-func (_mock *CredentialsHandleMock) OnUpdate(updateFunc secrets.UpdateFunc[secrets.Credentials]) {
-	_mock.Called(updateFunc)
+func (_mock *CredentialsHandleMock) OnUpdate(callback secrets.UpdateFunc[secrets.Credentials]) {
+	_mock.Called(callback)
 	return
 }
 
@@ -112,12 +103,12 @@ type CredentialsHandleMock_OnUpdate_Call struct {
 }
 
 // OnUpdate is a helper method to define mock.On call
-//   - updateFunc secrets.UpdateFunc[secrets.Credentials]
-func (_e *CredentialsHandleMock_Expecter) OnUpdate(updateFunc interface{}) *CredentialsHandleMock_OnUpdate_Call {
-	return &CredentialsHandleMock_OnUpdate_Call{Call: _e.mock.On("OnUpdate", updateFunc)}
+//   - callback secrets.UpdateFunc[secrets.Credentials]
+func (_e *CredentialsHandleMock_Expecter) OnUpdate(callback interface{}) *CredentialsHandleMock_OnUpdate_Call {
+	return &CredentialsHandleMock_OnUpdate_Call{Call: _e.mock.On("OnUpdate", callback)}
 }
 
-func (_c *CredentialsHandleMock_OnUpdate_Call) Run(run func(updateFunc secrets.UpdateFunc[secrets.Credentials])) *CredentialsHandleMock_OnUpdate_Call {
+func (_c *CredentialsHandleMock_OnUpdate_Call) Run(run func(callback secrets.UpdateFunc[secrets.Credentials])) *CredentialsHandleMock_OnUpdate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 secrets.UpdateFunc[secrets.Credentials]
 		if args[0] != nil {
@@ -135,7 +126,7 @@ func (_c *CredentialsHandleMock_OnUpdate_Call) Return() *CredentialsHandleMock_O
 	return _c
 }
 
-func (_c *CredentialsHandleMock_OnUpdate_Call) RunAndReturn(run func(updateFunc secrets.UpdateFunc[secrets.Credentials])) *CredentialsHandleMock_OnUpdate_Call {
+func (_c *CredentialsHandleMock_OnUpdate_Call) RunAndReturn(run func(callback secrets.UpdateFunc[secrets.Credentials])) *CredentialsHandleMock_OnUpdate_Call {
 	_c.Run(run)
 	return _c
 }
