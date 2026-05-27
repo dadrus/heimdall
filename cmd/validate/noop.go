@@ -35,7 +35,6 @@ type noopResolver struct{}
 func (noopResolver) Secret(
 	context.Context,
 	secrets.Reference,
-	...secrets.ResolveOption,
 ) (secrets.SecretHandle, error) {
 	return noopHandle[secrets.Secret]{}, nil
 }
@@ -43,7 +42,6 @@ func (noopResolver) Secret(
 func (noopResolver) SecretSet(
 	context.Context,
 	secrets.Reference,
-	...secrets.ResolveOption,
 ) (secrets.SecretSetHandle, error) {
 	return noopHandle[[]secrets.Secret]{}, nil
 }
@@ -51,7 +49,6 @@ func (noopResolver) SecretSet(
 func (noopResolver) Credentials(
 	context.Context,
 	secrets.Reference,
-	...secrets.ResolveOption,
 ) (secrets.CredentialsHandle, error) {
 	return noopHandle[secrets.Credentials]{}, nil
 }
@@ -59,13 +56,16 @@ func (noopResolver) Credentials(
 func (noopResolver) CertificateBundle(
 	context.Context,
 	secrets.Reference,
-	...secrets.ResolveOption,
 ) (secrets.CertificateBundleHandle, error) {
 	return noopHandle[secrets.CertificateBundle]{}, nil
 }
 
 type noopScopedResolver struct {
 	noopResolver
+}
+
+func (r noopScopedResolver) AwaitReady(_ context.Context) error {
+	return nil
 }
 
 func (noopScopedResolver) Release() {}
@@ -78,7 +78,7 @@ func (noopScopedResolverFactory) Create(id string, opts ...secrets.ScopeOption) 
 
 type noopHandle[T any] struct{}
 
-func (noopHandle[T]) Get(context.Context) (T, bool) {
+func (noopHandle[T]) Get() (T, bool) {
 	var zero T
 
 	return zero, false
