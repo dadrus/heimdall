@@ -1,7 +1,6 @@
 package template
 
 import (
-	"context"
 	"fmt"
 	"net/url"
 	"reflect"
@@ -72,7 +71,7 @@ func secret(
 			)
 		}
 
-		value, ok := informer.Get(context.Background())
+		value, ok := informer.Get()
 		if !ok {
 			return "", errorchain.NewWithMessagef(
 				pipeline.ErrConfiguration,

@@ -59,9 +59,7 @@ func createSecretInformers(
 			ctx,
 			resolver,
 			ref,
-			secrets.InformerOptions[string]{
-				Converter: toStringSecret,
-			},
+			secrets.WithConverter(toStringSecret),
 		)
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(

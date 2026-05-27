@@ -125,12 +125,16 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, ref, mock.Anything).
+					Secret(mock.Anything, ref).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(types.NewStringSecret("api-key", "foo"), true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), types.NewStringSecret("api-key", "foo"))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -175,14 +179,16 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, ref, mock.Anything).
-					Return(handle, nil).
-					Once()
+					Secret(mock.Anything, ref).
+					Return(handle, nil)
 
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(types.NewStringSecret("api-key", "foo"), true).
-					Twice()
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), types.NewStringSecret("api-key", "foo"))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -200,12 +206,16 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, ref, mock.Anything).
+					Secret(mock.Anything, ref).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(types.NewStringSecret("api-key", "foo"), true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), types.NewStringSecret("api-key", "foo"))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -223,12 +233,16 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, ref, mock.Anything).
+					Secret(mock.Anything, ref).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(types.NewStringSecret("api-key", "foo"), true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), types.NewStringSecret("api-key", "foo"))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -246,13 +260,16 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, ref, mock.Anything).
+					Secret(mock.Anything, ref).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(types.NewStringSecret("api-key", "foo"), true).
-					Twice()
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), types.NewStringSecret("api-key", "foo"))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -270,12 +287,16 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, ref, mock.Anything).
+					Secret(mock.Anything, ref).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(types.NewStringSecret("api-key", "foo"), true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), types.NewStringSecret("api-key", "foo"))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -293,12 +314,16 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, ref, mock.Anything).
+					Secret(mock.Anything, ref).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(types.NewStringSecret("api-key", "foo"), true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), types.NewStringSecret("api-key", "foo"))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -316,12 +341,16 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, ref, mock.Anything).
+					Secret(mock.Anything, ref).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(types.NewStringSecret("api-key", "foo"), true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), types.NewStringSecret("api-key", "foo"))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -336,12 +365,16 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, ref, mock.Anything).
+					Secret(mock.Anything, ref).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(types.NewStringSecret("api-key", "foo"), true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), types.NewStringSecret("api-key", "foo"))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
@@ -356,7 +389,7 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, ref, mock.Anything).
+					Secret(mock.Anything, ref).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, _ string, err error) {
@@ -373,12 +406,38 @@ func TestTemplateSecret(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, ref, mock.Anything).
+					Secret(mock.Anything, ref).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(nil, false)
+					OnUpdate(mock.Anything)
+			},
+			assert: func(t *testing.T, _ string, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, template.ErrTemplateRender)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "secret reference 'k8s/api-key' is not available")
+			},
+		},
+		"returns render error if registered secret cannot be converted": {
+			raw: `{{ secret "k8s" "api-key" }}`,
+			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
+				t.Helper()
+
+				resolver.EXPECT().
+					Secret(mock.Anything, ref).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), types.NewCredentials("api-key", map[string]any{"foo": "bar"}))
+						require.Error(t, err)
+						require.ErrorIs(t, err, secrets.ErrSecretKindMismatch)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, _ string, err error) {
 				t.Helper()
@@ -451,6 +510,30 @@ func TestTemplateSecret(t *testing.T) {
 		},
 		"rejects additional argument": {
 			raw: `{{ secret "k8s" "api-key" "unexpected" }}`,
+			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, _ string, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+			},
+		},
+		"rejects empty source": {
+			raw: `{{ secret "" "api-key" }}`,
+			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
+				t.Helper()
+			},
+			assert: func(t *testing.T, _ string, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+			},
+		},
+		"rejects empty selector": {
+			raw: `{{ secret "k8s" "" }}`,
 			setup: func(t *testing.T, _ *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
 				t.Helper()
 			},
