@@ -19,7 +19,6 @@ package rules
 import (
 	"net/http"
 	"net/url"
-	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -875,71 +874,6 @@ func TestRepositoryDeleteRulesFromDifferentRuleSets(t *testing.T) {
 	assert.True(t, impl.index.Empty())
 }
 
-func TestRepositoryDeleteRuleSetReturnsCleanupCandidates(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	mp := otel.GetMeterProvider()
-	repo, err := newRepository(&ruleFactory{}, mp.Meter("test"))
-	require.NoError(t, err)
-
-	impl := repo.(*repository)
-
-	deletedSource := rule.RuleSet{ID: "deleted"}
-	keptSource := rule.RuleSet{ID: "kept"}
-
-	deletedRule1 := &ruleImpl{id: "1", source: deletedSource, hash: []byte{1}}
-	deletedRule1.routes = append(deletedRule1.routes, &routeImpl{
-		rule: deletedRule1,
-		host: "example.com",
-		path: "/deleted/1",
-	})
-
-	deletedRule2 := &ruleImpl{id: "2", source: deletedSource, hash: []byte{1}}
-	deletedRule2.routes = append(deletedRule2.routes, &routeImpl{
-		rule: deletedRule2,
-		host: "example.com",
-		path: "/deleted/2",
-	})
-
-	keptRule := &ruleImpl{id: "3", source: keptSource, hash: []byte{1}}
-	keptRule.routes = append(keptRule.routes, &routeImpl{
-		rule: keptRule,
-		host: "example.com",
-		path: "/kept",
-	})
-
-	deletedRules := []rule.Rule{deletedRule1, deletedRule2}
-
-	require.NoError(t, repo.AddRuleSet(t.Context(), deletedSource, deletedRules))
-	require.NoError(t, repo.AddRuleSet(t.Context(), keptSource, []rule.Rule{keptRule}))
-
-	// WHEN
-	err = repo.DeleteRuleSet(t.Context(), deletedSource)
-
-	// THEN
-	require.NoError(t, err)
-
-	assert.ElementsMatch(t, []rule.Rule{keptRule}, impl.knownRules)
-
-	_, err = impl.index.FindEntry("example.com", "/deleted/1",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.Error(t, err)
-
-	_, err = impl.index.FindEntry("example.com", "/deleted/2",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.Error(t, err)
-
-	_, err = impl.index.FindEntry("example.com", "/kept",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(route rule.Route, _, _ []string) bool {
-				return route.Rule() == keptRule
-			}))
-	require.NoError(t, err)
-}
-
 func TestRepositoryUpdateRuleSetSingle(t *testing.T) {
 	t.Parallel()
 
@@ -977,7 +911,10 @@ func TestRepositoryUpdateRuleSetSingle(t *testing.T) {
 	rule3 = &ruleImpl{id: "3", source: source, hash: []byte{2}}
 	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "foo.example.com", path: "/foo/3"})
 	rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "foo.example.com", path: "/foo/4"})
-	// rule 4 same as before
+	// rule 4 same as before, but compiled again and therefore represented by a new instance
+	oldRule4 := rule4
+	rule4 = &ruleImpl{id: "4", source: source, hash: []byte{1}}
+	rule4.routes = append(rule4.routes, &routeImpl{rule: rule4, host: "baz.example.com", path: "/bar/4"})
 
 	updatedRules := []rule.Rule{rule1, rule3, rule4}
 
@@ -989,19 +926,33 @@ func TestRepositoryUpdateRuleSetSingle(t *testing.T) {
 
 	assert.Len(t, impl.knownRules, 3)
 	assert.False(t, impl.index.Empty())
+	assert.Contains(t, impl.knownRules, rule1)
+	assert.Contains(t, impl.knownRules, rule3)
+	assert.Contains(t, impl.knownRules, rule4)
 
-	_, err = impl.index.FindEntry("example.com", "/bar/1",
+	for _, knownRule := range impl.knownRules {
+		assert.NotSame(t, initialRules[0], knownRule)
+		assert.NotSame(t, initialRules[1], knownRule)
+		assert.NotSame(t, initialRules[2], knownRule)
+		assert.NotSame(t, oldRule4, knownRule)
+	}
+
+	entry, err := impl.index.FindEntry("example.com", "/bar/1",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
+	assert.Same(t, rule1, entry.Value.Rule())
+
 	_, err = impl.index.FindEntry("bar.example.com", "/bar/1a",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
-	_, err = impl.index.FindEntry("bar.example.com", "/bar/1b",
+
+	entry, err = impl.index.FindEntry("bar.example.com", "/bar/1b",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
+	assert.Same(t, rule1, entry.Value.Rule())
 
 	_, err = impl.index.FindEntry("example.com", "/bar/2",
 		radixtrie.LookupMatcherFunc[rule.Route](
@@ -1012,19 +963,25 @@ func TestRepositoryUpdateRuleSetSingle(t *testing.T) {
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.Error(t, err)
-	_, err = impl.index.FindEntry("foo.example.com", "/foo/3",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.NoError(t, err)
-	_, err = impl.index.FindEntry("foo.example.com", "/foo/4",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.NoError(t, err)
 
-	_, err = impl.index.FindEntry("baz.example.com", "/bar/4",
+	entry, err = impl.index.FindEntry("foo.example.com", "/foo/3",
 		radixtrie.LookupMatcherFunc[rule.Route](
 			func(_ rule.Route, _, _ []string) bool { return true }))
 	require.NoError(t, err)
+	assert.Same(t, rule3, entry.Value.Rule())
+
+	entry, err = impl.index.FindEntry("foo.example.com", "/foo/4",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
+	require.NoError(t, err)
+	assert.Same(t, rule3, entry.Value.Rule())
+
+	entry, err = impl.index.FindEntry("baz.example.com", "/bar/4",
+		radixtrie.LookupMatcherFunc[rule.Route](
+			func(_ rule.Route, _, _ []string) bool { return true }))
+	require.NoError(t, err)
+	assert.Same(t, rule4, entry.Value.Rule())
+	assert.NotSame(t, oldRule4, entry.Value.Rule())
 }
 
 func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
@@ -1033,7 +990,7 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		initRules    []rule.Rule
 		updatedRules []rule.Rule
-		assert       func(t *testing.T, err error, repo *repository)
+		assert       func(t *testing.T, err error, repo *repository, initRules, updatedRules []rule.Rule)
 	}{
 		"successful update": {
 			initRules: func() []rule.Rule {
@@ -1044,7 +1001,10 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 				rule2 := &ruleImpl{id: "2", source: rule.RuleSet{ID: "2"}, hash: []byte{1}}
 				rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "example.com", path: "/bar/2"})
 
-				return []rule.Rule{rule1, rule2}
+				rule3 := &ruleImpl{id: "3", source: rule.RuleSet{ID: "2"}, hash: []byte{1}}
+				rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "baz.example.com", path: "/bar/3"})
+
+				return []rule.Rule{rule1, rule2, rule3}
 			}(),
 			updatedRules: func() []rule.Rule {
 				// rule 2 changed: example.com/bar/2 gone, foo.example.com/foo/3 and /foo/4 added
@@ -1052,38 +1012,63 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 				rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "foo.example.com", path: "/foo/3"})
 				rule2.routes = append(rule2.routes, &routeImpl{rule: rule2, host: "foo.example.com", path: "/foo/4"})
 
-				return []rule.Rule{rule2}
+				// rule 3 same as before, but compiled again and therefore represented by a new instance
+				rule3 := &ruleImpl{id: "3", source: rule.RuleSet{ID: "2"}, hash: []byte{1}}
+				rule3.routes = append(rule3.routes, &routeImpl{rule: rule3, host: "baz.example.com", path: "/bar/3"})
+
+				return []rule.Rule{rule2, rule3}
 			}(),
-			assert: func(t *testing.T, err error, repo *repository) {
+			assert: func(t *testing.T, err error, repo *repository, initRules, updatedRules []rule.Rule) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.Len(t, repo.knownRules, 2)
+				assert.Len(t, repo.knownRules, 3)
 				assert.False(t, repo.index.Empty())
+				assert.Contains(t, repo.knownRules, initRules[0])
+				assert.Contains(t, repo.knownRules, updatedRules[0])
+				assert.Contains(t, repo.knownRules, updatedRules[1])
 
-				_, err = repo.index.FindEntry("example.com", "/bar/1",
+				for _, knownRule := range repo.knownRules {
+					assert.NotSame(t, initRules[1], knownRule)
+					assert.NotSame(t, initRules[2], knownRule)
+				}
+
+				entry, err := repo.index.FindEntry("example.com", "/bar/1",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.FindEntry("bar.example.com", "/bar/1a",
+				assert.Same(t, initRules[0], entry.Value.Rule())
+
+				entry, err = repo.index.FindEntry("bar.example.com", "/bar/1a",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
+				assert.Same(t, initRules[0], entry.Value.Rule())
 
 				_, err = repo.index.FindEntry("example.com", "/bar/2",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.Error(t, err)
 
-				_, err = repo.index.FindEntry("foo.example.com", "/foo/3",
+				entry, err = repo.index.FindEntry("foo.example.com", "/foo/3",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
-				_, err = repo.index.FindEntry("foo.example.com", "/foo/4",
+				assert.Same(t, updatedRules[0], entry.Value.Rule())
+
+				entry, err = repo.index.FindEntry("foo.example.com", "/foo/4",
 					radixtrie.LookupMatcherFunc[rule.Route](
 						func(_ rule.Route, _, _ []string) bool { return true }))
 				require.NoError(t, err)
+				assert.Same(t, updatedRules[0], entry.Value.Rule())
+
+				entry, err = repo.index.FindEntry("baz.example.com", "/bar/3",
+					radixtrie.LookupMatcherFunc[rule.Route](
+						func(_ rule.Route, _, _ []string) bool { return true }))
+				require.NoError(t, err)
+				assert.Same(t, updatedRules[1], entry.Value.Rule())
+				assert.NotSame(t, initRules[2], entry.Value.Rule())
 			},
 		},
 		"rule attempts to provide a more specific host for an existing rule in a different rule set": {
@@ -1102,7 +1087,7 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 
 				return []rule.Rule{rule2}
 			}(),
-			assert: func(t *testing.T, err error, repo *repository) {
+			assert: func(t *testing.T, err error, repo *repository, _, _ []rule.Rule) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -1141,7 +1126,7 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 
 				return []rule.Rule{rule2}
 			}(),
-			assert: func(t *testing.T, err error, repo *repository) {
+			assert: func(t *testing.T, err error, repo *repository, _, _ []rule.Rule) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -1177,7 +1162,7 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 
 				return []rule.Rule{rule2}
 			}(),
-			assert: func(t *testing.T, err error, repo *repository) {
+			assert: func(t *testing.T, err error, repo *repository, _, _ []rule.Rule) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -1216,106 +1201,9 @@ func TestRepositoryUpdateRuleSetMultiple(t *testing.T) {
 			err = repo.UpdateRuleSet(t.Context(), rule.RuleSet{ID: "2"}, tc.updatedRules)
 
 			// THEN
-			tc.assert(t, err, repo.(*repository))
+			tc.assert(t, err, repo.(*repository), tc.initRules, tc.updatedRules)
 		})
 	}
-}
-
-func TestRepositoryUpdateRuleSetReturnsCleanupCandidates(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	mp := otel.GetMeterProvider()
-	repo, err := newRepository(&ruleFactory{}, mp.Meter("test"))
-	require.NoError(t, err)
-
-	impl := repo.(*repository)
-	source := rule.RuleSet{ID: "1"}
-
-	oldChangedRule := &ruleImpl{id: "changed", source: source, hash: []byte{1}}
-	oldChangedRule.routes = append(oldChangedRule.routes, &routeImpl{
-		rule: oldChangedRule,
-		host: "example.com",
-		path: "/changed",
-	})
-
-	oldDeletedRule := &ruleImpl{id: "deleted", source: source, hash: []byte{1}}
-	oldDeletedRule.routes = append(oldDeletedRule.routes, &routeImpl{
-		rule: oldDeletedRule,
-		host: "example.com",
-		path: "/deleted",
-	})
-
-	oldUnchangedRule := &ruleImpl{id: "unchanged", source: source, hash: []byte{1}}
-	oldUnchangedRule.routes = append(oldUnchangedRule.routes, &routeImpl{
-		rule: oldUnchangedRule,
-		host: "example.com",
-		path: "/unchanged",
-	})
-
-	require.NoError(t, repo.AddRuleSet(t.Context(), source, []rule.Rule{
-		oldChangedRule,
-		oldDeletedRule,
-		oldUnchangedRule,
-	}))
-
-	newChangedRule := &ruleImpl{id: "changed", source: source, hash: []byte{2}}
-	newChangedRule.routes = append(newChangedRule.routes, &routeImpl{
-		rule: newChangedRule,
-		host: "example.com",
-		path: "/changed-new",
-	})
-
-	newUnchangedRule := &ruleImpl{id: "unchanged", source: source, hash: []byte{1}}
-	newUnchangedRule.routes = append(newUnchangedRule.routes, &routeImpl{
-		rule: newUnchangedRule,
-		host: "example.com",
-		path: "/unchanged",
-	})
-
-	// WHEN
-	err = repo.UpdateRuleSet(t.Context(), source, []rule.Rule{
-		newChangedRule,
-		newUnchangedRule,
-	})
-
-	// THEN
-	require.NoError(t, err)
-
-	require.Len(t, impl.knownRules, 2)
-	assert.True(t, containsRuleInstance(impl.knownRules, newChangedRule))
-	assert.True(t, containsRuleInstance(impl.knownRules, oldUnchangedRule))
-	assert.False(t, containsRuleInstance(impl.knownRules, oldChangedRule))
-	assert.False(t, containsRuleInstance(impl.knownRules, oldDeletedRule))
-	assert.False(t, containsRuleInstance(impl.knownRules, newUnchangedRule))
-
-	_, err = impl.index.FindEntry("example.com", "/changed",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.Error(t, err)
-
-	_, err = impl.index.FindEntry("example.com", "/deleted",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.Error(t, err)
-
-	_, err = impl.index.FindEntry("example.com", "/changed-new",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(_ rule.Route, _, _ []string) bool { return true }))
-	require.NoError(t, err)
-
-	_, err = impl.index.FindEntry("example.com", "/unchanged",
-		radixtrie.LookupMatcherFunc[rule.Route](
-			func(route rule.Route, _, _ []string) bool {
-				return route.Rule() == oldUnchangedRule
-			}))
-	require.NoError(t, err)
-}
-
-func containsRuleInstance(rules []rule.Rule, expected rule.Rule) bool {
-	return slices.ContainsFunc(rules, func(candidate rule.Rule) bool {
-		return candidate == expected
-	})
 }
 
 func TestRepositoryFindRule(t *testing.T) {
