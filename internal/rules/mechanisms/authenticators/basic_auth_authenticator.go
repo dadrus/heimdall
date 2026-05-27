@@ -133,9 +133,7 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 		context.Background(),
 		app.SecretResolver(),
 		secrets.Reference{Source: conf.Credentials.Source, Selector: conf.Credentials.Selector},
-		secrets.CredentialsInformerOptions[credentialsChecker]{
-			Converter: toCredentialsChecker(app.DecoderFactory()),
-		},
+		secrets.WithConverter(toCredentialsChecker(app.DecoderFactory())),
 	)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
@@ -211,7 +209,7 @@ func (a *basicAuthAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 			WithErrorContext(a)
 	}
 
-	checker, ok := a.informer.Get(ctx.Context())
+	checker, ok := a.informer.Get()
 	if !ok {
 		return errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
@@ -278,9 +276,7 @@ func (a *basicAuthAuthenticator) CreateStep(
 			ctx,
 			resolver,
 			secrets.Reference{Source: conf.Credentials.Source, Selector: conf.Credentials.Selector},
-			secrets.CredentialsInformerOptions[credentialsChecker]{
-				Converter: toCredentialsChecker(a.app.DecoderFactory()),
-			},
+			secrets.WithConverter(toCredentialsChecker(a.app.DecoderFactory())),
 		)
 		if err != nil {
 			return nil, errorchain.NewWithMessage(

@@ -560,7 +560,7 @@ error_signaling:
 			chm.EXPECT().OnUpdate(mock.Anything).Maybe()
 
 			sr := secretsmocks.NewResolverMock(t)
-			sr.EXPECT().Credentials(mock.Anything, mock.Anything, mock.Anything).
+			sr.EXPECT().Credentials(mock.Anything, mock.Anything).
 				Maybe().
 				Return(chm, nil)
 

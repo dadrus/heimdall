@@ -57,16 +57,19 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(chm, nil)
 
 				chm.EXPECT().
-					Get(mock.Anything).
-					Return(secrettypes.NewCredentials("bar", map[string]any{
-						"user_id":  "bar",
-						"password": "baz",
-					}), true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+							"user_id":  "bar",
+							"password": "baz",
+						}))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
@@ -85,7 +88,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				assert.Equal(t, auth.ID(), auth.Type())
 				require.NotNil(t, auth.informer)
 
-				_, ok := auth.informer.Get(t.Context())
+				_, ok := auth.informer.Get()
 				assert.True(t, ok)
 			},
 		},
@@ -101,16 +104,19 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secrettypes.NewCredentials("bar", map[string]any{
-						"user_id":  "bar",
-						"password": "baz",
-					}), true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+							"user_id":  "bar",
+							"password": "baz",
+						}))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
@@ -129,7 +135,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				assert.Equal(t, auth.ID(), auth.Type())
 				require.NotNil(t, auth.informer)
 
-				_, ok := auth.informer.Get(t.Context())
+				_, ok := auth.informer.Get()
 				assert.True(t, ok)
 			},
 		},
@@ -145,16 +151,19 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secrettypes.NewCredentials("bar", map[string]any{
-						"user_id":  "bar",
-						"password": "baz",
-					}), true)
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+							"user_id":  "bar",
+							"password": "baz",
+						}))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
@@ -173,7 +182,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				assert.Equal(t, auth.ID(), auth.Type())
 				require.NotNil(t, auth.informer)
 
-				_, ok := auth.informer.Get(t.Context())
+				_, ok := auth.informer.Get()
 				assert.True(t, ok)
 			},
 		},
@@ -203,7 +212,6 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -228,9 +236,19 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+							"user_id":  "bar",
+							"password": "baz",
+						}))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, auth *basicAuthAuthenticator) {
 				t.Helper()
@@ -242,7 +260,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 		},
 		"without credentials configuration": {
 			config: config.MechanismConfig{},
-			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.CredentialsHandleMock) {
+			setup: func(t *testing.T, _ *secretsmocks.ResolverMock, _ *secretsmocks.CredentialsHandleMock) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, err error, _ *basicAuthAuthenticator) {
@@ -315,9 +333,19 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(appHandle, nil)
+
+				appHandle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+							"user_id":  "bar",
+							"password": "baz",
+						}))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
@@ -347,17 +375,37 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(appHandle, nil)
+
+				appHandle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+							"user_id":  "bar",
+							"password": "baz",
+						}))
+						require.NoError(t, err)
+
+						return true
+					}))
 
 				stepResolver.EXPECT().
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "baz"},
-						mock.Anything,
 					).
 					Return(stepHandle, nil)
+
+				stepHandle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("baz", map[string]any{
+							"user_id":  "bar",
+							"password": "baz",
+						}))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
@@ -398,15 +446,24 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(appHandle, nil)
+
+				appHandle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+							"user_id":  "bar",
+							"password": "baz",
+						}))
+						require.NoError(t, err)
+
+						return true
+					}))
 
 				stepResolver.EXPECT().
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "baz"},
-						mock.Anything,
 					).
 					Return(nil, assert.AnError)
 			},
@@ -439,9 +496,19 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(appHandle, nil)
+
+				appHandle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+							"user_id":  "bar",
+							"password": "baz",
+						}))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, _, _ *basicAuthAuthenticator) {
 				t.Helper()
@@ -469,9 +536,19 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(appHandle, nil)
+
+				appHandle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+							"user_id":  "bar",
+							"password": "baz",
+						}))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
@@ -514,9 +591,19 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(appHandle, nil)
+
+				appHandle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+							"user_id":  "bar",
+							"password": "baz",
+						}))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
@@ -566,9 +653,19 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					Credentials(
 						mock.Anything,
 						secrets.Reference{Source: "foo", Selector: "bar"},
-						mock.Anything,
 					).
 					Return(appHandle, nil)
+
+				appHandle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+							"user_id":  "bar",
+							"password": "baz",
+						}))
+						require.NoError(t, err)
+
+						return true
+					}))
 			},
 			assert: func(t *testing.T, err error, prototype, configured *basicAuthAuthenticator) {
 				t.Helper()
@@ -908,14 +1005,28 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 				Credentials(
 					mock.Anything,
 					secrets.Reference{Source: "foo", Selector: "bar"},
-					mock.Anything,
 				).
 				Return(handle, nil)
 
-			handle.EXPECT().
-				Get(mock.Anything).
-				Maybe().
-				Return(tc.handleValue, tc.handleOK)
+			if !tc.handleOK {
+				handle.EXPECT().OnUpdate(mock.Anything)
+			} else if _, ok := tc.handleValue.Values()["user_id"]; !ok {
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), tc.handleValue)
+						require.Error(t, err)
+
+						return true
+					}))
+			} else {
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), tc.handleValue)
+						require.NoError(t, err)
+
+						return true
+					}))
+			}
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
@@ -998,9 +1109,19 @@ func TestBasicAuthAuthenticatorDecorateErrorResponse(t *testing.T) {
 				Credentials(
 					mock.Anything,
 					secrets.Reference{Source: "foo", Selector: "bar"},
-					mock.Anything,
 				).
 				Return(handle, nil)
+
+			handle.EXPECT().
+				OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+					err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+						"user_id":  "bar",
+						"password": "baz",
+					}))
+					require.NoError(t, err)
+
+					return true
+				}))
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
