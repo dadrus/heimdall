@@ -18,7 +18,6 @@ package webhooks
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -136,22 +135,16 @@ func TestControllerLifecycle(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "webhooks", Selector: "server"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						err := cb(context.Background(), secret)
+						err := cb(t.Context(), secret)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true).
-					Maybe()
 			},
 			request: func(t *testing.T, baseURL string) *http.Request {
 				t.Helper()
@@ -224,22 +217,16 @@ func TestControllerLifecycle(t *testing.T) {
 					Secret(
 						mock.Anything,
 						secrets.Reference{Source: "webhooks", Selector: "server"},
-						mock.Anything,
 					).
 					Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-						err := cb(context.Background(), secret)
+						err := cb(t.Context(), secret)
 						require.NoError(t, err)
 
 						return true
 					}))
-
-				handle.EXPECT().
-					Get(mock.Anything).
-					Return(secret, true).
-					Maybe()
 			},
 			request: func(t *testing.T, baseURL string) *http.Request {
 				t.Helper()
