@@ -26,7 +26,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	noopmetric "go.opentelemetry.io/otel/metric/noop"
 
+	"github.com/dadrus/heimdall/internal/secrets/metrics/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/source"
 	sourcemocks "github.com/dadrus/heimdall/internal/secrets/source/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/types"
@@ -100,7 +102,7 @@ func TestNewResolver(t *testing.T) {
 		})).
 		Once()
 
-	res, err := newResolver(zerolog.Nop(), repository)
+	res, err := newResolver(zerolog.Nop(), repository, noopmetric.Meter{})
 
 	require.NoError(t, err)
 	require.NotNil(t, res)
@@ -128,18 +130,44 @@ func TestResolverStart(t *testing.T) {
 			setup: func(t *testing.T, res *resolver, calls *atomic.Int32) {
 				t.Helper()
 
-				res.pendingTasks = append(
-					res.pendingTasks,
-					newTestBinding(t, func(context.Context) (string, error) {
+				bdg1 := newBinding(
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					mocks.NewSecretUsageMock(t),
+					func(context.Context) (string, error) {
 						calls.Add(1)
 
 						return "a", nil
-					}),
-					newTestBinding(t, func(context.Context) (string, error) {
+					},
+				)
+
+				bdg2 := newBinding(
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					mocks.NewSecretUsageMock(t),
+					func(context.Context) (string, error) {
 						calls.Add(1)
 
 						return "b", nil
-					}),
+					},
+				)
+
+				res.pendingTasks = append(
+					res.pendingTasks,
+					bdg1,
+					bdg2,
 				)
 			},
 			assert: func(t *testing.T, res *resolver, calls *atomic.Int32) {
@@ -157,15 +185,25 @@ func TestResolverStart(t *testing.T) {
 			setup: func(t *testing.T, res *resolver, calls *atomic.Int32) {
 				t.Helper()
 
-				res.state = resolverStateStopped
-				res.pendingTasks = append(
-					res.pendingTasks,
-					newTestBinding(t, func(context.Context) (string, error) {
+				bdg := newBinding(
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					mocks.NewSecretUsageMock(t),
+					func(context.Context) (string, error) {
 						calls.Add(1)
 
 						return "ignored", nil
-					}),
+					},
 				)
+
+				res.state = resolverStateStopped
+				res.pendingTasks = append(res.pendingTasks, bdg)
 			},
 			assert: func(t *testing.T, res *resolver, calls *atomic.Int32) {
 				t.Helper()
@@ -236,11 +274,24 @@ func TestResolverScheduleResolve(t *testing.T) {
 			res := newEmptyTestResolver(t)
 			res.state = tc.state
 
-			res.scheduleResolve(newTestBinding(t, func(context.Context) (string, error) {
-				calls.Add(1)
+			bdg := newBinding(
+				bindingKey{
+					kind:      bindingKindSecret,
+					source:    "source",
+					selector:  "selector",
+					namespace: "namespace",
+					scope:     referenceScopeInternal,
+				},
+				zerolog.Nop(),
+				mocks.NewSecretUsageMock(t),
+				func(context.Context) (string, error) {
+					calls.Add(1)
 
-				return "resolved", nil
-			}))
+					return "resolved", nil
+				},
+			)
+
+			res.scheduleResolve(bdg)
 
 			tc.assert(t, res, &calls)
 		})
@@ -1514,7 +1565,19 @@ func TestResolverReleaseBinding(t *testing.T) {
 				selector: "selector",
 				scope:    referenceScopeInternal,
 			}
-			bdg := newTestBinding[Secret](t, nil)
+
+			bdg := newBinding[Secret](
+				bindingKey{
+					kind:      bindingKindSecret,
+					source:    "source",
+					selector:  "selector",
+					namespace: "namespace",
+					scope:     referenceScopeInternal,
+				},
+				zerolog.Nop(),
+				mocks.NewSecretUsageMock(t),
+				nil,
+			)
 
 			res.secretBindings[key] = &leasedBinding[Secret]{
 				binding: bdg,
@@ -1551,7 +1614,19 @@ func TestResolverReleaseBindingForAllKinds(t *testing.T) {
 			setup: func(t *testing.T, res *resolver, key bindingKey) *bindingMarker {
 				t.Helper()
 
-				bdg := newTestBinding[Secret](t, nil)
+				bdg := newBinding[Secret](
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					mocks.NewSecretUsageMock(t),
+					nil,
+				)
+
 				res.secretBindings[key] = &leasedBinding[Secret]{binding: bdg, leases: 1}
 
 				return &bindingMarker{schedule: bdg.Schedule}
@@ -1568,7 +1643,19 @@ func TestResolverReleaseBindingForAllKinds(t *testing.T) {
 			setup: func(t *testing.T, res *resolver, key bindingKey) *bindingMarker {
 				t.Helper()
 
-				bdg := newTestBinding[[]Secret](t, nil)
+				bdg := newBinding[[]Secret](
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					mocks.NewSecretUsageMock(t),
+					nil,
+				)
+
 				res.secretSetBindings[key] = &leasedBinding[[]Secret]{binding: bdg, leases: 1}
 
 				return &bindingMarker{schedule: bdg.Schedule}
@@ -1585,7 +1672,18 @@ func TestResolverReleaseBindingForAllKinds(t *testing.T) {
 			setup: func(t *testing.T, res *resolver, key bindingKey) *bindingMarker {
 				t.Helper()
 
-				bdg := newTestBinding[Credentials](t, nil)
+				bdg := newBinding[Credentials](
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					mocks.NewSecretUsageMock(t),
+					nil,
+				)
 				res.credentialsBindings[key] = &leasedBinding[Credentials]{binding: bdg, leases: 1}
 
 				return &bindingMarker{schedule: bdg.Schedule}
@@ -1602,7 +1700,18 @@ func TestResolverReleaseBindingForAllKinds(t *testing.T) {
 			setup: func(t *testing.T, res *resolver, key bindingKey) *bindingMarker {
 				t.Helper()
 
-				bdg := newTestBinding[CertificateBundle](t, nil)
+				bdg := newBinding[CertificateBundle](
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					mocks.NewSecretUsageMock(t),
+					nil,
+				)
 				res.certificateBundleBindings[key] = &leasedBinding[CertificateBundle]{binding: bdg, leases: 1}
 
 				return &bindingMarker{schedule: bdg.Schedule}
@@ -1776,19 +1885,63 @@ func TestResolverMatch(t *testing.T) {
 			for _, key := range tc.keys {
 				switch key.kind {
 				case bindingKindSecret:
-					bdg := newTestBinding[Secret](t, nil)
+					bdg := newBinding[Secret](
+						bindingKey{
+							kind:      bindingKindSecret,
+							source:    "source",
+							selector:  "selector",
+							namespace: "namespace",
+							scope:     referenceScopeInternal,
+						},
+						zerolog.Nop(),
+						mocks.NewSecretUsageMock(t),
+						nil,
+					)
 					bdg.bindingKey = key
 					res.secretBindings[key] = &leasedBinding[Secret]{binding: bdg, leases: 1}
 				case bindingKindSecretSet:
-					bdg := newTestBinding[[]Secret](t, nil)
+					bdg := newBinding[[]Secret](
+						bindingKey{
+							kind:      bindingKindSecret,
+							source:    "source",
+							selector:  "selector",
+							namespace: "namespace",
+							scope:     referenceScopeInternal,
+						},
+						zerolog.Nop(),
+						mocks.NewSecretUsageMock(t),
+						nil,
+					)
 					bdg.bindingKey = key
 					res.secretSetBindings[key] = &leasedBinding[[]Secret]{binding: bdg, leases: 1}
 				case bindingKindCredentials:
-					bdg := newTestBinding[Credentials](t, nil)
+					bdg := newBinding[Credentials](
+						bindingKey{
+							kind:      bindingKindSecret,
+							source:    "source",
+							selector:  "selector",
+							namespace: "namespace",
+							scope:     referenceScopeInternal,
+						},
+						zerolog.Nop(),
+						mocks.NewSecretUsageMock(t),
+						nil,
+					)
 					bdg.bindingKey = key
 					res.credentialsBindings[key] = &leasedBinding[Credentials]{binding: bdg, leases: 1}
 				case bindingKindCertificateBundle:
-					bdg := newTestBinding[CertificateBundle](t, nil)
+					bdg := newBinding[CertificateBundle](
+						bindingKey{
+							kind:      bindingKindSecret,
+							source:    "source",
+							selector:  "selector",
+							namespace: "namespace",
+							scope:     referenceScopeInternal,
+						},
+						zerolog.Nop(),
+						mocks.NewSecretUsageMock(t),
+						nil,
+					)
 					bdg.bindingKey = key
 					res.certificateBundleBindings[key] = &leasedBinding[CertificateBundle]{binding: bdg, leases: 1}
 				}
@@ -1836,9 +1989,25 @@ func TestResolverHandleSourceEvent(t *testing.T) {
 		selector: "selector",
 		scope:    referenceScopeInternal,
 	}
-	bdg := newTestBinding[Secret](t, func(context.Context) (Secret, error) {
-		return res.resolveSecret(t.Context(), internalRef(Reference{Source: "src", Selector: "selector"}))
-	})
+
+	sum := mocks.NewSecretUsageMock(t)
+	sum.EXPECT().Track(mock.Anything)
+	sum.EXPECT().Untrack(mock.Anything).Maybe()
+
+	bdg := newBinding(
+		bindingKey{
+			kind:      bindingKindSecret,
+			source:    "source",
+			selector:  "selector",
+			namespace: "namespace",
+			scope:     referenceScopeInternal,
+		},
+		zerolog.Nop(),
+		sum,
+		func(context.Context) (Secret, error) {
+			return res.resolveSecret(t.Context(), internalRef(Reference{Source: "src", Selector: "selector"}))
+		},
+	)
 	bdg.bindingKey = key
 
 	res.secretBindings[key] = &leasedBinding[Secret]{
@@ -1873,7 +2042,18 @@ func TestResolverHandleSourceEventQueuesTaskBeforeStart(t *testing.T) {
 		selector: "selector",
 		scope:    referenceScopeInternal,
 	}
-	bdg := newTestBinding[Secret](t, nil)
+	bdg := newBinding[Secret](
+		bindingKey{
+			kind:      bindingKindSecret,
+			source:    "source",
+			selector:  "selector",
+			namespace: "namespace",
+			scope:     referenceScopeInternal,
+		},
+		zerolog.Nop(),
+		mocks.NewSecretUsageMock(t),
+		nil,
+	)
 	bdg.bindingKey = key
 
 	res.secretBindings[key] = &leasedBinding[Secret]{
@@ -1912,9 +2092,42 @@ func TestResolverStop(t *testing.T) {
 		scope:    referenceScopeInternal,
 	}
 
-	secretBinding := newTestBinding[Secret](t, nil)
-	credentialsBinding := newTestBinding[Credentials](t, nil)
-	certificateBundleBinding := newTestBinding[CertificateBundle](t, nil)
+	secretBinding := newBinding[Secret](
+		bindingKey{
+			kind:      bindingKindSecret,
+			source:    "source",
+			selector:  "selector",
+			namespace: "namespace",
+			scope:     referenceScopeInternal,
+		},
+		zerolog.Nop(),
+		mocks.NewSecretUsageMock(t),
+		nil,
+	)
+	credentialsBinding := newBinding[Credentials](
+		bindingKey{
+			kind:      bindingKindSecret,
+			source:    "source",
+			selector:  "selector",
+			namespace: "namespace",
+			scope:     referenceScopeInternal,
+		},
+		zerolog.Nop(),
+		mocks.NewSecretUsageMock(t),
+		nil,
+	)
+	certificateBundleBinding := newBinding[CertificateBundle](
+		bindingKey{
+			kind:      bindingKindSecret,
+			source:    "source",
+			selector:  "selector",
+			namespace: "namespace",
+			scope:     referenceScopeInternal,
+		},
+		zerolog.Nop(),
+		mocks.NewSecretUsageMock(t),
+		nil,
+	)
 
 	res.secretBindings[secretKey] = &leasedBinding[Secret]{
 		binding: secretBinding,
@@ -1931,9 +2144,20 @@ func TestResolverStop(t *testing.T) {
 
 	res.pendingTasks = append(
 		res.pendingTasks,
-		newTestBinding(t, func(context.Context) (string, error) {
-			return "ignored", nil
-		}),
+		newBinding(
+			bindingKey{
+				kind:      bindingKindSecret,
+				source:    "source",
+				selector:  "selector",
+				namespace: "namespace",
+				scope:     referenceScopeInternal,
+			},
+			zerolog.Nop(),
+			mocks.NewSecretUsageMock(t),
+			func(context.Context) (string, error) {
+				return "ignored", nil
+			},
+		),
 	)
 
 	res.Stop()
@@ -1997,7 +2221,7 @@ func newTestResolver(
 ) *resolver {
 	t.Helper()
 
-	res, err := newResolver(zerolog.Nop(), repository)
+	res, err := newResolver(zerolog.Nop(), repository, noopmetric.Meter{})
 	require.NoError(t, err)
 
 	t.Cleanup(func() {

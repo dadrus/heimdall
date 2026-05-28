@@ -25,6 +25,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/secrets/metrics/mocks"
 )
 
 func TestLeasedBindingRun(t *testing.T) {
@@ -38,11 +40,22 @@ func TestLeasedBindingRun(t *testing.T) {
 			setup: func(t *testing.T, _ *bytes.Buffer, calls *atomic.Int32) *leasedBinding[string] {
 				t.Helper()
 
-				bdg := newTestBinding(t, func(context.Context) (string, error) {
-					calls.Add(1)
+				bdg := newBinding(
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					mocks.NewSecretUsageMock(t),
+					func(context.Context) (string, error) {
+						calls.Add(1)
 
-					return "resolved", nil
-				})
+						return "resolved", nil
+					},
+				)
 
 				return newLeasedBinding(bdg)
 			},
@@ -60,11 +73,23 @@ func TestLeasedBindingRun(t *testing.T) {
 			setup: func(t *testing.T, logs *bytes.Buffer, calls *atomic.Int32) *leasedBinding[string] {
 				t.Helper()
 
-				bdg := newTestBinding(t, func(context.Context) (string, error) {
-					calls.Add(1)
+				bdg := newBinding(
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					mocks.NewSecretUsageMock(t),
+					func(context.Context) (string, error) {
+						calls.Add(1)
 
-					return "", assert.AnError
-				})
+						return "", assert.AnError
+					},
+				)
+
 				bdg.logger = zerolog.New(logs)
 
 				return newLeasedBinding(bdg)
@@ -102,7 +127,18 @@ func TestLeasedBindingUnschedule(t *testing.T) {
 
 	var logs bytes.Buffer
 
-	bdg := newTestBinding[string](t, nil)
+	bdg := newBinding[string](
+		bindingKey{
+			kind:      bindingKindSecret,
+			source:    "source",
+			selector:  "selector",
+			namespace: "namespace",
+			scope:     referenceScopeInternal,
+		},
+		zerolog.Nop(),
+		mocks.NewSecretUsageMock(t),
+		nil,
+	)
 	bdg.logger = zerolog.New(&logs)
 
 	entry := newLeasedBinding(bdg)
@@ -118,7 +154,18 @@ func TestLeasedBindingUnschedule(t *testing.T) {
 func TestLeasedBindingStop(t *testing.T) {
 	t.Parallel()
 
-	bdg := newTestBinding[string](t, nil)
+	bdg := newBinding[string](
+		bindingKey{
+			kind:      bindingKindSecret,
+			source:    "source",
+			selector:  "selector",
+			namespace: "namespace",
+			scope:     referenceScopeInternal,
+		},
+		zerolog.Nop(),
+		mocks.NewSecretUsageMock(t),
+		nil,
+	)
 	bdg.subscribe(func(context.Context, string) error { return nil })
 
 	entry := newLeasedBinding(bdg)

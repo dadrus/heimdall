@@ -24,6 +24,7 @@ import (
 	"github.com/rs/zerolog"
 	"golang.org/x/sync/singleflight"
 
+	"github.com/dadrus/heimdall/internal/secrets/metrics"
 	"github.com/dadrus/heimdall/internal/x/task"
 )
 
@@ -59,7 +60,8 @@ type binding[T any] struct {
 	task.StateMachine
 	bindingKey
 
-	logger  zerolog.Logger
+	usage  metrics.SecretUsage
+	logger zerolog.Logger
 	resolve func(context.Context) (T, error)
 
 	value   atomic.Value                // stores T
@@ -87,10 +89,12 @@ func (b *binding[T]) log(err error, msg string) {
 func newBinding[T any](
 	bk bindingKey,
 	logger zerolog.Logger,
+	usage metrics.SecretUsage,
 	resolve func(context.Context) (T, error),
 ) *binding[T] {
 	return &binding[T]{
 		bindingKey: bk,
+		usage:      usage,
 		logger:     logger,
 		resolve:    resolve,
 		callbacks:  make(map[uint64]UpdateFunc[T]),
@@ -178,6 +182,12 @@ func (b *binding[T]) subscribe(cb UpdateFunc[T]) func() {
 }
 
 func (b *binding[T]) publish(ctx context.Context, value T) {
+	b.track(value)
+
+	if old, ok := b.peek(); ok {
+		b.untrack(old)
+	}
+
 	b.value.Store(value)
 	b.setLastErr(nil)
 
@@ -240,6 +250,10 @@ func (b *binding[T]) Run() {
 func (b *binding[T]) stop() {
 	b.Stop()
 
+	if value, ok := b.peek(); ok {
+		b.untrack(value)
+	}
+
 	b.callbacksMu.Lock()
 	defer b.callbacksMu.Unlock()
 
@@ -275,6 +289,24 @@ func (b *binding[T]) getLastErr() error {
 	}
 
 	return stored.err
+}
+
+func (b *binding[T]) track(value T) {
+	secret, ok := any(value).(Secret)
+	if !ok || secret == nil {
+		return
+	}
+
+	b.usage.Track(secret)
+}
+
+func (b *binding[T]) untrack(value T) {
+	secret, ok := any(value).(Secret)
+	if !ok || secret == nil {
+		return
+	}
+
+	b.usage.Untrack(secret)
 }
 
 var _ task.Task = (*binding[Secret])(nil)

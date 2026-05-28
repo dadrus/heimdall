@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/secrets/metrics/mocks"
 	"github.com/dadrus/heimdall/internal/secrets/types"
 )
 
@@ -121,7 +122,18 @@ func TestScopeSecret(t *testing.T) {
 				t.Helper()
 
 				key := testScopeBindingKey(bindingKindSecret)
-				bdg := newScopeTestBinding[Secret](t, key, types.NewStringSecret("selector", "value"))
+				secret := types.NewStringSecret("selector", "value")
+
+				sum := mocks.NewSecretUsageMock(t)
+				sum.EXPECT().Track(secret)
+
+				bdg := newBinding(
+					key,
+					zerolog.Nop(),
+					sum,
+					func(context.Context) (Secret, error) { return secret, nil },
+				)
+				bdg.publish(t.Context(), secret)
 
 				bindings.EXPECT().
 					secretBinding(
@@ -182,7 +194,18 @@ func TestScopeSecret(t *testing.T) {
 				t.Helper()
 
 				key := testScopeBindingKey(bindingKindSecret)
-				bdg := newScopeTestBinding[Secret](t, key, types.NewStringSecret("selector", "value"))
+				secret := types.NewStringSecret("selector", "value")
+
+				sum := mocks.NewSecretUsageMock(t)
+				sum.EXPECT().Track(secret)
+
+				bdg := newBinding(
+					key,
+					zerolog.Nop(),
+					sum,
+					func(context.Context) (Secret, error) { return secret, nil },
+				)
+				bdg.publish(t.Context(), secret)
 
 				bindings.EXPECT().
 					secretBinding(
@@ -243,7 +266,14 @@ func TestScopeSecretSet(t *testing.T) {
 					types.NewStringSecret("selector/a", "a"),
 					types.NewStringSecret("selector/b", "b"),
 				}
-				bdg := newScopeTestBinding[[]Secret](t, key, secrets)
+
+				bdg := newBinding(
+					key,
+					zerolog.Nop(),
+					mocks.NewSecretUsageMock(t),
+					func(context.Context) ([]Secret, error) { return secrets, nil },
+				)
+				bdg.publish(t.Context(), secrets)
 
 				bindings.EXPECT().
 					secretSetBinding(
@@ -304,11 +334,15 @@ func TestScopeSecretSet(t *testing.T) {
 				t.Helper()
 
 				key := testScopeBindingKey(bindingKindSecretSet)
-				bdg := newScopeTestBinding[[]Secret](
-					t,
+				secrets := []Secret{types.NewStringSecret("selector/a", "a")}
+
+				bdg := newBinding(
 					key,
-					[]Secret{types.NewStringSecret("selector/a", "a")},
+					zerolog.Nop(),
+					mocks.NewSecretUsageMock(t),
+					func(context.Context) ([]Secret, error) { return secrets, nil },
 				)
+				bdg.publish(t.Context(), secrets)
 
 				bindings.EXPECT().
 					secretSetBinding(
@@ -366,7 +400,17 @@ func TestScopeCredentials(t *testing.T) {
 
 				key := testScopeBindingKey(bindingKindCredentials)
 				creds := types.NewCredentials("selector", map[string]any{"client_id": "heimdall"})
-				bdg := newScopeTestBinding[Credentials](t, key, creds)
+
+				sum := mocks.NewSecretUsageMock(t)
+				sum.EXPECT().Track(creds)
+
+				bdg := newBinding(
+					key,
+					zerolog.Nop(),
+					sum,
+					func(context.Context) (Credentials, error) { return creds, nil },
+				)
+				bdg.publish(t.Context(), creds)
 
 				bindings.EXPECT().
 					credentialsBinding(
@@ -427,11 +471,18 @@ func TestScopeCredentials(t *testing.T) {
 				t.Helper()
 
 				key := testScopeBindingKey(bindingKindCredentials)
-				bdg := newScopeTestBinding[Credentials](
-					t,
+				creds := types.NewCredentials("selector", map[string]any{"client_id": "heimdall"})
+
+				sum := mocks.NewSecretUsageMock(t)
+				sum.EXPECT().Track(creds)
+
+				bdg := newBinding(
 					key,
-					types.NewCredentials("selector", map[string]any{"client_id": "heimdall"}),
+					zerolog.Nop(),
+					sum,
+					func(context.Context) (Credentials, error) { return creds, nil },
 				)
+				bdg.publish(t.Context(), creds)
 
 				bindings.EXPECT().
 					credentialsBinding(
@@ -489,7 +540,17 @@ func TestScopeCertificateBundle(t *testing.T) {
 
 				key := testScopeBindingKey(bindingKindCertificateBundle)
 				bundle := types.NewCertificateBundle("selector", nil)
-				bdg := newScopeTestBinding[CertificateBundle](t, key, bundle)
+
+				sum := mocks.NewSecretUsageMock(t)
+				sum.EXPECT().Track(bundle)
+
+				bdg := newBinding(
+					key,
+					zerolog.Nop(),
+					sum,
+					func(context.Context) (CertificateBundle, error) { return bundle, nil },
+				)
+				bdg.publish(t.Context(), bundle)
 
 				bindings.EXPECT().
 					certificateBundleBinding(
@@ -550,11 +611,18 @@ func TestScopeCertificateBundle(t *testing.T) {
 				t.Helper()
 
 				key := testScopeBindingKey(bindingKindCertificateBundle)
-				bdg := newScopeTestBinding[CertificateBundle](
-					t,
+				bundle := types.NewCertificateBundle("selector", nil)
+
+				sum := mocks.NewSecretUsageMock(t)
+				sum.EXPECT().Track(bundle)
+
+				bdg := newBinding(
 					key,
-					types.NewCertificateBundle("selector", nil),
+					zerolog.Nop(),
+					sum,
+					func(context.Context) (CertificateBundle, error) { return bundle, nil },
 				)
+				bdg.publish(t.Context(), bundle)
 
 				bindings.EXPECT().
 					certificateBundleBinding(
@@ -611,7 +679,18 @@ func TestScopeUsesScopedReferences(t *testing.T) {
 		namespace: "team-a",
 		scope:     referenceScopeRule,
 	}
-	bdg := newScopeTestBinding[Secret](t, key, types.NewStringSecret("selector", "value"))
+	secret := types.NewStringSecret("selector", "value")
+
+	sum := mocks.NewSecretUsageMock(t)
+	sum.EXPECT().Track(secret)
+
+	bdg := newBinding(
+		key,
+		zerolog.Nop(),
+		sum,
+		func(context.Context) (Secret, error) { return secret, nil },
+	)
+	bdg.publish(t.Context(), secret)
 
 	bindings.EXPECT().
 		secretBinding(
@@ -1003,25 +1082,6 @@ func testScopeBindingKey(kind bindingKind) bindingKey {
 		namespace: "",
 		scope:     referenceScopeInternal,
 	}
-}
-
-func newScopeTestBinding[T any](
-	t *testing.T,
-	key bindingKey,
-	value T,
-) *binding[T] {
-	t.Helper()
-
-	bdg := newBinding(
-		key,
-		zerolog.Nop(),
-		func(context.Context) (T, error) {
-			return value, nil
-		},
-	)
-	bdg.publish(t.Context(), value)
-
-	return bdg
 }
 
 type guardedScopeCalls struct {

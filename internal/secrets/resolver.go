@@ -22,7 +22,9 @@ import (
 	"sync"
 
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel/metric"
 
+	"github.com/dadrus/heimdall/internal/secrets/metrics"
 	"github.com/dadrus/heimdall/internal/secrets/source"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/task"
@@ -64,6 +66,8 @@ type resolver struct {
 
 	appScope *scope
 
+	su metrics.SecretUsage
+
 	mu                        sync.RWMutex
 	secretBindings            map[bindingKey]*leasedBinding[Secret]
 	secretSetBindings         map[bindingKey]*leasedBinding[[]Secret]
@@ -77,6 +81,7 @@ type resolver struct {
 func newResolver(
 	logger zerolog.Logger,
 	sources source.Repository,
+	meter metric.Meter,
 ) (*resolver, error) {
 	executor, err := task.NewExecutor(bindingRefreshTaskWorkers)
 	if err != nil {
@@ -86,10 +91,19 @@ func newResolver(
 		).CausedBy(err)
 	}
 
+	cm, err := metrics.NewCertificateMeter(meter)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(
+			ErrInternal,
+			"failed creating certificate metrics",
+		).CausedBy(err)
+	}
+
 	res := &resolver{
 		logger:                    logger,
 		sources:                   sources,
 		executor:                  executor,
+		su:                        cm,
 		secretBindings:            make(map[bindingKey]*leasedBinding[Secret]),
 		secretSetBindings:         make(map[bindingKey]*leasedBinding[[]Secret]),
 		credentialsBindings:       make(map[bindingKey]*leasedBinding[Credentials]),
@@ -180,7 +194,7 @@ func (r *resolver) secretBinding(
 	entry := r.secretBindings[key]
 	if entry == nil {
 		ref := reference
-		bdg := newBinding(key, r.logger, func(ctx context.Context) (Secret, error) {
+		bdg := newBinding(key, r.logger, r.su, func(ctx context.Context) (Secret, error) {
 			return r.resolveSecret(ctx, ref)
 		})
 
@@ -219,7 +233,7 @@ func (r *resolver) secretSetBinding(
 	entry := r.secretSetBindings[key]
 	if entry == nil {
 		ref := reference
-		bdg := newBinding(key, r.logger, func(ctx context.Context) ([]Secret, error) {
+		bdg := newBinding(key, r.logger, r.su, func(ctx context.Context) ([]Secret, error) {
 			return r.resolveSecretSet(ctx, ref)
 		})
 
@@ -258,7 +272,7 @@ func (r *resolver) credentialsBinding(
 	entry := r.credentialsBindings[key]
 	if entry == nil {
 		ref := reference
-		bdg := newBinding(key, r.logger, func(ctx context.Context) (Credentials, error) {
+		bdg := newBinding(key, r.logger, r.su, func(ctx context.Context) (Credentials, error) {
 			return r.resolveCredentials(ctx, ref)
 		})
 
@@ -297,7 +311,7 @@ func (r *resolver) certificateBundleBinding(
 	entry := r.certificateBundleBindings[key]
 	if entry == nil {
 		ref := reference
-		bdg := newBinding(key, r.logger, func(ctx context.Context) (CertificateBundle, error) {
+		bdg := newBinding(key, r.logger, r.su, func(ctx context.Context) (CertificateBundle, error) {
 			return r.resolveCertificateBundle(ctx, ref)
 		})
 

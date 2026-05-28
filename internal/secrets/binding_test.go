@@ -19,7 +19,6 @@ package secrets
 import (
 	"bytes"
 	"context"
-	"errors"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -28,72 +27,93 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/secrets/metrics/mocks"
+	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
 )
 
 func TestBindingResolveOnce(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		initialValue string
+		initialValue Secret
 		groupKey     resolveGroupKey
-		setup        func(t *testing.T, calls *atomic.Int32) func(context.Context) (string, error)
-		wantValue    string
+		setup        func(t *testing.T, usage *mocks.SecretUsageMock, calls *atomic.Int32) func(context.Context) (Secret, error)
+		wantValue    Secret
 		wantCalls    int32
 		wantErr      error
 	}{
 		"cached resolve returns existing value": {
-			initialValue: "cached",
+			initialValue: secrettypes.NewStringSecret("cached", "cached"),
 			groupKey:     resolveGroupCached,
-			setup: func(t *testing.T, calls *atomic.Int32) func(context.Context) (string, error) {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock, calls *atomic.Int32) func(context.Context) (Secret, error) {
 				t.Helper()
 
-				return func(context.Context) (string, error) {
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("cached", "cached")).
+					Once()
+
+				return func(context.Context) (Secret, error) {
 					calls.Add(1)
 
-					return "resolved", nil
+					return secrettypes.NewStringSecret("resolved", "resolved"), nil
 				}
 			},
-			wantValue: "cached",
+			wantValue: secrettypes.NewStringSecret("cached", "cached"),
 			wantCalls: 0,
 		},
 		"cached resolve resolves missing value": {
 			groupKey: resolveGroupCached,
-			setup: func(t *testing.T, calls *atomic.Int32) func(context.Context) (string, error) {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock, calls *atomic.Int32) func(context.Context) (Secret, error) {
 				t.Helper()
 
-				return func(context.Context) (string, error) {
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("resolved", "resolved")).
+					Once()
+
+				return func(context.Context) (Secret, error) {
 					calls.Add(1)
 
-					return "resolved", nil
+					return secrettypes.NewStringSecret("resolved", "resolved"), nil
 				}
 			},
-			wantValue: "resolved",
+			wantValue: secrettypes.NewStringSecret("resolved", "resolved"),
 			wantCalls: 1,
 		},
 		"forced resolve ignores existing value": {
-			initialValue: "cached",
+			initialValue: secrettypes.NewStringSecret("cached", "cached"),
 			groupKey:     resolveGroupForced,
-			setup: func(t *testing.T, calls *atomic.Int32) func(context.Context) (string, error) {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock, calls *atomic.Int32) func(context.Context) (Secret, error) {
 				t.Helper()
 
-				return func(context.Context) (string, error) {
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("cached", "cached")).
+					Once()
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("forced", "forced")).
+					Once()
+				usage.EXPECT().
+					Untrack(secrettypes.NewStringSecret("cached", "cached")).
+					Once()
+
+				return func(context.Context) (Secret, error) {
 					calls.Add(1)
 
-					return "forced", nil
+					return secrettypes.NewStringSecret("forced", "forced"), nil
 				}
 			},
-			wantValue: "forced",
+			wantValue: secrettypes.NewStringSecret("forced", "forced"),
 			wantCalls: 1,
 		},
 		"returns resolve error": {
 			groupKey: resolveGroupCached,
-			setup: func(t *testing.T, calls *atomic.Int32) func(context.Context) (string, error) {
+			setup: func(t *testing.T, _ *mocks.SecretUsageMock, calls *atomic.Int32) func(context.Context) (Secret, error) {
 				t.Helper()
 
-				return func(context.Context) (string, error) {
+				return func(context.Context) (Secret, error) {
 					calls.Add(1)
 
-					return "", assert.AnError
+					return nil, assert.AnError
 				}
 			},
 			wantCalls: 1,
@@ -105,8 +125,21 @@ func TestBindingResolveOnce(t *testing.T) {
 
 			var calls atomic.Int32
 
-			bdg := newTestBinding(t, tc.setup(t, &calls))
-			if tc.initialValue != "" {
+			usage := mocks.NewSecretUsageMock(t)
+			bdg := newBinding(
+				bindingKey{
+					kind:      bindingKindSecret,
+					source:    "source",
+					selector:  "selector",
+					namespace: "namespace",
+					scope:     referenceScopeInternal,
+				},
+				zerolog.Nop(),
+				usage,
+				tc.setup(t, usage, &calls),
+			)
+
+			if tc.initialValue != nil {
 				bdg.publish(t.Context(), tc.initialValue)
 			}
 
@@ -116,7 +149,7 @@ func TestBindingResolveOnce(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, tc.wantErr)
 				require.ErrorIs(t, bdg.getLastErr(), tc.wantErr)
-				require.Empty(t, got)
+				require.Nil(t, got)
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, tc.wantValue, got)
@@ -150,16 +183,32 @@ func TestBindingResolveOnceDeduplicatesConcurrentCachedResolves(t *testing.T) {
 		})
 	})
 
-	bdg := newTestBinding(t, func(context.Context) (string, error) {
-		calls.Add(1)
+	usage := mocks.NewSecretUsageMock(t)
+	usage.EXPECT().
+		Track(secrettypes.NewStringSecret("resolved", "resolved")).
+		Once()
 
-		<-release
+	bdg := newBinding(
+		bindingKey{
+			kind:      bindingKindSecret,
+			source:    "source",
+			selector:  "selector",
+			namespace: "namespace",
+			scope:     referenceScopeInternal,
+		},
+		zerolog.Nop(),
+		usage,
+		func(context.Context) (Secret, error) {
+			calls.Add(1)
 
-		return "resolved", nil
-	})
+			<-release
+
+			return secrettypes.NewStringSecret("resolved", "resolved"), nil
+		},
+	)
 
 	type result struct {
-		value string
+		value Secret
 		err   error
 	}
 
@@ -187,12 +236,12 @@ func TestBindingResolveOnceDeduplicatesConcurrentCachedResolves(t *testing.T) {
 		got := <-results
 
 		require.NoError(t, got.err)
-		require.Equal(t, "resolved", got.value)
+		require.Equal(t, secrettypes.NewStringSecret("resolved", "resolved"), got.value)
 	}
 
 	value, ok := bdg.peek()
 	require.True(t, ok)
-	require.Equal(t, "resolved", value)
+	require.Equal(t, secrettypes.NewStringSecret("resolved", "resolved"), value)
 	require.NoError(t, bdg.awaitReady(t.Context()))
 	require.NoError(t, bdg.getLastErr())
 	require.EqualValues(t, 1, calls.Load())
@@ -217,23 +266,39 @@ func TestBindingResolveOnceHonorsContextWhileWaitingForRunningResolve(t *testing
 		once  sync.Once
 	)
 
-	bdg := newTestBinding(t, func(context.Context) (string, error) {
-		calls.Add(1)
+	usage := mocks.NewSecretUsageMock(t)
+	usage.EXPECT().
+		Track(secrettypes.NewStringSecret("resolved", "resolved")).
+		Once()
 
-		once.Do(func() {
-			close(resolveStarted)
-		})
+	bdg := newBinding(
+		bindingKey{
+			kind:      bindingKindSecret,
+			source:    "source",
+			selector:  "selector",
+			namespace: "namespace",
+			scope:     referenceScopeInternal,
+		},
+		zerolog.Nop(),
+		usage,
+		func(context.Context) (Secret, error) {
+			calls.Add(1)
 
-		<-releaseResolve
+			once.Do(func() {
+				close(resolveStarted)
+			})
 
-		return "resolved", nil
-	})
+			<-releaseResolve
+
+			return secrettypes.NewStringSecret("resolved", "resolved"), nil
+		},
+	)
 
 	_, ok := bdg.peek()
 	require.False(t, ok)
 
 	type result struct {
-		value string
+		value Secret
 		err   error
 	}
 
@@ -267,20 +332,20 @@ func TestBindingResolveOnceHonorsContextWhileWaitingForRunningResolve(t *testing
 
 	require.Error(t, err)
 	require.ErrorIs(t, err, context.DeadlineExceeded)
-	require.Empty(t, got)
+	require.Nil(t, got)
 	require.EqualValues(t, 1, calls.Load())
 
 	select {
 	case first := <-resolveDone:
 		require.NoError(t, first.err)
-		require.Equal(t, "resolved", first.value)
+		require.Equal(t, secrettypes.NewStringSecret("resolved", "resolved"), first.value)
 	case <-time.After(time.Second):
 		require.Fail(t, "background resolve did not finish")
 	}
 
 	value, ok := bdg.peek()
 	require.True(t, ok)
-	require.Equal(t, "resolved", value)
+	require.Equal(t, secrettypes.NewStringSecret("resolved", "resolved"), value)
 	require.NoError(t, bdg.awaitReady(t.Context()))
 	require.NoError(t, bdg.getLastErr())
 }
@@ -289,28 +354,50 @@ func TestBindingRefresh(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, calls *guardedCalls) *binding[string]
-		assert func(t *testing.T, bdg *binding[string], calls *guardedCalls, err error)
+		setup  func(t *testing.T, usage *mocks.SecretUsageMock, calls *guardedCalls) *binding[Secret]
+		assert func(t *testing.T, bdg *binding[Secret], calls *guardedCalls, err error)
 	}{
 		"forces resolve and publishes value": {
-			setup: func(t *testing.T, calls *guardedCalls) *binding[string] {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock, calls *guardedCalls) *binding[Secret] {
 				t.Helper()
 
-				bdg := newTestBinding(t, func(context.Context) (string, error) {
-					calls.Add("resolve")
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("old-value", "old-value")).
+					Once()
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("new-value", "new-value")).
+					Once()
+				usage.EXPECT().
+					Untrack(secrettypes.NewStringSecret("old-value", "old-value")).
+					Once()
 
-					return "new-value", nil
-				})
-				bdg.value.Store("old-value")
-				bdg.subscribe(func(_ context.Context, value string) error {
-					calls.Add("callback:" + value)
+				bdg := newBinding(
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					func(context.Context) (Secret, error) {
+						calls.Add("resolve")
+
+						return secrettypes.NewStringSecret("new-value", "new-value"), nil
+					},
+				)
+
+				bdg.publish(t.Context(), secrettypes.NewStringSecret("old-value", "old-value"))
+				bdg.subscribe(func(_ context.Context, value Secret) error {
+					calls.Add("callback:" + value.Selector())
 
 					return nil
 				})
 
 				return bdg
 			},
-			assert: func(t *testing.T, bdg *binding[string], calls *guardedCalls, err error) {
+			assert: func(t *testing.T, bdg *binding[Secret], calls *guardedCalls, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -322,27 +409,38 @@ func TestBindingRefresh(t *testing.T) {
 
 				value, ok := bdg.peek()
 				require.True(t, ok)
-				require.Equal(t, "new-value", value)
+				require.Equal(t, secrettypes.NewStringSecret("new-value", "new-value"), value)
 			},
 		},
 		"returns resolve error and does not publish": {
-			setup: func(t *testing.T, calls *guardedCalls) *binding[string] {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock, calls *guardedCalls) *binding[Secret] {
 				t.Helper()
 
-				bdg := newTestBinding(t, func(context.Context) (string, error) {
-					calls.Add("resolve")
+				bdg := newBinding(
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					func(context.Context) (Secret, error) {
+						calls.Add("resolve")
 
-					return "", assert.AnError
-				})
-				bdg.subscribe(func(_ context.Context, value string) error {
-					calls.Add("callback:" + value)
+						return nil, assert.AnError
+					},
+				)
+				bdg.subscribe(func(_ context.Context, value Secret) error {
+					calls.Add("callback:" + value.Selector())
 
 					return nil
 				})
 
 				return bdg
 			},
-			assert: func(t *testing.T, bdg *binding[string], calls *guardedCalls, err error) {
+			assert: func(t *testing.T, bdg *binding[Secret], calls *guardedCalls, err error) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -359,7 +457,8 @@ func TestBindingRefresh(t *testing.T) {
 
 			var calls guardedCalls
 
-			bdg := tc.setup(t, &calls)
+			usage := mocks.NewSecretUsageMock(t)
+			bdg := tc.setup(t, usage, &calls)
 
 			err := bdg.refresh(context.Background())
 
@@ -372,25 +471,40 @@ func TestBindingSubscribe(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, calls *guardedCalls) (*binding[string], func())
-		assert func(t *testing.T, bdg *binding[string], calls *guardedCalls, cleanup func())
+		setup  func(t *testing.T, usage *mocks.SecretUsageMock, calls *guardedCalls) (*binding[Secret], func())
+		assert func(t *testing.T, bdg *binding[Secret], calls *guardedCalls, cleanup func())
 	}{
 		"registers callback and immediately notifies with current value": {
-			setup: func(t *testing.T, calls *guardedCalls) (*binding[string], func()) {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock, calls *guardedCalls) (*binding[Secret], func()) {
 				t.Helper()
 
-				bdg := newTestBinding[string](t, nil)
-				bdg.value.Store("current")
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("current", "current")).
+					Once()
 
-				cleanup := bdg.subscribe(func(_ context.Context, value string) error {
-					calls.Add("callback:" + value)
+				bdg := newBinding[Secret](
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					nil,
+				)
+				bdg.publish(t.Context(), secrettypes.NewStringSecret("current", "current"))
+
+				cleanup := bdg.subscribe(func(_ context.Context, value Secret) error {
+					calls.Add("callback:" + value.Selector())
 
 					return nil
 				})
 
 				return bdg, cleanup
 			},
-			assert: func(t *testing.T, bdg *binding[string], calls *guardedCalls, cleanup func()) {
+			assert: func(t *testing.T, bdg *binding[Secret], calls *guardedCalls, cleanup func()) {
 				t.Helper()
 
 				require.Equal(t, []string{"callback:current"}, calls.All())
@@ -401,26 +515,41 @@ func TestBindingSubscribe(t *testing.T) {
 			},
 		},
 		"registers callback without immediate notification if value is unavailable": {
-			setup: func(t *testing.T, calls *guardedCalls) (*binding[string], func()) {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock, calls *guardedCalls) (*binding[Secret], func()) {
 				t.Helper()
 
-				bdg := newTestBinding[string](t, nil)
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("published", "published")).
+					Once()
 
-				cleanup := bdg.subscribe(func(_ context.Context, value string) error {
-					calls.Add("callback:" + value)
+				bdg := newBinding[Secret](
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					nil,
+				)
+
+				cleanup := bdg.subscribe(func(_ context.Context, value Secret) error {
+					calls.Add("callback:" + value.Selector())
 
 					return nil
 				})
 
 				return bdg, cleanup
 			},
-			assert: func(t *testing.T, bdg *binding[string], calls *guardedCalls, cleanup func()) {
+			assert: func(t *testing.T, bdg *binding[Secret], calls *guardedCalls, cleanup func()) {
 				t.Helper()
 
 				require.Empty(t, calls.All())
 				require.Len(t, bdg.callbacks, 1)
 
-				bdg.publish(t.Context(), "published")
+				bdg.publish(t.Context(), secrettypes.NewStringSecret("published", "published"))
 				require.Equal(t, []string{"callback:published"}, calls.All())
 
 				cleanup()
@@ -428,14 +557,25 @@ func TestBindingSubscribe(t *testing.T) {
 			},
 		},
 		"nil callback is ignored": {
-			setup: func(t *testing.T, _ *guardedCalls) (*binding[string], func()) {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock, _ *guardedCalls) (*binding[Secret], func()) {
 				t.Helper()
 
-				bdg := newTestBinding[string](t, nil)
+				bdg := newBinding[Secret](
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					nil,
+				)
 
 				return bdg, bdg.subscribe(nil)
 			},
-			assert: func(t *testing.T, bdg *binding[string], calls *guardedCalls, cleanup func()) {
+			assert: func(t *testing.T, bdg *binding[Secret], calls *guardedCalls, cleanup func()) {
 				t.Helper()
 
 				require.Empty(t, calls.All())
@@ -450,7 +590,8 @@ func TestBindingSubscribe(t *testing.T) {
 
 			var calls guardedCalls
 
-			bdg, cleanup := tc.setup(t, &calls)
+			usage := mocks.NewSecretUsageMock(t)
+			bdg, cleanup := tc.setup(t, usage, &calls)
 
 			tc.assert(t, bdg, &calls, cleanup)
 		})
@@ -461,35 +602,50 @@ func TestBindingPublish(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, logs *bytes.Buffer, calls *guardedCalls) *binding[string]
-		assert func(t *testing.T, bdg *binding[string], logs *bytes.Buffer, calls *guardedCalls)
+		setup  func(t *testing.T, usage *mocks.SecretUsageMock, logs *bytes.Buffer, calls *guardedCalls) *binding[Secret]
+		assert func(t *testing.T, bdg *binding[Secret], logs *bytes.Buffer, calls *guardedCalls)
 	}{
 		"stores value and notifies subscribers": {
-			setup: func(t *testing.T, _ *bytes.Buffer, calls *guardedCalls) *binding[string] {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock, _ *bytes.Buffer, calls *guardedCalls) *binding[Secret] {
 				t.Helper()
 
-				bdg := newTestBinding[string](t, nil)
-				bdg.subscribe(func(_ context.Context, value string) error {
-					calls.Add("a:" + value)
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("published", "published")).
+					Once()
+
+				bdg := newBinding[Secret](
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					nil,
+				)
+				bdg.subscribe(func(_ context.Context, value Secret) error {
+					calls.Add("a:" + value.Selector())
 
 					return nil
 				})
-				bdg.subscribe(func(_ context.Context, value string) error {
-					calls.Add("b:" + value)
+				bdg.subscribe(func(_ context.Context, value Secret) error {
+					calls.Add("b:" + value.Selector())
 
 					return nil
 				})
 
 				return bdg
 			},
-			assert: func(t *testing.T, bdg *binding[string], _ *bytes.Buffer, calls *guardedCalls) {
+			assert: func(t *testing.T, bdg *binding[Secret], _ *bytes.Buffer, calls *guardedCalls) {
 				t.Helper()
 
 				require.NoError(t, bdg.awaitReady(t.Context()))
 
 				value, ok := bdg.peek()
 				require.True(t, ok)
-				require.Equal(t, "published", value)
+				require.Equal(t, secrettypes.NewStringSecret("published", "published"), value)
 
 				require.ElementsMatch(t, []string{
 					"a:published",
@@ -497,18 +653,72 @@ func TestBindingPublish(t *testing.T) {
 				}, calls.All())
 			},
 		},
-		"logs callback errors": {
-			setup: func(t *testing.T, _ *bytes.Buffer, _ *guardedCalls) *binding[string] {
+		"tracks new usage and untracks old usage": {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock, _ *bytes.Buffer, _ *guardedCalls) *binding[Secret] {
 				t.Helper()
 
-				bdg := newTestBinding[string](t, nil)
-				bdg.subscribe(func(context.Context, string) error {
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("old", "old")).
+					Once()
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("published", "published")).
+					Once()
+				usage.EXPECT().
+					Untrack(secrettypes.NewStringSecret("old", "old")).
+					Once()
+
+				bdg := newBinding[Secret](
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					nil,
+				)
+				bdg.publish(t.Context(), secrettypes.NewStringSecret("old", "old"))
+
+				return bdg
+			},
+			assert: func(t *testing.T, bdg *binding[Secret], _ *bytes.Buffer, _ *guardedCalls) {
+				t.Helper()
+
+				value, ok := bdg.peek()
+				require.True(t, ok)
+				require.Equal(t, secrettypes.NewStringSecret("published", "published"), value)
+				require.NoError(t, bdg.awaitReady(t.Context()))
+			},
+		},
+		"logs callback errors": {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock, _ *bytes.Buffer, _ *guardedCalls) *binding[Secret] {
+				t.Helper()
+
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("published", "published")).
+					Once()
+
+				bdg := newBinding[Secret](
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					nil,
+				)
+				bdg.subscribe(func(context.Context, Secret) error {
 					return assert.AnError
 				})
 
 				return bdg
 			},
-			assert: func(t *testing.T, _ *binding[string], logs *bytes.Buffer, _ *guardedCalls) {
+			assert: func(t *testing.T, _ *binding[Secret], logs *bytes.Buffer, _ *guardedCalls) {
 				t.Helper()
 
 				require.Contains(t, logs.String(), "Secret binding update callback failed")
@@ -527,10 +737,11 @@ func TestBindingPublish(t *testing.T) {
 				calls guardedCalls
 			)
 
-			bdg := tc.setup(t, &logs, &calls)
+			usage := mocks.NewSecretUsageMock(t)
+			bdg := tc.setup(t, usage, &logs, &calls)
 			bdg.logger = zerolog.New(&logs)
 
-			bdg.publish(t.Context(), "published")
+			bdg.publish(t.Context(), secrettypes.NewStringSecret("published", "published"))
 
 			tc.assert(t, bdg, &logs, &calls)
 		})
@@ -541,20 +752,35 @@ func TestBindingRun(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, logs *bytes.Buffer, calls *guardedCalls) *binding[string]
-		assert func(t *testing.T, bdg *binding[string], logs *bytes.Buffer, calls *guardedCalls)
+		setup  func(t *testing.T, usage *mocks.SecretUsageMock, logs *bytes.Buffer, calls *guardedCalls) *binding[Secret]
+		assert func(t *testing.T, bdg *binding[Secret], logs *bytes.Buffer, calls *guardedCalls)
 	}{
 		"refreshes binding": {
-			setup: func(t *testing.T, _ *bytes.Buffer, calls *guardedCalls) *binding[string] {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock, _ *bytes.Buffer, calls *guardedCalls) *binding[Secret] {
 				t.Helper()
 
-				return newTestBinding(t, func(context.Context) (string, error) {
-					calls.Add("resolve")
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("refreshed", "refreshed")).
+					Once()
 
-					return "refreshed", nil
-				})
+				return newBinding(
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					func(context.Context) (Secret, error) {
+						calls.Add("resolve")
+
+						return secrettypes.NewStringSecret("refreshed", "refreshed"), nil
+					},
+				)
 			},
-			assert: func(t *testing.T, bdg *binding[string], _ *bytes.Buffer, calls *guardedCalls) {
+			assert: func(t *testing.T, bdg *binding[Secret], _ *bytes.Buffer, calls *guardedCalls) {
 				t.Helper()
 
 				require.NoError(t, bdg.awaitReady(t.Context()))
@@ -563,20 +789,31 @@ func TestBindingRun(t *testing.T) {
 
 				value, ok := bdg.peek()
 				require.True(t, ok)
-				require.Equal(t, "refreshed", value)
+				require.Equal(t, secrettypes.NewStringSecret("refreshed", "refreshed"), value)
 			},
 		},
 		"logs refresh error": {
-			setup: func(t *testing.T, _ *bytes.Buffer, calls *guardedCalls) *binding[string] {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock, _ *bytes.Buffer, calls *guardedCalls) *binding[Secret] {
 				t.Helper()
 
-				return newTestBinding(t, func(context.Context) (string, error) {
-					calls.Add("resolve")
+				return newBinding(
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					func(context.Context) (Secret, error) {
+						calls.Add("resolve")
 
-					return "", assert.AnError
-				})
+						return nil, assert.AnError
+					},
+				)
 			},
-			assert: func(t *testing.T, _ *binding[string], logs *bytes.Buffer, calls *guardedCalls) {
+			assert: func(t *testing.T, _ *binding[Secret], logs *bytes.Buffer, calls *guardedCalls) {
 				t.Helper()
 
 				require.Equal(t, []string{"resolve"}, calls.All())
@@ -592,7 +829,8 @@ func TestBindingRun(t *testing.T) {
 				calls guardedCalls
 			)
 
-			bdg := tc.setup(t, &logs, &calls)
+			usage := mocks.NewSecretUsageMock(t)
+			bdg := tc.setup(t, usage, &logs, &calls)
 			bdg.logger = zerolog.New(&logs)
 
 			bdg.Run()
@@ -607,7 +845,18 @@ func TestBindingUnschedule(t *testing.T) {
 
 	var logs bytes.Buffer
 
-	bdg := newTestBinding[string](t, nil)
+	bdg := newBinding[Secret](
+		bindingKey{
+			kind:      bindingKindSecret,
+			source:    "source",
+			selector:  "selector",
+			namespace: "namespace",
+			scope:     referenceScopeInternal,
+		},
+		zerolog.Nop(),
+		mocks.NewSecretUsageMock(t),
+		nil,
+	)
 	bdg.logger = zerolog.New(&logs)
 
 	require.True(t, bdg.Schedule())
@@ -621,8 +870,28 @@ func TestBindingUnschedule(t *testing.T) {
 func TestBindingStop(t *testing.T) {
 	t.Parallel()
 
-	bdg := newTestBinding[string](t, nil)
-	bdg.subscribe(func(context.Context, string) error { return nil })
+	usage := mocks.NewSecretUsageMock(t)
+	usage.EXPECT().
+		Track(secrettypes.NewStringSecret("current", "current")).
+		Once()
+	usage.EXPECT().
+		Untrack(secrettypes.NewStringSecret("current", "current")).
+		Once()
+
+	bdg := newBinding[Secret](
+		bindingKey{
+			kind:      bindingKindSecret,
+			source:    "source",
+			selector:  "selector",
+			namespace: "namespace",
+			scope:     referenceScopeInternal,
+		},
+		zerolog.Nop(),
+		usage,
+		nil,
+	)
+	bdg.publish(t.Context(), secrettypes.NewStringSecret("current", "current"))
+	bdg.subscribe(func(context.Context, Secret) error { return nil })
 
 	require.NotEmpty(t, bdg.callbacks)
 
@@ -636,15 +905,30 @@ func TestBindingAwaitReady(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T) (*binding[string], context.Context)
+		setup  func(t *testing.T, usage *mocks.SecretUsageMock) (*binding[Secret], context.Context)
 		assert func(t *testing.T, err error)
 	}{
 		"returns nil after publish": {
-			setup: func(t *testing.T) (*binding[string], context.Context) {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock) (*binding[Secret], context.Context) {
 				t.Helper()
 
-				bdg := newTestBinding[string](t, nil)
-				bdg.publish(t.Context(), "ready")
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("ready", "ready")).
+					Once()
+
+				bdg := newBinding[Secret](
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					nil,
+				)
+				bdg.publish(t.Context(), secrettypes.NewStringSecret("ready", "ready"))
 
 				return bdg, t.Context()
 			},
@@ -655,13 +939,26 @@ func TestBindingAwaitReady(t *testing.T) {
 			},
 		},
 		"returns context error if no value and no last error": {
-			setup: func(t *testing.T) (*binding[string], context.Context) {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock) (*binding[Secret], context.Context) {
 				t.Helper()
 
 				ctx, cancel := context.WithCancel(t.Context())
 				cancel()
 
-				return newTestBinding[string](t, nil), ctx
+				bdg := newBinding[Secret](
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					nil,
+				)
+
+				return bdg, ctx
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -671,12 +968,23 @@ func TestBindingAwaitReady(t *testing.T) {
 			},
 		},
 		"returns last error if no value and last error exists": {
-			setup: func(t *testing.T) (*binding[string], context.Context) {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock) (*binding[Secret], context.Context) {
 				t.Helper()
 
-				bdg := newTestBinding(t, func(context.Context) (string, error) {
-					return "", assert.AnError
-				})
+				bdg := newBinding(
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					func(context.Context) (Secret, error) {
+						return nil, assert.AnError
+					},
+				)
 
 				_, err := bdg.resolveOnce(t.Context(), resolveGroupCached)
 				require.Error(t, err)
@@ -698,7 +1006,8 @@ func TestBindingAwaitReady(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			bdg, ctx := tc.setup(t)
+			usage := mocks.NewSecretUsageMock(t)
+			bdg, ctx := tc.setup(t, usage)
 
 			tc.assert(t, bdg.awaitReady(ctx))
 		})
@@ -709,16 +1018,27 @@ func TestBindingLastErr(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T) *binding[string]
-		assert func(t *testing.T, bdg *binding[string])
+		setup  func(t *testing.T, usage *mocks.SecretUsageMock) *binding[Secret]
+		assert func(t *testing.T, bdg *binding[Secret])
 	}{
 		"resolve error stores last error": {
-			setup: func(t *testing.T) *binding[string] {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock) *binding[Secret] {
 				t.Helper()
 
-				bdg := newTestBinding(t, func(context.Context) (string, error) {
-					return "", assert.AnError
-				})
+				bdg := newBinding(
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					func(context.Context) (Secret, error) {
+						return nil, assert.AnError
+					},
+				)
 
 				_, err := bdg.resolveOnce(t.Context(), resolveGroupCached)
 				require.Error(t, err)
@@ -726,19 +1046,35 @@ func TestBindingLastErr(t *testing.T) {
 
 				return bdg
 			},
-			assert: func(t *testing.T, bdg *binding[string]) {
+			assert: func(t *testing.T, bdg *binding[Secret]) {
 				t.Helper()
 
 				require.ErrorIs(t, bdg.getLastErr(), assert.AnError)
 			},
 		},
 		"successful resolve clears last error": {
-			setup: func(t *testing.T) *binding[string] {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock) *binding[Secret] {
 				t.Helper()
 
-				bdg := newTestBinding(t, func(context.Context) (string, error) {
-					return "resolved", nil
-				})
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("resolved", "resolved")).
+					Once()
+
+				bdg := newBinding(
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					func(context.Context) (Secret, error) {
+						return secrettypes.NewStringSecret("resolved", "resolved"), nil
+					},
+				)
+
 				bdg.setLastErr(assert.AnError)
 
 				_, err := bdg.resolveOnce(t.Context(), resolveGroupForced)
@@ -746,23 +1082,38 @@ func TestBindingLastErr(t *testing.T) {
 
 				return bdg
 			},
-			assert: func(t *testing.T, bdg *binding[string]) {
+			assert: func(t *testing.T, bdg *binding[Secret]) {
 				t.Helper()
 
 				require.NoError(t, bdg.getLastErr())
 			},
 		},
 		"publish clears last error": {
-			setup: func(t *testing.T) *binding[string] {
+			setup: func(t *testing.T, usage *mocks.SecretUsageMock) *binding[Secret] {
 				t.Helper()
 
-				bdg := newTestBinding[string](t, nil)
+				usage.EXPECT().
+					Track(secrettypes.NewStringSecret("published", "published")).
+					Once()
+
+				bdg := newBinding[Secret](
+					bindingKey{
+						kind:      bindingKindSecret,
+						source:    "source",
+						selector:  "selector",
+						namespace: "namespace",
+						scope:     referenceScopeInternal,
+					},
+					zerolog.Nop(),
+					usage,
+					nil,
+				)
 				bdg.setLastErr(assert.AnError)
-				bdg.publish(t.Context(), "published")
+				bdg.publish(t.Context(), secrettypes.NewStringSecret("published", "published"))
 
 				return bdg
 			},
-			assert: func(t *testing.T, bdg *binding[string]) {
+			assert: func(t *testing.T, bdg *binding[Secret]) {
 				t.Helper()
 
 				require.NoError(t, bdg.getLastErr())
@@ -772,38 +1123,12 @@ func TestBindingLastErr(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			bdg := tc.setup(t)
+			usage := mocks.NewSecretUsageMock(t)
+			bdg := tc.setup(t, usage)
 
 			tc.assert(t, bdg)
 		})
 	}
-}
-
-func newTestBinding[T any](
-	t *testing.T,
-	resolve func(context.Context) (T, error),
-) *binding[T] {
-	t.Helper()
-
-	if resolve == nil {
-		resolve = func(context.Context) (T, error) {
-			var zero T
-
-			return zero, errors.New("unexpected resolve call")
-		}
-	}
-
-	return newBinding(
-		bindingKey{
-			kind:      bindingKindSecret,
-			source:    "source",
-			selector:  "selector",
-			namespace: "namespace",
-			scope:     referenceScopeInternal,
-		},
-		zerolog.Nop(),
-		resolve,
-	)
 }
 
 type guardedCalls struct {
