@@ -36,19 +36,24 @@ var Module = fx.Invoke( // nolint: gochecknoglobals
 	),
 )
 
-func newLifecycleManager(app app.Context, cch cache.Cache, executor pipeline.Executor) *fxlcm.LifecycleManager {
+func newLifecycleManager(
+	app app.Context,
+	cch cache.Cache,
+	executor pipeline.Executor,
+) (*fxlcm.LifecycleManager, error) {
 	conf := app.Config()
 	logger := app.Logger()
 	cfg := conf.Serve
 
-	return &fxlcm.LifecycleManager{
-		ServiceName: "Proxy",
-		Server:      newService(conf, cch, logger, executor),
-		ListenerFactory: listener.Factory{
-			Address:        cfg.Address(),
-			TLSConf:        cfg.TLS,
-			SecretResolver: app.SecretResolver(),
-		},
-		Logger: logger,
+	lf, err := listener.NewFactory(cfg.Address(), cfg.TLS, app.SecretResolver())
+	if err != nil {
+		return nil, err
 	}
+
+	return &fxlcm.LifecycleManager{
+		ServiceName:     "Proxy",
+		Server:          newService(conf, cch, logger, executor),
+		ListenerFactory: lf,
+		Logger:          logger,
+	}, nil
 }

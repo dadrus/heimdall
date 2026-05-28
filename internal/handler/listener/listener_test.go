@@ -175,10 +175,11 @@ func TestFactoryCreate(t *testing.T) {
 				tc.setup(t, sr, handle)
 			}
 
-			factory := Factory{
-				Address:        address,
-				TLSConf:        tc.tlsConf,
-				SecretResolver: sr,
+			factory, err := NewFactory(address, tc.tlsConf, sr)
+			if err != nil {
+				tc.assert(t, err, nil, capturedAddress)
+
+				return
 			}
 
 			ln, err := factory.Create(t.Context())

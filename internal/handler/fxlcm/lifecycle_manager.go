@@ -41,6 +41,12 @@ type ListenerFactory interface {
 	Create(ctx context.Context) (net.Listener, error)
 }
 
+type ListenerFactoryFunc func(ctx context.Context) (net.Listener, error)
+
+func (f ListenerFactoryFunc) Create(ctx context.Context) (net.Listener, error) {
+	return f(ctx)
+}
+
 type LifecycleManager struct {
 	ServiceName     string
 	Server          Server

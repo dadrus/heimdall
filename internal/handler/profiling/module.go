@@ -48,7 +48,7 @@ var Module = fx.Invoke( // nolint: gochecknoglobals
 	),
 )
 
-func newLifecycleManager(app app.Context) lifecycleManager {
+func newLifecycleManager(app app.Context) (lifecycleManager, error) {
 	conf := app.Config()
 	logger := app.Logger()
 
@@ -56,19 +56,22 @@ func newLifecycleManager(app app.Context) lifecycleManager {
 	if !cfg.Enabled {
 		logger.Info().Msg("Profiling service disabled")
 
-		return noopManager{}
+		return noopManager{}, nil
+	}
+
+	lf, err := listener.NewFactory(cfg.Address(), nil, nil)
+	if err != nil {
+		return nil, err
 	}
 
 	return &fxlcm.LifecycleManager{
-		ServiceName: "Profiling",
-		Logger:      logger,
-		ListenerFactory: listener.Factory{
-			Address: cfg.Address(),
-		},
+		ServiceName:     "Profiling",
+		Logger:          logger,
+		ListenerFactory: lf,
 		Server: &http.Server{
 			ReadHeaderTimeout: 5 * time.Second,  // nolint: mnd
 			IdleTimeout:       90 * time.Second, // nolint: mnd
 			ErrorLog:          loggeradapter.NewStdLogger(logger),
 		},
-	}
+	}, nil
 }

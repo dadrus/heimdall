@@ -134,7 +134,8 @@ func NewProvider(
 	logger = logger.With().Str("_provider_type", ProviderType).Logger()
 	authClass := x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass)
 	instanceID, _ := os.Hostname()
-	adc := webhooks.New(
+
+	adc, err := webhooks.New(
 		providerConf.TLS,
 		app.SecretResolver(),
 		srf,
@@ -142,6 +143,10 @@ func NewProvider(
 		authClass,
 		rf,
 	)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
+			"failed to create webhook controller").CausedBy(err)
+	}
 
 	logger.Info().Msg("Rule provider configured.")
 

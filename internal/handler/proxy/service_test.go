@@ -1040,11 +1040,12 @@ func TestProxyService(t *testing.T) {
 
 			tc.configureMocks(t, exec, sr, secretHandle, upstreamURL)
 
-			factory := listener.Factory{
-				Address:        proxyConf.Address(),
-				TLSConf:        proxyConf.TLS,
-				SecretResolver: sr,
-			}
+			factory, err := listener.NewFactory(
+				proxyConf.Address(),
+				proxyConf.TLS,
+				sr,
+			)
+			require.NoError(t, err)
 
 			lstnr, err := factory.Create(t.Context())
 			require.NoError(t, err)
@@ -1158,10 +1159,12 @@ func TestWebSocketSupport(t *testing.T) {
 
 	defer proxy.Shutdown(t.Context())
 
-	factory := listener.Factory{
-		Address: conf.Serve.Address(),
-		TLSConf: conf.Serve.TLS,
-	}
+	factory, err := listener.NewFactory(
+		conf.Serve.Address(),
+		conf.Serve.TLS,
+		nil,
+	)
+	require.NoError(t, err)
 
 	lstnr, err := factory.Create(t.Context())
 	require.NoError(t, err)
@@ -1263,10 +1266,12 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	defer proxy.Shutdown(t.Context())
 
-	factory := listener.Factory{
-		Address: conf.Serve.Address(),
-		TLSConf: conf.Serve.TLS,
-	}
+	factory, err := listener.NewFactory(
+		conf.Serve.Address(),
+		conf.Serve.TLS,
+		nil,
+	)
+	require.NoError(t, err)
 
 	lstnr, err := factory.Create(t.Context())
 	require.NoError(t, err)

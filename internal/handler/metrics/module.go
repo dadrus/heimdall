@@ -59,7 +59,7 @@ type ErrLoggerFun func(v ...any)
 
 func (l ErrLoggerFun) Println(v ...any) { l(v) }
 
-func newLifecycleManager(app app.Context) lifecycleManager {
+func newLifecycleManager(app app.Context) (lifecycleManager, error) {
 	conf := app.Config()
 	logger := app.Logger()
 
@@ -71,7 +71,12 @@ func newLifecycleManager(app app.Context) lifecycleManager {
 		strings.Contains(exporterNames, "none") {
 		logger.Info().Msg("Metrics service disabled")
 
-		return noopManager{}
+		return noopManager{}, nil
+	}
+
+	lf, err := listener.NewFactory(cfg.Address(), nil, nil)
+	if err != nil {
+		return nil, err
 	}
 
 	mux := http.NewServeMux()
@@ -89,10 +94,8 @@ func newLifecycleManager(app app.Context) lifecycleManager {
 			)))
 
 	return &fxlcm.LifecycleManager{
-		ServiceName: "Metrics",
-		ListenerFactory: listener.Factory{
-			Address: cfg.Address(),
-		},
+		ServiceName:     "Metrics",
+		ListenerFactory: lf,
 		Server: &http.Server{
 			Handler:        mux,
 			ReadTimeout:    5 * time.Second,  // nolint: mnd
@@ -102,5 +105,5 @@ func newLifecycleManager(app app.Context) lifecycleManager {
 			ErrorLog:       loggeradapter.NewStdLogger(logger),
 		},
 		Logger: logger,
-	}
+	}, nil
 }

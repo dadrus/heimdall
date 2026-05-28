@@ -36,19 +36,24 @@ var Module = fx.Invoke( // nolint: gochecknoglobals
 	),
 )
 
-func newLifecycleManager(app app.Context, exec pipeline.Executor, cch cache.Cache) *fxlcm.LifecycleManager {
+func newLifecycleManager(
+	app app.Context,
+	exec pipeline.Executor,
+	cch cache.Cache,
+) (*fxlcm.LifecycleManager, error) {
 	conf := app.Config()
 	logger := app.Logger()
 	cfg := conf.Serve
 
-	return &fxlcm.LifecycleManager{
-		ServiceName: "Decision Envoy ExtAuth",
-		Server:      &adapter{s: newService(conf, cch, logger, exec)},
-		ListenerFactory: listener.Factory{
-			Address:        cfg.Address(),
-			TLSConf:        cfg.TLS,
-			SecretResolver: app.SecretResolver(),
-		},
-		Logger: logger,
+	lf, err := listener.NewFactory(cfg.Address(), cfg.TLS, app.SecretResolver())
+	if err != nil {
+		return nil, err
 	}
+
+	return &fxlcm.LifecycleManager{
+		ServiceName:     "Decision Envoy ExtAuth",
+		Server:          &adapter{s: newService(conf, cch, logger, exec)},
+		ListenerFactory: lf,
+		Logger:          logger,
+	}, nil
 }

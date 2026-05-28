@@ -116,10 +116,12 @@ func (suite *ServiceTestSuite) SetupTest() {
 		Metrics: config.MetricsConfig{Enabled: true},
 	}
 
-	factory := listener.Factory{
-		Address: conf.Management.Address(),
-		TLSConf: conf.Management.TLS,
-	}
+	factory, err := listener.NewFactory(
+		conf.Management.Address(),
+		conf.Management.TLS,
+		nil,
+	)
+	suite.Require().NoError(err)
 
 	listener, err := factory.Create(suite.T().Context())
 	suite.Require().NoError(err)

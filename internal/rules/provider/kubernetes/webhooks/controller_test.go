@@ -302,7 +302,9 @@ func TestControllerLifecycle(t *testing.T) {
 			require.NoError(t, err)
 
 			listeningAddress = fmt.Sprintf("127.0.0.1:%d", port)
-			controller := New(tc.tls, sr, srf, log.Logger, "", mocks.NewFactoryMock(t))
+			controller, err := New(tc.tls, sr, srf, log.Logger, "", mocks.NewFactoryMock(t))
+			require.NoError(t, err)
+
 			baseURL := fmt.Sprintf("%s://%s",
 				x.IfThenElse(tc.tls != nil, "https", "http"),
 				listeningAddress,

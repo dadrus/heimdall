@@ -61,36 +61,53 @@ func (l *listener) Accept() (net.Conn, error) {
 }
 
 type Factory struct {
-	Address        string
-	TLSConf        *config.TLS
-	SecretResolver secrets.Resolver
+	address    string
+	tlsConfig  *tls.Config
+	tlsEnabled bool
+}
+
+func NewFactory(
+	address string,
+	tlsConf *config.TLS,
+	secretResolver secrets.Resolver,
+) (Factory, error) {
+	var tlsConfig *tls.Config
+
+	if tlsConf != nil {
+		cfg, err := tlsx.ToServerTLSConfig(
+			context.Background(),
+			secretResolver,
+			tlsConf,
+			// key observer, falls noch Teil der Signatur
+		)
+		if err != nil {
+			return Factory{}, err
+		}
+
+		tlsConfig = cfg
+	}
+
+	return Factory{
+		address:    address,
+		tlsConfig:  tlsConfig,
+		tlsEnabled: tlsConf != nil,
+	}, nil
 }
 
 func (f Factory) Create(ctx context.Context) (net.Listener, error) {
-	var tlsConf *tls.Config
-
-	if f.TLSConf != nil {
-		cfg, err := tlsx.ToServerTLSConfig(ctx, f.SecretResolver, f.TLSConf)
-		if err != nil {
-			return nil, err
-		}
-
-		tlsConf = cfg
-	}
-
-	listnr, err := listen(ctx, f.Address)
+	listnr, err := listen(ctx, f.address)
 	if err != nil {
 		return nil, err
 	}
 
 	listnr = &listener{Listener: listnr}
 
-	if tlsConf != nil {
-		listnr = tls.NewListener(listnr, tlsConf)
+	if f.tlsConfig != nil {
+		listnr = tls.NewListener(listnr, f.tlsConfig)
 	}
 
 	return &listenerWrapper{
 		Listener:   listnr,
-		tlsEnabled: tlsConf != nil,
+		tlsEnabled: f.tlsEnabled,
 	}, nil
 }
