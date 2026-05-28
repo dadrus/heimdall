@@ -178,7 +178,13 @@ func TestNew(t *testing.T) {
 				tc.setup(t, sr, handle)
 			}
 
-			ln, err := New(t.Context(), address, tc.serviceConf.TLS, sr)
+			factory := Factory{
+				Address:        address,
+				TLSConf:        tc.serviceConf.TLS,
+				SecretResolver: sr,
+			}
+
+			ln, err := factory.Create(t.Context())
 
 			defer func() {
 				if ln != nil {

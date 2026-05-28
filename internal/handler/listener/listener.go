@@ -46,21 +46,22 @@ func (l *listener) Accept() (net.Conn, error) {
 	return &conn{Conn: con}, nil
 }
 
-func New(
-	ctx context.Context,
-	address string,
-	tlsConf *config.TLS,
-	sm secrets.Resolver,
-) (net.Listener, error) {
-	listnr, err := listen(ctx, address)
+type Factory struct {
+	Address        string
+	TLSConf        *config.TLS
+	SecretResolver secrets.Resolver
+}
+
+func (f Factory) Create(ctx context.Context) (net.Listener, error) {
+	listnr, err := listen(ctx, f.Address)
 	if err != nil {
 		return nil, err
 	}
 
 	listnr = &listener{Listener: listnr}
 
-	if tlsConf != nil {
-		cfg, err := tlsx.ToServerTLSConfig(ctx, sm, tlsConf)
+	if f.TLSConf != nil {
+		cfg, err := tlsx.ToServerTLSConfig(ctx, f.SecretResolver, f.TLSConf)
 		if err != nil {
 			return nil, err
 		}
