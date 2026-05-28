@@ -146,10 +146,7 @@ func (s *jwtSigner) onSecretUpdated(_ context.Context, secret secrets.Secret, _ 
 	aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
 
 	s.updateHash(aks)
-	s.ko.Notify(keyregistry.KeyInfo{
-		Key:        aks,
-		Exportable: true,
-	})
+	s.ko.Notify(aks)
 
 	return nil
 }

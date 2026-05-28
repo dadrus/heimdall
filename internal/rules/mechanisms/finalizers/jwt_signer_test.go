@@ -34,7 +34,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyregistry"
 	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
@@ -318,11 +317,7 @@ func TestJWTSignerSign(t *testing.T) {
 				Return(shm, nil)
 
 			ko := keyregistrymocks.NewKeyObserverMock(t)
-			ko.EXPECT().
-				Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
-					return ki.Key == secret && ki.Exportable
-				})).
-				Maybe()
+			ko.EXPECT().Notify(secret).Maybe()
 
 			signer, err := newJWTSigner(
 				t.Context(),
@@ -352,9 +347,7 @@ func TestJWTSignerOnSecretUpdated(t *testing.T) {
 	secret := secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil)
 
 	kr := keyregistrymocks.NewRegistryMock(t)
-	kr.EXPECT().Notify(mock.MatchedBy(func(info keyregistry.KeyInfo) bool {
-		return info.Key == secret && info.Exportable
-	}))
+	kr.EXPECT().Notify(secret)
 
 	signer := jwtSigner{ko: kr}
 
