@@ -33,6 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/cloudblob"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
 	"github.com/dadrus/heimdall/internal/rules/provider/httpendpoint"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -81,9 +82,21 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	sm, err := secrets.NewManager(
+		conf,
+		logger,
+		df,
+		noopmetric.Meter{},
+	)
+	if err != nil {
+		return err
+	}
+
+	resolver := sm.Resolver()
+
 	appCtx := &appContext{
 		kr: noopRegistry{},
-		sr: noopResolver{},
+		sr: resolver,
 		d:  df,
 		l:  logger,
 		c:  conf,
@@ -96,7 +109,7 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 
 	rFactory, err := rules.NewRuleFactory(
 		repo,
-		noopResolver{},
+		resolver,
 		conf,
 		config.DecisionMode,
 		logger,
@@ -117,7 +130,7 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		config.DecisionMode,
 		noopRepository{},
 		rFactory,
-		noopScopedResolverFactory{},
+		sm.ScopedResolverFactory(),
 	)
 
 	_, err = filesystem.NewProvider(appCtx, rProcessor)

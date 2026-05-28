@@ -31,6 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/repository"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/validation"
 )
 
@@ -94,11 +95,23 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	sm, err := secrets.NewManager(
+		conf,
+		logger,
+		df,
+		noopmetric.Meter{},
+	)
+	if err != nil {
+		return err
+	}
+
+	resolver := sm.Resolver()
+
 	conf.Providers.FileSystem = map[string]any{"src": args[0]}
 
 	appCtx := &appContext{
 		kr: noopRegistry{},
-		sr: noopResolver{},
+		sr: resolver,
 		d:  df,
 		l:  logger,
 		c:  conf,
@@ -111,7 +124,7 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 	rFactory, err := rules.NewRuleFactory(
 		repo,
-		noopResolver{},
+		resolver,
 		conf,
 		opMode,
 		logger,
@@ -123,7 +136,12 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	processor := rules.NewRuleSetProcessor(opMode, noopRepository{}, rFactory, noopScopedResolverFactory{})
+	processor := rules.NewRuleSetProcessor(
+		opMode,
+		noopRepository{},
+		rFactory,
+		sm.ScopedResolverFactory(),
+	)
 
 	provider, err := filesystem.NewProvider(appCtx, processor)
 	if err != nil {
