@@ -98,7 +98,6 @@ func (c baseConfig) tlsConfig(appCtx app.Context) (*tls.Config, error) {
 		context.Background(),
 		appCtx.SecretResolver(),
 		&c.TLS.TLS,
-		appCtx.KeyRegistry(),
 	)
 	if err != nil {
 		return nil, err

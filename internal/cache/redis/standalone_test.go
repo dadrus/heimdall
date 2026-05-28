@@ -40,7 +40,6 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
-	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
@@ -94,7 +93,6 @@ func TestStandaloneCache(t *testing.T) {
 			sr *secretsmocks.ResolverMock,
 			credentialsHandle *secretsmocks.CredentialsHandleMock,
 			secretHandle *secretsmocks.SecretHandleMock,
-			kr *keyregistrymocks.RegistryMock,
 		) []byte
 		assert func(t *testing.T, err error, cch types.Cache)
 	}{
@@ -104,7 +102,6 @@ func TestStandaloneCache(t *testing.T) {
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) []byte {
 				t.Helper()
 
@@ -124,7 +121,6 @@ func TestStandaloneCache(t *testing.T) {
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) []byte {
 				t.Helper()
 
@@ -144,7 +140,6 @@ func TestStandaloneCache(t *testing.T) {
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) []byte {
 				t.Helper()
 
@@ -164,7 +159,6 @@ func TestStandaloneCache(t *testing.T) {
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) []byte {
 				t.Helper()
 
@@ -184,7 +178,6 @@ func TestStandaloneCache(t *testing.T) {
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) []byte {
 				t.Helper()
 
@@ -213,7 +206,6 @@ func TestStandaloneCache(t *testing.T) {
 				sr *secretsmocks.ResolverMock,
 				chm *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) []byte {
 				t.Helper()
 
@@ -261,7 +253,6 @@ func TestStandaloneCache(t *testing.T) {
 				sr *secretsmocks.ResolverMock,
 				_ *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) []byte {
 				t.Helper()
 
@@ -287,7 +278,6 @@ func TestStandaloneCache(t *testing.T) {
 				sr *secretsmocks.ResolverMock,
 				_ *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) []byte {
 				t.Helper()
 
@@ -314,7 +304,6 @@ func TestStandaloneCache(t *testing.T) {
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) []byte {
 				t.Helper()
 
@@ -336,7 +325,6 @@ func TestStandaloneCache(t *testing.T) {
 				sr *secretsmocks.ResolverMock,
 				chm *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) []byte {
 				t.Helper()
 
@@ -398,7 +386,6 @@ func TestStandaloneCache(t *testing.T) {
 				sr *secretsmocks.ResolverMock,
 				_ *secretsmocks.CredentialsHandleMock,
 				secretHandle *secretsmocks.SecretHandleMock,
-				kr *keyregistrymocks.RegistryMock,
 			) []byte {
 				t.Helper()
 
@@ -410,8 +397,6 @@ func TestStandaloneCache(t *testing.T) {
 						secrets.Reference{Source: "redis", Selector: "tls"},
 					).
 					Return(secretHandle, nil)
-
-				kr.EXPECT().Notify(mock.Anything)
 
 				secretHandle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -470,7 +455,6 @@ func TestStandaloneCache(t *testing.T) {
 			sr := secretsmocks.NewResolverMock(t)
 			credentialsHandle := secretsmocks.NewCredentialsHandleMock(t)
 			secretHandle := secretsmocks.NewSecretHandleMock(t)
-			kr := keyregistrymocks.NewRegistryMock(t)
 			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
 
 			validator, err := validation.NewValidator(
@@ -479,13 +463,12 @@ func TestStandaloneCache(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			conf, err := testsupport.DecodeTestConfig(tc.config(t, sr, credentialsHandle, secretHandle, kr))
+			conf, err := testsupport.DecodeTestConfig(tc.config(t, sr, credentialsHandle, secretHandle))
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
-			appCtx.EXPECT().KeyRegistry().Maybe().Return(kr)
 			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 
 			// WHEN

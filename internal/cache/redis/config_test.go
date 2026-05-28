@@ -32,8 +32,6 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/keyregistry"
-	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
@@ -55,7 +53,6 @@ func TestBaseConfigClientOptions(t *testing.T) {
 			sr *secretsmocks.ResolverMock,
 			credentialsHandle *secretsmocks.CredentialsHandleMock,
 			secretHandle *secretsmocks.SecretHandleMock,
-			observer *keyregistrymocks.RegistryMock,
 		)
 		assert func(t *testing.T, err error, opts rueidis.ClientOption)
 	}{
@@ -69,7 +66,6 @@ func TestBaseConfigClientOptions(t *testing.T) {
 				sr *secretsmocks.ResolverMock,
 				credentialsHandle *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) {
 				t.Helper()
 
@@ -115,7 +111,6 @@ func TestBaseConfigClientOptions(t *testing.T) {
 				sr *secretsmocks.ResolverMock,
 				_ *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) {
 				t.Helper()
 
@@ -143,7 +138,6 @@ func TestBaseConfigClientOptions(t *testing.T) {
 				sr *secretsmocks.ResolverMock,
 				credentialsHandle *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) {
 				t.Helper()
 
@@ -182,7 +176,6 @@ func TestBaseConfigClientOptions(t *testing.T) {
 				sr *secretsmocks.ResolverMock,
 				_ *secretsmocks.CredentialsHandleMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.RegistryMock,
 			) {
 				t.Helper()
 
@@ -214,7 +207,6 @@ func TestBaseConfigClientOptions(t *testing.T) {
 				sr *secretsmocks.ResolverMock,
 				_ *secretsmocks.CredentialsHandleMock,
 				secretHandle *secretsmocks.SecretHandleMock,
-				observer *keyregistrymocks.RegistryMock,
 			) {
 				t.Helper()
 
@@ -224,16 +216,6 @@ func TestBaseConfigClientOptions(t *testing.T) {
 						secrets.Reference{Source: "redis", Selector: "tls"},
 					).
 					Return(secretHandle, nil)
-
-				observer.EXPECT().Keys().Maybe().Return(nil)
-				observer.EXPECT().
-					Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
-						return ki.Key.KeyID() == "kid" &&
-							ki.Key.PrivateKey() == privateKey &&
-							assert.ObjectsAreEqual(ki.Key.CertChain(), []*x509.Certificate{cert}) &&
-							!ki.Exportable
-					})).
-					Return()
 
 				secretHandle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -255,7 +237,6 @@ func TestBaseConfigClientOptions(t *testing.T) {
 			sr := secretsmocks.NewResolverMock(t)
 			credentialsHandle := secretsmocks.NewCredentialsHandleMock(t)
 			secretHandle := secretsmocks.NewSecretHandleMock(t)
-			observer := keyregistrymocks.NewRegistryMock(t)
 			validator, err := validation.NewValidator(
 				validation.WithTagValidator(config.EnforcementSettings{}),
 			)
@@ -263,12 +244,11 @@ func TestBaseConfigClientOptions(t *testing.T) {
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
-			appCtx.EXPECT().KeyRegistry().Maybe().Return(observer)
 			appCtx.EXPECT().DecoderFactory().Maybe().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 			if tc.setup != nil {
-				tc.setup(t, sr, credentialsHandle, secretHandle, observer)
+				tc.setup(t, sr, credentialsHandle, secretHandle)
 			}
 
 			opts, err := tc.cfg.clientOptions(appCtx)

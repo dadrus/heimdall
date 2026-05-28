@@ -37,7 +37,6 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
-	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
@@ -215,12 +214,9 @@ func TestSentinelCache(t *testing.T) {
 			conf, err := testsupport.DecodeTestConfig(tc.config(t, sr))
 			require.NoError(t, err)
 
-			kr := keyregistrymocks.NewRegistryMock(t)
-
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
-			appCtx.EXPECT().KeyRegistry().Maybe().Return(kr)
 			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 
 			// WHEN
