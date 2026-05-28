@@ -92,6 +92,9 @@ packages:
       CertificateBundleHandle: {}
       ScopedResolver: {}
       ScopedResolverFactory: {}
+  github.com/dadrus/heimdall/internal/secrets/metrics:
+    interfaces:
+      SecretUsage: {}
   github.com/dadrus/heimdall/internal/rules:
     interfaces:
       executionCondition: {}
