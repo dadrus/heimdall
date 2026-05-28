@@ -116,12 +116,12 @@ func (suite *ServiceTestSuite) SetupTest() {
 		Metrics: config.MetricsConfig{Enabled: true},
 	}
 
-	listener, err := listener.New(
-		suite.T().Context(),
-		conf.Management.Address(),
-		conf.Management.TLS,
-		nil,
-	)
+	factory := listener.Factory{
+		Address:        conf.Management.Address(),
+		TLSConf:        conf.Management.TLS,
+	}
+
+	listener, err := factory.Create(suite.T().Context())
 	suite.Require().NoError(err)
 	suite.addr = "http://" + listener.Addr().String()
 

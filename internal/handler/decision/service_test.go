@@ -540,7 +540,12 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			srvConf.Host = "127.0.0.1"
 			srvConf.Port = port
 
-			listener, err := listener.New(t.Context(), srvConf.Address(), srvConf.TLS, nil)
+			factory := listener.Factory{
+				Address:        srvConf.Address(),
+				TLSConf:        srvConf.TLS,
+			}
+
+			listener, err := factory.Create(t.Context())
 			require.NoError(t, err)
 
 			conf := &config.Configuration{Serve: srvConf}

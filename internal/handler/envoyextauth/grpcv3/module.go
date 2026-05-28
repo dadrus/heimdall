@@ -24,6 +24,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
@@ -41,11 +42,13 @@ func newLifecycleManager(app app.Context, exec pipeline.Executor, cch cache.Cach
 	cfg := conf.Serve
 
 	return &fxlcm.LifecycleManager{
-		ServiceName:    "Decision Envoy ExtAuth",
-		ServiceAddress: cfg.Address(),
-		Server:         &adapter{s: newService(conf, cch, logger, exec)},
-		Logger:         logger,
-		TLSConf:        cfg.TLS,
-		SecretResolver: app.SecretResolver(),
+		ServiceName: "Decision Envoy ExtAuth",
+		Server:      &adapter{s: newService(conf, cch, logger, exec)},
+		ListenerFactory: listener.Factory{
+			Address:        cfg.Address(),
+			TLSConf:        cfg.TLS,
+			SecretResolver: app.SecretResolver(),
+		},
+		Logger: logger,
 	}
 }

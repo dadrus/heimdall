@@ -26,6 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
 
@@ -59,9 +60,11 @@ func newLifecycleManager(app app.Context) lifecycleManager {
 	}
 
 	return &fxlcm.LifecycleManager{
-		ServiceName:    "Profiling",
-		ServiceAddress: cfg.Address(),
-		Logger:         logger,
+		ServiceName: "Profiling",
+		Logger:      logger,
+		ListenerFactory: listener.Factory{
+			Address: cfg.Address(),
+		},
 		Server: &http.Server{
 			ReadHeaderTimeout: 5 * time.Second,  // nolint: mnd
 			IdleTimeout:       90 * time.Second, // nolint: mnd

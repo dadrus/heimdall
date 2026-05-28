@@ -23,6 +23,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/handler/listener"
 )
 
 var Module = fx.Invoke( // nolint: gochecknoglobals
@@ -40,11 +41,13 @@ func newLifecycleManager(app app.Context) *fxlcm.LifecycleManager {
 	cfg := conf.Management
 
 	return &fxlcm.LifecycleManager{
-		ServiceName:    "Management",
-		ServiceAddress: cfg.Address(),
-		Server:         newService(conf, logger, kr),
-		Logger:         logger,
-		TLSConf:        cfg.TLS,
-		SecretResolver: app.SecretResolver(),
+		ServiceName: "Management",
+		Server:      newService(conf, logger, kr),
+		ListenerFactory: listener.Factory{
+			Address:        cfg.Address(),
+			TLSConf:        cfg.TLS,
+			SecretResolver: app.SecretResolver(),
+		},
+		Logger: logger,
 	}
 }

@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/justinas/alice"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -89,7 +90,9 @@ func newLifecycleManager(app app.Context) lifecycleManager {
 
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Metrics",
-		ServiceAddress: cfg.Address(),
+		ListenerFactory: listener.Factory{
+			Address:        cfg.Address(),
+		},
 		Server: &http.Server{
 			Handler:        mux,
 			ReadTimeout:    5 * time.Second,  // nolint: mnd

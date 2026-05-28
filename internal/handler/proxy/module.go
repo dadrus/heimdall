@@ -19,6 +19,7 @@ package proxy
 import (
 	"context"
 
+	"github.com/dadrus/heimdall/internal/handler/listener"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -42,10 +43,12 @@ func newLifecycleManager(app app.Context, cch cache.Cache, executor pipeline.Exe
 
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Proxy",
-		ServiceAddress: cfg.Address(),
 		Server:         newService(conf, cch, logger, executor),
+		ListenerFactory: listener.Factory{
+			Address:        cfg.Address(),
+			TLSConf:        cfg.TLS,
+			SecretResolver: app.SecretResolver(),
+		},
 		Logger:         logger,
-		TLSConf:        cfg.TLS,
-		SecretResolver: app.SecretResolver(),
 	}
 }

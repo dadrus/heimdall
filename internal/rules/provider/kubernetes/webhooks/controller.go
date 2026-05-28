@@ -23,6 +23,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/secrets"
 )
@@ -55,11 +56,13 @@ func New(
 	}
 
 	return &fxlcm.LifecycleManager{
-		ServiceName:    "Kubernetes Admission Controller",
-		ServiceAddress: listeningAddress,
-		Server:         newService(listeningAddress, ruleFactory, srf, authClass, logger),
-		Logger:         logger,
-		TLSConf:        tlsConf,
-		SecretResolver: sr,
+		ServiceName: "Kubernetes Admission Controller",
+		Server:      newService(listeningAddress, ruleFactory, srf, authClass, logger),
+		ListenerFactory: listener.Factory{
+			Address:        listeningAddress,
+			TLSConf:        tlsConf,
+			SecretResolver: sr,
+		},
+		Logger: logger,
 	}
 }
