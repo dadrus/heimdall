@@ -32,8 +32,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyregistry"
-	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
@@ -48,7 +46,7 @@ func TestToServerTLSConfig(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		conf   config.TLS
-		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock, ko *keyregistrymocks.KeyObserverMock)
+		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock)
 		assert func(t *testing.T, err error, cfg *tls.Config)
 	}{
 		"fails if secret resolution fails": {
@@ -59,7 +57,6 @@ func TestToServerTLSConfig(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 			) {
 				t.Helper()
 
@@ -89,7 +86,6 @@ func TestToServerTLSConfig(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				handle *secretsmocks.SecretHandleMock,
-				ko *keyregistrymocks.KeyObserverMock,
 			) {
 				t.Helper()
 
@@ -99,14 +95,6 @@ func TestToServerTLSConfig(t *testing.T) {
 						secrets.Reference{Source: "tls", Selector: "server"},
 					).
 					Return(handle, nil)
-
-				ko.EXPECT().
-					Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
-						return ki.Key.KeyID() == secret.KeyID() &&
-							ki.Key.PrivateKey() == secret.PrivateKey() &&
-							assert.ObjectsAreEqual(ki.Key.CertChain(), secret.CertChain()) &&
-							!ki.Exportable
-					}))
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -136,7 +124,6 @@ func TestToServerTLSConfig(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				handle *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 			) {
 				t.Helper()
 
@@ -169,11 +156,10 @@ func TestToServerTLSConfig(t *testing.T) {
 
 			sr := secretsmocks.NewResolverMock(t)
 			handle := secretsmocks.NewSecretHandleMock(t)
-			ko := keyregistrymocks.NewKeyObserverMock(t)
 
-			tc.setup(t, sr, handle, ko)
+			tc.setup(t, sr, handle)
 
-			cfg, err := ToServerTLSConfig(t.Context(), sr, &tc.conf, ko)
+			cfg, err := ToServerTLSConfig(t.Context(), sr, &tc.conf)
 
 			tc.assert(t, err, cfg)
 		})
@@ -187,7 +173,7 @@ func TestToClientTLSConfig(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		conf   config.TLS
-		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock, ko *keyregistrymocks.KeyObserverMock)
+		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock)
 		assert func(t *testing.T, err error, cfg *tls.Config)
 	}{
 		"without client certificate secret": {
@@ -196,7 +182,6 @@ func TestToClientTLSConfig(t *testing.T) {
 				t *testing.T,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 			) {
 				t.Helper()
 			},
@@ -220,7 +205,6 @@ func TestToClientTLSConfig(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 			) {
 				t.Helper()
 
@@ -249,7 +233,6 @@ func TestToClientTLSConfig(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				handle *secretsmocks.SecretHandleMock,
-				ko *keyregistrymocks.KeyObserverMock,
 			) {
 				t.Helper()
 
@@ -259,14 +242,6 @@ func TestToClientTLSConfig(t *testing.T) {
 						secrets.Reference{Source: "tls", Selector: "client"},
 					).
 					Return(handle, nil)
-
-				ko.EXPECT().
-					Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
-						return ki.Key.KeyID() == secret.KeyID() &&
-							ki.Key.PrivateKey() == secret.PrivateKey() &&
-							assert.ObjectsAreEqual(ki.Key.CertChain(), secret.CertChain()) &&
-							!ki.Exportable
-					}))
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -296,7 +271,6 @@ func TestToClientTLSConfig(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				handle *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 			) {
 				t.Helper()
 
@@ -324,11 +298,10 @@ func TestToClientTLSConfig(t *testing.T) {
 
 			sr := secretsmocks.NewResolverMock(t)
 			handle := secretsmocks.NewSecretHandleMock(t)
-			ko := keyregistrymocks.NewKeyObserverMock(t)
 
-			tc.setup(t, sr, handle, ko)
+			tc.setup(t, sr, handle)
 
-			cfg, err := ToClientTLSConfig(t.Context(), sr, &tc.conf, ko)
+			cfg, err := ToClientTLSConfig(t.Context(), sr, &tc.conf)
 
 			tc.assert(t, err, cfg)
 		})
@@ -484,7 +457,7 @@ func TestNewCertificateInformer(t *testing.T) {
 	secret := newTLSSecret(t)
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock, ko *keyregistrymocks.KeyObserverMock)
+		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock)
 		assert func(t *testing.T, informer *secrets.SecretInformer[*tls.Certificate], err error)
 	}{
 		"wraps resolver error as configuration error": {
@@ -492,7 +465,6 @@ func TestNewCertificateInformer(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 			) {
 				t.Helper()
 
@@ -518,7 +490,6 @@ func TestNewCertificateInformer(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				handle *secretsmocks.SecretHandleMock,
-				ko *keyregistrymocks.KeyObserverMock,
 			) {
 				t.Helper()
 
@@ -528,14 +499,6 @@ func TestNewCertificateInformer(t *testing.T) {
 						secrets.Reference{Source: "tls", Selector: "server"},
 					).
 					Return(handle, nil)
-
-				ko.EXPECT().
-					Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
-						return ki.Key.KeyID() == secret.KeyID() &&
-							ki.Key.PrivateKey() == secret.PrivateKey() &&
-							assert.ObjectsAreEqual(ki.Key.CertChain(), secret.CertChain()) &&
-							!ki.Exportable
-					}))
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -565,9 +528,8 @@ func TestNewCertificateInformer(t *testing.T) {
 
 			sr := secretsmocks.NewResolverMock(t)
 			handle := secretsmocks.NewSecretHandleMock(t)
-			ko := keyregistrymocks.NewKeyObserverMock(t)
 
-			tc.setup(t, sr, handle, ko)
+			tc.setup(t, sr, handle)
 
 			informer, err := newCertificateInformer(
 				t.Context(),
@@ -575,7 +537,6 @@ func TestNewCertificateInformer(t *testing.T) {
 					Secret: config.Secret{Source: "tls", Selector: "server"},
 				},
 				sr,
-				ko,
 			)
 
 			tc.assert(t, informer, err)
@@ -660,7 +621,7 @@ func TestServerTLSConfigGetCertificate(t *testing.T) {
 	secret := newTLSSecret(t)
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock, ko *keyregistrymocks.KeyObserverMock, req *tls.ClientHelloInfo)
+		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock, req *tls.ClientHelloInfo)
 		assert func(t *testing.T, cert *tls.Certificate, err error)
 	}{
 		"fails if no certificate is available": {
@@ -668,7 +629,6 @@ func TestServerTLSConfigGetCertificate(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				handle *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 				_ *tls.ClientHelloInfo,
 			) {
 				t.Helper()
@@ -696,7 +656,6 @@ func TestServerTLSConfigGetCertificate(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				handle *secretsmocks.SecretHandleMock,
-				ko *keyregistrymocks.KeyObserverMock,
 				req *tls.ClientHelloInfo,
 			) {
 				t.Helper()
@@ -707,8 +666,6 @@ func TestServerTLSConfigGetCertificate(t *testing.T) {
 						secrets.Reference{Source: "tls", Selector: "server"},
 					).
 					Return(handle, nil)
-
-				expectKeyRegistration(t, ko, secret)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -738,7 +695,6 @@ func TestServerTLSConfigGetCertificate(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				handle *secretsmocks.SecretHandleMock,
-				ko *keyregistrymocks.KeyObserverMock,
 				req *tls.ClientHelloInfo,
 			) {
 				t.Helper()
@@ -749,8 +705,6 @@ func TestServerTLSConfigGetCertificate(t *testing.T) {
 						secrets.Reference{Source: "tls", Selector: "server"},
 					).
 					Return(handle, nil)
-
-				expectKeyRegistration(t, ko, secret)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -790,10 +744,9 @@ func TestServerTLSConfigGetCertificate(t *testing.T) {
 
 			sr := secretsmocks.NewResolverMock(t)
 			handle := secretsmocks.NewSecretHandleMock(t)
-			ko := keyregistrymocks.NewKeyObserverMock(t)
 			req := &tls.ClientHelloInfo{}
 
-			tc.setup(t, sr, handle, ko, req)
+			tc.setup(t, sr, handle, req)
 
 			cfg, err := ToServerTLSConfig(
 				t.Context(),
@@ -801,7 +754,6 @@ func TestServerTLSConfigGetCertificate(t *testing.T) {
 				&config.TLS{
 					Secret: config.Secret{Source: "tls", Selector: "server"},
 				},
-				ko,
 			)
 			require.NoError(t, err)
 			require.NotNil(t, cfg)
@@ -820,7 +772,7 @@ func TestClientTLSConfigGetClientCertificate(t *testing.T) {
 	secret := newTLSSecret(t)
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock, ko *keyregistrymocks.KeyObserverMock, req *tls.CertificateRequestInfo)
+		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock, req *tls.CertificateRequestInfo)
 		assert func(t *testing.T, cert *tls.Certificate, err error)
 	}{
 		"fails if no certificate is available": {
@@ -828,7 +780,6 @@ func TestClientTLSConfigGetClientCertificate(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				handle *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 				_ *tls.CertificateRequestInfo,
 			) {
 				t.Helper()
@@ -856,7 +807,6 @@ func TestClientTLSConfigGetClientCertificate(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				handle *secretsmocks.SecretHandleMock,
-				ko *keyregistrymocks.KeyObserverMock,
 				req *tls.CertificateRequestInfo,
 			) {
 				t.Helper()
@@ -867,8 +817,6 @@ func TestClientTLSConfigGetClientCertificate(t *testing.T) {
 						secrets.Reference{Source: "tls", Selector: "client"},
 					).
 					Return(handle, nil)
-
-				expectKeyRegistration(t, ko, secret)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -895,7 +843,6 @@ func TestClientTLSConfigGetClientCertificate(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				handle *secretsmocks.SecretHandleMock,
-				ko *keyregistrymocks.KeyObserverMock,
 				req *tls.CertificateRequestInfo,
 			) {
 				t.Helper()
@@ -906,8 +853,6 @@ func TestClientTLSConfigGetClientCertificate(t *testing.T) {
 						secrets.Reference{Source: "tls", Selector: "client"},
 					).
 					Return(handle, nil)
-
-				expectKeyRegistration(t, ko, secret)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -940,10 +885,9 @@ func TestClientTLSConfigGetClientCertificate(t *testing.T) {
 
 			sr := secretsmocks.NewResolverMock(t)
 			handle := secretsmocks.NewSecretHandleMock(t)
-			ko := keyregistrymocks.NewKeyObserverMock(t)
 			req := &tls.CertificateRequestInfo{}
 
-			tc.setup(t, sr, handle, ko, req)
+			tc.setup(t, sr, handle, req)
 
 			cfg, err := ToClientTLSConfig(
 				t.Context(),
@@ -951,7 +895,6 @@ func TestClientTLSConfigGetClientCertificate(t *testing.T) {
 				&config.TLS{
 					Secret: config.Secret{Source: "tls", Selector: "client"},
 				},
-				ko,
 			)
 			require.NoError(t, err)
 			require.NotNil(t, cfg)
@@ -962,22 +905,6 @@ func TestClientTLSConfigGetClientCertificate(t *testing.T) {
 			tc.assert(t, cert, err)
 		})
 	}
-}
-
-func expectKeyRegistration(
-	t *testing.T,
-	ko *keyregistrymocks.KeyObserverMock,
-	secret secrets.AsymmetricKeySecret,
-) {
-	t.Helper()
-
-	ko.EXPECT().
-		Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
-			return ki.Key.KeyID() == secret.KeyID() &&
-				ki.Key.PrivateKey() == secret.PrivateKey() &&
-				assert.ObjectsAreEqual(ki.Key.CertChain(), secret.CertChain()) &&
-				!ki.Exportable
-		}))
 }
 
 func newTLSSecret(t *testing.T) secrets.AsymmetricKeySecret {

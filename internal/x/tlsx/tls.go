@@ -6,7 +6,6 @@ import (
 	"errors"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -83,21 +82,12 @@ func newCertificateInformer(
 	ctx context.Context,
 	tlsCfg *config.TLS,
 	sr secrets.Resolver,
-	ko keyregistry.KeyObserver,
 ) (*secrets.SecretInformer[*tls.Certificate], error) {
 	informer, err := secrets.NewSecretInformer(
 		ctx,
 		sr,
 		secrets.Reference{Source: tlsCfg.Secret.Source, Selector: tlsCfg.Secret.Selector},
 		secrets.WithConverter(toTLSCertificate),
-		secrets.WithUpdateCallback(func(ctx context.Context, secret secrets.Secret, _ *tls.Certificate) error {
-			ko.Notify(keyregistry.KeyInfo{
-				Key:        secret.(secrets.AsymmetricKeySecret), //nolint:forcetypeassert
-				Exportable: false,
-			})
-
-			return nil
-		}),
 	)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
@@ -113,7 +103,6 @@ func ToClientTLSConfig(
 	ctx context.Context,
 	sr secrets.Resolver,
 	tlsCfg *config.TLS,
-	ko keyregistry.KeyObserver,
 ) (*tls.Config, error) {
 	cfg := newBaseTLSConfig(tlsCfg)
 
@@ -121,7 +110,7 @@ func ToClientTLSConfig(
 		return cfg, nil
 	}
 
-	certResolver, err := newCertificateInformer(ctx, tlsCfg, sr, ko)
+	certResolver, err := newCertificateInformer(ctx, tlsCfg, sr)
 	if err != nil {
 		return nil, err
 	}
@@ -137,9 +126,8 @@ func ToServerTLSConfig(
 	ctx context.Context,
 	sr secrets.Resolver,
 	tlsCfg *config.TLS,
-	ko keyregistry.KeyObserver,
 ) (*tls.Config, error) {
-	certResolver, err := newCertificateInformer(ctx, tlsCfg, sr, ko)
+	certResolver, err := newCertificateInformer(ctx, tlsCfg, sr)
 	if err != nil {
 		return nil, err
 	}
