@@ -24,10 +24,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -36,22 +33,19 @@ type Server interface {
 	Shutdown(ctx context.Context) error
 }
 
+type ListenerFactory interface {
+	Create(ctx context.Context) (net.Listener, error)
+}
+
 type LifecycleManager struct {
-	ServiceName    string
-	ServiceAddress string
-	Server         Server
-	Logger         zerolog.Logger
-	TLSConf        *config.TLS
-	SecretResolver secrets.Resolver
+	ServiceName     string
+	Server          Server
+	ListenerFactory ListenerFactory
+	Logger          zerolog.Logger
 }
 
 func (m *LifecycleManager) Start(ctx context.Context) error {
-	ln, err := listener.New(
-		ctx,
-		m.ServiceAddress,
-		m.TLSConf,
-		m.SecretResolver,
-	)
+	ln, err := m.ListenerFactory.Create(ctx)
 	if err != nil {
 		return errorchain.NewWithMessagef(pipeline.ErrInternal,
 			"Could not create listener for %s service", m.ServiceName).
@@ -63,12 +57,6 @@ func (m *LifecycleManager) Start(ctx context.Context) error {
 			Str("_address", ln.Addr().String()).
 			Str("_service", m.ServiceName).
 			Msg("Starting listening")
-
-		if m.TLSConf == nil {
-			m.Logger.Warn().
-				Str("_service", m.ServiceName).
-				Msg("TLS is disabled.")
-		}
 
 		if err = m.Server.Serve(ln); err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {

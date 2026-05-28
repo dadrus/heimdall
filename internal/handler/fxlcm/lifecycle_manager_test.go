@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/handler/fxlcm/mocks"
+	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -94,10 +95,10 @@ func TestLifecycleManagerStart(t *testing.T) {
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
 
 			lcm := &LifecycleManager{
-				ServiceName:    "foo",
-				ServiceAddress: fmt.Sprintf("127.0.0.1:%d", port),
-				Server:         srv,
-				Logger:         logger,
+				ServiceName:     "foo",
+				Server:          srv,
+				ListenerFactory: listener.Factory{Address: fmt.Sprintf("127.0.0.1:%d", port)},
+				Logger:          logger,
 			}
 
 			// WHEN
