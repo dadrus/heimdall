@@ -23,7 +23,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
-	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/secrets"
 )
@@ -47,7 +46,6 @@ func New(
 	tlsConf *config.TLS,
 	sr secrets.Resolver,
 	srf secrets.ScopedResolverFactory,
-	ko keyregistry.KeyObserver,
 	logger zerolog.Logger,
 	authClass string,
 	ruleFactory rule.Factory,
@@ -63,6 +61,5 @@ func New(
 		Logger:         logger,
 		TLSConf:        tlsConf,
 		SecretResolver: sr,
-		KeyObserver:    ko,
 	}
 }

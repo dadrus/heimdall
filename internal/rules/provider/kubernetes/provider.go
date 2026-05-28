@@ -138,7 +138,6 @@ func NewProvider(
 		providerConf.TLS,
 		app.SecretResolver(),
 		srf,
-		app.KeyRegistry(),
 		logger,
 		authClass,
 		rf,

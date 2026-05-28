@@ -43,7 +43,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/dadrus/heimdall/internal/config"
-	mocks2 "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 	"github.com/dadrus/heimdall/internal/secrets"
@@ -285,9 +284,6 @@ func TestControllerLifecycle(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ko := mocks2.NewKeyObserverMock(t)
-			ko.EXPECT().Notify(mock.Anything).Maybe()
-
 			sr := secretsmocks.NewResolverMock(t)
 			handle := secretsmocks.NewSecretHandleMock(t)
 			srf := secretsmocks.NewScopedResolverFactoryMock(t)
@@ -306,7 +302,7 @@ func TestControllerLifecycle(t *testing.T) {
 			require.NoError(t, err)
 
 			listeningAddress = fmt.Sprintf("127.0.0.1:%d", port)
-			controller := New(tc.tls, sr, srf, ko, log.Logger, "", mocks.NewFactoryMock(t))
+			controller := New(tc.tls, sr, srf, log.Logger, "", mocks.NewFactoryMock(t))
 			baseURL := fmt.Sprintf("%s://%s",
 				x.IfThenElse(tc.tls != nil, "https", "http"),
 				listeningAddress,
