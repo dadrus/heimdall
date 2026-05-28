@@ -23,16 +23,11 @@ import (
 )
 
 type KeyObserver interface {
-	Notify(ki KeyInfo)
+	Notify(secret secrets.AsymmetricKeySecret)
 }
 
 type JWKSProvider interface {
 	Keys() []jose.JSONWebKey
-}
-
-type KeyInfo struct {
-	Key        secrets.AsymmetricKeySecret
-	Exportable bool
 }
 
 type Registry interface {

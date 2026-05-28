@@ -17,77 +17,28 @@
 package keyregistry
 
 import (
-	"context"
-	"crypto/x509"
 	"maps"
 	"slices"
-	"sort"
-	"strings"
 	"sync"
-	"time"
-
-	"github.com/go-jose/go-jose/v4"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
 
 	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
-	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/secrets"
+	"github.com/go-jose/go-jose/v4"
 )
-
-const (
-	certificateIssuerKey       = attribute.Key("issuer")
-	certificateSerialNumberKey = attribute.Key("serial_nr")
-	certificateSubjectKey      = attribute.Key("subject")
-	certificateDNSNameKey      = attribute.Key("dns_names")
-)
-
-type certID struct {
-	issuer string
-	serial string
-}
-
-type certEntry struct {
-	refCount int
-	notAfter time.Time
-	attrs    attribute.Set
-}
 
 type registry struct {
 	mut sync.RWMutex
 
-	// Internal state used to calculate the keysSnapshot and the metricsState
-	state map[string]KeyInfo
+	// Internal keys used to calculate the snapshot
+	keys map[string]secrets.AsymmetricKeySecret
 
 	// Immutable snapshot returned by Keys().
-	keysSnapshot []jose.JSONWebKey
-
-	// Prepared state for certificate-related metrics used during metrics gathering.
-	metricsState map[certID]certEntry
-
-	// The actual metric
-	certExpiry metric.Float64ObservableGauge
+	snapshot []jose.JSONWebKey
 }
 
-func newRegistry(meter metric.Meter) (Registry, error) {
-	certExpiry, err := meter.Float64ObservableGauge("certificate.expiry",
-		metric.WithDescription("Number of seconds until certificate expires"),
-		metric.WithUnit("s"),
-	)
-	if err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
-			"failed creating certificate.expiry gauge").CausedBy(err)
-	}
-
+func newRegistry() (Registry, error) {
 	reg := &registry{
-		state:        make(map[string]KeyInfo, 10),
-		metricsState: make(map[certID]certEntry, 10),
-		certExpiry:   certExpiry,
-	}
-
-	if _, err = meter.RegisterCallback(reg.collect, certExpiry); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
-			"failed registering callback for metrics collection").CausedBy(err)
+		keys: make(map[string]secrets.AsymmetricKeySecret, 10),
 	}
 
 	return reg, nil
@@ -95,68 +46,29 @@ func newRegistry(meter metric.Meter) (Registry, error) {
 
 func (r *registry) Keys() []jose.JSONWebKey {
 	r.mut.RLock()
-	keys := r.keysSnapshot
+	keys := r.snapshot
 	r.mut.RUnlock()
 
 	return keys
 }
 
-func (r *registry) Notify(ki KeyInfo) {
+func (r *registry) Notify(secret secrets.AsymmetricKeySecret) {
 	r.mut.Lock()
 	defer r.mut.Unlock()
 
-	old := r.state[ki.Key.KeyID()]
-	r.state[ki.Key.KeyID()] = ki
+	r.keys[secret.KeyID()] = secret
 
-	if old.Key != nil {
-		r.updateMetricsData(old.Key.CertChain(), -1)
-	}
-
-	r.updateMetricsData(ki.Key.CertChain(), 1)
-	r.rebuildExportableKeys()
+	r.rebuildSnapshot()
 }
 
-func (r *registry) updateMetricsData(chain []*x509.Certificate, delta int) {
-	for _, cert := range chain {
-		key := createCertID(cert)
-		entry, exists := r.metricsState[key]
-		entry.refCount += delta
+func (r *registry) rebuildSnapshot() {
+	snapshot := make([]jose.JSONWebKey, 0, len(r.keys))
 
-		if entry.refCount <= 0 {
-			delete(r.metricsState, key)
+	keyIDs := slices.Collect(maps.Keys(r.keys))
+	slices.Sort(keyIDs)
 
-			continue
-		}
-
-		if !exists && delta > 0 {
-			entry.notAfter = cert.NotAfter
-			entry.attrs = buildAttributes(cert)
-		}
-
-		r.metricsState[key] = entry
-	}
-}
-
-func createCertID(cert *x509.Certificate) certID {
-	return certID{
-		issuer: cert.Issuer.String(),
-		serial: cert.SerialNumber.String(),
-	}
-}
-
-func (r *registry) rebuildExportableKeys() {
-	snapshot := make([]jose.JSONWebKey, 0, len(r.state))
-
-	keys := slices.Collect(maps.Keys(r.state))
-	slices.Sort(keys)
-
-	for _, id := range keys {
-		key := r.state[id]
-		if !key.Exportable {
-			continue
-		}
-
-		jwk, err := joseadapter.ToJWK(key.Key)
+	for _, keyID := range keyIDs {
+		jwk, err := joseadapter.ToJWK(r.keys[keyID])
 		if err != nil {
 			continue
 		}
@@ -164,34 +76,5 @@ func (r *registry) rebuildExportableKeys() {
 		snapshot = append(snapshot, jwk)
 	}
 
-	r.keysSnapshot = snapshot
-}
-
-func (r *registry) collect(_ context.Context, observer metric.Observer) error {
-	now := time.Now()
-
-	r.mut.RLock()
-	defer r.mut.RUnlock()
-
-	for _, entry := range r.metricsState {
-		observer.ObserveFloat64(
-			r.certExpiry,
-			entry.notAfter.Sub(now).Seconds(),
-			metric.WithAttributeSet(entry.attrs),
-		)
-	}
-
-	return nil
-}
-
-func buildAttributes(cert *x509.Certificate) attribute.Set {
-	dnsNames := append([]string(nil), cert.DNSNames...)
-	sort.Strings(dnsNames)
-
-	return attribute.NewSet(
-		certificateIssuerKey.String(cert.Issuer.String()),
-		certificateSerialNumberKey.String(cert.SerialNumber.String()),
-		certificateSubjectKey.String(cert.Subject.String()),
-		certificateDNSNameKey.String(strings.Join(dnsNames, ",")),
-	)
+	r.snapshot = snapshot
 }
