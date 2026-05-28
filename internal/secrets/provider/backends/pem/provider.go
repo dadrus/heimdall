@@ -18,6 +18,8 @@ package pem
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
@@ -42,14 +44,18 @@ type pemProvider struct {
 	path     string
 	password string
 	watch    bool
-	watchMu  sync.Mutex
-	started  bool
-	logger   zerolog.Logger
+
+	watchMu      sync.Mutex
+	started      bool
+	resolvedPath string
+
+	logger zerolog.Logger
 
 	mu sync.RWMutex
 	ks keyStore
 
-	observer  provider.ChangeObserver
+	observer provider.ChangeObserver
+
 	watchStop context.CancelFunc
 	watcherWg sync.WaitGroup
 }
@@ -92,18 +98,17 @@ func (p *pemProvider) GetSecret(
 	selector provider.Selector,
 ) (provider.Secret, error) {
 	p.mu.RLock()
-	ks := p.ks
-	p.mu.RUnlock()
+	defer p.mu.RUnlock()
 
-	if len(ks) == 0 {
+	if len(p.ks) == 0 {
 		return nil, provider.ErrSecretNotFound
 	}
 
 	if selector.Value != "" {
-		return ks.get(selector.Value)
+		return p.ks.get(selector.Value)
 	}
 
-	return ks[0], nil
+	return p.ks[0], nil
 }
 
 func (p *pemProvider) GetSecretSet(
@@ -143,6 +148,12 @@ func (p *pemProvider) Start(ctx context.Context) error {
 		return nil
 	}
 
+	resolvedPath, err := filepath.EvalSymlinks(p.path)
+	if err != nil {
+		return errorchain.NewWithMessagef(provider.ErrInternal,
+			"failed to resolve pem provider watch path %s", p.path).CausedBy(err)
+	}
+
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
 		return errorchain.NewWithMessage(provider.ErrInternal,
@@ -156,9 +167,12 @@ func (p *pemProvider) Start(ctx context.Context) error {
 			"failed to register pem provider watch for %s", p.path).CausedBy(err)
 	}
 
-	runCtx, cancel := context.WithCancel(ctx)
+	runCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+
+	p.resolvedPath = resolvedPath
 	p.watchStop = cancel
 	p.started = true
+
 	p.watcherWg.Add(1)
 
 	go p.runWatcher(runCtx, watcher)
@@ -168,10 +182,14 @@ func (p *pemProvider) Start(ctx context.Context) error {
 
 func (p *pemProvider) Stop(_ context.Context) error {
 	p.watchMu.Lock()
+
 	cancel := p.watchStop
 	started := p.started
+
 	p.watchStop = nil
 	p.started = false
+	p.resolvedPath = ""
+
 	p.watchMu.Unlock()
 
 	if started && cancel != nil {
@@ -182,17 +200,26 @@ func (p *pemProvider) Stop(_ context.Context) error {
 	return nil
 }
 
-func (p *pemProvider) reload() error {
+func (p *pemProvider) reload() {
 	ks, err := newKeyStoreFromPEMFile(p.path, p.password)
 	if err != nil {
-		return err
+		p.logger.Warn().
+			Err(err).
+			Str("_file", p.path).
+			Msg("Reloading pem file failed")
+
+		return
 	}
 
 	p.mu.Lock()
 	p.ks = ks
 	p.mu.Unlock()
 
-	return nil
+	p.observer.Notify(provider.ChangeEvent{})
+
+	p.logger.Info().
+		Str("_file", p.path).
+		Msg("pem file reloaded")
 }
 
 func (p *pemProvider) runWatcher(ctx context.Context, watcher *fsnotify.Watcher) {
@@ -205,29 +232,22 @@ func (p *pemProvider) runWatcher(ctx context.Context, watcher *fsnotify.Watcher)
 		select {
 		case <-ctx.Done():
 			return
+
 		case evt, ok := <-watcher.Events:
 			if !ok {
 				return
 			}
 
-			if !isReloadEvent(evt) {
-				continue
+			shouldReload := isReloadEvent(evt)
+
+			if isAtomicUpdateEvent(evt) {
+				shouldReload = shouldReload || p.updateWatchForAtomicUpdate(watcher, p.path)
 			}
 
-			if err := p.reload(); err != nil {
-				p.logger.Warn().
-					Err(err).
-					Str("_file", p.path).
-					Msg("Reloading pem file failed")
-
-				continue
+			if shouldReload {
+				p.reload()
 			}
 
-			p.observer.Notify(provider.ChangeEvent{})
-
-			p.logger.Info().
-				Str("_file", p.path).
-				Msg("pem file reloaded")
 		case err, ok := <-watcher.Errors:
 			if !ok {
 				return
@@ -241,9 +261,61 @@ func (p *pemProvider) runWatcher(ctx context.Context, watcher *fsnotify.Watcher)
 	}
 }
 
+func (p *pemProvider) updateWatchForAtomicUpdate(watcher *fsnotify.Watcher, path string) bool {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			_ = watcher.Remove(path)
+
+			return false
+		}
+
+		p.logger.Warn().
+			Err(err).
+			Str("_file", path).
+			Msg("Checking pem file for atomic update failed")
+
+		return false
+	}
+
+	resolvedPath, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		p.logger.Warn().
+			Err(err).
+			Str("_file", path).
+			Msg("Resolving pem file symlink target failed")
+
+		return false
+	}
+
+	p.watchMu.Lock()
+	defer p.watchMu.Unlock()
+
+	if p.resolvedPath == resolvedPath {
+		return false
+	}
+
+	_ = watcher.Remove(path)
+
+	p.resolvedPath = resolvedPath
+
+	if err = watcher.Add(path); err != nil {
+		p.logger.Warn().
+			Err(err).
+			Str("_file", path).
+			Msg("Re-registering pem file watch after atomic update failed")
+
+		return false
+	}
+
+	return true
+}
+
 func isReloadEvent(evt fsnotify.Event) bool {
 	return evt.Has(fsnotify.Write) ||
 		evt.Has(fsnotify.Create) ||
-		evt.Has(fsnotify.Rename) ||
-		evt.Has(fsnotify.Chmod)
+		evt.Has(fsnotify.Rename)
+}
+
+func isAtomicUpdateEvent(evt fsnotify.Event) bool {
+	return evt.Has(fsnotify.Chmod)
 }
