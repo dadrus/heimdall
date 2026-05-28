@@ -79,12 +79,10 @@ func newBaseTLSConfig(tlsCfg *config.TLS) *tls.Config {
 }
 
 func newCertificateInformer(
-	ctx context.Context,
 	tlsCfg *config.TLS,
 	sr secrets.Resolver,
 ) (*secrets.SecretInformer[*tls.Certificate], error) {
 	informer, err := secrets.NewSecretInformer(
-		ctx,
 		sr,
 		secrets.Reference{Source: tlsCfg.Secret.Source, Selector: tlsCfg.Secret.Selector},
 		secrets.WithConverter(toTLSCertificate),
@@ -100,7 +98,6 @@ func newCertificateInformer(
 }
 
 func ToClientTLSConfig(
-	ctx context.Context,
 	sr secrets.Resolver,
 	tlsCfg *config.TLS,
 ) (*tls.Config, error) {
@@ -110,7 +107,7 @@ func ToClientTLSConfig(
 		return cfg, nil
 	}
 
-	certResolver, err := newCertificateInformer(ctx, tlsCfg, sr)
+	certResolver, err := newCertificateInformer(tlsCfg, sr)
 	if err != nil {
 		return nil, err
 	}
@@ -123,11 +120,10 @@ func ToClientTLSConfig(
 }
 
 func ToServerTLSConfig(
-	ctx context.Context,
 	sr secrets.Resolver,
 	tlsCfg *config.TLS,
 ) (*tls.Config, error) {
-	certResolver, err := newCertificateInformer(ctx, tlsCfg, sr)
+	certResolver, err := newCertificateInformer(tlsCfg, sr)
 	if err != nil {
 		return nil, err
 	}

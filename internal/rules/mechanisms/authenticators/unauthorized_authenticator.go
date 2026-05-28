@@ -17,8 +17,6 @@
 package authenticators
 
 import (
-	"context"
-
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -80,8 +78,7 @@ func (a *unauthorizedAuthenticator) Execute(ctx pipeline.Context, _ pipeline.Sub
 }
 
 func (a *unauthorizedAuthenticator) CreateStep(
-	ctx context.Context,
-	resolver secrets.Resolver,
+	_ secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {
 	// nothing can be reconfigured

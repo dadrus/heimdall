@@ -1111,26 +1111,26 @@ func TestResolverBindingReturnsBindingKeyError(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		call func(ctx context.Context, res *resolver, ref scopedReference) (any, bindingKey, error)
+		call func(res *resolver, ref scopedReference) (any, bindingKey, error)
 	}{
 		"secret binding": {
-			call: func(ctx context.Context, res *resolver, ref scopedReference) (any, bindingKey, error) {
-				return res.secretBinding(ctx, ref)
+			call: func(res *resolver, ref scopedReference) (any, bindingKey, error) {
+				return res.secretBinding(ref)
 			},
 		},
 		"secret set binding": {
-			call: func(ctx context.Context, res *resolver, ref scopedReference) (any, bindingKey, error) {
-				return res.secretSetBinding(ctx, ref)
+			call: func(res *resolver, ref scopedReference) (any, bindingKey, error) {
+				return res.secretSetBinding(ref)
 			},
 		},
 		"credentials binding": {
-			call: func(ctx context.Context, res *resolver, ref scopedReference) (any, bindingKey, error) {
-				return res.credentialsBinding(ctx, ref)
+			call: func(res *resolver, ref scopedReference) (any, bindingKey, error) {
+				return res.credentialsBinding(ref)
 			},
 		},
 		"certificate bundle binding": {
-			call: func(ctx context.Context, res *resolver, ref scopedReference) (any, bindingKey, error) {
-				return res.certificateBundleBinding(ctx, ref)
+			call: func(res *resolver, ref scopedReference) (any, bindingKey, error) {
+				return res.certificateBundleBinding(ref)
 			},
 		},
 	} {
@@ -1147,7 +1147,6 @@ func TestResolverBindingReturnsBindingKeyError(t *testing.T) {
 			res := newTestResolver(t, repository)
 
 			got, key, err := tc.call(
-				t.Context(),
 				res,
 				internalRef(Reference{Source: "src", Selector: "selector"}),
 			)
@@ -1233,7 +1232,6 @@ func TestResolverSecretBinding(t *testing.T) {
 			}
 
 			bdg, key, err := res.secretBinding(
-				t.Context(),
 				internalRef(Reference{Source: "src", Selector: "selector"}),
 			)
 
@@ -1320,7 +1318,6 @@ func TestResolverSecretSetBinding(t *testing.T) {
 			}
 
 			bdg, key, err := res.secretSetBinding(
-				t.Context(),
 				internalRef(Reference{Source: "src", Selector: "selector"}),
 			)
 
@@ -1404,7 +1401,6 @@ func TestResolverCredentialsBinding(t *testing.T) {
 			}
 
 			bdg, key, err := res.credentialsBinding(
-				t.Context(),
 				internalRef(Reference{Source: "src", Selector: "selector"}),
 			)
 
@@ -1488,7 +1484,6 @@ func TestResolverCertificateBundleBinding(t *testing.T) {
 			}
 
 			bdg, key, err := res.certificateBundleBinding(
-				t.Context(),
 				internalRef(Reference{Source: "src", Selector: "selector"}),
 			)
 
@@ -1511,13 +1506,11 @@ func TestResolverSecretBindingReusesExistingBinding(t *testing.T) {
 	res := newTestResolver(t, repository)
 
 	first, key, err := res.secretBinding(
-		t.Context(),
 		internalRef(Reference{Source: "src", Selector: "selector"}),
 	)
 	require.NoError(t, err)
 
 	second, secondKey, err := res.secretBinding(
-		t.Context(),
 		internalRef(Reference{Source: "src", Selector: "selector"}),
 	)
 	require.NoError(t, err)
@@ -2004,8 +1997,8 @@ func TestResolverHandleSourceEvent(t *testing.T) {
 		},
 		zerolog.Nop(),
 		sum,
-		func(context.Context) (Secret, error) {
-			return res.resolveSecret(t.Context(), internalRef(Reference{Source: "src", Selector: "selector"}))
+		func(ctx context.Context) (Secret, error) {
+			return res.resolveSecret(ctx, internalRef(Reference{Source: "src", Selector: "selector"}))
 		},
 	)
 	bdg.bindingKey = key

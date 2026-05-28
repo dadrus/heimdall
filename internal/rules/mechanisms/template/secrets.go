@@ -1,7 +1,6 @@
 package template
 
 import (
-	"context"
 	"text/template"
 	"text/template/parse"
 
@@ -20,7 +19,6 @@ func toStringSecret(secret secrets.Secret) (string, error) {
 }
 
 func createSecretInformers(
-	ctx context.Context,
 	resolver secrets.Resolver,
 	tmpl *template.Template,
 	forbidden bool,
@@ -56,7 +54,6 @@ func createSecretInformers(
 		}
 
 		informer, err := secrets.NewSecretInformer(
-			ctx,
 			resolver,
 			ref,
 			secrets.WithConverter(toStringSecret),

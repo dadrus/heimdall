@@ -31,11 +31,6 @@ type handleOwner interface {
 	registerReadiness(await func(context.Context) error)
 }
 
-type noopHandleOwner struct{}
-
-func (noopHandleOwner) registerCleanup(func())                          {}
-func (noopHandleOwner) registerReadiness(_ func(context.Context) error) {}
-
 type handle[T any] struct {
 	b handleBinding[T]
 	o handleOwner

@@ -17,8 +17,6 @@
 package finalizers
 
 import (
-	"context"
-
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -70,8 +68,7 @@ func (f *noopFinalizer) Execute(ctx pipeline.Context, _ pipeline.Subject) error 
 }
 
 func (f *noopFinalizer) CreateStep(
-	ctx context.Context,
-	resolver secrets.Resolver,
+	_ secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {

@@ -95,7 +95,6 @@ func (c baseConfig) tlsConfig(appCtx app.Context) (*tls.Config, error) {
 	}
 
 	tlsCfg, err := tlsx.ToClientTLSConfig(
-		context.Background(),
 		appCtx.SecretResolver(),
 		&c.TLS.TLS,
 	)
@@ -116,7 +115,6 @@ func (c baseConfig) credentialsInformer(
 	}
 
 	informer, err := secrets.NewCredentialsInformer(
-		context.Background(),
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
 		secrets.WithConverter(toRedisCredentials(appCtx.DecoderFactory())),

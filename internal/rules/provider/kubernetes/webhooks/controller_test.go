@@ -131,10 +131,7 @@ func TestControllerLifecycle(t *testing.T) {
 				)
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "webhooks", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "webhooks", Selector: "server"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -213,10 +210,7 @@ func TestControllerLifecycle(t *testing.T) {
 				)
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "webhooks", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "webhooks", Selector: "server"}).
 					Return(handle, nil)
 
 				handle.EXPECT().

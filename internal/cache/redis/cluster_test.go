@@ -32,7 +32,6 @@ import (
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -180,10 +179,7 @@ tls:
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "redis", Selector: "tls"},
-					).
+					Secret(secrets.Reference{Source: "redis", Selector: "tls"}).
 					Return(nil, assert.AnError)
 
 				return []byte(

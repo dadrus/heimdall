@@ -89,14 +89,13 @@ func WithUpdateCallback[S, T any](
 }
 
 func NewSecretInformer[T any](
-	ctx context.Context,
 	resolver Resolver,
 	reference Reference,
 	opts ...SecretInformerOption[T],
 ) (*SecretInformer[T], error) {
 	cfg := applyInformerOptions(opts...)
 
-	hdl, err := resolver.Secret(ctx, reference)
+	hdl, err := resolver.Secret(reference)
 	if err != nil {
 		return nil, err
 	}
@@ -131,14 +130,13 @@ func (i *SecretInformer[T]) Get() (T, bool) {
 }
 
 func NewCredentialsInformer[T any](
-	ctx context.Context,
 	resolver Resolver,
 	reference Reference,
 	opts ...CredentialsInformerOption[T],
 ) (*CredentialsInformer[T], error) {
 	cfg := applyInformerOptions(opts...)
 
-	hdl, err := resolver.Credentials(ctx, reference)
+	hdl, err := resolver.Credentials(reference)
 	if err != nil {
 		return nil, err
 	}
@@ -173,14 +171,13 @@ func (i *CredentialsInformer[T]) Get() (T, bool) {
 }
 
 func NewCertificateBundleInformer[T any](
-	ctx context.Context,
 	resolver Resolver,
 	reference Reference,
 	opts ...CertificateBundleInformerOption[T],
 ) (*CertificateBundleInformer[T], error) {
 	cfg := applyInformerOptions(opts...)
 
-	hdl, err := resolver.CertificateBundle(ctx, reference)
+	hdl, err := resolver.CertificateBundle(reference)
 	if err != nil {
 		return nil, err
 	}

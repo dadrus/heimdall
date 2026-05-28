@@ -1,8 +1,6 @@
 package contextualizers
 
 import (
-	"context"
-
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -90,7 +88,6 @@ func (c *mapContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subject) 
 }
 
 func (c *mapContextualizer) CreateStep(
-	ctx context.Context,
 	resolver secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {

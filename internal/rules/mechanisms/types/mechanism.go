@@ -17,8 +17,6 @@
 package types //nolint: revive
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
@@ -51,7 +49,6 @@ type Mechanism interface {
 	Kind() Kind
 
 	CreateStep(
-		ctx context.Context,
 		resolver secrets.Resolver,
 		def StepDefinition,
 	) (pipeline.Step, error)

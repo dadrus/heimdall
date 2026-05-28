@@ -387,9 +387,7 @@ func (s *RegistryTestSuite) TestDoNotify() {
 				Create(publicationID(parent)).
 				Return(scope)
 
-			scope.EXPECT().
-				SecretSet(mock.Anything, parent).
-				Return(handle, nil)
+			scope.EXPECT().SecretSet(parent).Return(handle, nil)
 
 			scope.EXPECT().
 				AwaitReady(mock.Anything).
@@ -426,9 +424,7 @@ func (s *RegistryTestSuite) TestDoNotifyLogsIgnoredNonAsymmetricSecrets() {
 		Create(id).
 		Return(scope)
 
-	scope.EXPECT().
-		SecretSet(mock.Anything, parent).
-		Return(handle, nil)
+	scope.EXPECT().SecretSet(parent).Return(handle, nil)
 
 	scope.EXPECT().
 		AwaitReady(mock.Anything).
@@ -494,9 +490,7 @@ func (s *RegistryTestSuite) TestDoNotifyReplacesExistingPublicationSet() {
 		Create(id).
 		Return(scope)
 
-	scope.EXPECT().
-		SecretSet(mock.Anything, parent).
-		Return(handle, nil)
+	scope.EXPECT().SecretSet(parent).Return(handle, nil)
 
 	scope.EXPECT().
 		AwaitReady(mock.Anything).
@@ -552,9 +546,7 @@ func (s *RegistryTestSuite) TestDoNotifyAggregatesDifferentPublicationSets() {
 		Create(id1).
 		Return(scope1)
 
-	scope1.EXPECT().
-		SecretSet(mock.Anything, parent1).
-		Return(handle1, nil)
+	scope1.EXPECT().SecretSet(parent1).Return(handle1, nil)
 
 	scope1.EXPECT().
 		AwaitReady(mock.Anything).
@@ -587,9 +579,7 @@ func (s *RegistryTestSuite) TestDoNotifyAggregatesDifferentPublicationSets() {
 		Create(id2).
 		Return(scope2)
 
-	scope2.EXPECT().
-		SecretSet(mock.Anything, parent2).
-		Return(handle2, nil)
+	scope2.EXPECT().SecretSet(parent2).Return(handle2, nil)
 
 	scope2.EXPECT().
 		AwaitReady(mock.Anything).
@@ -645,9 +635,7 @@ func (s *RegistryTestSuite) TestDoNotifyFailsWithoutReplacingExistingSet() {
 					Create(publicationID(parent)).
 					Return(scope)
 
-				scope.EXPECT().
-					SecretSet(mock.Anything, parent).
-					Return(nil, assert.AnError)
+				scope.EXPECT().SecretSet(parent).Return(nil, assert.AnError)
 
 				scope.EXPECT().
 					Release()
@@ -670,9 +658,7 @@ func (s *RegistryTestSuite) TestDoNotifyFailsWithoutReplacingExistingSet() {
 					Create(publicationID(parent)).
 					Return(scope)
 
-				scope.EXPECT().
-					SecretSet(mock.Anything, parent).
-					Return(handle, nil)
+				scope.EXPECT().SecretSet(parent).Return(handle, nil)
 
 				scope.EXPECT().
 					AwaitReady(mock.Anything).
@@ -741,9 +727,7 @@ func (s *RegistryTestSuite) TestNotifyPublishesVerificationSet() {
 			Create(id).
 			Return(scope)
 
-		scope.EXPECT().
-			SecretSet(mock.Anything, parent).
-			Return(handle, nil)
+		scope.EXPECT().SecretSet(parent).Return(handle, nil)
 
 		scope.EXPECT().
 			AwaitReady(mock.Anything).
@@ -796,9 +780,7 @@ func (s *RegistryTestSuite) TestNotifyTimesOutVerificationSetPublication() {
 			Create(id).
 			Return(scope)
 
-		scope.EXPECT().
-			SecretSet(mock.Anything, parent).
-			Return(handle, nil)
+		scope.EXPECT().SecretSet(parent).Return(handle, nil)
 
 		scope.EXPECT().
 			AwaitReady(mock.Anything).

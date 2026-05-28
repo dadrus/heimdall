@@ -17,7 +17,6 @@
 package finalizers
 
 import (
-	"context"
 	"strings"
 	"time"
 
@@ -96,7 +95,6 @@ func newOAuth2ClientCredentialsFinalizer(
 	}
 
 	informer, err := secrets.NewCredentialsInformer(
-		context.Background(),
 		app.SecretResolver(),
 		secrets.Reference{Source: conf.Credentials.Source, Selector: conf.Credentials.Selector},
 		secrets.WithConverter(toOAuth2ClientCredentials(app.DecoderFactory())),
@@ -146,7 +144,6 @@ func (*oauth2ClientCredentialsFinalizer) Accept(_ pipeline.Visitor) {}
 func (*oauth2ClientCredentialsFinalizer) Kind() types.Kind          { return types.KindFinalizer }
 
 func (f *oauth2ClientCredentialsFinalizer) CreateStep(
-	_ context.Context,
 	_ secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {

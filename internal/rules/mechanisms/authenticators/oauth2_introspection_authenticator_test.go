@@ -440,7 +440,7 @@ error_signaling:
 			chm.EXPECT().OnUpdate(mock.Anything).Maybe()
 
 			sr := secretsmocks.NewResolverMock(t)
-			sr.EXPECT().Credentials(mock.Anything, mock.Anything).
+			sr.EXPECT().Credentials(mock.Anything).
 				Maybe().
 				Return(chm, nil)
 
@@ -802,7 +802,7 @@ error_signaling:
 			configured, ok := mech.(*oauth2IntrospectionAuthenticator)
 			require.True(t, ok)
 
-			step, err := mech.CreateStep(t.Context(), sr, tc.stepDef)
+			step, err := mech.CreateStep(sr, tc.stepDef)
 
 			auth, ok := step.(*oauth2IntrospectionAuthenticator)
 			if err == nil {

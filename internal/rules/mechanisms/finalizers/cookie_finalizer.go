@@ -17,8 +17,6 @@
 package finalizers
 
 import (
-	"context"
-
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -109,7 +107,6 @@ func (f *cookieFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 }
 
 func (f *cookieFinalizer) CreateStep(
-	ctx context.Context,
 	resolver secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {

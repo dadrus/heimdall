@@ -54,10 +54,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(chm, nil)
 
 				chm.EXPECT().
@@ -101,10 +98,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -148,10 +142,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -209,10 +200,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *basicAuthAuthenticator) {
@@ -233,10 +221,7 @@ func TestNewBasicAuthAuthenticator(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -330,10 +315,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				t.Helper()
 
 				appResolver.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(appHandle, nil)
 
 				appHandle.EXPECT().
@@ -372,10 +354,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				t.Helper()
 
 				appResolver.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(appHandle, nil)
 
 				appHandle.EXPECT().
@@ -390,10 +369,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					}))
 
 				stepResolver.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "baz"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "baz"}).
 					Return(stepHandle, nil)
 
 				stepHandle.EXPECT().
@@ -443,10 +419,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				t.Helper()
 
 				appResolver.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(appHandle, nil)
 
 				appHandle.EXPECT().
@@ -461,10 +434,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 					}))
 
 				stepResolver.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "baz"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "baz"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _, _ *basicAuthAuthenticator) {
@@ -493,10 +463,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				t.Helper()
 
 				appResolver.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(appHandle, nil)
 
 				appHandle.EXPECT().
@@ -533,10 +500,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				t.Helper()
 
 				appResolver.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(appHandle, nil)
 
 				appHandle.EXPECT().
@@ -588,10 +552,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				t.Helper()
 
 				appResolver.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(appHandle, nil)
 
 				appHandle.EXPECT().
@@ -650,10 +611,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 				t.Helper()
 
 				appResolver.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(appHandle, nil)
 
 				appHandle.EXPECT().
@@ -715,7 +673,7 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 			configured, ok := mech.(*basicAuthAuthenticator)
 			require.True(t, ok)
 
-			step, err := mech.CreateStep(t.Context(), stepResolver, tc.stepDef)
+			step, err := mech.CreateStep(stepResolver, tc.stepDef)
 
 			auth, ok := step.(*basicAuthAuthenticator)
 			if err == nil {
@@ -1002,10 +960,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 			handle := secretsmocks.NewCredentialsHandleMock(t)
 
 			sr.EXPECT().
-				Credentials(
-					mock.Anything,
-					secrets.Reference{Source: "foo", Selector: "bar"},
-				).
+				Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 				Return(handle, nil)
 
 			if !tc.handleOK {
@@ -1037,7 +992,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 			mech, err := newBasicAuthAuthenticator(appCtx, uc, conf)
 			require.NoError(t, err)
 
-			step, err := mech.CreateStep(t.Context(), sr, tc.stepDef)
+			step, err := mech.CreateStep(sr, tc.stepDef)
 			require.NoError(t, err)
 
 			ctx := mocks.NewContextMock(t)
@@ -1106,10 +1061,7 @@ func TestBasicAuthAuthenticatorDecorateErrorResponse(t *testing.T) {
 			handle := secretsmocks.NewCredentialsHandleMock(t)
 
 			sr.EXPECT().
-				Credentials(
-					mock.Anything,
-					secrets.Reference{Source: "foo", Selector: "bar"},
-				).
+				Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 				Return(handle, nil)
 
 			handle.EXPECT().

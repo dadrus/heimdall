@@ -92,11 +92,10 @@ func (s *HTTPMessageSignatures) Hash() []byte {
 	return nil
 }
 
-func (s *HTTPMessageSignatures) init(ctx context.Context, appCtx app.Context) error {
+func (s *HTTPMessageSignatures) init(appCtx app.Context) error {
 	ref := secrets.Reference{Source: s.Signer.Secret.Source, Selector: s.Signer.Secret.Selector}
 
 	informer, err := secrets.NewSecretInformer(
-		ctx,
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: s.Signer.Secret.Source, Selector: s.Signer.Secret.Selector},
 		secrets.WithConverter(s.createSigner),

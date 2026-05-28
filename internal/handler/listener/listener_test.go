@@ -95,10 +95,7 @@ func TestFactoryCreate(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "listener", Selector: "tls"},
-					).
+					Secret(secrets.Reference{Source: "listener", Selector: "tls"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ net.Listener, capturedAddress string) {
@@ -124,10 +121,7 @@ func TestFactoryCreate(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "listener", Selector: "tls"},
-					).
+					Secret(secrets.Reference{Source: "listener", Selector: "tls"}).
 					Return(handle, nil)
 
 				handle.EXPECT().

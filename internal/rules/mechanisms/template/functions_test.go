@@ -124,9 +124,7 @@ func TestTemplateSecret(t *testing.T) {
 			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(mock.Anything, ref).
-					Return(handle, nil)
+				resolver.EXPECT().Secret(ref).Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -178,9 +176,7 @@ func TestTemplateSecret(t *testing.T) {
 			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(mock.Anything, ref).
-					Return(handle, nil)
+				resolver.EXPECT().Secret(ref).Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -205,9 +201,7 @@ func TestTemplateSecret(t *testing.T) {
 			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(mock.Anything, ref).
-					Return(handle, nil)
+				resolver.EXPECT().Secret(ref).Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -232,9 +226,7 @@ func TestTemplateSecret(t *testing.T) {
 			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(mock.Anything, ref).
-					Return(handle, nil)
+				resolver.EXPECT().Secret(ref).Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -259,9 +251,7 @@ func TestTemplateSecret(t *testing.T) {
 			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(mock.Anything, ref).
-					Return(handle, nil)
+				resolver.EXPECT().Secret(ref).Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -286,9 +276,7 @@ func TestTemplateSecret(t *testing.T) {
 			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(mock.Anything, ref).
-					Return(handle, nil)
+				resolver.EXPECT().Secret(ref).Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -313,9 +301,7 @@ func TestTemplateSecret(t *testing.T) {
 			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(mock.Anything, ref).
-					Return(handle, nil)
+				resolver.EXPECT().Secret(ref).Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -340,9 +326,7 @@ func TestTemplateSecret(t *testing.T) {
 			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(mock.Anything, ref).
-					Return(handle, nil)
+				resolver.EXPECT().Secret(ref).Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -364,9 +348,7 @@ func TestTemplateSecret(t *testing.T) {
 			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(mock.Anything, ref).
-					Return(handle, nil)
+				resolver.EXPECT().Secret(ref).Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -388,9 +370,7 @@ func TestTemplateSecret(t *testing.T) {
 			setup: func(t *testing.T, resolver *mocks.ResolverMock, _ *mocks.SecretHandleMock) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(mock.Anything, ref).
-					Return(nil, assert.AnError)
+				resolver.EXPECT().Secret(ref).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, _ string, err error) {
 				t.Helper()
@@ -405,9 +385,7 @@ func TestTemplateSecret(t *testing.T) {
 			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(mock.Anything, ref).
-					Return(handle, nil)
+				resolver.EXPECT().Secret(ref).Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.Anything)
@@ -426,9 +404,7 @@ func TestTemplateSecret(t *testing.T) {
 			setup: func(t *testing.T, resolver *mocks.ResolverMock, handle *mocks.SecretHandleMock) {
 				t.Helper()
 
-				resolver.EXPECT().
-					Secret(mock.Anything, ref).
-					Return(handle, nil)
+				resolver.EXPECT().Secret(ref).Return(handle, nil)
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {

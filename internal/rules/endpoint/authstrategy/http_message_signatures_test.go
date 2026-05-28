@@ -60,10 +60,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, hms *HTTPMessageSignatures) {
@@ -84,10 +81,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				secret := secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil)
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -131,7 +125,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				Components: []string{"@method"},
 			}
 
-			err := conf.init(t.Context(), appCtx)
+			err := conf.init(appCtx)
 
 			tc.assert(t, err, conf)
 		})
@@ -189,7 +183,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 	handle := secretsmocks.NewSecretHandleMock(t)
 	ref := secrets.Reference{Source: "foo", Selector: "bar"}
 
-	sr.EXPECT().Secret(mock.Anything, ref).Return(handle, nil)
+	sr.EXPECT().Secret(ref).Return(handle, nil)
 	handle.EXPECT().
 		OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
 			err := cb(t.Context(), secret)
@@ -210,7 +204,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 		Components: []string{"@method"},
 	}
 
-	err = conf.init(t.Context(), appCtx)
+	err = conf.init(appCtx)
 	require.NoError(t, err)
 
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", nil)

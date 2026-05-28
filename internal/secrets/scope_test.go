@@ -23,7 +23,6 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/secrets/metrics/mocks"
@@ -137,7 +136,6 @@ func TestScopeSecret(t *testing.T) {
 
 				bindings.EXPECT().
 					secretBinding(
-						mock.Anything,
 						scopedReference{
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
@@ -169,7 +167,6 @@ func TestScopeSecret(t *testing.T) {
 
 				bindings.EXPECT().
 					secretBinding(
-						mock.Anything,
 						scopedReference{
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
@@ -209,7 +206,6 @@ func TestScopeSecret(t *testing.T) {
 
 				bindings.EXPECT().
 					secretBinding(
-						mock.Anything,
 						scopedReference{
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
@@ -241,7 +237,6 @@ func TestScopeSecret(t *testing.T) {
 			scp := tc.setup(t, bindings)
 
 			handle, err := scp.Secret(
-				t.Context(),
 				Reference{Source: "src", Selector: "selector"},
 			)
 
@@ -277,7 +272,6 @@ func TestScopeSecretSet(t *testing.T) {
 
 				bindings.EXPECT().
 					secretSetBinding(
-						mock.Anything,
 						scopedReference{
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
@@ -309,7 +303,6 @@ func TestScopeSecretSet(t *testing.T) {
 
 				bindings.EXPECT().
 					secretSetBinding(
-						mock.Anything,
 						scopedReference{
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
@@ -346,7 +339,6 @@ func TestScopeSecretSet(t *testing.T) {
 
 				bindings.EXPECT().
 					secretSetBinding(
-						mock.Anything,
 						scopedReference{
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
@@ -378,7 +370,6 @@ func TestScopeSecretSet(t *testing.T) {
 			scp := tc.setup(t, bindings)
 
 			handle, err := scp.SecretSet(
-				t.Context(),
 				Reference{Source: "src", Selector: "selector"},
 			)
 
@@ -414,7 +405,6 @@ func TestScopeCredentials(t *testing.T) {
 
 				bindings.EXPECT().
 					credentialsBinding(
-						mock.Anything,
 						scopedReference{
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
@@ -446,7 +436,6 @@ func TestScopeCredentials(t *testing.T) {
 
 				bindings.EXPECT().
 					credentialsBinding(
-						mock.Anything,
 						scopedReference{
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
@@ -486,7 +475,6 @@ func TestScopeCredentials(t *testing.T) {
 
 				bindings.EXPECT().
 					credentialsBinding(
-						mock.Anything,
 						scopedReference{
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
@@ -518,7 +506,6 @@ func TestScopeCredentials(t *testing.T) {
 			scp := tc.setup(t, bindings)
 
 			handle, err := scp.Credentials(
-				t.Context(),
 				Reference{Source: "src", Selector: "selector"},
 			)
 
@@ -554,7 +541,6 @@ func TestScopeCertificateBundle(t *testing.T) {
 
 				bindings.EXPECT().
 					certificateBundleBinding(
-						mock.Anything,
 						scopedReference{
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
@@ -586,7 +572,6 @@ func TestScopeCertificateBundle(t *testing.T) {
 
 				bindings.EXPECT().
 					certificateBundleBinding(
-						mock.Anything,
 						scopedReference{
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
@@ -626,7 +611,6 @@ func TestScopeCertificateBundle(t *testing.T) {
 
 				bindings.EXPECT().
 					certificateBundleBinding(
-						mock.Anything,
 						scopedReference{
 							Reference: Reference{Source: "src", Selector: "selector"},
 							scope:     referenceScopeInternal,
@@ -658,7 +642,6 @@ func TestScopeCertificateBundle(t *testing.T) {
 			scp := tc.setup(t, bindings)
 
 			handle, err := scp.CertificateBundle(
-				t.Context(),
 				Reference{Source: "src", Selector: "selector"},
 			)
 
@@ -694,7 +677,6 @@ func TestScopeUsesScopedReferences(t *testing.T) {
 
 	bindings.EXPECT().
 		secretBinding(
-			mock.Anything,
 			scopedReference{
 				Reference: Reference{Source: "src", Selector: "selector"},
 				namespace: "team-a",
@@ -710,7 +692,6 @@ func TestScopeUsesScopedReferences(t *testing.T) {
 	)
 
 	handle, err := scp.Secret(
-		t.Context(),
 		Reference{Source: "src", Selector: "selector"},
 	)
 

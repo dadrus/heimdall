@@ -240,7 +240,6 @@ func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 }
 
 func (a *jwtAuthenticator) CreateStep(
-	_ context.Context,
 	_ secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {

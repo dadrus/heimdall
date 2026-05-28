@@ -44,10 +44,10 @@ type (
 	}
 
 	Resolver interface {
-		Secret(ctx context.Context, ref Reference) (SecretHandle, error)
-		SecretSet(ctx context.Context, ref Reference) (SecretSetHandle, error)
-		Credentials(ctx context.Context, ref Reference) (CredentialsHandle, error)
-		CertificateBundle(ctx context.Context, ref Reference) (CertificateBundleHandle, error)
+		Secret(ref Reference) (SecretHandle, error)
+		SecretSet(ref Reference) (SecretSetHandle, error)
+		Credentials(ref Reference) (CredentialsHandle, error)
+		CertificateBundle(ref Reference) (CertificateBundleHandle, error)
 	}
 
 	ScopedResolver interface {

@@ -17,7 +17,6 @@
 package contextualizers
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -186,7 +185,6 @@ func (c *genericContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subje
 }
 
 func (c *genericContextualizer) CreateStep(
-	_ context.Context,
 	resolver secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {

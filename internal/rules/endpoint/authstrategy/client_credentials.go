@@ -82,7 +82,7 @@ func (c *OAuth2ClientCredentials) Hash() []byte {
 	return nil
 }
 
-func (c *OAuth2ClientCredentials) init(ctx context.Context, appCtx app.Context) error {
+func (c *OAuth2ClientCredentials) init(appCtx app.Context) error {
 	c.appCtx = appCtx
 
 	if c.Header == nil {
@@ -94,7 +94,6 @@ func (c *OAuth2ClientCredentials) init(ctx context.Context, appCtx app.Context) 
 	}
 
 	informer, err := secrets.NewCredentialsInformer(
-		ctx,
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
 		secrets.WithConverter(c.createClientCredentialsConfig),

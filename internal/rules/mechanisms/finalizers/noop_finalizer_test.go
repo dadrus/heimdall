@@ -44,7 +44,7 @@ func TestNoopFinalizerExecution(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, types.KindFinalizer, mech.Kind())
 
-	step, err := mech.CreateStep(t.Context(), nil, types.StepDefinition{ID: ""})
+	step, err := mech.CreateStep(nil, types.StepDefinition{ID: ""})
 	require.NoError(t, err)
 
 	// WHEN
@@ -108,7 +108,7 @@ func TestNoopFinalizerCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(t.Context(), nil, tc.stepDef)
+			step, err := mech.CreateStep(nil, tc.stepDef)
 
 			// THEN
 			fin, ok := step.(*noopFinalizer)

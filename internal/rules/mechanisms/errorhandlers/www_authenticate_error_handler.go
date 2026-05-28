@@ -17,8 +17,6 @@
 package errorhandlers
 
 import (
-	"context"
-
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -95,8 +93,7 @@ func (eh *wwwAuthenticateErrorHandler) Execute(ctx pipeline.Context, _ pipeline.
 }
 
 func (eh *wwwAuthenticateErrorHandler) CreateStep(
-	ctx context.Context,
-	resolver secrets.Resolver,
+	_ secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {

@@ -216,10 +216,7 @@ func TestStandaloneCache(t *testing.T) {
 				})
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "creds", Selector: "redis"},
-					).
+					Credentials(secrets.Reference{Source: "creds", Selector: "redis"}).
 					Return(chm, nil)
 
 				chm.EXPECT().
@@ -257,10 +254,7 @@ func TestStandaloneCache(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "creds", Selector: "redis"},
-					).
+					Credentials(secrets.Reference{Source: "creds", Selector: "redis"}).
 					Return(nil, assert.AnError)
 
 				return []byte("{address: 127.0.0.1:12345, client_cache: {disabled: true}, tls: {disabled: true}, credentials: { source: creds, selector: redis }}")
@@ -282,10 +276,7 @@ func TestStandaloneCache(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "redis", Selector: "tls"},
-					).
+					Secret(secrets.Reference{Source: "redis", Selector: "tls"}).
 					Return(nil, assert.AnError)
 
 				return []byte(`{ tls: { secret: { source: redis, selector: tls } }, address: "foo.local:12345"}`)
@@ -349,10 +340,7 @@ func TestStandaloneCache(t *testing.T) {
 				})
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "creds", Selector: "redis"},
-					).
+					Credentials(secrets.Reference{Source: "creds", Selector: "redis"}).
 					Return(chm, nil)
 
 				chm.EXPECT().
@@ -392,10 +380,7 @@ func TestStandaloneCache(t *testing.T) {
 				secret := secrettypes.NewAsymmetricKeySecret("tls", "key1", key, []*x509.Certificate{cert})
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "redis", Selector: "tls"},
-					).
+					Secret(secrets.Reference{Source: "redis", Selector: "tls"}).
 					Return(secretHandle, nil)
 
 				secretHandle.EXPECT().

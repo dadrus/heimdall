@@ -17,7 +17,6 @@
 package errorhandlers
 
 import (
-	"context"
 	"net/http"
 	"strings"
 
@@ -121,8 +120,7 @@ func (eh *redirectErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject
 }
 
 func (eh *redirectErrorHandler) CreateStep(
-	ctx context.Context,
-	resolver secrets.Resolver,
+	_ secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {

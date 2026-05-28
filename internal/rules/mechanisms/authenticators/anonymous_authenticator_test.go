@@ -245,7 +245,7 @@ func TestAnonymousAuthenticatorCreateStep(t *testing.T) {
 			require.NoError(t, err)
 
 			// WHEN
-			step, err := mechanism.CreateStep(t.Context(), nil, tc.stepDef)
+			step, err := mechanism.CreateStep(nil, tc.stepDef)
 
 			// THEN
 			configured, ok := step.(*anonymousAuthenticator)

@@ -57,10 +57,7 @@ func TestBasicAuthInit(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, ba *BasicAuth) {
@@ -84,10 +81,7 @@ func TestBasicAuthInit(t *testing.T) {
 				})
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -134,7 +128,7 @@ func TestBasicAuthInit(t *testing.T) {
 
 			ba := &BasicAuth{Credentials: secret}
 
-			err = ba.init(t.Context(), appCtx)
+			err = ba.init(appCtx)
 
 			tc.assert(t, err, ba)
 		})
@@ -155,10 +149,7 @@ func TestBasicAuthApply(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().OnUpdate(mock.Anything)
@@ -182,10 +173,7 @@ func TestBasicAuthApply(t *testing.T) {
 				})
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -217,10 +205,7 @@ func TestBasicAuthApply(t *testing.T) {
 				})
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -272,7 +257,7 @@ func TestBasicAuthApply(t *testing.T) {
 				appCtx.EXPECT().DecoderFactory().Maybe().
 					Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
-				err = ba.init(t.Context(), appCtx)
+				err = ba.init(appCtx)
 				require.NoError(t, err)
 			}
 

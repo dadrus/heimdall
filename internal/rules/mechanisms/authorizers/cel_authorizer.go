@@ -17,8 +17,6 @@
 package authorizers
 
 import (
-	"context"
-
 	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog"
 
@@ -121,8 +119,7 @@ func (a *celAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) erro
 }
 
 func (a *celAuthorizer) CreateStep(
-	ctx context.Context,
-	resolver secrets.Resolver,
+	_ secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {

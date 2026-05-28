@@ -80,8 +80,7 @@ foo: bar
 
 				ch := secretsmocks.NewCredentialsHandleMock(t)
 
-				resolver.EXPECT().Credentials(mock.Anything, mock.Anything).
-					Return(ch, nil)
+				resolver.EXPECT().Credentials(mock.Anything).Return(ch, nil)
 
 				ch.EXPECT().OnUpdate(mock.Anything)
 			},
@@ -122,8 +121,7 @@ credentials:
 
 				ch := secretsmocks.NewCredentialsHandleMock(t)
 
-				resolver.EXPECT().Credentials(mock.Anything, mock.Anything).
-					Return(ch, nil)
+				resolver.EXPECT().Credentials(mock.Anything).Return(ch, nil)
 
 				ch.EXPECT().OnUpdate(mock.Anything)
 			},
@@ -182,8 +180,7 @@ header:
 
 				ch := secretsmocks.NewCredentialsHandleMock(t)
 
-				resolver.EXPECT().Credentials(mock.Anything, mock.Anything).
-					Return(ch, nil)
+				resolver.EXPECT().Credentials(mock.Anything).Return(ch, nil)
 
 				ch.EXPECT().OnUpdate(mock.Anything)
 			},
@@ -493,8 +490,7 @@ header:
 			ch.EXPECT().OnUpdate(mock.Anything)
 
 			resolver := secretsmocks.NewResolverMock(t)
-			resolver.EXPECT().Credentials(mock.Anything, mock.Anything).
-				Return(ch, nil)
+			resolver.EXPECT().Credentials(mock.Anything).Return(ch, nil)
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().Maybe().
@@ -509,7 +505,7 @@ header:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(t.Context(), resolver, tc.stepDef)
+			step, err := mech.CreateStep(resolver, tc.stepDef)
 
 			// THEN
 			fin, ok := step.(*oauth2ClientCredentialsFinalizer)
@@ -598,7 +594,7 @@ token_url: ` + srv.URL + `
 				ch := secretsmocks.NewCredentialsHandleMock(t)
 
 				rm.EXPECT().
-					Credentials(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(ch, nil)
 
 				ch.EXPECT().OnUpdate(mock.Anything)
@@ -625,7 +621,7 @@ token_url: ` + srv.URL + `
 				chm := secretsmocks.NewCredentialsHandleMock(t)
 
 				rm.EXPECT().
-					Credentials(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(chm, nil)
 
 				chm.EXPECT().
@@ -665,7 +661,7 @@ token_url: ` + srv.URL + `
 
 				chm := secretsmocks.NewCredentialsHandleMock(t)
 
-				rm.EXPECT().Credentials(mock.Anything, mock.Anything).Return(chm, nil)
+				rm.EXPECT().Credentials(mock.Anything).Return(chm, nil)
 
 				chm.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
@@ -705,10 +701,8 @@ token_url: ` + srv.URL + `
 
 				chm := secretsmocks.NewCredentialsHandleMock(t)
 
-				rm.EXPECT().Credentials(
-					mock.Anything,
-					secrets.Reference{Source: "foo", Selector: "bar"},
-				).Return(chm, nil)
+				rm.EXPECT().Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
+					Return(chm, nil)
 
 				chm.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
@@ -756,7 +750,7 @@ cache_ttl: 3m
 
 				chm := secretsmocks.NewCredentialsHandleMock(t)
 
-				rm.EXPECT().Credentials(mock.Anything, mock.Anything).Return(chm, nil)
+				rm.EXPECT().Credentials(mock.Anything).Return(chm, nil)
 
 				chm.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
@@ -832,7 +826,7 @@ cache_ttl: 3m
 			mech, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, conf)
 			require.NoError(t, err)
 
-			step, err := mech.CreateStep(t.Context(), resolver, types.StepDefinition{ID: "test"})
+			step, err := mech.CreateStep(resolver, types.StepDefinition{ID: "test"})
 			require.NoError(t, err)
 
 			endpointCalled = false

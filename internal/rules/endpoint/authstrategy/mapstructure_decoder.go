@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"net/http"
 	"reflect"
 
@@ -31,7 +30,7 @@ import (
 )
 
 type authStrategy interface {
-	init(ctx context.Context, appCtx app.Context) error
+	init(appCtx app.Context) error
 	Apply(req *http.Request) error
 	Hash() []byte
 }
@@ -133,7 +132,7 @@ func DecodeAuthenticationStrategyHookFunc(appCtx app.Context) mapstructure.Decod
 			).CausedBy(err)
 		}
 
-		if err := strategy.init(context.Background(), appCtx); err != nil {
+		if err := strategy.init(appCtx); err != nil {
 			return nil, err
 		}
 

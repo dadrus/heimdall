@@ -17,8 +17,6 @@
 package errorhandlers
 
 import (
-	"context"
-
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -89,7 +87,6 @@ func newGenericErrorHandler(app app.Context, name string, rawConfig map[string]a
 }
 
 func (eh *genericErrorHandler) CreateStep(
-	ctx context.Context,
 	resolver secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {

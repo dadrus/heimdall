@@ -86,7 +86,7 @@ func (r *registry) doNotify(ctx context.Context, ref secrets.Reference) {
 	scope := r.srf.Create(id)
 	defer scope.Release()
 
-	handle, err := scope.SecretSet(ctx, parent)
+	handle, err := scope.SecretSet(parent)
 	if err != nil {
 		r.logger.Warn().
 			Err(err).

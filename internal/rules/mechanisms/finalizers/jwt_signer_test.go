@@ -160,7 +160,7 @@ func TestNewJWTSigner(t *testing.T) {
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *jwtSigner) {
@@ -182,7 +182,7 @@ func TestNewJWTSigner(t *testing.T) {
 				shm.EXPECT().OnUpdate(mock.Anything)
 
 				resolver.EXPECT().
-					Secret(mock.Anything, secrets.Reference{
+					Secret(secrets.Reference{
 						Source:   "signer",
 						Selector: "jwt/signing/2026-05",
 					}).
@@ -209,7 +209,7 @@ func TestNewJWTSigner(t *testing.T) {
 				shm.EXPECT().OnUpdate(mock.Anything)
 
 				resolver.EXPECT().
-					Secret(mock.Anything, secrets.Reference{
+					Secret(secrets.Reference{
 						Source:   "signer",
 						Selector: "jwt/signing/2026-05",
 					}).
@@ -232,7 +232,7 @@ func TestNewJWTSigner(t *testing.T) {
 			ko := keyregistrymocks.NewKeyObserverMock(t)
 			ko.EXPECT().Notify(mock.Anything).Maybe()
 
-			signer, err := newJWTSigner(t.Context(), tc.config, resolver, ko)
+			signer, err := newJWTSigner(tc.config, resolver, ko)
 			tc.assert(t, err, signer)
 		})
 	}
@@ -313,13 +313,12 @@ func TestJWTSignerSign(t *testing.T) {
 			tc.setup(t, shm)
 
 			resolver := secretsmocks.NewResolverMock(t)
-			resolver.EXPECT().Secret(mock.Anything, ref).Return(shm, nil)
+			resolver.EXPECT().Secret(ref).Return(shm, nil)
 
 			ko := keyregistrymocks.NewKeyObserverMock(t)
 			ko.EXPECT().Notify(ref).Maybe()
 
 			signer, err := newJWTSigner(
-				t.Context(),
 				&SignerConfig{
 					Name:   "foo",
 					Secret: config.Secret{Source: "signer", Selector: "jwt/signing/2026-05"},

@@ -179,7 +179,6 @@ func (r *resolver) scopedResolver(id string, opts ...ScopeOption) ScopedResolver
 }
 
 func (r *resolver) secretBinding(
-	ctx context.Context,
 	reference scopedReference,
 ) (*binding[Secret], bindingKey, error) {
 	key, err := r.bindingKey(reference, bindingKindSecret)
@@ -218,7 +217,6 @@ func (r *resolver) secretBinding(
 }
 
 func (r *resolver) secretSetBinding(
-	ctx context.Context,
 	reference scopedReference,
 ) (*binding[[]Secret], bindingKey, error) {
 	key, err := r.bindingKey(reference, bindingKindSecretSet)
@@ -257,7 +255,6 @@ func (r *resolver) secretSetBinding(
 }
 
 func (r *resolver) credentialsBinding(
-	ctx context.Context,
 	reference scopedReference,
 ) (*binding[Credentials], bindingKey, error) {
 	key, err := r.bindingKey(reference, bindingKindCredentials)
@@ -296,7 +293,6 @@ func (r *resolver) credentialsBinding(
 }
 
 func (r *resolver) certificateBundleBinding(
-	ctx context.Context,
 	reference scopedReference,
 ) (*binding[CertificateBundle], bindingKey, error) {
 	key, err := r.bindingKey(reference, bindingKindCertificateBundle)

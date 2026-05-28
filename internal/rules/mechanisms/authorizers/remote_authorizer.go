@@ -17,7 +17,6 @@
 package authorizers
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -210,7 +209,6 @@ func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 }
 
 func (a *remoteAuthorizer) CreateStep(
-	_ context.Context,
 	resolver secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {

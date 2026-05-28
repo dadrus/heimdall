@@ -61,10 +61,7 @@ func TestToServerTLSConfig(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "server"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, cfg *tls.Config) {
@@ -91,7 +88,6 @@ func TestToServerTLSConfig(t *testing.T) {
 
 				sr.EXPECT().
 					Secret(
-						mock.Anything,
 						secrets.Reference{Source: "tls", Selector: "server"},
 					).
 					Return(handle, nil)
@@ -128,10 +124,7 @@ func TestToServerTLSConfig(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "server"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -159,7 +152,7 @@ func TestToServerTLSConfig(t *testing.T) {
 
 			tc.setup(t, sr, handle)
 
-			cfg, err := ToServerTLSConfig(t.Context(), sr, &tc.conf)
+			cfg, err := ToServerTLSConfig(sr, &tc.conf)
 
 			tc.assert(t, err, cfg)
 		})
@@ -209,10 +202,7 @@ func TestToClientTLSConfig(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "client"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "client"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, cfg *tls.Config) {
@@ -237,10 +227,7 @@ func TestToClientTLSConfig(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "client"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "client"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -275,10 +262,7 @@ func TestToClientTLSConfig(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "client"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "client"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -301,7 +285,7 @@ func TestToClientTLSConfig(t *testing.T) {
 
 			tc.setup(t, sr, handle)
 
-			cfg, err := ToClientTLSConfig(t.Context(), sr, &tc.conf)
+			cfg, err := ToClientTLSConfig(sr, &tc.conf)
 
 			tc.assert(t, err, cfg)
 		})
@@ -327,10 +311,7 @@ func TestGetCertificate(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "server"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -354,10 +335,7 @@ func TestGetCertificate(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "server"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -394,10 +372,7 @@ func TestGetCertificate(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "server"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -437,7 +412,6 @@ func TestGetCertificate(t *testing.T) {
 			tc.setup(t, sr, handle, req)
 
 			informer, err := secrets.NewSecretInformer(
-				t.Context(),
 				sr,
 				secrets.Reference{Source: "tls", Selector: "server"},
 				secrets.WithConverter(toTLSCertificate),
@@ -469,10 +443,7 @@ func TestNewCertificateInformer(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "server"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, informer *secrets.SecretInformer[*tls.Certificate], err error) {
@@ -494,10 +465,7 @@ func TestNewCertificateInformer(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "server"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -532,7 +500,6 @@ func TestNewCertificateInformer(t *testing.T) {
 			tc.setup(t, sr, handle)
 
 			informer, err := newCertificateInformer(
-				t.Context(),
 				&config.TLS{
 					Secret: config.Secret{Source: "tls", Selector: "server"},
 				},
@@ -634,10 +601,7 @@ func TestServerTLSConfigGetCertificate(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "server"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -661,10 +625,7 @@ func TestServerTLSConfigGetCertificate(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "server"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -700,10 +661,7 @@ func TestServerTLSConfigGetCertificate(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "server"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -749,7 +707,6 @@ func TestServerTLSConfigGetCertificate(t *testing.T) {
 			tc.setup(t, sr, handle, req)
 
 			cfg, err := ToServerTLSConfig(
-				t.Context(),
 				sr,
 				&config.TLS{
 					Secret: config.Secret{Source: "tls", Selector: "server"},
@@ -785,10 +742,7 @@ func TestClientTLSConfigGetClientCertificate(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "client"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "client"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -812,10 +766,7 @@ func TestClientTLSConfigGetClientCertificate(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "client"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "client"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -848,10 +799,7 @@ func TestClientTLSConfigGetClientCertificate(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "tls", Selector: "client"},
-					).
+					Secret(secrets.Reference{Source: "tls", Selector: "client"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -890,7 +838,6 @@ func TestClientTLSConfigGetClientCertificate(t *testing.T) {
 			tc.setup(t, sr, handle, req)
 
 			cfg, err := ToClientTLSConfig(
-				t.Context(),
 				sr,
 				&config.TLS{
 					Secret: config.Secret{Source: "tls", Selector: "client"},

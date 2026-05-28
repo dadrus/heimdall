@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"context"
 	"errors"
 	"strings"
 	"sync"
@@ -105,7 +104,6 @@ func (f *ruleFactory) DefaultRule() rule.Rule { return f.defaultRule }
 func (f *ruleFactory) HasDefaultRule() bool   { return f.hasDefaultRule }
 
 func (f *ruleFactory) CreateRule(
-	ctx context.Context,
 	resolver secrets.Resolver,
 	source v1beta1.RuleSet,
 	rul v1beta1.Rule,
@@ -122,7 +120,7 @@ func (f *ruleFactory) CreateRule(
 		v1beta1.EncodedSlashesOff,
 	)
 
-	createdPipelines, err := f.createPipelines(ctx, resolver, rul.Execute, rul.ErrorHandler)
+	createdPipelines, err := f.createPipelines(resolver, rul.Execute, rul.ErrorHandler)
 	if err != nil {
 		return nil, err
 	}
@@ -211,14 +209,13 @@ func (f *ruleFactory) addRoutes(
 }
 
 func (f *ruleFactory) createPipelines(
-	ctx context.Context,
 	resolver secrets.Resolver,
 	executeSteps,
 	errorSteps []v1beta1.Step,
 ) (rulePipelineImpl, error) {
 	execPipeline, err := createPipeline[*executePipeline](
 		executeSteps,
-		newExecutePipelineBuilder(ctx, f, resolver, len(executeSteps)),
+		newExecutePipelineBuilder(f, resolver, len(executeSteps)),
 	)
 	if err != nil {
 		return rulePipelineImpl{}, err
@@ -226,7 +223,7 @@ func (f *ruleFactory) createPipelines(
 
 	errPipeline, err := createPipeline[*errorPipeline](
 		errorSteps,
-		newErrorPipelineBuilder(ctx, f, resolver, len(errorSteps)),
+		newErrorPipelineBuilder(f, resolver, len(errorSteps)),
 	)
 	if err != nil {
 		return rulePipelineImpl{}, err
@@ -278,7 +275,7 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 		return err
 	}
 
-	createdPipelines, err := f.createPipelines(context.Background(), f.sr, executeSteps, ehSteps)
+	createdPipelines, err := f.createPipelines(f.sr, executeSteps, ehSteps)
 	if err != nil {
 		return err
 	}
@@ -346,7 +343,6 @@ func (f *ruleFactory) convertToSteps(rawSteps []config.MechanismConfig) ([]v1bet
 }
 
 func (f *ruleFactory) createStep(
-	ctx context.Context,
 	resolver secrets.Resolver,
 	ref v1beta1.MechanismReference,
 	def StepDefinition,
@@ -357,7 +353,6 @@ func (f *ruleFactory) createStep(
 	}
 
 	step, err := mechanism.CreateStep(
-		ctx,
 		resolver,
 		mechanisms.StepDefinition{
 			ID:        def.ID,

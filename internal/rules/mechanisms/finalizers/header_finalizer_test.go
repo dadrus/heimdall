@@ -287,7 +287,7 @@ headers:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(t.Context(), sr, tc.stepDef)
+			step, err := mech.CreateStep(sr, tc.stepDef)
 
 			// THEN
 			fin, ok := step.(*headerFinalizer)
@@ -424,7 +424,7 @@ headers:
 			mech, err := newHeaderFinalizer(appCtx, uc, conf)
 			require.NoError(t, err)
 
-			step, err := mech.CreateStep(t.Context(), sr, types.StepDefinition{ID: ""})
+			step, err := mech.CreateStep(sr, types.StepDefinition{ID: ""})
 			require.NoError(t, err)
 
 			// WHEN

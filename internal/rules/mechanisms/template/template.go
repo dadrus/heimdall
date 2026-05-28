@@ -18,7 +18,6 @@ package template
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"errors"
 	"maps"
@@ -73,7 +72,6 @@ func New(val string, opts ...Option) (Template, error) {
 	}
 
 	createdInformers, err := createSecretInformers(
-		context.Background(),
 		cfg.resolver,
 		tmpl,
 		cfg.secretsForbidden,

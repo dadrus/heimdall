@@ -44,10 +44,7 @@ func TestAPIKeyInit(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, ak *APIKey) {
@@ -68,10 +65,7 @@ func TestAPIKeyInit(t *testing.T) {
 				secret := types.NewStringSecret("bar", "baz")
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -117,7 +111,7 @@ func TestAPIKeyInit(t *testing.T) {
 
 			tc.setup(t, sr, handle)
 
-			err := ak.init(t.Context(), appCtx)
+			err := ak.init(appCtx)
 
 			tc.assert(t, err, ak)
 		})
@@ -142,10 +136,7 @@ func TestAPIKeyApply(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().OnUpdate(mock.Anything)
@@ -170,10 +161,7 @@ func TestAPIKeyApply(t *testing.T) {
 				secret := types.NewStringSecret("bar", "baz")
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -203,10 +191,7 @@ func TestAPIKeyApply(t *testing.T) {
 				secret := types.NewStringSecret("bar", "baz")
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -239,10 +224,7 @@ func TestAPIKeyApply(t *testing.T) {
 				secret := types.NewStringSecret("bar", "baz")
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -276,10 +258,7 @@ func TestAPIKeyApply(t *testing.T) {
 				secret := types.NewStringSecret("bar", "baz")
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -310,10 +289,7 @@ func TestAPIKeyApply(t *testing.T) {
 				secret := types.NewSymmetricKeySecret("bar", "baz", []byte{})
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -355,7 +331,7 @@ func TestAPIKeyApply(t *testing.T) {
 			if tc.config.Secret.Source != "" || tc.config.Secret.Selector != "" {
 				appCtx.EXPECT().SecretResolver().Return(sr)
 
-				err = tc.config.init(t.Context(), appCtx)
+				err = tc.config.init(appCtx)
 				require.NoError(t, err)
 			}
 

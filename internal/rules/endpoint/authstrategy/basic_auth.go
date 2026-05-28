@@ -81,9 +81,8 @@ func (c *BasicAuth) Hash() []byte {
 	return nil
 }
 
-func (c *BasicAuth) init(ctx context.Context, appCtx app.Context) error {
+func (c *BasicAuth) init(appCtx app.Context) error {
 	informer, err := secrets.NewCredentialsInformer(
-		ctx,
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
 		secrets.WithConverter(toBasicAuthCredentials(appCtx.DecoderFactory())),

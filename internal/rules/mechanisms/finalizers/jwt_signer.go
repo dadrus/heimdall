@@ -54,7 +54,6 @@ type jwtSigner struct {
 }
 
 func newJWTSigner(
-	ctx context.Context,
 	conf *SignerConfig,
 	sm secrets.Resolver,
 	ko keyregistry.KeyObserver,
@@ -68,7 +67,6 @@ func newJWTSigner(
 	var err error
 
 	signer.informer, err = secrets.NewSecretInformer(
-		ctx,
 		sm,
 		signer.ref,
 		secrets.WithConverter(createJOSESigner),

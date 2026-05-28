@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -85,7 +84,6 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 
 				factory.EXPECT().
 					CreateRule(
-						mock.Anything,
 						resolver,
 						mock.MatchedBy(func(rs v1beta1.RuleSet) bool {
 							return rs.ID == "test" && rs.Namespace == "team-a"
@@ -131,7 +129,6 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 
 				factory.EXPECT().
 					CreateRule(
-						mock.Anything,
 						resolver,
 						mock.MatchedBy(func(rs v1beta1.RuleSet) bool {
 							return rs.ID == "test" && rs.Namespace == "team-a"
@@ -181,7 +178,6 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 
 				factory.EXPECT().
 					CreateRule(
-						mock.Anything,
 						resolver,
 						mock.MatchedBy(func(rs v1beta1.RuleSet) bool {
 							return rs.ID == "test" && rs.Namespace == "team-a"
@@ -244,7 +240,6 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 
 				factory.EXPECT().
 					CreateRule(
-						mock.Anything,
 						resolver,
 						mock.MatchedBy(func(rs v1beta1.RuleSet) bool {
 							return rs.ID == "test" && rs.Namespace == "team-a"
@@ -278,8 +273,6 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 
 				scope, ok := processor.scopes["test"]
 				require.True(t, ok)
-				require.NotNil(t, scope.ctx)
-				require.NotNil(t, scope.cancel)
 				require.NotNil(t, scope.resolver)
 				require.Equal(t, "test", scope.id)
 			},
@@ -375,10 +368,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 			) {
 				t.Helper()
 
-				_, cancel := context.WithCancel(t.Context())
 				processor.scopes["test"] = ruleSetScope{
-					ctx:      t.Context(),
-					cancel:   cancel,
 					resolver: oldResolver,
 					id:       "test",
 				}
@@ -389,7 +379,6 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 
 				factory.EXPECT().
 					CreateRule(
-						mock.Anything,
 						newResolver,
 						mock.MatchedBy(func(rs v1beta1.RuleSet) bool {
 							return rs.ID == "test" && rs.Namespace == "team-a"
@@ -440,10 +429,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 
 				rul := mocks.NewRuleMock(t)
 
-				_, cancel := context.WithCancel(t.Context())
 				processor.scopes["test"] = ruleSetScope{
-					ctx:      t.Context(),
-					cancel:   cancel,
 					resolver: oldResolver,
 					id:       "test",
 				}
@@ -454,7 +440,6 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 
 				factory.EXPECT().
 					CreateRule(
-						mock.Anything,
 						newResolver,
 						mock.MatchedBy(func(rs v1beta1.RuleSet) bool {
 							return rs.ID == "test" && rs.Namespace == "team-a"
@@ -509,10 +494,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 
 				rul := mocks.NewRuleMock(t)
 
-				_, cancel := context.WithCancel(t.Context())
 				processor.scopes["test"] = ruleSetScope{
-					ctx:      t.Context(),
-					cancel:   cancel,
 					resolver: oldResolver,
 					id:       "test",
 				}
@@ -523,7 +505,6 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 
 				factory.EXPECT().
 					CreateRule(
-						mock.Anything,
 						newResolver,
 						mock.MatchedBy(func(rs v1beta1.RuleSet) bool {
 							return rs.ID == "test" && rs.Namespace == "team-a"
@@ -591,10 +572,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 
 				rul := mocks.NewRuleMock(t)
 
-				_, cancel := context.WithCancel(t.Context())
 				processor.scopes["test"] = ruleSetScope{
-					ctx:      t.Context(),
-					cancel:   cancel,
 					resolver: oldResolver,
 					id:       "test",
 				}
@@ -605,7 +583,6 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 
 				factory.EXPECT().
 					CreateRule(
-						mock.Anything,
 						newResolver,
 						mock.MatchedBy(func(rs v1beta1.RuleSet) bool {
 							return rs.ID == "test" && rs.Namespace == "team-a"
@@ -708,7 +685,6 @@ func TestRuleSetProcessorOnUpdatedWithoutPreviousRuleSet(t *testing.T) {
 
 	factory.EXPECT().
 		CreateRule(
-			mock.Anything,
 			resolver,
 			mock.MatchedBy(func(rs v1beta1.RuleSet) bool {
 				return rs.ID == "test" && rs.Namespace == "team-a"
@@ -772,10 +748,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			) {
 				t.Helper()
 
-				_, cancel := context.WithCancel(t.Context())
 				processor.scopes["test"] = ruleSetScope{
-					ctx:      t.Context(),
-					cancel:   cancel,
 					resolver: resolver,
 					id:       "test",
 				}
@@ -813,10 +786,7 @@ func TestRuleSetProcessorOnDeleted(t *testing.T) {
 			) {
 				t.Helper()
 
-				_, cancel := context.WithCancel(t.Context())
 				processor.scopes["test"] = ruleSetScope{
-					ctx:      t.Context(),
-					cancel:   cancel,
 					resolver: resolver,
 					id:       "test",
 				}
@@ -922,14 +892,10 @@ func TestRuleSetProcessorNewScope(t *testing.T) {
 		scopeFactory,
 	).(*ruleSetProcessor)
 
-	scope := processor.newScope(t.Context(), ruleSet)
+	scope := processor.newScope(ruleSet)
 
-	require.NotNil(t, scope.ctx)
-	require.NotNil(t, scope.cancel)
 	require.Same(t, resolver, scope.resolver)
 	require.Equal(t, "test", scope.id)
-
-	scope.cancel()
 }
 
 func TestRuleSetProcessorStoreReplaceAndDeleteScope(t *testing.T) {
@@ -945,18 +911,12 @@ func TestRuleSetProcessorStoreReplaceAndDeleteScope(t *testing.T) {
 		secretsmocks.NewScopedResolverFactoryMock(t),
 	).(*ruleSetProcessor)
 
-	_, oldCancel := context.WithCancel(t.Context())
 	oldScope := ruleSetScope{
-		ctx:      t.Context(),
-		cancel:   oldCancel,
 		resolver: oldResolver,
 		id:       "test",
 	}
 
-	_, newCancel := context.WithCancel(t.Context())
 	newScope := ruleSetScope{
-		ctx:      t.Context(),
-		cancel:   newCancel,
 		resolver: newResolver,
 		id:       "test",
 	}

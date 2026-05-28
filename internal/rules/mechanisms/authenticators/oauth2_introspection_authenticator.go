@@ -217,7 +217,6 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx pipeline.Context, sub pip
 }
 
 func (a *oauth2IntrospectionAuthenticator) CreateStep(
-	_ context.Context,
 	_ secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {

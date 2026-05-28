@@ -96,7 +96,7 @@ signer:
 				t.Helper()
 
 				resolver.EXPECT().
-					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
@@ -127,7 +127,7 @@ signer:
 					}))
 
 				resolver.EXPECT().
-					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(shm, nil)
 			},
 			assert: func(t *testing.T, err error, fin *jwtFinalizer) {
@@ -175,7 +175,7 @@ values:
 					}))
 
 				resolver.EXPECT().
-					Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(shm, nil)
 			},
 			assert: func(t *testing.T, err error, fin *jwtFinalizer) {
@@ -547,7 +547,7 @@ signer:
 
 			resolver := secretsmocks.NewResolverMock(t)
 			resolver.EXPECT().
-				Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
+				Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 				Return(shm, nil)
 
 			ko := keyregistrymocks.NewRegistryMock(t)
@@ -571,7 +571,7 @@ signer:
 
 			stepResolver := secretsmocks.NewResolverMock(t)
 
-			step, err := mech.CreateStep(t.Context(), stepResolver, tc.stepDef)
+			step, err := mech.CreateStep(stepResolver, tc.stepDef)
 
 			fin, ok := step.(*jwtFinalizer)
 			if err == nil {
@@ -961,7 +961,7 @@ signer:
 
 			resolver := secretsmocks.NewResolverMock(t)
 			resolver.EXPECT().
-				Secret(mock.Anything, secrets.Reference{Source: "foo", Selector: "bar"}).
+				Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 				Return(shm, nil)
 
 			ko := keyregistrymocks.NewRegistryMock(t)
@@ -985,7 +985,7 @@ signer:
 			configured, ok := mech.(*jwtFinalizer)
 			require.True(t, ok)
 
-			step, err := mech.CreateStep(t.Context(), secretsmocks.NewResolverMock(t), types.StepDefinition{})
+			step, err := mech.CreateStep(secretsmocks.NewResolverMock(t), types.StepDefinition{})
 			require.NoError(t, err)
 
 			configureMocks(t, configured, mctx, cch, shm, tc.subject)

@@ -17,7 +17,6 @@
 package authenticators
 
 import (
-	"context"
 	"crypto/sha512"
 	"crypto/subtle"
 	"encoding/base64"
@@ -130,7 +129,6 @@ func newBasicAuthAuthenticator(app app.Context, name string, rawConfig map[strin
 	}
 
 	informer, err := secrets.NewCredentialsInformer(
-		context.Background(),
 		app.SecretResolver(),
 		secrets.Reference{Source: conf.Credentials.Source, Selector: conf.Credentials.Selector},
 		secrets.WithConverter(toCredentialsChecker(app.DecoderFactory())),
@@ -235,7 +233,6 @@ func (a *basicAuthAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 }
 
 func (a *basicAuthAuthenticator) CreateStep(
-	ctx context.Context,
 	resolver secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {
@@ -273,7 +270,6 @@ func (a *basicAuthAuthenticator) CreateStep(
 		var err error
 
 		informer, err = secrets.NewCredentialsInformer(
-			ctx,
 			resolver,
 			secrets.Reference{Source: conf.Credentials.Source, Selector: conf.Credentials.Selector},
 			secrets.WithConverter(toCredentialsChecker(a.app.DecoderFactory())),

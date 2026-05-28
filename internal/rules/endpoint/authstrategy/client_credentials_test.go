@@ -59,10 +59,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, cc *OAuth2ClientCredentials) {
@@ -85,10 +82,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 				})
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -135,10 +129,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 				})
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -203,7 +194,7 @@ func TestOAuth2ClientCredentialsInit(t *testing.T) {
 				TTL:         &ttl,
 			}
 
-			err = cc.init(t.Context(), appCtx)
+			err = cc.init(appCtx)
 
 			tc.assert(t, err, cc)
 		})
@@ -248,10 +239,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().OnUpdate(mock.Anything)
@@ -281,10 +269,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 				})
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -328,10 +313,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 				})
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -369,10 +351,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 				})
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -418,10 +397,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 				})
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -561,7 +537,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 			appCtx.EXPECT().DecoderFactory().Maybe().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
-			err = cc.init(t.Context(), appCtx)
+			err = cc.init(appCtx)
 			require.NoError(t, err)
 
 			req, err := http.NewRequestWithContext(

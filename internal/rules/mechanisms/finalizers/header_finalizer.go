@@ -17,7 +17,6 @@
 package finalizers
 
 import (
-	"context"
 	"strings"
 
 	"github.com/rs/zerolog"
@@ -115,7 +114,6 @@ func (f *headerFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 }
 
 func (f *headerFinalizer) CreateStep(
-	ctx context.Context,
 	resolver secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {

@@ -5,8 +5,6 @@
 package secrets
 
 import (
-	"context"
-
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -38,8 +36,8 @@ func (_m *BindingProviderMock) EXPECT() *BindingProviderMock_Expecter {
 }
 
 // certificateBundleBinding provides a mock function for the type BindingProviderMock
-func (_mock *BindingProviderMock) certificateBundleBinding(ctx context.Context, reference scopedReference) (*binding[CertificateBundle], bindingKey, error) {
-	ret := _mock.Called(ctx, reference)
+func (_mock *BindingProviderMock) certificateBundleBinding(reference scopedReference) (*binding[CertificateBundle], bindingKey, error) {
+	ret := _mock.Called(reference)
 
 	if len(ret) == 0 {
 		panic("no return value specified for certificateBundleBinding")
@@ -48,23 +46,23 @@ func (_mock *BindingProviderMock) certificateBundleBinding(ctx context.Context, 
 	var r0 *binding[CertificateBundle]
 	var r1 bindingKey
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, scopedReference) (*binding[CertificateBundle], bindingKey, error)); ok {
-		return returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(0).(func(scopedReference) (*binding[CertificateBundle], bindingKey, error)); ok {
+		return returnFunc(reference)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, scopedReference) *binding[CertificateBundle]); ok {
-		r0 = returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(0).(func(scopedReference) *binding[CertificateBundle]); ok {
+		r0 = returnFunc(reference)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*binding[CertificateBundle])
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, scopedReference) bindingKey); ok {
-		r1 = returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(1).(func(scopedReference) bindingKey); ok {
+		r1 = returnFunc(reference)
 	} else {
 		r1 = ret.Get(1).(bindingKey)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, scopedReference) error); ok {
-		r2 = returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(2).(func(scopedReference) error); ok {
+		r2 = returnFunc(reference)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -77,25 +75,19 @@ type BindingProviderMock_certificateBundleBinding_Call struct {
 }
 
 // certificateBundleBinding is a helper method to define mock.On call
-//   - ctx context.Context
 //   - reference scopedReference
-func (_e *BindingProviderMock_Expecter) certificateBundleBinding(ctx interface{}, reference interface{}) *BindingProviderMock_certificateBundleBinding_Call {
-	return &BindingProviderMock_certificateBundleBinding_Call{Call: _e.mock.On("certificateBundleBinding", ctx, reference)}
+func (_e *BindingProviderMock_Expecter) certificateBundleBinding(reference interface{}) *BindingProviderMock_certificateBundleBinding_Call {
+	return &BindingProviderMock_certificateBundleBinding_Call{Call: _e.mock.On("certificateBundleBinding", reference)}
 }
 
-func (_c *BindingProviderMock_certificateBundleBinding_Call) Run(run func(ctx context.Context, reference scopedReference)) *BindingProviderMock_certificateBundleBinding_Call {
+func (_c *BindingProviderMock_certificateBundleBinding_Call) Run(run func(reference scopedReference)) *BindingProviderMock_certificateBundleBinding_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
+		var arg0 scopedReference
 		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 scopedReference
-		if args[1] != nil {
-			arg1 = args[1].(scopedReference)
+			arg0 = args[0].(scopedReference)
 		}
 		run(
 			arg0,
-			arg1,
 		)
 	})
 	return _c
@@ -106,14 +98,14 @@ func (_c *BindingProviderMock_certificateBundleBinding_Call) Return(bindingMoqPa
 	return _c
 }
 
-func (_c *BindingProviderMock_certificateBundleBinding_Call) RunAndReturn(run func(ctx context.Context, reference scopedReference) (*binding[CertificateBundle], bindingKey, error)) *BindingProviderMock_certificateBundleBinding_Call {
+func (_c *BindingProviderMock_certificateBundleBinding_Call) RunAndReturn(run func(reference scopedReference) (*binding[CertificateBundle], bindingKey, error)) *BindingProviderMock_certificateBundleBinding_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // credentialsBinding provides a mock function for the type BindingProviderMock
-func (_mock *BindingProviderMock) credentialsBinding(ctx context.Context, reference scopedReference) (*binding[Credentials], bindingKey, error) {
-	ret := _mock.Called(ctx, reference)
+func (_mock *BindingProviderMock) credentialsBinding(reference scopedReference) (*binding[Credentials], bindingKey, error) {
+	ret := _mock.Called(reference)
 
 	if len(ret) == 0 {
 		panic("no return value specified for credentialsBinding")
@@ -122,23 +114,23 @@ func (_mock *BindingProviderMock) credentialsBinding(ctx context.Context, refere
 	var r0 *binding[Credentials]
 	var r1 bindingKey
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, scopedReference) (*binding[Credentials], bindingKey, error)); ok {
-		return returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(0).(func(scopedReference) (*binding[Credentials], bindingKey, error)); ok {
+		return returnFunc(reference)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, scopedReference) *binding[Credentials]); ok {
-		r0 = returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(0).(func(scopedReference) *binding[Credentials]); ok {
+		r0 = returnFunc(reference)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*binding[Credentials])
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, scopedReference) bindingKey); ok {
-		r1 = returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(1).(func(scopedReference) bindingKey); ok {
+		r1 = returnFunc(reference)
 	} else {
 		r1 = ret.Get(1).(bindingKey)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, scopedReference) error); ok {
-		r2 = returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(2).(func(scopedReference) error); ok {
+		r2 = returnFunc(reference)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -151,25 +143,19 @@ type BindingProviderMock_credentialsBinding_Call struct {
 }
 
 // credentialsBinding is a helper method to define mock.On call
-//   - ctx context.Context
 //   - reference scopedReference
-func (_e *BindingProviderMock_Expecter) credentialsBinding(ctx interface{}, reference interface{}) *BindingProviderMock_credentialsBinding_Call {
-	return &BindingProviderMock_credentialsBinding_Call{Call: _e.mock.On("credentialsBinding", ctx, reference)}
+func (_e *BindingProviderMock_Expecter) credentialsBinding(reference interface{}) *BindingProviderMock_credentialsBinding_Call {
+	return &BindingProviderMock_credentialsBinding_Call{Call: _e.mock.On("credentialsBinding", reference)}
 }
 
-func (_c *BindingProviderMock_credentialsBinding_Call) Run(run func(ctx context.Context, reference scopedReference)) *BindingProviderMock_credentialsBinding_Call {
+func (_c *BindingProviderMock_credentialsBinding_Call) Run(run func(reference scopedReference)) *BindingProviderMock_credentialsBinding_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
+		var arg0 scopedReference
 		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 scopedReference
-		if args[1] != nil {
-			arg1 = args[1].(scopedReference)
+			arg0 = args[0].(scopedReference)
 		}
 		run(
 			arg0,
-			arg1,
 		)
 	})
 	return _c
@@ -180,7 +166,7 @@ func (_c *BindingProviderMock_credentialsBinding_Call) Return(bindingMoqParam *b
 	return _c
 }
 
-func (_c *BindingProviderMock_credentialsBinding_Call) RunAndReturn(run func(ctx context.Context, reference scopedReference) (*binding[Credentials], bindingKey, error)) *BindingProviderMock_credentialsBinding_Call {
+func (_c *BindingProviderMock_credentialsBinding_Call) RunAndReturn(run func(reference scopedReference) (*binding[Credentials], bindingKey, error)) *BindingProviderMock_credentialsBinding_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -232,8 +218,8 @@ func (_c *BindingProviderMock_releaseBinding_Call) RunAndReturn(run func(key bin
 }
 
 // secretBinding provides a mock function for the type BindingProviderMock
-func (_mock *BindingProviderMock) secretBinding(ctx context.Context, reference scopedReference) (*binding[Secret], bindingKey, error) {
-	ret := _mock.Called(ctx, reference)
+func (_mock *BindingProviderMock) secretBinding(reference scopedReference) (*binding[Secret], bindingKey, error) {
+	ret := _mock.Called(reference)
 
 	if len(ret) == 0 {
 		panic("no return value specified for secretBinding")
@@ -242,23 +228,23 @@ func (_mock *BindingProviderMock) secretBinding(ctx context.Context, reference s
 	var r0 *binding[Secret]
 	var r1 bindingKey
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, scopedReference) (*binding[Secret], bindingKey, error)); ok {
-		return returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(0).(func(scopedReference) (*binding[Secret], bindingKey, error)); ok {
+		return returnFunc(reference)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, scopedReference) *binding[Secret]); ok {
-		r0 = returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(0).(func(scopedReference) *binding[Secret]); ok {
+		r0 = returnFunc(reference)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*binding[Secret])
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, scopedReference) bindingKey); ok {
-		r1 = returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(1).(func(scopedReference) bindingKey); ok {
+		r1 = returnFunc(reference)
 	} else {
 		r1 = ret.Get(1).(bindingKey)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, scopedReference) error); ok {
-		r2 = returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(2).(func(scopedReference) error); ok {
+		r2 = returnFunc(reference)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -271,25 +257,19 @@ type BindingProviderMock_secretBinding_Call struct {
 }
 
 // secretBinding is a helper method to define mock.On call
-//   - ctx context.Context
 //   - reference scopedReference
-func (_e *BindingProviderMock_Expecter) secretBinding(ctx interface{}, reference interface{}) *BindingProviderMock_secretBinding_Call {
-	return &BindingProviderMock_secretBinding_Call{Call: _e.mock.On("secretBinding", ctx, reference)}
+func (_e *BindingProviderMock_Expecter) secretBinding(reference interface{}) *BindingProviderMock_secretBinding_Call {
+	return &BindingProviderMock_secretBinding_Call{Call: _e.mock.On("secretBinding", reference)}
 }
 
-func (_c *BindingProviderMock_secretBinding_Call) Run(run func(ctx context.Context, reference scopedReference)) *BindingProviderMock_secretBinding_Call {
+func (_c *BindingProviderMock_secretBinding_Call) Run(run func(reference scopedReference)) *BindingProviderMock_secretBinding_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
+		var arg0 scopedReference
 		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 scopedReference
-		if args[1] != nil {
-			arg1 = args[1].(scopedReference)
+			arg0 = args[0].(scopedReference)
 		}
 		run(
 			arg0,
-			arg1,
 		)
 	})
 	return _c
@@ -300,14 +280,14 @@ func (_c *BindingProviderMock_secretBinding_Call) Return(bindingMoqParam *bindin
 	return _c
 }
 
-func (_c *BindingProviderMock_secretBinding_Call) RunAndReturn(run func(ctx context.Context, reference scopedReference) (*binding[Secret], bindingKey, error)) *BindingProviderMock_secretBinding_Call {
+func (_c *BindingProviderMock_secretBinding_Call) RunAndReturn(run func(reference scopedReference) (*binding[Secret], bindingKey, error)) *BindingProviderMock_secretBinding_Call {
 	_c.Call.Return(run)
 	return _c
 }
 
 // secretSetBinding provides a mock function for the type BindingProviderMock
-func (_mock *BindingProviderMock) secretSetBinding(ctx context.Context, reference scopedReference) (*binding[[]Secret], bindingKey, error) {
-	ret := _mock.Called(ctx, reference)
+func (_mock *BindingProviderMock) secretSetBinding(reference scopedReference) (*binding[[]Secret], bindingKey, error) {
+	ret := _mock.Called(reference)
 
 	if len(ret) == 0 {
 		panic("no return value specified for secretSetBinding")
@@ -316,23 +296,23 @@ func (_mock *BindingProviderMock) secretSetBinding(ctx context.Context, referenc
 	var r0 *binding[[]Secret]
 	var r1 bindingKey
 	var r2 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, scopedReference) (*binding[[]Secret], bindingKey, error)); ok {
-		return returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(0).(func(scopedReference) (*binding[[]Secret], bindingKey, error)); ok {
+		return returnFunc(reference)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, scopedReference) *binding[[]Secret]); ok {
-		r0 = returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(0).(func(scopedReference) *binding[[]Secret]); ok {
+		r0 = returnFunc(reference)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*binding[[]Secret])
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, scopedReference) bindingKey); ok {
-		r1 = returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(1).(func(scopedReference) bindingKey); ok {
+		r1 = returnFunc(reference)
 	} else {
 		r1 = ret.Get(1).(bindingKey)
 	}
-	if returnFunc, ok := ret.Get(2).(func(context.Context, scopedReference) error); ok {
-		r2 = returnFunc(ctx, reference)
+	if returnFunc, ok := ret.Get(2).(func(scopedReference) error); ok {
+		r2 = returnFunc(reference)
 	} else {
 		r2 = ret.Error(2)
 	}
@@ -345,25 +325,19 @@ type BindingProviderMock_secretSetBinding_Call struct {
 }
 
 // secretSetBinding is a helper method to define mock.On call
-//   - ctx context.Context
 //   - reference scopedReference
-func (_e *BindingProviderMock_Expecter) secretSetBinding(ctx interface{}, reference interface{}) *BindingProviderMock_secretSetBinding_Call {
-	return &BindingProviderMock_secretSetBinding_Call{Call: _e.mock.On("secretSetBinding", ctx, reference)}
+func (_e *BindingProviderMock_Expecter) secretSetBinding(reference interface{}) *BindingProviderMock_secretSetBinding_Call {
+	return &BindingProviderMock_secretSetBinding_Call{Call: _e.mock.On("secretSetBinding", reference)}
 }
 
-func (_c *BindingProviderMock_secretSetBinding_Call) Run(run func(ctx context.Context, reference scopedReference)) *BindingProviderMock_secretSetBinding_Call {
+func (_c *BindingProviderMock_secretSetBinding_Call) Run(run func(reference scopedReference)) *BindingProviderMock_secretSetBinding_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
+		var arg0 scopedReference
 		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 scopedReference
-		if args[1] != nil {
-			arg1 = args[1].(scopedReference)
+			arg0 = args[0].(scopedReference)
 		}
 		run(
 			arg0,
-			arg1,
 		)
 	})
 	return _c
@@ -374,7 +348,7 @@ func (_c *BindingProviderMock_secretSetBinding_Call) Return(bindingMoqParam *bin
 	return _c
 }
 
-func (_c *BindingProviderMock_secretSetBinding_Call) RunAndReturn(run func(ctx context.Context, reference scopedReference) (*binding[[]Secret], bindingKey, error)) *BindingProviderMock_secretSetBinding_Call {
+func (_c *BindingProviderMock_secretSetBinding_Call) RunAndReturn(run func(reference scopedReference) (*binding[[]Secret], bindingKey, error)) *BindingProviderMock_secretSetBinding_Call {
 	_c.Call.Return(run)
 	return _c
 }

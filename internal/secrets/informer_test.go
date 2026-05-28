@@ -98,7 +98,6 @@ func TestNewSecretInformer(t *testing.T) {
 			tc.setup(t, resolver, handle)
 
 			informer, err := NewSecretInformer(
-				t.Context(),
 				resolver,
 				Reference{Source: "src", Selector: "selector"},
 				tc.opts...,
@@ -189,7 +188,6 @@ func TestSecretInformerGet(t *testing.T) {
 			opts := wrapSecretConverters(tc.opts, &converterCalls)
 
 			informer, err := NewSecretInformer(
-				t.Context(),
 				resolver,
 				Reference{Source: "src", Selector: "selector"},
 				opts...,
@@ -223,7 +221,6 @@ func TestSecretInformerGetUsesIdentityConverter(t *testing.T) {
 	resolver := &testResolver{secretHandle: handle}
 
 	informer, err := NewSecretInformer[Secret](
-		t.Context(),
 		resolver,
 		Reference{Source: "src", Selector: "selector"},
 	)
@@ -279,7 +276,6 @@ func TestSecretInformerAwaitReady(t *testing.T) {
 			resolver := &testResolver{secretHandle: handle}
 
 			_, err := NewSecretInformer(
-				t.Context(),
 				resolver,
 				Reference{Source: "src", Selector: "selector"},
 				WithConverter(func(secret Secret) (string, error) {
@@ -384,7 +380,6 @@ func TestSecretInformerRegistersOnUpdateCallback(t *testing.T) {
 			userCallbackCalled := false
 
 			informer, err := NewSecretInformer(
-				t.Context(),
 				resolver,
 				Reference{Source: "src", Selector: "selector"},
 				WithConverter(func(secret Secret) (string, error) {
@@ -476,7 +471,6 @@ func TestNewCredentialsInformer(t *testing.T) {
 			tc.setup(t, resolver, handle)
 
 			informer, err := NewCredentialsInformer(
-				t.Context(),
 				resolver,
 				Reference{Source: "src", Selector: "selector"},
 				tc.opts...,
@@ -570,7 +564,6 @@ func TestCredentialsInformerGet(t *testing.T) {
 			opts := wrapCredentialsConverters(tc.opts, &converterCalls)
 
 			informer, err := NewCredentialsInformer(
-				t.Context(),
 				resolver,
 				Reference{Source: "src", Selector: "selector"},
 				opts...,
@@ -604,7 +597,6 @@ func TestCredentialsInformerGetUsesIdentityConverter(t *testing.T) {
 	resolver := &testResolver{credentialsHandle: handle}
 
 	informer, err := NewCredentialsInformer[Credentials](
-		t.Context(),
 		resolver,
 		Reference{Source: "src", Selector: "selector"},
 	)
@@ -660,7 +652,6 @@ func TestCredentialsInformerAwaitReady(t *testing.T) {
 			resolver := &testResolver{credentialsHandle: handle}
 
 			_, err := NewCredentialsInformer(
-				t.Context(),
 				resolver,
 				Reference{Source: "src", Selector: "selector"},
 				WithConverter(func(credentials Credentials) (string, error) {
@@ -689,7 +680,6 @@ func TestCredentialsInformerRegistersOnUpdateCallback(t *testing.T) {
 	userCallbackCalled := false
 
 	informer, err := NewCredentialsInformer(
-		t.Context(),
 		resolver,
 		Reference{Source: "src", Selector: "selector"},
 		WithConverter(func(credentials Credentials) (string, error) {
@@ -783,7 +773,6 @@ func TestNewCertificateBundleInformer(t *testing.T) {
 			tc.setup(t, resolver, handle)
 
 			informer, err := NewCertificateBundleInformer(
-				t.Context(),
 				resolver,
 				Reference{Source: "src", Selector: "selector"},
 				tc.opts...,
@@ -878,7 +867,6 @@ func TestCertificateBundleInformerGet(t *testing.T) {
 			opts := wrapCertificateBundleConverters(tc.opts, &converterCalls)
 
 			informer, err := NewCertificateBundleInformer(
-				t.Context(),
 				resolver,
 				Reference{Source: "src", Selector: "selector"},
 				opts...,
@@ -912,7 +900,6 @@ func TestCertificateBundleInformerGetUsesIdentityConverter(t *testing.T) {
 	resolver := &testResolver{certificateBundleHandle: handle}
 
 	informer, err := NewCertificateBundleInformer[CertificateBundle](
-		t.Context(),
 		resolver,
 		Reference{Source: "src", Selector: "selector"},
 	)
@@ -968,7 +955,6 @@ func TestCertificateBundleInformerAwaitReady(t *testing.T) {
 			resolver := &testResolver{certificateBundleHandle: handle}
 
 			_, err := NewCertificateBundleInformer(
-				t.Context(),
 				resolver,
 				Reference{Source: "src", Selector: "selector"},
 				WithConverter(func(bundle CertificateBundle) (string, error) {
@@ -997,7 +983,6 @@ func TestCertificateBundleInformerRegistersOnUpdateCallback(t *testing.T) {
 	userCallbackCalled := false
 
 	informer, err := NewCertificateBundleInformer(
-		t.Context(),
 		resolver,
 		Reference{Source: "src", Selector: "selector"},
 		WithConverter(func(bundle CertificateBundle) (string, error) {
@@ -1109,10 +1094,7 @@ type testResolver struct {
 	certificateBundleRef    Reference
 }
 
-func (r *testResolver) Secret(
-	_ context.Context,
-	ref Reference,
-) (SecretHandle, error) {
+func (r *testResolver) Secret(ref Reference) (SecretHandle, error) {
 	r.secretRef = ref
 
 	if r.secretErr != nil {
@@ -1122,17 +1104,11 @@ func (r *testResolver) Secret(
 	return r.secretHandle, nil
 }
 
-func (r *testResolver) SecretSet(
-	context.Context,
-	Reference,
-) (SecretSetHandle, error) {
+func (r *testResolver) SecretSet(_ Reference) (SecretSetHandle, error) {
 	panic("not implemented")
 }
 
-func (r *testResolver) Credentials(
-	_ context.Context,
-	ref Reference,
-) (CredentialsHandle, error) {
+func (r *testResolver) Credentials(ref Reference) (CredentialsHandle, error) {
 	r.credentialsRef = ref
 
 	if r.credentialsErr != nil {
@@ -1142,10 +1118,7 @@ func (r *testResolver) Credentials(
 	return r.credentialsHandle, nil
 }
 
-func (r *testResolver) CertificateBundle(
-	_ context.Context,
-	ref Reference,
-) (CertificateBundleHandle, error) {
+func (r *testResolver) CertificateBundle(ref Reference) (CertificateBundleHandle, error) {
 	r.certificateBundleRef = ref
 
 	if r.certificateBundleErr != nil {

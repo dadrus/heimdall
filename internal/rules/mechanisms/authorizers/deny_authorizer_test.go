@@ -82,7 +82,7 @@ func TestDenyAuthorizerCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			conf, err := mech.CreateStep(t.Context(), nil, tc.stepDef)
+			conf, err := mech.CreateStep(nil, tc.stepDef)
 
 			// THEN
 			auth, ok := conf.(*denyAuthorizer)
@@ -109,7 +109,7 @@ func TestDenyAuthorizerExecute(t *testing.T) {
 
 	mech, err := newDenyAuthorizer(appCtx, "bar", nil)
 	require.NoError(t, err)
-	step, err := mech.CreateStep(t.Context(), nil, types.StepDefinition{ID: ""})
+	step, err := mech.CreateStep(nil, types.StepDefinition{ID: ""})
 	require.NoError(t, err)
 
 	// WHEN

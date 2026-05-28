@@ -17,8 +17,6 @@
 package authenticators
 
 import (
-	"context"
-
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -99,7 +97,6 @@ func (a *anonymousAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 }
 
 func (a *anonymousAuthenticator) CreateStep(
-	_ context.Context,
 	_ secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {

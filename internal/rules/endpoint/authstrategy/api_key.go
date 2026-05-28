@@ -78,9 +78,8 @@ func (c *APIKey) Hash() []byte {
 	return nil
 }
 
-func (c *APIKey) init(ctx context.Context, appCtx app.Context) error {
+func (c *APIKey) init(appCtx app.Context) error {
 	informer, err := secrets.NewSecretInformer(
-		ctx,
 		appCtx.SecretResolver(),
 		secrets.Reference{Source: c.Secret.Source, Selector: c.Secret.Selector},
 		secrets.WithConverter(toStringSecret),

@@ -282,7 +282,7 @@ values:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(t.Context(), sr, tc.stepDef)
+			step, err := mech.CreateStep(sr, tc.stepDef)
 
 			// THEN
 			contextualizer, ok := step.(*mapContextualizer)

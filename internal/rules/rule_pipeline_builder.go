@@ -1,7 +1,6 @@
 package rules
 
 import (
-	"context"
 	"slices"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
@@ -34,7 +33,6 @@ func createPipeline[T any](
 
 type stepCreator interface {
 	createStep(
-		ctx context.Context,
 		resolver secrets.Resolver,
 		ref v1beta1.MechanismReference,
 		def StepDefinition,
@@ -42,20 +40,17 @@ type stepCreator interface {
 }
 
 type stepBuilder struct {
-	ctx      context.Context
 	resolver secrets.Resolver
 	sc       stepCreator
 	stepIDs  []string
 }
 
 func newStepBuilder(
-	ctx context.Context,
 	resolver secrets.Resolver,
 	sc stepCreator,
 	capacity int,
 ) *stepBuilder {
 	return &stepBuilder{
-		ctx:      ctx,
 		resolver: resolver,
 		sc:       sc,
 		stepIDs:  make([]string, 0, capacity),
@@ -66,7 +61,6 @@ func (b *stepBuilder) create(step v1beta1.Step, def StepDefinition) (pipeline.St
 	b.stepIDs = append(b.stepIDs, step.ID)
 
 	return b.sc.createStep(
-		b.ctx,
 		b.resolver,
 		step.MechanismReference(),
 		def,
@@ -109,13 +103,12 @@ type executePipelineBuilder struct {
 }
 
 func newExecutePipelineBuilder(
-	ctx context.Context,
 	factory *ruleFactory,
 	resolver secrets.Resolver,
 	capacity int,
 ) *executePipelineBuilder {
 	return &executePipelineBuilder{
-		steps:          newStepBuilder(ctx, resolver, factory, capacity),
+		steps:          newStepBuilder(resolver, factory, capacity),
 		authenticators: make(map[string]compositePrincipalCreator),
 		principalOrder: make([]string, 0, capacity),
 	}
@@ -256,13 +249,12 @@ type errorPipelineBuilder struct {
 }
 
 func newErrorPipelineBuilder(
-	ctx context.Context,
 	factory *ruleFactory,
 	resolver secrets.Resolver,
 	capacity int,
 ) *errorPipelineBuilder {
 	return &errorPipelineBuilder{
-		steps:         newStepBuilder(ctx, resolver, factory, capacity),
+		steps:         newStepBuilder(resolver, factory, capacity),
 		errorHandlers: make(stage, 0, capacity),
 	}
 }

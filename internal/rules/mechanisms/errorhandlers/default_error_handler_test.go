@@ -104,7 +104,7 @@ func TestDefaultErrorHandlerExecute(t *testing.T) {
 			mech, err := newDefaultErrorHandler(appCtx, "foo", nil)
 			require.NoError(t, err)
 
-			step, err := mech.CreateStep(t.Context(), nil, types.StepDefinition{ID: ""})
+			step, err := mech.CreateStep(nil, types.StepDefinition{ID: ""})
 			require.NoError(t, err)
 
 			// WHEN & THEN
@@ -166,7 +166,7 @@ func TestDefaultErrorHandlerCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(t.Context(), nil, tc.stepDef)
+			step, err := mech.CreateStep(nil, tc.stepDef)
 
 			// THEN
 			eh, ok := step.(*defaultErrorHandler)

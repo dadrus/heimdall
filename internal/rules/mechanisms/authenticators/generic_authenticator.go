@@ -17,7 +17,6 @@
 package authenticators
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -163,8 +162,7 @@ func (a *genericAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subjec
 }
 
 func (a *genericAuthenticator) CreateStep(
-	ctx context.Context,
-	resolver secrets.Resolver,
+	_ secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {
 	// this authenticator allows ttl to be redefined on the rule level

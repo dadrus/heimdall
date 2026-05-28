@@ -806,10 +806,7 @@ func TestProxyService(t *testing.T) {
 				)
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "proxy", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "proxy", Selector: "server"}).
 					Return(secretHandle, nil)
 
 				secretHandle.EXPECT().
@@ -927,10 +924,7 @@ func TestProxyService(t *testing.T) {
 				)
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "proxy", Selector: "server"},
-					).
+					Secret(secrets.Reference{Source: "proxy", Selector: "server"}).
 					Return(secretHandle, nil)
 
 				secretHandle.EXPECT().

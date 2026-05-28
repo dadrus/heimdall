@@ -5,8 +5,6 @@
 package mocks
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/secrets"
@@ -41,8 +39,8 @@ func (_m *FactoryMock) EXPECT() *FactoryMock_Expecter {
 }
 
 // CreateRule provides a mock function for the type FactoryMock
-func (_mock *FactoryMock) CreateRule(ctx context.Context, resolver secrets.Resolver, source v1beta1.RuleSet, ruleConfig v1beta1.Rule) (rule.Rule, error) {
-	ret := _mock.Called(ctx, resolver, source, ruleConfig)
+func (_mock *FactoryMock) CreateRule(resolver secrets.Resolver, source v1beta1.RuleSet, ruleConfig v1beta1.Rule) (rule.Rule, error) {
+	ret := _mock.Called(resolver, source, ruleConfig)
 
 	if len(ret) == 0 {
 		panic("no return value specified for CreateRule")
@@ -50,18 +48,18 @@ func (_mock *FactoryMock) CreateRule(ctx context.Context, resolver secrets.Resol
 
 	var r0 rule.Rule
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Resolver, v1beta1.RuleSet, v1beta1.Rule) (rule.Rule, error)); ok {
-		return returnFunc(ctx, resolver, source, ruleConfig)
+	if returnFunc, ok := ret.Get(0).(func(secrets.Resolver, v1beta1.RuleSet, v1beta1.Rule) (rule.Rule, error)); ok {
+		return returnFunc(resolver, source, ruleConfig)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, secrets.Resolver, v1beta1.RuleSet, v1beta1.Rule) rule.Rule); ok {
-		r0 = returnFunc(ctx, resolver, source, ruleConfig)
+	if returnFunc, ok := ret.Get(0).(func(secrets.Resolver, v1beta1.RuleSet, v1beta1.Rule) rule.Rule); ok {
+		r0 = returnFunc(resolver, source, ruleConfig)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(rule.Rule)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, secrets.Resolver, v1beta1.RuleSet, v1beta1.Rule) error); ok {
-		r1 = returnFunc(ctx, resolver, source, ruleConfig)
+	if returnFunc, ok := ret.Get(1).(func(secrets.Resolver, v1beta1.RuleSet, v1beta1.Rule) error); ok {
+		r1 = returnFunc(resolver, source, ruleConfig)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -74,37 +72,31 @@ type FactoryMock_CreateRule_Call struct {
 }
 
 // CreateRule is a helper method to define mock.On call
-//   - ctx context.Context
 //   - resolver secrets.Resolver
 //   - source v1beta1.RuleSet
 //   - ruleConfig v1beta1.Rule
-func (_e *FactoryMock_Expecter) CreateRule(ctx interface{}, resolver interface{}, source interface{}, ruleConfig interface{}) *FactoryMock_CreateRule_Call {
-	return &FactoryMock_CreateRule_Call{Call: _e.mock.On("CreateRule", ctx, resolver, source, ruleConfig)}
+func (_e *FactoryMock_Expecter) CreateRule(resolver interface{}, source interface{}, ruleConfig interface{}) *FactoryMock_CreateRule_Call {
+	return &FactoryMock_CreateRule_Call{Call: _e.mock.On("CreateRule", resolver, source, ruleConfig)}
 }
 
-func (_c *FactoryMock_CreateRule_Call) Run(run func(ctx context.Context, resolver secrets.Resolver, source v1beta1.RuleSet, ruleConfig v1beta1.Rule)) *FactoryMock_CreateRule_Call {
+func (_c *FactoryMock_CreateRule_Call) Run(run func(resolver secrets.Resolver, source v1beta1.RuleSet, ruleConfig v1beta1.Rule)) *FactoryMock_CreateRule_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
+		var arg0 secrets.Resolver
 		if args[0] != nil {
-			arg0 = args[0].(context.Context)
+			arg0 = args[0].(secrets.Resolver)
 		}
-		var arg1 secrets.Resolver
+		var arg1 v1beta1.RuleSet
 		if args[1] != nil {
-			arg1 = args[1].(secrets.Resolver)
+			arg1 = args[1].(v1beta1.RuleSet)
 		}
-		var arg2 v1beta1.RuleSet
+		var arg2 v1beta1.Rule
 		if args[2] != nil {
-			arg2 = args[2].(v1beta1.RuleSet)
-		}
-		var arg3 v1beta1.Rule
-		if args[3] != nil {
-			arg3 = args[3].(v1beta1.Rule)
+			arg2 = args[2].(v1beta1.Rule)
 		}
 		run(
 			arg0,
 			arg1,
 			arg2,
-			arg3,
 		)
 	})
 	return _c
@@ -115,7 +107,7 @@ func (_c *FactoryMock_CreateRule_Call) Return(rule1 rule.Rule, err error) *Facto
 	return _c
 }
 
-func (_c *FactoryMock_CreateRule_Call) RunAndReturn(run func(ctx context.Context, resolver secrets.Resolver, source v1beta1.RuleSet, ruleConfig v1beta1.Rule) (rule.Rule, error)) *FactoryMock_CreateRule_Call {
+func (_c *FactoryMock_CreateRule_Call) RunAndReturn(run func(resolver secrets.Resolver, source v1beta1.RuleSet, ruleConfig v1beta1.Rule) (rule.Rule, error)) *FactoryMock_CreateRule_Call {
 	_c.Call.Return(run)
 	return _c
 }

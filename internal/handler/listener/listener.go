@@ -74,12 +74,7 @@ func NewFactory(
 	var tlsConfig *tls.Config
 
 	if tlsConf != nil {
-		cfg, err := tlsx.ToServerTLSConfig(
-			context.Background(),
-			secretResolver,
-			tlsConf,
-			// key observer, falls noch Teil der Signatur
-		)
+		cfg, err := tlsx.ToServerTLSConfig(secretResolver, tlsConf)
 		if err != nil {
 			return Factory{}, err
 		}

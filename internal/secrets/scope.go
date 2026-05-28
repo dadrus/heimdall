@@ -8,22 +8,18 @@ import (
 
 type bindingProvider interface {
 	secretBinding(
-		ctx context.Context,
 		reference scopedReference,
 	) (*binding[Secret], bindingKey, error)
 
 	secretSetBinding(
-		ctx context.Context,
 		reference scopedReference,
 	) (*binding[[]Secret], bindingKey, error)
 
 	credentialsBinding(
-		ctx context.Context,
 		reference scopedReference,
 	) (*binding[Credentials], bindingKey, error)
 
 	certificateBundleBinding(
-		ctx context.Context,
 		reference scopedReference,
 	) (*binding[CertificateBundle], bindingKey, error)
 
@@ -79,11 +75,8 @@ func newScope(
 	return scp
 }
 
-func (s *scope) Secret(
-	ctx context.Context,
-	ref Reference,
-) (SecretHandle, error) {
-	bdg, key, err := s.bindings.secretBinding(ctx, s.refFactory(ref))
+func (s *scope) Secret(ref Reference) (SecretHandle, error) {
+	bdg, key, err := s.bindings.secretBinding(s.refFactory(ref))
 	if err != nil {
 		return nil, err
 	}
@@ -97,11 +90,8 @@ func (s *scope) Secret(
 	return newHandle[Secret](bdg, s), nil
 }
 
-func (s *scope) SecretSet(
-	ctx context.Context,
-	ref Reference,
-) (SecretSetHandle, error) {
-	bdg, key, err := s.bindings.secretSetBinding(ctx, s.refFactory(ref))
+func (s *scope) SecretSet(ref Reference) (SecretSetHandle, error) {
+	bdg, key, err := s.bindings.secretSetBinding(s.refFactory(ref))
 	if err != nil {
 		return nil, err
 	}
@@ -115,11 +105,8 @@ func (s *scope) SecretSet(
 	return newHandle[[]Secret](bdg, s), nil
 }
 
-func (s *scope) Credentials(
-	ctx context.Context,
-	ref Reference,
-) (CredentialsHandle, error) {
-	bdg, key, err := s.bindings.credentialsBinding(ctx, s.refFactory(ref))
+func (s *scope) Credentials(ref Reference) (CredentialsHandle, error) {
+	bdg, key, err := s.bindings.credentialsBinding(s.refFactory(ref))
 	if err != nil {
 		return nil, err
 	}
@@ -133,11 +120,8 @@ func (s *scope) Credentials(
 	return newHandle[Credentials](bdg, s), nil
 }
 
-func (s *scope) CertificateBundle(
-	ctx context.Context,
-	ref Reference,
-) (CertificateBundleHandle, error) {
-	bdg, key, err := s.bindings.certificateBundleBinding(ctx, s.refFactory(ref))
+func (s *scope) CertificateBundle(ref Reference) (CertificateBundleHandle, error) {
+	bdg, key, err := s.bindings.certificateBundleBinding(s.refFactory(ref))
 	if err != nil {
 		return nil, err
 	}

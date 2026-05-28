@@ -18,7 +18,6 @@ package authenticators
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -744,7 +743,7 @@ principal:
 			configured, ok := mech.(*genericAuthenticator)
 			require.True(t, ok)
 
-			step, err := mech.CreateStep(context.Background(), sr, tc.stepDef)
+			step, err := mech.CreateStep(sr, tc.stepDef)
 
 			auth, ok := step.(*genericAuthenticator)
 			if err == nil {

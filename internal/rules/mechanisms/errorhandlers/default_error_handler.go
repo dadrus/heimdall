@@ -17,8 +17,6 @@
 package errorhandlers
 
 import (
-	"context"
-
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -72,8 +70,7 @@ func (eh *defaultErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject)
 }
 
 func (eh *defaultErrorHandler) CreateStep(
-	ctx context.Context,
-	resolver secrets.Resolver,
+	_ secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {

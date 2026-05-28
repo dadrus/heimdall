@@ -17,7 +17,6 @@
 package finalizers
 
 import (
-	"context"
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
@@ -99,7 +98,6 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (ty
 	}
 
 	signer, err := newJWTSigner(
-		context.Background(),
 		&conf.Signer,
 		app.SecretResolver(),
 		app.KeyRegistry(),
@@ -176,7 +174,6 @@ func (f *jwtFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error
 }
 
 func (f *jwtFinalizer) CreateStep(
-	ctx context.Context,
 	resolver secrets.Resolver,
 	def types.StepDefinition,
 ) (pipeline.Step, error) {

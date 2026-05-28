@@ -32,28 +32,24 @@ func (noopRegistry) Keys() []jose.JSONWebKey    { return nil }
 type noopResolver struct{}
 
 func (noopResolver) Secret(
-	context.Context,
 	secrets.Reference,
 ) (secrets.SecretHandle, error) {
 	return noopHandle[secrets.Secret]{}, nil
 }
 
 func (noopResolver) SecretSet(
-	context.Context,
 	secrets.Reference,
 ) (secrets.SecretSetHandle, error) {
 	return noopHandle[[]secrets.Secret]{}, nil
 }
 
 func (noopResolver) Credentials(
-	context.Context,
 	secrets.Reference,
 ) (secrets.CredentialsHandle, error) {
 	return noopHandle[secrets.Credentials]{}, nil
 }
 
 func (noopResolver) CertificateBundle(
-	context.Context,
 	secrets.Reference,
 ) (secrets.CertificateBundleHandle, error) {
 	return noopHandle[secrets.CertificateBundle]{}, nil
@@ -71,7 +67,7 @@ func (noopScopedResolver) Release() {}
 
 type noopScopedResolverFactory struct{}
 
-func (noopScopedResolverFactory) Create(id string, opts ...secrets.ScopeOption) secrets.ScopedResolver {
+func (noopScopedResolverFactory) Create(_ string, _ ...secrets.ScopeOption) secrets.ScopedResolver {
 	return noopScopedResolver{}
 }
 

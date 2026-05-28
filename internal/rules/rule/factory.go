@@ -17,15 +17,12 @@
 package rule
 
 import (
-	"context"
-
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/secrets"
 )
 
 type Factory interface {
 	CreateRule(
-		ctx context.Context,
 		resolver secrets.Resolver,
 		source v1beta1.RuleSet,
 		ruleConfig v1beta1.Rule,

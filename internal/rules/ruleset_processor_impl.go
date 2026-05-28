@@ -34,14 +34,11 @@ import (
 var ErrUnsupportedRuleSetVersion = errors.New("unsupported rule set version")
 
 type ruleSetScope struct {
-	ctx      context.Context
-	cancel   context.CancelFunc
 	resolver secrets.ScopedResolver
 	id       string
 }
 
 func (s ruleSetScope) release() {
-	s.cancel()
 	s.resolver.Release()
 }
 
@@ -105,7 +102,7 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSe
 		err   error
 	)
 
-	scope := p.newScope(context.WithoutCancel(ctx), ruleSet)
+	scope := p.newScope(ruleSet)
 
 	defer func() {
 		if err != nil {
@@ -165,7 +162,7 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSe
 		err   error
 	)
 
-	scope := p.newScope(context.WithoutCancel(ctx), ruleSet)
+	scope := p.newScope(ruleSet)
 
 	defer func() {
 		if err != nil {
@@ -249,7 +246,7 @@ func (p *ruleSetProcessor) loadRules(
 	rules := make([]rule.Rule, 0, len(ruleSet.Rules))
 
 	for _, rc := range ruleSet.Rules {
-		rul, err := p.f.CreateRule(scope.ctx, scope.resolver, ruleSet, rc)
+		rul, err := p.f.CreateRule(scope.resolver, ruleSet, rc)
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(
 				pipeline.ErrInternal,
@@ -263,13 +260,9 @@ func (p *ruleSetProcessor) loadRules(
 	return rules, nil
 }
 
-func (p *ruleSetProcessor) newScope(parent context.Context, ruleSet v1beta1.RuleSet) ruleSetScope {
-	ctx, cancel := context.WithCancel(parent)
-
+func (p *ruleSetProcessor) newScope(ruleSet v1beta1.RuleSet) ruleSetScope {
 	return ruleSetScope{
-		ctx:    ctx,
-		cancel: cancel,
-		id:     ruleSet.ID,
+		id: ruleSet.ID,
 		resolver: p.sf.Create(
 			ruleSet.ID,
 			secrets.WithNamespace(ruleSet.Namespace),

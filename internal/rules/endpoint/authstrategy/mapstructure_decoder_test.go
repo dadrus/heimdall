@@ -75,10 +75,7 @@ auth:
 				})
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -485,10 +482,7 @@ auth:
 				})
 
 				sr.EXPECT().
-					Credentials(
-						mock.Anything,
-						secrets.Reference{Source: "oauth", Selector: "client-creds"},
-					).
+					Credentials(secrets.Reference{Source: "oauth", Selector: "client-creds"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -727,10 +721,7 @@ auth:
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
@@ -776,10 +767,7 @@ auth:
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "foo", Selector: "bar"},
-					).
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 					Return(handle, nil)
 
 				handle.EXPECT().
@@ -875,10 +863,7 @@ func setupAPIKeySecret(
 	secret := secrettypes.NewStringSecret("bar", "baz")
 
 	sr.EXPECT().
-		Secret(
-			mock.Anything,
-			secrets.Reference{Source: "foo", Selector: "bar"},
-		).
+		Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
 		Return(handle, nil)
 
 	handle.EXPECT().
@@ -903,10 +888,7 @@ func setupOAuth2ClientCredentials(
 	})
 
 	sr.EXPECT().
-		Credentials(
-			mock.Anything,
-			secrets.Reference{Source: "foo", Selector: "bar"},
-		).
+		Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
 		Return(handle, nil)
 
 	handle.EXPECT().

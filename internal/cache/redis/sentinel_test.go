@@ -30,7 +30,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -162,10 +161,7 @@ func TestSentinelCache(t *testing.T) {
 				t.Helper()
 
 				sr.EXPECT().
-					Secret(
-						mock.Anything,
-						secrets.Reference{Source: "redis", Selector: "tls"},
-					).
+					Secret(secrets.Reference{Source: "redis", Selector: "tls"}).
 					Return(nil, assert.AnError)
 
 				return []byte(
