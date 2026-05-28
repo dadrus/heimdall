@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 
-	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/secrets"
@@ -27,8 +26,8 @@ func (noopRepository) DeleteRuleSet(_ context.Context, _ rule.RuleSet) error {
 
 type noopRegistry struct{}
 
-func (noopRegistry) Notify(_ keyregistry.KeyInfo) {}
-func (noopRegistry) Keys() []jose.JSONWebKey      { return nil }
+func (noopRegistry) Notify(_ secrets.AsymmetricKeySecret) {}
+func (noopRegistry) Keys() []jose.JSONWebKey              { return nil }
 
 type noopResolver struct{}
 
