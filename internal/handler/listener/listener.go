@@ -22,7 +22,6 @@ import (
 	"net"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/tlsx"
 )
@@ -52,7 +51,6 @@ func New(
 	address string,
 	tlsConf *config.TLS,
 	sm secrets.Resolver,
-	ko keyregistry.KeyObserver,
 ) (net.Listener, error) {
 	listnr, err := listen(ctx, address)
 	if err != nil {
@@ -62,7 +60,7 @@ func New(
 	listnr = &listener{Listener: listnr}
 
 	if tlsConf != nil {
-		cfg, err := tlsx.ToServerTLSConfig(ctx, sm, tlsConf, ko)
+		cfg, err := tlsx.ToServerTLSConfig(ctx, sm, tlsConf)
 		if err != nil {
 			return nil, err
 		}

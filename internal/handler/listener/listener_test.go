@@ -34,8 +34,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyregistry"
-	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
@@ -53,7 +51,6 @@ func TestNew(t *testing.T) {
 			t *testing.T,
 			sr *secretsmocks.ResolverMock,
 			handle *secretsmocks.SecretHandleMock,
-			ko *keyregistrymocks.KeyObserverMock,
 		)
 		listener  net.Listener
 		listenErr error
@@ -98,7 +95,6 @@ func TestNew(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 			) {
 				t.Helper()
 
@@ -130,7 +126,6 @@ func TestNew(t *testing.T) {
 				t *testing.T,
 				sr *secretsmocks.ResolverMock,
 				handle *secretsmocks.SecretHandleMock,
-				ko *keyregistrymocks.KeyObserverMock,
 			) {
 				t.Helper()
 
@@ -140,15 +135,6 @@ func TestNew(t *testing.T) {
 						secrets.Reference{Source: "listener", Selector: "tls"},
 					).
 					Return(handle, nil)
-
-				ko.EXPECT().
-					Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
-						return ki.Key.KeyID() == secret.KeyID() &&
-							ki.Key.PrivateKey() == secret.PrivateKey() &&
-							assert.ObjectsAreEqual(ki.Key.CertChain(), secret.CertChain()) &&
-							!ki.Exportable
-					})).
-					Return()
 
 				handle.EXPECT().
 					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
@@ -187,13 +173,12 @@ func TestNew(t *testing.T) {
 
 			sr := secretsmocks.NewResolverMock(t)
 			handle := secretsmocks.NewSecretHandleMock(t)
-			ko := keyregistrymocks.NewKeyObserverMock(t)
 
 			if tc.setup != nil {
-				tc.setup(t, sr, handle, ko)
+				tc.setup(t, sr, handle)
 			}
 
-			ln, err := New(t.Context(), address, tc.serviceConf.TLS, sr, ko)
+			ln, err := New(t.Context(), address, tc.serviceConf.TLS, sr)
 
 			defer func() {
 				if ln != nil {
