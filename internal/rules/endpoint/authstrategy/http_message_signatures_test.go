@@ -204,7 +204,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 		}))
 
 	reg := keyregistrymocks.NewRegistryMock(t)
-	reg.EXPECT().Notify(mock.Anything).Maybe()
+	reg.EXPECT().Notify(secret).Maybe()
 
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().SecretResolver().Return(sr)

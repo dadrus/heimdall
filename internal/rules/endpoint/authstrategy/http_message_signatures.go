@@ -34,7 +34,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
@@ -102,7 +101,7 @@ func (s *HTTPMessageSignatures) init(ctx context.Context, appCtx app.Context) er
 		secrets.WithUpdateCallback(func(_ context.Context, secret secrets.Secret, _ httpsig.Signer) error {
 			aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
 
-			appCtx.KeyRegistry().Notify(keyregistry.KeyInfo{Key: aks, Exportable: true})
+			appCtx.KeyRegistry().Notify(aks)
 			s.updateHash(aks)
 
 			return nil
