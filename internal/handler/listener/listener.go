@@ -30,6 +30,20 @@ type listener struct {
 	net.Listener
 }
 
+type Listener interface {
+	net.Listener
+
+	TLSEnabled() bool
+}
+
+type listenerWrapper struct {
+	net.Listener
+
+	tlsEnabled bool
+}
+
+func (l *listenerWrapper) TLSEnabled() bool { return l.tlsEnabled }
+
 //nolint:gochecknoglobals // package-local seam for listener unit tests
 var listen = func(ctx context.Context, address string) (net.Listener, error) {
 	var lc net.ListenConfig
@@ -53,12 +67,7 @@ type Factory struct {
 }
 
 func (f Factory) Create(ctx context.Context) (net.Listener, error) {
-	listnr, err := listen(ctx, f.Address)
-	if err != nil {
-		return nil, err
-	}
-
-	listnr = &listener{Listener: listnr}
+	var tlsConf *tls.Config
 
 	if f.TLSConf != nil {
 		cfg, err := tlsx.ToServerTLSConfig(ctx, f.SecretResolver, f.TLSConf)
@@ -66,8 +75,22 @@ func (f Factory) Create(ctx context.Context) (net.Listener, error) {
 			return nil, err
 		}
 
-		return tls.NewListener(listnr, cfg), nil
+		tlsConf = cfg
 	}
 
-	return listnr, nil
+	listnr, err := listen(ctx, f.Address)
+	if err != nil {
+		return nil, err
+	}
+
+	listnr = &listener{Listener: listnr}
+
+	if tlsConf != nil {
+		listnr = tls.NewListener(listnr, tlsConf)
+	}
+
+	return &listenerWrapper{
+		Listener:   listnr,
+		tlsEnabled: tlsConf != nil,
+	}, nil
 }

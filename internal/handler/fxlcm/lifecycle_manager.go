@@ -33,6 +33,10 @@ type Server interface {
 	Shutdown(ctx context.Context) error
 }
 
+type tlsAwareListener interface {
+	TLSEnabled() bool
+}
+
 type ListenerFactory interface {
 	Create(ctx context.Context) (net.Listener, error)
 }
@@ -57,6 +61,12 @@ func (m *LifecycleManager) Start(ctx context.Context) error {
 			Str("_address", ln.Addr().String()).
 			Str("_service", m.ServiceName).
 			Msg("Starting listening")
+
+		if tlsAware, ok := ln.(tlsAwareListener); ok && !tlsAware.TLSEnabled() {
+			m.Logger.Warn().
+				Str("_service", m.ServiceName).
+				Msg("TLS is disabled.")
+		}
 
 		if err = m.Server.Serve(ln); err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {

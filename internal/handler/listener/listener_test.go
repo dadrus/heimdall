@@ -41,27 +41,26 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func TestNew(t *testing.T) {
+func TestFactoryCreate(t *testing.T) {
+	t.Parallel()
+
 	secret := newTLSSecret(t)
 	address := "127.0.0.1:8443"
 
 	for uc, tc := range map[string]struct {
-		serviceConf config.ServeConfig
-		setup       func(
+		tlsConf *config.TLS
+		setup   func(
 			t *testing.T,
 			sr *secretsmocks.ResolverMock,
 			handle *secretsmocks.SecretHandleMock,
 		)
 		listener  net.Listener
 		listenErr error
-		assert    func(t *testing.T, err error, ln net.Listener, base net.Listener, capturedAddress string)
+		assert    func(t *testing.T, err error, ln net.Listener, capturedAddress string)
 	}{
 		"creation fails": {
-			serviceConf: config.ServeConfig{
-				Host: ".....",
-			},
 			listenErr: assert.AnError,
-			assert: func(t *testing.T, err error, _ net.Listener, _ net.Listener, capturedAddress string) {
+			assert: func(t *testing.T, err error, _ net.Listener, capturedAddress string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -70,25 +69,22 @@ func TestNew(t *testing.T) {
 			},
 		},
 		"without tls": {
-			serviceConf: config.ServeConfig{Host: "127.0.0.1"},
-			listener:    &acceptRecorder{},
-			assert: func(t *testing.T, err error, ln net.Listener, base net.Listener, capturedAddress string) {
+			listener: &acceptRecorder{},
+			assert: func(t *testing.T, err error, ln net.Listener, capturedAddress string) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.NotNil(t, ln)
 				assert.Equal(t, address, capturedAddress)
 
-				wrapped, ok := ln.(*listener)
+				tlsAware, ok := ln.(Listener)
 				require.True(t, ok)
-				assert.Same(t, base, wrapped.Listener)
+				assert.False(t, tlsAware.TLSEnabled())
 			},
 		},
 		"fails if secret cannot be resolved": {
-			serviceConf: config.ServeConfig{
-				TLS: &config.TLS{
-					Secret: config.Secret{Source: "listener", Selector: "tls"},
-				},
+			tlsConf: &config.TLS{
+				Secret: config.Secret{Source: "listener", Selector: "tls"},
 			},
 			listener: &acceptRecorder{},
 			setup: func(
@@ -105,21 +101,19 @@ func TestNew(t *testing.T) {
 					).
 					Return(nil, assert.AnError)
 			},
-			assert: func(t *testing.T, err error, _ net.Listener, _ net.Listener, capturedAddress string) {
+			assert: func(t *testing.T, err error, _ net.Listener, capturedAddress string) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "failed resolving TLS secret")
-				assert.Equal(t, address, capturedAddress)
+				assert.Empty(t, capturedAddress)
 			},
 		},
 		"successful with secret backed tls config": {
-			serviceConf: config.ServeConfig{
-				TLS: &config.TLS{
-					Secret:     config.Secret{Source: "listener", Selector: "tls"},
-					MinVersion: tls.VersionTLS12,
-				},
+			tlsConf: &config.TLS{
+				Secret:     config.Secret{Source: "listener", Selector: "tls"},
+				MinVersion: tls.VersionTLS12,
 			},
 			listener: &acceptRecorder{},
 			setup: func(
@@ -144,13 +138,16 @@ func TestNew(t *testing.T) {
 						return true
 					}))
 			},
-			assert: func(t *testing.T, err error, ln net.Listener, base net.Listener, capturedAddress string) {
+			assert: func(t *testing.T, err error, ln net.Listener, capturedAddress string) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.NotNil(t, ln)
 				assert.Equal(t, address, capturedAddress)
-				assert.NotSame(t, base, ln)
+
+				tlsAware, ok := ln.(Listener)
+				require.True(t, ok)
+				assert.True(t, tlsAware.TLSEnabled())
 			},
 		},
 	} {
@@ -180,7 +177,7 @@ func TestNew(t *testing.T) {
 
 			factory := Factory{
 				Address:        address,
-				TLSConf:        tc.serviceConf.TLS,
+				TLSConf:        tc.tlsConf,
 				SecretResolver: sr,
 			}
 
@@ -192,12 +189,14 @@ func TestNew(t *testing.T) {
 				}
 			}()
 
-			tc.assert(t, err, ln, tc.listener, capturedAddress)
+			tc.assert(t, err, ln, capturedAddress)
 		})
 	}
 }
 
 func TestListenerAccept(t *testing.T) {
+	t.Parallel()
+
 	expectedConn := &connRecorder{}
 	expectedErr := assert.AnError
 
