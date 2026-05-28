@@ -46,6 +46,5 @@ func newLifecycleManager(app app.Context) *fxlcm.LifecycleManager {
 		Logger:         logger,
 		TLSConf:        cfg.TLS,
 		SecretResolver: app.SecretResolver(),
-		KeyObserver:    kr,
 	}
 }

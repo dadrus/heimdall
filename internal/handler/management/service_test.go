@@ -121,7 +121,6 @@ func (suite *ServiceTestSuite) SetupTest() {
 		conf.Management.Address(),
 		conf.Management.TLS,
 		nil,
-		nil,
 	)
 	suite.Require().NoError(err)
 	suite.addr = "http://" + listener.Addr().String()

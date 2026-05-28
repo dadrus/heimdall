@@ -48,8 +48,6 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
-	"github.com/dadrus/heimdall/internal/keyregistry"
-	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	mocks2 "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/secrets"
@@ -95,7 +93,6 @@ func TestProxyService(t *testing.T) {
 			exec *mocks2.ExecutorMock,
 			sr *secretsmocks.ResolverMock,
 			secretHandle *secretsmocks.SecretHandleMock,
-			ko *keyregistrymocks.KeyObserverMock,
 			upstreamURL *url.URL,
 		)
 		processRequest func(t *testing.T, rw http.ResponseWriter, req *http.Request)
@@ -120,7 +117,6 @@ func TestProxyService(t *testing.T) {
 				exec *mocks2.ExecutorMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 				_ *url.URL,
 			) {
 				t.Helper()
@@ -159,7 +155,6 @@ func TestProxyService(t *testing.T) {
 				exec *mocks2.ExecutorMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 				_ *url.URL,
 			) {
 				t.Helper()
@@ -198,7 +193,6 @@ func TestProxyService(t *testing.T) {
 				exec *mocks2.ExecutorMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 				_ *url.URL,
 			) {
 				t.Helper()
@@ -237,7 +231,6 @@ func TestProxyService(t *testing.T) {
 				exec *mocks2.ExecutorMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 				_ *url.URL,
 			) {
 				t.Helper()
@@ -276,7 +269,6 @@ func TestProxyService(t *testing.T) {
 				exec *mocks2.ExecutorMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 				_ *url.URL,
 			) {
 				t.Helper()
@@ -321,7 +313,6 @@ func TestProxyService(t *testing.T) {
 				exec *mocks2.ExecutorMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 				upstreamURL *url.URL,
 			) {
 				t.Helper()
@@ -409,7 +400,6 @@ func TestProxyService(t *testing.T) {
 				exec *mocks2.ExecutorMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 				upstreamURL *url.URL,
 			) {
 				t.Helper()
@@ -497,7 +487,6 @@ func TestProxyService(t *testing.T) {
 				exec *mocks2.ExecutorMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 				upstreamURL *url.URL,
 			) {
 				t.Helper()
@@ -592,7 +581,6 @@ func TestProxyService(t *testing.T) {
 				exec *mocks2.ExecutorMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 				upstreamURL *url.URL,
 			) {
 				t.Helper()
@@ -684,7 +672,6 @@ func TestProxyService(t *testing.T) {
 				_ *mocks2.ExecutorMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 				_ *url.URL,
 			) {
 				t.Helper()
@@ -735,7 +722,6 @@ func TestProxyService(t *testing.T) {
 				_ *mocks2.ExecutorMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
-				_ *keyregistrymocks.KeyObserverMock,
 				_ *url.URL,
 			) {
 				t.Helper()
@@ -789,7 +775,6 @@ func TestProxyService(t *testing.T) {
 				exec *mocks2.ExecutorMock,
 				sr *secretsmocks.ResolverMock,
 				secretHandle *secretsmocks.SecretHandleMock,
-				ko *keyregistrymocks.KeyObserverMock,
 				upstreamURL *url.URL,
 			) {
 				t.Helper()
@@ -819,14 +804,6 @@ func TestProxyService(t *testing.T) {
 					proxyKey,
 					[]*x509.Certificate{proxyCert},
 				)
-
-				ko.EXPECT().
-					Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
-						return ki.Key.KeyID() == secret.KeyID() &&
-							ki.Key.PrivateKey() == secret.PrivateKey() &&
-							assert.ObjectsAreEqual(ki.Key.CertChain(), secret.CertChain()) &&
-							!ki.Exportable
-					}))
 
 				sr.EXPECT().
 					Secret(
@@ -919,7 +896,6 @@ func TestProxyService(t *testing.T) {
 				exec *mocks2.ExecutorMock,
 				sr *secretsmocks.ResolverMock,
 				secretHandle *secretsmocks.SecretHandleMock,
-				ko *keyregistrymocks.KeyObserverMock,
 				upstreamURL *url.URL,
 			) {
 				t.Helper()
@@ -949,14 +925,6 @@ func TestProxyService(t *testing.T) {
 					proxyKey,
 					[]*x509.Certificate{proxyCert},
 				)
-
-				ko.EXPECT().
-					Notify(mock.MatchedBy(func(ki keyregistry.KeyInfo) bool {
-						return ki.Key.KeyID() == secret.KeyID() &&
-							ki.Key.PrivateKey() == secret.PrivateKey() &&
-							assert.ObjectsAreEqual(ki.Key.CertChain(), secret.CertChain()) &&
-							!ki.Exportable
-					}))
 
 				sr.EXPECT().
 					Secret(
@@ -1069,11 +1037,10 @@ func TestProxyService(t *testing.T) {
 			exec := mocks2.NewExecutorMock(t)
 			sr := secretsmocks.NewResolverMock(t)
 			secretHandle := secretsmocks.NewSecretHandleMock(t)
-			ko := keyregistrymocks.NewKeyObserverMock(t)
 
-			tc.configureMocks(t, exec, sr, secretHandle, ko, upstreamURL)
+			tc.configureMocks(t, exec, sr, secretHandle, upstreamURL)
 
-			lstnr, err := listener.New(t.Context(), proxyConf.Address(), proxyConf.TLS, sr, ko)
+			lstnr, err := listener.New(t.Context(), proxyConf.Address(), proxyConf.TLS, sr)
 			require.NoError(t, err)
 
 			client := createClient(t)
@@ -1185,7 +1152,7 @@ func TestWebSocketSupport(t *testing.T) {
 
 	defer proxy.Shutdown(t.Context())
 
-	lstnr, err := listener.New(t.Context(), conf.Serve.Address(), conf.Serve.TLS, nil, nil)
+	lstnr, err := listener.New(t.Context(), conf.Serve.Address(), conf.Serve.TLS, nil)
 	require.NoError(t, err)
 
 	go func() {
@@ -1285,7 +1252,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	defer proxy.Shutdown(t.Context())
 
-	lstnr, err := listener.New(t.Context(), conf.Serve.Address(), conf.Serve.TLS, nil, nil)
+	lstnr, err := listener.New(t.Context(), conf.Serve.Address(), conf.Serve.TLS, nil)
 	require.NoError(t, err)
 
 	go func() {
