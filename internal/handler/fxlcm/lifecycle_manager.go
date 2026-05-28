@@ -26,7 +26,6 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
-	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -44,7 +43,6 @@ type LifecycleManager struct {
 	Logger         zerolog.Logger
 	TLSConf        *config.TLS
 	SecretResolver secrets.Resolver
-	KeyObserver    keyregistry.KeyObserver
 }
 
 func (m *LifecycleManager) Start(ctx context.Context) error {
@@ -53,7 +51,6 @@ func (m *LifecycleManager) Start(ctx context.Context) error {
 		m.ServiceAddress,
 		m.TLSConf,
 		m.SecretResolver,
-		m.KeyObserver,
 	)
 	if err != nil {
 		return errorchain.NewWithMessagef(pipeline.ErrInternal,
