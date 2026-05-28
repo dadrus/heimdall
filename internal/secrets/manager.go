@@ -25,9 +25,9 @@ func NewManager(
 	df encoding.DecoderFactory,
 	meter metric.Meter,
 ) (Manager, error) {
-	proxy := newDependencyResolverProxy()
+	proxy := &dependencyResolverProxy{}
 
-	repository, err := newRepository(cfg, logger, df, proxy)
+	repository, err := source.NewRepository(cfg, logger, df, proxy)
 	if err != nil {
 		return nil, err
 	}
@@ -65,6 +65,13 @@ func (r *manager) Start(ctx context.Context) error {
 
 	r.resolver.Start()
 
+	if err := r.resolver.AwaitReady(ctx); err != nil {
+		_ = r.repository.Stop(ctx)
+		r.resolver.Stop()
+
+		return err
+	}
+
 	return nil
 }
 
@@ -86,10 +93,6 @@ type dependencyResolverProxy struct {
 	resolver source.DependenciesResolver
 }
 
-func newDependencyResolverProxy() *dependencyResolverProxy {
-	return &dependencyResolverProxy{}
-}
-
 func (p *dependencyResolverProxy) ResolveSecret(
 	ctx context.Context,
 	ref Reference,
@@ -109,13 +112,4 @@ func (p *dependencyResolverProxy) ResolveCertificateBundle(
 	ref Reference,
 ) (CertificateBundle, error) {
 	return p.resolver.ResolveCertificateBundle(ctx, ref)
-}
-
-func newRepository(
-	cfg *config.Configuration,
-	logger zerolog.Logger,
-	df encoding.DecoderFactory,
-	resolver source.DependenciesResolver,
-) (source.Repository, error) {
-	return source.NewRepository(cfg, logger, df, resolver)
 }
