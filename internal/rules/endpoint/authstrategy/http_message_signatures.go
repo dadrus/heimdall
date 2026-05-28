@@ -93,6 +93,8 @@ func (s *HTTPMessageSignatures) Hash() []byte {
 }
 
 func (s *HTTPMessageSignatures) init(ctx context.Context, appCtx app.Context) error {
+	ref := secrets.Reference{Source: s.Signer.Secret.Source, Selector: s.Signer.Secret.Selector}
+
 	informer, err := secrets.NewSecretInformer(
 		ctx,
 		appCtx.SecretResolver(),
@@ -101,7 +103,7 @@ func (s *HTTPMessageSignatures) init(ctx context.Context, appCtx app.Context) er
 		secrets.WithUpdateCallback(func(_ context.Context, secret secrets.Secret, _ httpsig.Signer) error {
 			aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
 
-			appCtx.KeyRegistry().Notify(aks)
+			appCtx.KeyRegistry().Notify(ref)
 			s.updateHash(aks)
 
 			return nil

@@ -48,6 +48,7 @@ type SignerConfig struct {
 type jwtSigner struct {
 	iss      string
 	ko       keyregistry.KeyObserver
+	ref      secrets.Reference
 	informer *secrets.SecretInformer[jose.Signer]
 	hash     atomic.Value
 }
@@ -61,6 +62,7 @@ func newJWTSigner(
 	signer := &jwtSigner{
 		iss: x.IfThenElse(len(conf.Name) == 0, "heimdall", conf.Name),
 		ko:  ko,
+		ref: secrets.Reference{Source: conf.Secret.Source, Selector: conf.Secret.Selector},
 	}
 
 	var err error
@@ -68,7 +70,7 @@ func newJWTSigner(
 	signer.informer, err = secrets.NewSecretInformer(
 		ctx,
 		sm,
-		secrets.Reference{Source: conf.Secret.Source, Selector: conf.Secret.Selector},
+		signer.ref,
 		secrets.WithConverter(createJOSESigner),
 		secrets.WithUpdateCallback(signer.onSecretUpdated),
 	)
@@ -146,7 +148,7 @@ func (s *jwtSigner) onSecretUpdated(_ context.Context, secret secrets.Secret, _ 
 	aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
 
 	s.updateHash(aks)
-	s.ko.Notify(aks)
+	s.ko.Notify(s.ref)
 
 	return nil
 }

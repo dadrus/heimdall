@@ -187,14 +187,9 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 
 	sr := secretsmocks.NewResolverMock(t)
 	handle := secretsmocks.NewSecretHandleMock(t)
+	ref := secrets.Reference{Source: "foo", Selector: "bar"}
 
-	sr.EXPECT().
-		Secret(
-			mock.Anything,
-			secrets.Reference{Source: "foo", Selector: "bar"},
-		).
-		Return(handle, nil)
-
+	sr.EXPECT().Secret(mock.Anything, ref).Return(handle, nil)
 	handle.EXPECT().
 		OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
 			err := cb(t.Context(), secret)
@@ -204,7 +199,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 		}))
 
 	reg := keyregistrymocks.NewRegistryMock(t)
-	reg.EXPECT().Notify(secret).Maybe()
+	reg.EXPECT().Notify(ref).Maybe()
 
 	appCtx := app.NewContextMock(t)
 	appCtx.EXPECT().SecretResolver().Return(sr)

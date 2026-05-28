@@ -230,7 +230,7 @@ func TestNewJWTSigner(t *testing.T) {
 			tc.setup(t, resolver)
 
 			ko := keyregistrymocks.NewKeyObserverMock(t)
-			ko.EXPECT().Notify(mock.MatchedBy(func(info any) bool { return info != nil })).Maybe()
+			ko.EXPECT().Notify(mock.Anything).Maybe()
 
 			signer, err := newJWTSigner(t.Context(), tc.config, resolver, ko)
 			tc.assert(t, err, signer)
@@ -305,19 +305,18 @@ func TestJWTSignerSign(t *testing.T) {
 			t.Parallel()
 
 			shm := secretsmocks.NewSecretHandleMock(t)
+			ref := secrets.Reference{
+				Source:   "signer",
+				Selector: "jwt/signing/2026-05",
+			}
 
 			tc.setup(t, shm)
 
 			resolver := secretsmocks.NewResolverMock(t)
-			resolver.EXPECT().
-				Secret(mock.Anything, secrets.Reference{
-					Source:   "signer",
-					Selector: "jwt/signing/2026-05",
-				}).
-				Return(shm, nil)
+			resolver.EXPECT().Secret(mock.Anything, ref).Return(shm, nil)
 
 			ko := keyregistrymocks.NewKeyObserverMock(t)
-			ko.EXPECT().Notify(secret).Maybe()
+			ko.EXPECT().Notify(ref).Maybe()
 
 			signer, err := newJWTSigner(
 				t.Context(),
@@ -341,15 +340,17 @@ func TestJWTSignerOnSecretUpdated(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
+	ref := secrets.Reference{Source: "foo", Selector: "bar"}
+
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
 	secret := secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil)
 
 	kr := keyregistrymocks.NewRegistryMock(t)
-	kr.EXPECT().Notify(secret)
+	kr.EXPECT().Notify(ref)
 
-	signer := jwtSigner{ko: kr}
+	signer := jwtSigner{ko: kr, ref: ref}
 
 	// WHEN
 	signer.onSecretUpdated(t.Context(), secret, nil)

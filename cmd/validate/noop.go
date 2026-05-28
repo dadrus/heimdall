@@ -26,8 +26,8 @@ func (noopRepository) DeleteRuleSet(_ context.Context, _ rule.RuleSet) error {
 
 type noopRegistry struct{}
 
-func (noopRegistry) Notify(_ secrets.AsymmetricKeySecret) {}
-func (noopRegistry) Keys() []jose.JSONWebKey              { return nil }
+func (noopRegistry) Notify(_ secrets.Reference) {}
+func (noopRegistry) Keys() []jose.JSONWebKey    { return nil }
 
 type noopResolver struct{}
 

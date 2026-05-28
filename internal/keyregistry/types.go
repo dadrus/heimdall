@@ -23,7 +23,7 @@ import (
 )
 
 type KeyObserver interface {
-	Notify(secret secrets.AsymmetricKeySecret)
+	Notify(ref secrets.Reference)
 }
 
 type JWKSProvider interface {

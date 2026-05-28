@@ -84,8 +84,8 @@ func (_c *RegistryMock_Keys_Call) RunAndReturn(run func() []jose.JSONWebKey) *Re
 }
 
 // Notify provides a mock function for the type RegistryMock
-func (_mock *RegistryMock) Notify(secret secrets.AsymmetricKeySecret) {
-	_mock.Called(secret)
+func (_mock *RegistryMock) Notify(ref secrets.Reference) {
+	_mock.Called(ref)
 	return
 }
 
@@ -95,16 +95,16 @@ type RegistryMock_Notify_Call struct {
 }
 
 // Notify is a helper method to define mock.On call
-//   - secret secrets.AsymmetricKeySecret
-func (_e *RegistryMock_Expecter) Notify(secret interface{}) *RegistryMock_Notify_Call {
-	return &RegistryMock_Notify_Call{Call: _e.mock.On("Notify", secret)}
+//   - ref secrets.Reference
+func (_e *RegistryMock_Expecter) Notify(ref interface{}) *RegistryMock_Notify_Call {
+	return &RegistryMock_Notify_Call{Call: _e.mock.On("Notify", ref)}
 }
 
-func (_c *RegistryMock_Notify_Call) Run(run func(secret secrets.AsymmetricKeySecret)) *RegistryMock_Notify_Call {
+func (_c *RegistryMock_Notify_Call) Run(run func(ref secrets.Reference)) *RegistryMock_Notify_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 secrets.AsymmetricKeySecret
+		var arg0 secrets.Reference
 		if args[0] != nil {
-			arg0 = args[0].(secrets.AsymmetricKeySecret)
+			arg0 = args[0].(secrets.Reference)
 		}
 		run(
 			arg0,
@@ -118,7 +118,7 @@ func (_c *RegistryMock_Notify_Call) Return() *RegistryMock_Notify_Call {
 	return _c
 }
 
-func (_c *RegistryMock_Notify_Call) RunAndReturn(run func(secret secrets.AsymmetricKeySecret)) *RegistryMock_Notify_Call {
+func (_c *RegistryMock_Notify_Call) RunAndReturn(run func(ref secrets.Reference)) *RegistryMock_Notify_Call {
 	_c.Run(run)
 	return _c
 }
