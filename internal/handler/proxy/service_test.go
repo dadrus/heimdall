@@ -1159,8 +1159,8 @@ func TestWebSocketSupport(t *testing.T) {
 	defer proxy.Shutdown(t.Context())
 
 	factory := listener.Factory{
-		Address:        conf.Serve.Address(),
-		TLSConf:        conf.Serve.TLS,
+		Address: conf.Serve.Address(),
+		TLSConf: conf.Serve.TLS,
 	}
 
 	lstnr, err := factory.Create(t.Context())
@@ -1264,8 +1264,8 @@ func TestServerSentEventsSupport(t *testing.T) {
 	defer proxy.Shutdown(t.Context())
 
 	factory := listener.Factory{
-		Address:        conf.Serve.Address(),
-		TLSConf:        conf.Serve.TLS,
+		Address: conf.Serve.Address(),
+		TLSConf: conf.Serve.TLS,
 	}
 
 	lstnr, err := factory.Create(t.Context())

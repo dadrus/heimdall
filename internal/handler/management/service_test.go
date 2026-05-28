@@ -117,8 +117,8 @@ func (suite *ServiceTestSuite) SetupTest() {
 	}
 
 	factory := listener.Factory{
-		Address:        conf.Management.Address(),
-		TLSConf:        conf.Management.TLS,
+		Address: conf.Management.Address(),
+		TLSConf: conf.Management.TLS,
 	}
 
 	listener, err := factory.Create(suite.T().Context())

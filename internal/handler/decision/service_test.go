@@ -541,8 +541,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			srvConf.Port = port
 
 			factory := listener.Factory{
-				Address:        srvConf.Address(),
-				TLSConf:        srvConf.TLS,
+				Address: srvConf.Address(),
+				TLSConf: srvConf.TLS,
 			}
 
 			listener, err := factory.Create(t.Context())

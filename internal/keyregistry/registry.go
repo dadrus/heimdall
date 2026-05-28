@@ -21,9 +21,10 @@ import (
 	"slices"
 	"sync"
 
+	"github.com/go-jose/go-jose/v4"
+
 	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/go-jose/go-jose/v4"
 )
 
 type registry struct {

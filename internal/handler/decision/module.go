@@ -19,12 +19,12 @@ package decision
 import (
 	"context"
 
-	"github.com/dadrus/heimdall/internal/handler/listener"
 	"go.uber.org/fx"
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
@@ -42,13 +42,13 @@ func newLifecycleManager(app app.Context, cch cache.Cache, exec pipeline.Executo
 	cfg := conf.Serve
 
 	return &fxlcm.LifecycleManager{
-		ServiceName:    "Decision",
-		Server:         newService(conf, cch, logger, exec),
+		ServiceName: "Decision",
+		Server:      newService(conf, cch, logger, exec),
 		ListenerFactory: listener.Factory{
 			Address:        cfg.Address(),
 			TLSConf:        cfg.TLS,
 			SecretResolver: app.SecretResolver(),
 		},
-		Logger:         logger,
+		Logger: logger,
 	}
 }

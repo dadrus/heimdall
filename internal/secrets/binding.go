@@ -60,8 +60,8 @@ type binding[T any] struct {
 	task.StateMachine
 	bindingKey
 
-	usage  metrics.SecretUsage
-	logger zerolog.Logger
+	usage   metrics.SecretUsage
+	logger  zerolog.Logger
 	resolve func(context.Context) (T, error)
 
 	value   atomic.Value                // stores T
