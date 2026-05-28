@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/keyregistry"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/go-jose/go-jose/v4"
 	mock "github.com/stretchr/testify/mock"
 )
@@ -84,8 +84,8 @@ func (_c *RegistryMock_Keys_Call) RunAndReturn(run func() []jose.JSONWebKey) *Re
 }
 
 // Notify provides a mock function for the type RegistryMock
-func (_mock *RegistryMock) Notify(ki keyregistry.KeyInfo) {
-	_mock.Called(ki)
+func (_mock *RegistryMock) Notify(secret secrets.AsymmetricKeySecret) {
+	_mock.Called(secret)
 	return
 }
 
@@ -95,16 +95,16 @@ type RegistryMock_Notify_Call struct {
 }
 
 // Notify is a helper method to define mock.On call
-//   - ki keyregistry.KeyInfo
-func (_e *RegistryMock_Expecter) Notify(ki interface{}) *RegistryMock_Notify_Call {
-	return &RegistryMock_Notify_Call{Call: _e.mock.On("Notify", ki)}
+//   - secret secrets.AsymmetricKeySecret
+func (_e *RegistryMock_Expecter) Notify(secret interface{}) *RegistryMock_Notify_Call {
+	return &RegistryMock_Notify_Call{Call: _e.mock.On("Notify", secret)}
 }
 
-func (_c *RegistryMock_Notify_Call) Run(run func(ki keyregistry.KeyInfo)) *RegistryMock_Notify_Call {
+func (_c *RegistryMock_Notify_Call) Run(run func(secret secrets.AsymmetricKeySecret)) *RegistryMock_Notify_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 keyregistry.KeyInfo
+		var arg0 secrets.AsymmetricKeySecret
 		if args[0] != nil {
-			arg0 = args[0].(keyregistry.KeyInfo)
+			arg0 = args[0].(secrets.AsymmetricKeySecret)
 		}
 		run(
 			arg0,
@@ -118,7 +118,7 @@ func (_c *RegistryMock_Notify_Call) Return() *RegistryMock_Notify_Call {
 	return _c
 }
 
-func (_c *RegistryMock_Notify_Call) RunAndReturn(run func(ki keyregistry.KeyInfo)) *RegistryMock_Notify_Call {
+func (_c *RegistryMock_Notify_Call) RunAndReturn(run func(secret secrets.AsymmetricKeySecret)) *RegistryMock_Notify_Call {
 	_c.Run(run)
 	return _c
 }
