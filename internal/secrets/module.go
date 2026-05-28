@@ -19,118 +19,34 @@ package secrets
 import (
 	"context"
 
-	"github.com/rs/zerolog"
 	"go.uber.org/fx"
 
-	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/encoding"
-	"github.com/dadrus/heimdall/internal/secrets/source"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 var Module = fx.Options( //nolint:gochecknoglobals
 	fx.Provide(
-		newDependencyResolverProxy,
-		func(proxy *dependencyResolverProxy) source.DependenciesResolver { return proxy },
-		newRepository,
-		newResolver,
 		fx.Annotate(
-			newRuntime,
-			fx.OnStart(func(ctx context.Context, rt *runtime) error { return rt.Start(ctx) }),
-			fx.OnStop(func(ctx context.Context, rt *runtime) error { return rt.Stop(ctx) }),
+			NewManager,
+			fx.OnStart(func(ctx context.Context, manager Manager) error { return manager.Start(ctx) }),
+			fx.OnStop(func(ctx context.Context, manager Manager) error { return manager.Stop(ctx) }),
 		),
-		func(rt *runtime) Resolver {
-			return rt.resolver.globalResolver()
-		},
-		func(rt *runtime) ScopedResolverFactory {
-			return scopedResolverFactoryFunc(rt.resolver.scopedResolver)
-		},
+		func(manager Manager) Resolver { return manager.Resolver() },
+		func(manager Manager) ScopedResolverFactory { return manager.ScopedResolverFactory() },
 	),
 	fx.Invoke(
 		fx.Annotate(
-			func(*runtime) {},
-			fx.OnStart(func(ctx context.Context, rt *runtime) error {
-				return rt.resolver.AwaitReady(ctx)
+			func(Manager) {},
+			fx.OnStart(func(ctx context.Context, manager Manager) error {
+				if awaitable, ok := manager.(ReadyAwaiter); ok {
+					return awaitable.AwaitReady(ctx)
+				}
+
+				return errorchain.NewWithMessage(
+					ErrInternal,
+					"secrets manager does not implement ReadyAwaiter, which is expected",
+				)
 			}),
 		),
 	),
 )
-
-type scopedResolverFactoryFunc func(id string, opts ...ScopeOption) ScopedResolver
-
-func (f scopedResolverFactoryFunc) Create(id string, opts ...ScopeOption) ScopedResolver {
-	return f(id, opts...)
-}
-
-type dependencyResolverProxy struct {
-	resolver source.DependenciesResolver
-}
-
-func newDependencyResolverProxy() *dependencyResolverProxy {
-	return &dependencyResolverProxy{}
-}
-
-func (p *dependencyResolverProxy) ResolveSecret(
-	ctx context.Context,
-	ref Reference,
-) (Secret, error) {
-	return p.resolver.ResolveSecret(ctx, ref)
-}
-
-func (p *dependencyResolverProxy) ResolveCredentials(
-	ctx context.Context,
-	ref Reference,
-) (Credentials, error) {
-	return p.resolver.ResolveCredentials(ctx, ref)
-}
-
-func (p *dependencyResolverProxy) ResolveCertificateBundle(
-	ctx context.Context,
-	ref Reference,
-) (CertificateBundle, error) {
-	return p.resolver.ResolveCertificateBundle(ctx, ref)
-}
-
-func newRepository(
-	cfg *config.Configuration,
-	logger zerolog.Logger,
-	df encoding.DecoderFactory,
-	resolver source.DependenciesResolver,
-) (source.Repository, error) {
-	return source.NewRepository(cfg, logger, df, resolver)
-}
-
-func newRuntime(
-	repository source.Repository,
-	resolver *resolver,
-	proxy *dependencyResolverProxy,
-) *runtime {
-	proxy.resolver = resolver
-
-	return &runtime{
-		repository: repository,
-		resolver:   resolver,
-	}
-}
-
-type runtime struct {
-	repository source.Repository
-	resolver   *resolver
-}
-
-func (r *runtime) Start(ctx context.Context) error {
-	if err := r.repository.Start(ctx); err != nil {
-		return err
-	}
-
-	r.resolver.Start()
-
-	return nil
-}
-
-func (r *runtime) Stop(ctx context.Context) error {
-	err := r.repository.Stop(ctx)
-
-	r.resolver.Stop()
-
-	return err
-}
