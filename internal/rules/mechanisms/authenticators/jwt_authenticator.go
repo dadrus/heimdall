@@ -34,6 +34,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
@@ -42,7 +43,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/truststore"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
@@ -62,6 +62,16 @@ func init() {
 	)
 }
 
+func toCertPool(bundle secrets.CertificateBundle) (*x509.CertPool, error) {
+	pool := x509.NewCertPool()
+
+	for _, cert := range bundle.Certificates() {
+		pool.AddCert(cert)
+	}
+
+	return pool, nil
+}
+
 type jwtAuthenticator struct {
 	name            string
 	id              string
@@ -72,7 +82,7 @@ type jwtAuthenticator struct {
 	ttl             *time.Duration
 	sf              PrincipalFactory
 	ads             extractors.AuthDataExtractStrategy
-	trustStore      truststore.TrustStore
+	informer        *secrets.CertificateBundleInformer[*x509.CertPool]
 	validateJWKCert bool
 	ed              oauth2.BearerTokenUsageErrorDecorator
 }
@@ -94,11 +104,16 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 		AuthDataSource   extractors.CompositeExtractStrategy   `mapstructure:"jwt_source"`
 		CacheTTL         *time.Duration                        `mapstructure:"cache_ttl"`
 		ValidateJWK      *bool                                 `mapstructure:"validate_jwk"`
-		TrustStore       truststore.TrustStore                 `mapstructure:"trust_store"`
+		TrustAnchors     *config.Secret                        `mapstructure:"trust_anchors"     validate:"omitempty"`
 	}
 
-	var conf Config
-	if err := decodeConfig(app, rawConfig, &conf,
+	var (
+		conf     Config
+		informer *secrets.CertificateBundleInformer[*x509.CertPool]
+		err      error
+	)
+
+	if err = decodeConfig(app, rawConfig, &conf,
 		template.WithName("authenticator."+AuthenticatorJWT+"."+name),
 		template.WithSecretResolver(app.SecretResolver()),
 	); err != nil {
@@ -106,6 +121,13 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 			pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorJWT, name,
 		).CausedBy(err)
+	}
+
+	if conf.ValidateJWK != nil && !*conf.ValidateJWK && conf.TrustAnchors != nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"'trust_anchors' cannot be used if 'validate_jwk' is disabled",
+		)
 	}
 
 	if conf.JWKSEndpoint != nil {
@@ -121,6 +143,25 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 				Str("_type", AuthenticatorJWT).
 				Str("_name", name).
 				Msg("No TLS configured for the jwks endpoint used in authenticator")
+		}
+	}
+
+	validateJWKCert := x.IfThenElseExec(conf.ValidateJWK != nil,
+		func() bool { return *conf.ValidateJWK },
+		func() bool { return true })
+
+	if validateJWKCert && conf.TrustAnchors != nil {
+		informer, err = secrets.NewCertificateBundleInformer[*x509.CertPool](
+			app.SecretResolver(),
+			secrets.Reference{Source: conf.TrustAnchors.Source, Selector: conf.TrustAnchors.Selector},
+			secrets.WithRefreshStrategy[secrets.CertificateBundle, *x509.CertPool](secrets.RefreshInitialOnly()),
+			secrets.WithConverter(toCertPool),
+		)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(
+				pipeline.ErrConfiguration,
+				"failed creating trust anchors informer for %s authenticator '%s'", AuthenticatorJWT, name,
+			).CausedBy(err)
 		}
 	}
 
@@ -143,10 +184,6 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 	if len(conf.PrincipalInfo.IDFrom) == 0 {
 		conf.PrincipalInfo.IDFrom = "sub"
 	}
-
-	validateJWKCert := x.IfThenElseExec(conf.ValidateJWK != nil,
-		func() bool { return *conf.ValidateJWK },
-		func() bool { return true })
 
 	ads := x.IfThenElseExec(conf.AuthDataSource == nil,
 		func() extractors.CompositeExtractStrategy {
@@ -188,7 +225,7 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 		sf:              &conf.PrincipalInfo,
 		ads:             ads,
 		validateJWKCert: validateJWKCert,
-		trustStore:      conf.TrustStore,
+		informer:        informer,
 		ed:              conf.ErrorDecorator,
 	}, nil
 }
@@ -262,7 +299,7 @@ func (a *jwtAuthenticator) CreateStep(
 		SubjectInfo      *PrincipalInfo                        `mapstructure:"principal"         validate:"not_allowed"`
 		AuthDataSource   extractors.CompositeExtractStrategy   `mapstructure:"jwt_source"        validate:"not_allowed"`
 		ValidateJWK      *bool                                 `mapstructure:"validate_jwk"      validate:"not_allowed"`
-		TrustStore       truststore.TrustStore                 `mapstructure:"trust_store"       validate:"not_allowed"`
+		TrustAnchors     *config.Secret                        `mapstructure:"trust_anchors"     validate:"not_allowed"`
 		Assertions       oauth2.Expectation                    `mapstructure:"assertions"        validate:"-"`
 		ErrorDecorator   oauth2.BearerTokenUsageErrorDecorator `mapstructure:"error_signaling"`
 		CacheTTL         *time.Duration                        `mapstructure:"cache_ttl"`
@@ -289,7 +326,7 @@ func (a *jwtAuthenticator) CreateStep(
 		sf:              a.sf,
 		ads:             a.ads,
 		validateJWKCert: a.validateJWKCert,
-		trustStore:      a.trustStore,
+		informer:        a.informer,
 		ed:              conf.ErrorDecorator.Merge(a.ed),
 	}, nil
 }
@@ -633,11 +670,25 @@ func (a *jwtAuthenticator) validateJWK(jwk *jose.JSONWebKey) error {
 		return nil
 	}
 
+	if a.informer == nil {
+		return pkix.ValidateCertificate(jwk.Certificates[0],
+			pkix.WithIntermediateCACertificates(jwk.Certificates[1:]),
+			pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
+			pkix.WithSystemTrustStore(),
+		)
+	}
+
+	certPool, ok := a.informer.Get()
+	if !ok {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"trust anchors are not available",
+		)
+	}
+
 	return pkix.ValidateCertificate(jwk.Certificates[0],
 		pkix.WithIntermediateCACertificates(jwk.Certificates[1:]),
 		pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
-		x.IfThenElseExec(len(a.trustStore) == 0,
-			pkix.WithSystemTrustStore,
-			func() pkix.ValidationOption { return pkix.WithRootCACertificates(a.trustStore) }),
+		pkix.WithCertPool(certPool),
 	)
 }

@@ -27,7 +27,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -51,17 +50,15 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	endpointtestsupport "github.com/dadrus/heimdall/internal/rules/endpoint/testsupport"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
-	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
+	extractormocks "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
-	types2 "github.com/dadrus/heimdall/internal/secrets/types"
-	"github.com/dadrus/heimdall/internal/truststore"
+	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -74,23 +71,10 @@ const (
 func TestNewJwtAuthenticator(t *testing.T) {
 	t.Parallel()
 
-	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
-	require.NoError(t, err)
-
-	pemBytes, err := pemx.BuildPEM(pemx.WithX509Certificate(rootCA1.Certificate))
-	require.NoError(t, err)
-
-	file, err := os.CreateTemp(t.TempDir(), "test-create-jwt-authenticator-*")
-	require.NoError(t, err)
-
-	_, err = file.Write(pemBytes)
-	require.NoError(t, err)
-
-	trustStorePath := file.Name()
-
 	for uc, tc := range map[string]struct {
 		enforceTLS bool
 		config     []byte
+		setup      func(t *testing.T, sr *secretsmocks.ResolverMock)
 		assert     func(t *testing.T, err error, a *jwtAuthenticator)
 	}{
 		"unsupported fields": {
@@ -200,7 +184,7 @@ assertions:
 
 				assert.Nil(t, auth.ttl)
 				assert.True(t, auth.validateJWKCert)
-				assert.Empty(t, auth.trustStore)
+				assert.Nil(t, auth.informer)
 
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "minimal jwks endpoint based configuration with defaults, without cache and TLS enforcement", auth.ID())
@@ -258,7 +242,7 @@ cache_ttl: 5s`),
 				require.NotNil(t, auth.ttl)
 				assert.Equal(t, 5*time.Second, *auth.ttl)
 				assert.True(t, auth.validateJWKCert)
-				assert.Empty(t, auth.trustStore)
+				assert.Nil(t, auth.informer)
 
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "minimal jwks endpoint based configuration with cache and TLS enforcement", auth.ID())
@@ -308,8 +292,7 @@ assertions:
     - ES256
 principal:
   id: some_claim
-validate_jwk: false
-trust_store: ` + trustStorePath),
+validate_jwk: false`),
 			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
 				t.Helper()
 
@@ -350,7 +333,7 @@ trust_store: ` + trustStorePath),
 
 				assert.Nil(t, auth.ttl)
 				assert.False(t, auth.validateJWKCert)
-				assert.Contains(t, auth.trustStore, rootCA1.Certificate)
+				assert.Nil(t, auth.informer)
 
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "valid configuration with overwrites, without cache", auth.ID())
@@ -359,6 +342,79 @@ trust_store: ` + trustStorePath),
 				assert.Equal(t, DefaultPrincipalName, auth.PrincipalName())
 				assert.Equal(t, types.KindAuthenticator, auth.Kind())
 				assert.Equal(t, auth.ID(), auth.Type())
+			},
+		},
+		"valid configuration with trust anchors": {
+			config: []byte(`
+jwks_endpoint:
+  url: http://test.com
+assertions:
+  issuers:
+    - foobar
+trust_anchors:
+  source: trust
+  selector: anchors`),
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock) {
+				t.Helper()
+
+				handle := secretsmocks.NewCertificateBundleHandleMock(t)
+				handle.EXPECT().OnUpdate(mock.Anything)
+
+				sr.EXPECT().
+					CertificateBundle(secrets.Reference{Source: "trust", Selector: "anchors"}).
+					Return(handle, nil)
+			},
+			assert: func(t *testing.T, err error, auth *jwtAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.True(t, auth.validateJWKCert)
+				require.NotNil(t, auth.informer)
+			},
+		},
+		"fails if trust anchors are configured while jwk validation is disabled": {
+			config: []byte(`
+jwks_endpoint:
+  url: http://test.com
+assertions:
+  issuers:
+    - foobar
+validate_jwk: false
+trust_anchors:
+  source: trust
+  selector: anchors`),
+			assert: func(t *testing.T, err error, _ *jwtAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "'trust_anchors' cannot be used if 'validate_jwk' is disabled")
+			},
+		},
+		"fails if trust anchors informer cannot be created": {
+			config: []byte(`
+jwks_endpoint:
+  url: http://test.com
+assertions:
+  issuers:
+    - foobar
+trust_anchors:
+  source: trust
+  selector: anchors`),
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock) {
+				t.Helper()
+
+				sr.EXPECT().
+					CertificateBundle(secrets.Reference{Source: "trust", Selector: "anchors"}).
+					Return(nil, assert.AnError)
+			},
+			assert: func(t *testing.T, err error, _ *jwtAuthenticator) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorIs(t, err, assert.AnError)
+				require.ErrorContains(t, err, "failed creating trust anchors informer")
 			},
 		},
 		"minimal metadata endpoint based configuration with malformed endpoint": {
@@ -423,7 +479,7 @@ cache_ttl: 5s`),
 				require.NotNil(t, auth.ttl)
 				assert.Equal(t, 5*time.Second, *auth.ttl)
 				assert.True(t, auth.validateJWKCert)
-				assert.Empty(t, auth.trustStore)
+				assert.Nil(t, auth.informer)
 
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "metadata endpoint based configuration with cache and enabled TLS enforcement", auth.ID())
@@ -502,7 +558,7 @@ cache_ttl: 5s`),
 				require.NotNil(t, auth.ttl)
 				assert.Equal(t, 5*time.Second, *auth.ttl)
 				assert.True(t, auth.validateJWKCert)
-				assert.Empty(t, auth.trustStore)
+				assert.Nil(t, auth.informer)
 
 				assert.Equal(t, auth.Name(), auth.ID())
 				assert.Equal(t, "metadata endpoint with resolved endpoints configuration and enabled TLS enforcement", auth.ID())
@@ -564,6 +620,10 @@ error_signaling:
 				Maybe().
 				Return(chm, nil)
 
+			if tc.setup != nil {
+				tc.setup(t, sr)
+			}
+
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
 				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
@@ -585,22 +645,9 @@ error_signaling:
 func TestJwtAuthenticatorCreateStep(t *testing.T) {
 	t.Parallel()
 
-	rootCA1, err := testsupport.NewRootCA("Test Root CA 1", time.Hour*24)
-	require.NoError(t, err)
-
-	pemBytes, err := pemx.BuildPEM(pemx.WithX509Certificate(rootCA1.Certificate))
-	require.NoError(t, err)
-
-	file, err := os.CreateTemp(t.TempDir(), "test-create-jwt-authenticator-from-prototype-*")
-	require.NoError(t, err)
-
-	_, err = file.Write(pemBytes)
-	require.NoError(t, err)
-
-	trustStorePath := file.Name()
-
 	for uc, tc := range map[string]struct {
 		config  []byte
+		setup   func(t *testing.T, sr *secretsmocks.ResolverMock)
 		stepDef types.StepDefinition
 		assert  func(t *testing.T, err error, prototype, configured *jwtAuthenticator)
 	}{
@@ -637,7 +684,7 @@ assertions:
 				assert.Equal(t, prototype.a, configured.a)
 				assert.Equal(t, prototype.ads, configured.ads)
 				assert.Equal(t, prototype.app, configured.app)
-				assert.Equal(t, prototype.trustStore, configured.trustStore)
+				assert.Equal(t, prototype.informer, configured.informer)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, fmt.Sprintf("%v", prototype.r), fmt.Sprintf("%v", configured.r))
 				assert.Equal(t, prototype.sf, configured.sf)
@@ -692,7 +739,7 @@ assertions:
 
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
-				assert.Equal(t, prototype.trustStore, configured.trustStore)
+				assert.Equal(t, prototype.informer, configured.informer)
 
 				assert.Equal(t, "mechanism config without cache, step config with overwrites, but without cache", configured.ID())
 
@@ -738,7 +785,7 @@ metadata_endpoint:
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
-				assert.Equal(t, prototype.trustStore, configured.trustStore)
+				assert.Equal(t, prototype.informer, configured.informer)
 
 				assert.Equal(t, "mechanism config without cache, step config with overwrites incl cache", configured.ID())
 
@@ -782,7 +829,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
-				assert.Equal(t, prototype.trustStore, configured.trustStore)
+				assert.Equal(t, prototype.informer, configured.informer)
 
 				assert.Equal(t, "mechanism config with cache ttl, step config without", configured.ID())
 
@@ -818,7 +865,7 @@ cache_ttl: 5s`),
 				assert.Equal(t, 5*time.Second, *prototype.ttl)
 				assert.Equal(t, 15*time.Second, *configured.ttl)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
-				assert.Equal(t, prototype.trustStore, configured.trustStore)
+				assert.Equal(t, prototype.informer, configured.informer)
 
 				assert.Equal(t, "minimal mechanism config with cache ttl, step config with cache ttl only", configured.ID())
 
@@ -864,7 +911,7 @@ cache_ttl: 5s`),
 				assert.Contains(t, configured.a.ScopesMatcher, "foo")
 				assert.Contains(t, configured.a.ScopesMatcher, "bar")
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
-				assert.Equal(t, prototype.trustStore, configured.trustStore)
+				assert.Equal(t, prototype.informer, configured.informer)
 
 				assert.Equal(t, "mechanism without scopes configured, created step configures them and merges other fields", configured.ID())
 
@@ -894,7 +941,7 @@ assertions:
 				assert.Equal(t, prototype.a, configured.a)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
-				assert.Equal(t, prototype.trustStore, configured.trustStore)
+				assert.Equal(t, prototype.informer, configured.informer)
 
 				assert.Equal(t, "minimal mechanism config, step definition with custom principal name only", configured.ID())
 
@@ -905,7 +952,7 @@ assertions:
 				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
-		"mechanism with defaults, step does not allow jwk trust store override": {
+		"mechanism with defaults, step does not allow jwk trust anchors override": {
 			config: []byte(`
 jwks_endpoint:
   url: http://test.com
@@ -915,7 +962,10 @@ assertions:
 `),
 			stepDef: types.StepDefinition{
 				Config: config.MechanismConfig{
-					"trust_store": trustStorePath,
+					"trust_anchors": map[string]any{
+						"source":   "trust",
+						"selector": "anchors",
+					},
 				},
 			},
 			assert: func(t *testing.T, err error, _, _ *jwtAuthenticator) {
@@ -923,7 +973,7 @@ assertions:
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "'trust_store' is not allowed")
+				require.ErrorContains(t, err, "'trust_anchors' is not allowed")
 			},
 		},
 		"mechanism with defaults, step does not allow jwk validation override": {
@@ -942,6 +992,42 @@ metadata_endpoint:
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "'validate_jwk' is not allowed")
+			},
+		},
+		"mechanism with trust anchors preserves informer in configured step": {
+			config: []byte(`
+jwks_endpoint:
+  url: http://test.com
+assertions:
+  issuers:
+    - foobar
+trust_anchors:
+  source: trust
+  selector: anchors`),
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock) {
+				t.Helper()
+
+				handle := secretsmocks.NewCertificateBundleHandleMock(t)
+				handle.EXPECT().OnUpdate(mock.Anything)
+
+				sr.EXPECT().
+					CertificateBundle(secrets.Reference{Source: "trust", Selector: "anchors"}).
+					Return(handle, nil)
+			},
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"assertions": map[string]any{
+						"issuers": []string{"barfoo"},
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *jwtAuthenticator) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, prototype.informer)
+				require.Same(t, prototype.informer, configured.informer)
+				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
 			},
 		},
 		"mechanism config with error signaling, step config overwrites parts": {
@@ -989,7 +1075,7 @@ error_signaling:
 				assert.Equal(t, prototype.a, configured.a)
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
-				assert.Equal(t, prototype.trustStore, configured.trustStore)
+				assert.Equal(t, prototype.informer, configured.informer)
 			},
 		},
 	} {
@@ -1003,6 +1089,9 @@ error_signaling:
 			require.NoError(t, err)
 
 			sr := secretsmocks.NewResolverMock(t)
+			if tc.setup != nil {
+				tc.setup(t, sr)
+			}
 
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().DecoderFactory().
@@ -1090,10 +1179,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	ee3PrivKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
-	keyOnlyEntry := types2.NewAsymmetricKeySecret("test", kidKeyWithoutCert, ee2PrivKey, nil)
-	keyAndCertEntry := types2.NewAsymmetricKeySecret("test", kidKeyWithCert, ee1PrivKey,
+	keyOnlyEntry := secrettypes.NewAsymmetricKeySecret("test", kidKeyWithoutCert, ee2PrivKey, nil)
+	keyAndCertEntry := secrettypes.NewAsymmetricKeySecret("test", kidKeyWithCert, ee1PrivKey,
 		[]*x509.Certificate{ee1cert, intCA1Cert, rootCA1.Certificate})
-	keyRSAEntry := types2.NewAsymmetricKeySecret("test", kidRSAKey, ee3PrivKey, nil)
+	keyRSAEntry := secrettypes.NewAsymmetricKeySecret("test", kidRSAKey, ee3PrivKey, nil)
 
 	jwksWithDuplicateEntries, err := json.Marshal(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
 		mustToJWK(t, keyOnlyEntry),
@@ -1163,7 +1252,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			t *testing.T,
 			ctx *pipelinemocks.ContextMock,
 			cch *mocks.CacheMock,
-			ads *mocks2.AuthDataExtractStrategyMock,
+			ads *extractormocks.AuthDataExtractStrategyMock,
 			auth *jwtAuthenticator,
 		)
 		assert func(t *testing.T, err error, sub pipeline.Subject)
@@ -1174,7 +1263,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1203,7 +1292,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1232,7 +1321,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1269,7 +1358,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1305,7 +1394,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1342,7 +1431,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1386,7 +1475,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1436,7 +1525,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1480,7 +1569,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1522,7 +1611,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1577,7 +1666,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1633,7 +1722,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1689,7 +1778,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1750,7 +1839,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1811,7 +1900,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1878,7 +1967,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -1958,7 +2047,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -2033,7 +2122,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -2131,7 +2220,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -2176,31 +2265,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		"successful without cache hit using key & cert with jwk validation using custom trust store": {
-			authenticator: &jwtAuthenticator{
-				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
-					return oauth2.ServerMetadata{
-						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
-							endpoint.WithHeader("Accept", "application/json"),
-						),
-					}, nil
-				}),
-				a: oauth2.Expectation{
-					AllowedAlgorithms: []string{"ES384"},
-					TrustedIssuers:    []string{issuer},
-					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
-				},
-				sf:              &PrincipalInfo{IDFrom: "sub"},
-				ttl:             new(10 * time.Second),
-				validateJWKCert: true,
-				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain()[2]},
-				principalName:   DefaultPrincipalName,
-			},
+		"successful without cache hit using key & cert with jwk validation using custom trust anchors": {
+			authenticator: newJwtAuthenticatorWithTrustAnchors(t, jwksSrv.URL, issuer, keyAndCertEntry.CertChain()[2]),
 			configureMocks: func(
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				auth *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -2257,8 +2328,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, principalID, sub.Attributes()["sub"])
 			},
 		},
-		"successful validation of token without kid": {
+		"jwk validation fails if configured trust anchors are not ready": {
 			authenticator: &jwtAuthenticator{
+				id: "auth3",
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
 						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
@@ -2272,15 +2344,57 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:              &PrincipalInfo{IDFrom: "sub"},
+				ttl:             new(10 * time.Second),
 				validateJWKCert: true,
-				trustStore:      truststore.TrustStore{keyAndCertEntry.CertChain()[2]},
+				informer:        newNotReadyCertificateBundleInformer(t, "anchors"),
 				principalName:   DefaultPrincipalName,
 			},
 			configureMocks: func(
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
+				auth *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+					endpoint.WithHeader("Accept", "application/json"),
+				)
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, assert.AnError)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkJWKSRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+				}
+
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
+				t.Helper()
+
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.ErrorContains(t, err, "trust anchors are not available")
+			},
+		},
+		"successful validation of token without kid": {
+			authenticator: newJwtAuthenticatorWithTrustAnchors(t, jwksSrv.URL, issuer, keyAndCertEntry.CertChain()[2]),
+			configureMocks: func(
+				t *testing.T,
+				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -2336,7 +2450,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -2385,7 +2499,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -2435,7 +2549,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				_ *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -2487,7 +2601,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -2551,7 +2665,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
-				ads *mocks2.AuthDataExtractStrategyMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
 				_ *jwtAuthenticator,
 			) {
 				t.Helper()
@@ -2637,13 +2751,13 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					t *testing.T,
 					_ *pipelinemocks.ContextMock,
 					_ *mocks.CacheMock,
-					_ *mocks2.AuthDataExtractStrategyMock,
+					_ *extractormocks.AuthDataExtractStrategyMock,
 					_ *jwtAuthenticator,
 				) {
 					t.Helper()
 				})
 
-			ads := mocks2.NewAuthDataExtractStrategyMock(t)
+			ads := extractormocks.NewAuthDataExtractStrategyMock(t)
 			tc.authenticator.ads = ads
 
 			cch := mocks.NewCacheMock(t)
@@ -2925,4 +3039,92 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 			assert.Equal(t, []string{tc.expectedHeader}, response.Headers["WWW-Authenticate"])
 		})
 	}
+}
+
+func newJwtAuthenticatorWithTrustAnchors(
+	t *testing.T,
+	jwksURL string,
+	issuer string,
+	trustAnchors ...*x509.Certificate,
+) *jwtAuthenticator {
+	t.Helper()
+
+	informer := newTestCertificateBundleInformer(t, "anchors", trustAnchors...)
+
+	return &jwtAuthenticator{
+		r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+			return oauth2.ServerMetadata{
+				JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksURL,
+					endpoint.WithHeader("Accept", "application/json"),
+				),
+			}, nil
+		}),
+		a: oauth2.Expectation{
+			AllowedAlgorithms: []string{"ES384"},
+			TrustedIssuers:    []string{issuer},
+			ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+		},
+		sf:              &PrincipalInfo{IDFrom: "sub"},
+		ttl:             new(10 * time.Second),
+		validateJWKCert: true,
+		informer:        informer,
+		principalName:   DefaultPrincipalName,
+	}
+}
+
+func newTestCertificateBundleInformer(
+	t *testing.T,
+	selector string,
+	certificates ...*x509.Certificate,
+) *secrets.CertificateBundleInformer[*x509.CertPool] {
+	t.Helper()
+
+	bundle := secrettypes.NewCertificateBundle(selector, certificates)
+
+	handle := secretsmocks.NewCertificateBundleHandleMock(t)
+	handle.EXPECT().
+		OnUpdate(mock.MatchedBy(func(callback secrets.UpdateFunc[secrets.CertificateBundle]) bool {
+			require.NoError(t, callback(t.Context(), bundle))
+
+			return true
+		}))
+
+	resolver := secretsmocks.NewResolverMock(t)
+	resolver.EXPECT().
+		CertificateBundle(secrets.Reference{Source: "trust", Selector: selector}).
+		Return(handle, nil)
+
+	informer, err := secrets.NewCertificateBundleInformer[*x509.CertPool](
+		resolver,
+		secrets.Reference{Source: "trust", Selector: selector},
+		secrets.WithConverter(toCertPool),
+	)
+	require.NoError(t, err)
+
+	return informer
+}
+
+func newNotReadyCertificateBundleInformer(
+	t *testing.T,
+	selector string,
+) *secrets.CertificateBundleInformer[*x509.CertPool] {
+	t.Helper()
+
+	handle := secretsmocks.NewCertificateBundleHandleMock(t)
+	handle.EXPECT().
+		OnUpdate(mock.Anything)
+
+	resolver := secretsmocks.NewResolverMock(t)
+	resolver.EXPECT().
+		CertificateBundle(secrets.Reference{Source: "trust", Selector: selector}).
+		Return(handle, nil)
+
+	informer, err := secrets.NewCertificateBundleInformer[*x509.CertPool](
+		resolver,
+		secrets.Reference{Source: "trust", Selector: selector},
+		secrets.WithConverter(toCertPool),
+	)
+	require.NoError(t, err)
+
+	return informer
 }
