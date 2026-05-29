@@ -88,7 +88,7 @@ func (r *manager) Stop(ctx context.Context) error {
 
 	r.resolver.Stop()
 
-	if err != nil {
+	if err == nil {
 		r.logger.Info().Msg("Secrets manager stopped")
 	}
 
