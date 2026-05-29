@@ -37,24 +37,41 @@ import (
 	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestNewProvider(t *testing.T) {
 	t.Parallel()
 
 	pemFile := createPEMFile(t, "first", "second")
+	certFile := createCertificatePEMFile(t, "first", "second")
 
 	for uc, tc := range map[string]struct {
 		conf   map[string]any
 		assert func(*testing.T, error, provider.Provider)
 	}{
-		"successfully creates provider": {
+		"successfully creates provider with key store": {
 			conf: map[string]any{"path": pemFile},
 			assert: func(t *testing.T, err error, provider provider.Provider) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.Equal(t, "pem", provider.Type())
+			},
+		},
+		"successfully creates provider with certificate store": {
+			conf: map[string]any{"path": certFile},
+			assert: func(t *testing.T, err error, prv provider.Provider) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.Equal(t, "pem", prv.Type())
+
+				bundle, err := prv.GetCertificateBundle(t.Context(), provider.Selector{})
+				require.NoError(t, err)
+				require.Len(t, bundle.Certificates(), 2)
+				require.Equal(t, "first", bundle.Certificates()[0].Subject.CommonName)
+				require.Equal(t, "second", bundle.Certificates()[1].Subject.CommonName)
 			},
 		},
 		"fails for missing path config": {
@@ -162,6 +179,43 @@ func TestProviderWatch(t *testing.T) {
 					}
 
 					return secret.Selector() == "second"
+				}, time.Second, 20*time.Millisecond)
+			},
+		},
+		"reloads certificate bundle on file change and emits source event": {
+			createPath: func(t *testing.T) string {
+				t.Helper()
+
+				return createCertificatePEMFile(t, "first")
+			},
+			setup: func(t *testing.T, om *mocks.ChangeObserverMock) {
+				t.Helper()
+
+				om.EXPECT().
+					Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
+						return len(e.Selectors) == 0
+					}))
+			},
+			action: func(t *testing.T, prv provider.Provider, path string) {
+				t.Helper()
+
+				t.Cleanup(func() {
+					_ = prv.Stop(context.Background())
+				})
+
+				require.NoError(t, prv.Start(context.Background()))
+
+				writeCertificatePEMFile(t, path, "second")
+
+				require.Eventually(t, func() bool {
+					bundle, err := prv.GetCertificateBundle(context.Background(), provider.Selector{})
+					if err != nil {
+						return false
+					}
+
+					certs := bundle.Certificates()
+
+					return len(certs) == 1 && certs[0].Subject.CommonName == "second"
 				}, time.Second, 20*time.Millisecond)
 			},
 		},
@@ -460,8 +514,9 @@ func TestProviderReload(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, path string, om *mocks.ChangeObserverMock)
-		assert func(t *testing.T, prv *pemProvider, logs *bytes.Buffer)
+		createPath func(t *testing.T) string
+		setup      func(t *testing.T, path string, om *mocks.ChangeObserverMock)
+		assert     func(t *testing.T, prv *pemProvider, logs *bytes.Buffer)
 	}{
 		"reloads key material and emits source event": {
 			setup: func(t *testing.T, path string, om *mocks.ChangeObserverMock) {
@@ -478,11 +533,45 @@ func TestProviderReload(t *testing.T) {
 				t.Helper()
 
 				prv.mu.RLock()
-				ks := prv.ks
+				st := prv.store
 				prv.mu.RUnlock()
+
+				ks, ok := st.(keyStore)
+				require.True(t, ok)
 
 				require.Len(t, ks, 1)
 				require.Equal(t, "second", ks[0].Selector())
+				require.Contains(t, logs.String(), "pem file reloaded")
+			},
+		},
+		"reloads certificate bundle and emits source event": {
+			createPath: func(t *testing.T) string {
+				t.Helper()
+
+				return createCertificatePEMFile(t, "first")
+			},
+			setup: func(t *testing.T, path string, om *mocks.ChangeObserverMock) {
+				t.Helper()
+
+				writeCertificatePEMFile(t, path, "second")
+
+				om.EXPECT().
+					Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
+						return len(e.Selectors) == 0
+					}))
+			},
+			assert: func(t *testing.T, prv *pemProvider, logs *bytes.Buffer) {
+				t.Helper()
+
+				prv.mu.RLock()
+				st := prv.store
+				prv.mu.RUnlock()
+
+				cs, ok := st.(certStore)
+				require.True(t, ok)
+
+				require.Len(t, cs, 1)
+				require.Equal(t, "second", cs[0].Subject.CommonName)
 				require.Contains(t, logs.String(), "pem file reloaded")
 			},
 		},
@@ -496,12 +585,36 @@ func TestProviderReload(t *testing.T) {
 				t.Helper()
 
 				prv.mu.RLock()
-				ks := prv.ks
+				st := prv.store
 				prv.mu.RUnlock()
+
+				ks, ok := st.(keyStore)
+				require.True(t, ok)
 
 				require.Len(t, ks, 1)
 				require.Equal(t, "first", ks[0].Selector())
 				require.Contains(t, logs.String(), "Reloading pem file failed")
+			},
+		},
+		"keeps last-known-good material and logs if store kind changed": {
+			setup: func(t *testing.T, path string, _ *mocks.ChangeObserverMock) {
+				t.Helper()
+
+				writeCertificatePEMFile(t, path, "certificate")
+			},
+			assert: func(t *testing.T, prv *pemProvider, logs *bytes.Buffer) {
+				t.Helper()
+
+				prv.mu.RLock()
+				st := prv.store
+				prv.mu.RUnlock()
+
+				ks, ok := st.(keyStore)
+				require.True(t, ok)
+
+				require.Len(t, ks, 1)
+				require.Equal(t, "first", ks[0].Selector())
+				require.Contains(t, logs.String(), "Reloading pem file failed because store kind changed")
 			},
 		},
 	} {
@@ -509,7 +622,11 @@ func TestProviderReload(t *testing.T) {
 			t.Parallel()
 
 			path := createPEMFile(t, "first")
-			ks, err := newKeyStoreFromPEMFile(path, "")
+			if tc.createPath != nil {
+				path = tc.createPath(t)
+			}
+
+			store, err := loadStore(path, "")
 			require.NoError(t, err)
 
 			var logs bytes.Buffer
@@ -521,7 +638,7 @@ func TestProviderReload(t *testing.T) {
 				path:     path,
 				logger:   zerolog.New(&logs),
 				observer: om,
-				ks:       ks,
+				store:    store,
 			}
 
 			prv.reload()
@@ -629,11 +746,19 @@ func TestProviderGetSecret(t *testing.T) {
 			},
 		},
 		"fails if key store is empty": {
-			provider: &pemProvider{},
+			provider: &pemProvider{store: keyStore{}},
 			assert: func(t *testing.T, err error, _ types.Secret) {
 				t.Helper()
 
 				require.ErrorIs(t, err, types.ErrSecretNotFound)
+			},
+		},
+		"fails if provider is backed by certificate store": {
+			provider: newCertificatePEMProviderForTest(t, "first"),
+			assert: func(t *testing.T, err error, _ types.Secret) {
+				t.Helper()
+
+				require.ErrorIs(t, err, types.ErrUnsupportedOperation)
 			},
 		},
 	} {
@@ -677,12 +802,21 @@ func TestProviderGetSecretSet(t *testing.T) {
 			},
 		},
 		"returns empty set if key store is empty": {
-			provider: &pemProvider{},
+			provider: &pemProvider{store: keyStore{}},
 			assert: func(t *testing.T, err error, secretSet []types.Secret) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.Empty(t, secretSet)
+			},
+		},
+		"fails if provider is backed by certificate store": {
+			provider: newCertificatePEMProviderForTest(t, "first"),
+			assert: func(t *testing.T, err error, secretSet []types.Secret) {
+				t.Helper()
+
+				require.ErrorIs(t, err, types.ErrUnsupportedOperation)
+				require.Nil(t, secretSet)
 			},
 		},
 	} {
@@ -709,11 +843,41 @@ func TestProviderGetCredentials(t *testing.T) {
 func TestProviderGetCertificateBundle(t *testing.T) {
 	t.Parallel()
 
-	prov := &pemProvider{}
+	for uc, tc := range map[string]struct {
+		provider *pemProvider
+		assert   func(*testing.T, error, types.CertificateBundle)
+	}{
+		"returns certificate bundle": {
+			provider: newCertificatePEMProviderForTest(t, "first", "second"),
+			assert: func(t *testing.T, err error, bundle types.CertificateBundle) {
+				t.Helper()
 
-	_, err := prov.GetCertificateBundle(t.Context(), provider.Selector{})
+				require.NoError(t, err)
+				require.NotNil(t, bundle)
+				require.Empty(t, bundle.Selector())
+				require.Len(t, bundle.Certificates(), 2)
+				require.Equal(t, "first", bundle.Certificates()[0].Subject.CommonName)
+				require.Equal(t, "second", bundle.Certificates()[1].Subject.CommonName)
+			},
+		},
+		"fails if provider is backed by key store": {
+			provider: newPEMProviderForTest(t, "first"),
+			assert: func(t *testing.T, err error, bundle types.CertificateBundle) {
+				t.Helper()
 
-	require.ErrorIs(t, err, types.ErrUnsupportedOperation)
+				require.ErrorIs(t, err, types.ErrUnsupportedOperation)
+				require.Nil(t, bundle)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			bundle, err := tc.provider.GetCertificateBundle(t.Context(), provider.Selector{})
+
+			tc.assert(t, err, bundle)
+		})
+	}
 }
 
 func createPEMFile(t *testing.T, keyIDs ...string) string {
@@ -725,10 +889,40 @@ func createPEMFile(t *testing.T, keyIDs ...string) string {
 	return path
 }
 
+func createCertificatePEMFile(t *testing.T, names ...string) string {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), "certs.pem")
+	writeCertificatePEMFile(t, path, names...)
+
+	return path
+}
+
 func newPEMProviderForTest(t *testing.T, keyIDs ...string) *pemProvider {
 	t.Helper()
 
 	pemFile := createPEMFile(t, keyIDs...)
+
+	validator, err := validation.NewValidator()
+	require.NoError(t, err)
+
+	prov, err := newProvider(provider.Args{
+		Config:         map[string]any{"path": pemFile},
+		Logger:         zerolog.Nop(),
+		DecoderFactory: encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
+	})
+	require.NoError(t, err)
+
+	concrete, ok := prov.(*pemProvider)
+	require.True(t, ok)
+
+	return concrete
+}
+
+func newCertificatePEMProviderForTest(t *testing.T, names ...string) *pemProvider {
+	t.Helper()
+
+	pemFile := createCertificatePEMFile(t, names...)
 
 	validator, err := validation.NewValidator()
 	require.NoError(t, err)
@@ -764,6 +958,24 @@ func writePEMFile(t *testing.T, path string, keyIDs ...string) {
 		require.NoError(t, err)
 
 		opts = append(opts, pemx.WithRSAPrivateKey(key, pemx.WithHeader("X-Key-ID", keyID)))
+	}
+
+	data, err := pemx.BuildPEM(opts...)
+	require.NoError(t, err)
+
+	err = os.WriteFile(path, data, 0o600)
+	require.NoError(t, err)
+}
+
+func writeCertificatePEMFile(t *testing.T, path string, names ...string) {
+	t.Helper()
+
+	opts := make([]pemx.EntryOption, 0, len(names))
+	for _, name := range names {
+		ca, err := testsupport.NewRootCA(name, 24*time.Hour)
+		require.NoError(t, err)
+
+		opts = append(opts, pemx.WithX509Certificate(ca.Certificate))
 	}
 
 	data, err := pemx.BuildPEM(opts...)

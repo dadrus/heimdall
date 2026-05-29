@@ -1,12 +1,11 @@
 package pem
 
 import (
-	"bytes"
+	"context"
 	"crypto"
 	"crypto/x509"
 	"encoding/hex"
-	"encoding/pem"
-	"os"
+	"errors"
 
 	"github.com/youmark/pkcs8"
 
@@ -16,48 +15,13 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-const (
-	pemBlockTypeEncryptedPrivateKey = "ENCRYPTED PRIVATE KEY"
-	pemBlockTypePrivateKey          = "PRIVATE KEY"
-	pemBlockTypeECPrivateKey        = "EC PRIVATE KEY"
-	pemBlockTypeRSAPrivateKey       = "RSA PRIVATE KEY"
-	pemBlockTypeCertificate         = "CERTIFICATE"
-)
+var errNoKeyMaterialPresent = errors.New("no key material present in the keystore")
 
 type keyStore []provider.Secret
 
 type keyEntry struct {
 	keyID      string
 	privateKey crypto.Signer
-}
-
-func newKeyStoreFromKey(selector string, privateKey crypto.Signer) (keyStore, error) {
-	entry := keyEntry{
-		keyID:      selector,
-		privateKey: privateKey,
-	}
-
-	return buildStore([]keyEntry{entry}, nil)
-}
-
-func newKeyStoreFromPEMFile(path, password string) (keyStore, error) {
-	fileInfo, err := os.Stat(path)
-	if err != nil {
-		return nil, errorchain.NewWithMessagef(provider.ErrConfiguration,
-			"failed to get information about %s", path).CausedBy(err)
-	}
-
-	if fileInfo.IsDir() {
-		return nil, errorchain.NewWithMessagef(provider.ErrConfiguration, "'%s' is not a file", path)
-	}
-
-	contents, err := os.ReadFile(path)
-	if err != nil {
-		return nil, errorchain.NewWithMessagef(provider.ErrConfiguration,
-			"failed to read %s", path).CausedBy(err)
-	}
-
-	return newKeyStoreFromPEMBytes(contents, password)
 }
 
 func newKeyStoreFromPEMBytes(contents []byte, password string) (keyStore, error) {
@@ -119,9 +83,17 @@ func newKeyStoreFromPEMBytes(contents []byte, password string) (keyStore, error)
 	return buildStore(entries, certs)
 }
 
-func (s keyStore) get(selector string) (provider.Secret, error) {
+func (s keyStore) getSecret(_ context.Context, selector provider.Selector) (provider.Secret, error) {
+	if len(s) == 0 {
+		return nil, provider.ErrSecretNotFound
+	}
+
+	if len(selector.Value) == 0 {
+		return s[0], nil
+	}
+
 	for _, entry := range s {
-		if entry.Selector() == selector {
+		if entry.Selector() == selector.Value {
 			return entry, nil
 		}
 	}
@@ -129,26 +101,24 @@ func (s keyStore) get(selector string) (provider.Secret, error) {
 	return nil, errorchain.NewWithMessagef(provider.ErrSecretNotFound, "%s", selector)
 }
 
-func readPEMBlocks(data []byte) []*pem.Block {
-	var blocks []*pem.Block
+func (s keyStore) getSecretSet(_ context.Context, _ provider.Selector) ([]provider.Secret, error) {
+	return s, nil
+}
 
-	for {
-		block, next := pem.Decode(data)
-		if block == nil {
-			break
-		}
+func (s keyStore) getCertificateBundle(_ context.Context, _ provider.Selector) (provider.CertificateBundle, error) {
+	return nil, provider.ErrUnsupportedOperation
+}
 
-		blocks = append(blocks, block)
-		data = next
-	}
+func (s keyStore) sameKind(other store) bool {
+	_, ok := other.(keyStore)
 
-	return blocks
+	return ok
 }
 
 func buildStore(entries []keyEntry, certs []*x509.Certificate) (keyStore, error) {
 	if len(entries) == 0 {
-		return nil, errorchain.NewWithMessage(provider.ErrConfiguration,
-			"no key material present in the keystore")
+		return nil, errorchain.New(provider.ErrConfiguration).
+			CausedBy(errNoKeyMaterialPresent)
 	}
 
 	known := make(map[string]struct{}, len(entries))
@@ -204,61 +174,3 @@ func generateKeyID(chain []*x509.Certificate, signer crypto.Signer) (string, err
 	return hex.EncodeToString(keyID), nil
 }
 
-func findChain(key crypto.PublicKey, certPool []*x509.Certificate) []*x509.Certificate {
-	publicKey, ok := key.(interface {
-		Equal(other crypto.PublicKey) bool
-	})
-	if !ok {
-		return nil
-	}
-
-	for _, cert := range certPool {
-		if publicKey.Equal(cert.PublicKey) {
-			return buildChain([]*x509.Certificate{cert}, certPool)
-		}
-	}
-
-	return nil
-}
-
-func buildChain(chain []*x509.Certificate, certPool []*x509.Certificate) []*x509.Certificate {
-	child := chain[len(chain)-1]
-
-	for _, cert := range certPool {
-		if child.Equal(cert) {
-			continue
-		}
-
-		if isIssuerOf(child, cert) {
-			return buildChain(append(chain, cert), certPool)
-		}
-	}
-
-	return chain
-}
-
-func isIssuerOf(child, issuer *x509.Certificate) bool {
-	if len(child.AuthorityKeyId) != 0 && len(issuer.SubjectKeyId) != 0 {
-		return bytes.Equal(child.AuthorityKeyId, issuer.SubjectKeyId)
-	}
-
-	return bytes.Equal(child.RawIssuer, issuer.RawSubject)
-}
-
-func validateChain(chain []*x509.Certificate) error {
-	intermediates := make([]*x509.Certificate, 0, max(0, len(chain)-2)) //nolint:mnd
-	if len(chain) > 2 {                                                 //nolint:mnd
-		intermediates = append(intermediates, chain[1:len(chain)-1]...)
-	}
-
-	err := pkix.ValidateCertificate(chain[0],
-		pkix.WithRootCACertificates([]*x509.Certificate{chain[len(chain)-1]}),
-		pkix.WithIntermediateCACertificates(intermediates),
-	)
-	if err != nil {
-		return errorchain.NewWithMessage(provider.ErrConfiguration,
-			"invalid certificate chain").CausedBy(err)
-	}
-
-	return nil
-}

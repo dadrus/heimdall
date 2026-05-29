@@ -18,6 +18,7 @@ package pem
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"sync"
@@ -40,6 +41,14 @@ func init() {
 	registry.Register(ProviderType, provider.FactoryFunc(newProvider))
 }
 
+type store interface {
+	getSecret(ctx context.Context, selector provider.Selector) (provider.Secret, error)
+	getSecretSet(ctx context.Context, selector provider.Selector) ([]provider.Secret, error)
+	getCertificateBundle(ctx context.Context, selector provider.Selector) (provider.CertificateBundle, error)
+
+	sameKind(other store) bool
+}
+
 type pemProvider struct {
 	path     string
 	password string
@@ -51,8 +60,8 @@ type pemProvider struct {
 
 	logger zerolog.Logger
 
-	mu sync.RWMutex
-	ks keyStore
+	mu    sync.RWMutex
+	store store
 
 	observer provider.ChangeObserver
 
@@ -74,7 +83,7 @@ func newProvider(args provider.Args) (provider.Provider, error) {
 		return nil, err
 	}
 
-	ks, err := newKeyStoreFromPEMFile(cfg.Path, cfg.Password)
+	store, err := loadStore(cfg.Path, cfg.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +94,7 @@ func newProvider(args provider.Args) (provider.Provider, error) {
 		watch:    cfg.Watch,
 		logger:   args.Logger,
 		observer: args.Observer,
-		ks:       ks,
+		store:    store,
 	}, nil
 }
 
@@ -94,32 +103,23 @@ func (*pemProvider) IsNamespaceAware() bool             { return false }
 func (*pemProvider) Type() string                       { return ProviderType }
 
 func (p *pemProvider) GetSecret(
-	_ context.Context,
+	ctx context.Context,
 	selector provider.Selector,
 ) (provider.Secret, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 
-	if len(p.ks) == 0 {
-		return nil, provider.ErrSecretNotFound
-	}
-
-	if selector.Value != "" {
-		return p.ks.get(selector.Value)
-	}
-
-	return p.ks[0], nil
+	return p.store.getSecret(ctx, selector)
 }
 
 func (p *pemProvider) GetSecretSet(
-	_ context.Context,
-	_ provider.Selector,
+	ctx context.Context,
+	selector provider.Selector,
 ) ([]provider.Secret, error) {
 	p.mu.RLock()
-	ks := p.ks
-	p.mu.RUnlock()
+	defer p.mu.RUnlock()
 
-	return ks, nil
+	return p.store.getSecretSet(ctx, selector)
 }
 
 func (p *pemProvider) GetCredentials(
@@ -130,10 +130,13 @@ func (p *pemProvider) GetCredentials(
 }
 
 func (p *pemProvider) GetCertificateBundle(
-	_ context.Context,
-	_ provider.Selector,
+	ctx context.Context,
+	selector provider.Selector,
 ) (provider.CertificateBundle, error) {
-	return nil, provider.ErrUnsupportedOperation
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	return p.store.getCertificateBundle(ctx, selector)
 }
 
 func (p *pemProvider) Start(ctx context.Context) error {
@@ -201,7 +204,7 @@ func (p *pemProvider) Stop(_ context.Context) error {
 }
 
 func (p *pemProvider) reload() {
-	ks, err := newKeyStoreFromPEMFile(p.path, p.password)
+	next, err := loadStore(p.path, p.password)
 	if err != nil {
 		p.logger.Warn().
 			Err(err).
@@ -212,7 +215,18 @@ func (p *pemProvider) reload() {
 	}
 
 	p.mu.Lock()
-	p.ks = ks
+
+	if !p.store.sameKind(next) {
+		p.mu.Unlock()
+		p.logger.Warn().
+			Str("_file", p.path).
+			Msg("Reloading pem file failed because store kind changed")
+
+		return
+	}
+
+	p.store = next
+
 	p.mu.Unlock()
 
 	p.observer.Notify(provider.ChangeEvent{})
@@ -318,4 +332,27 @@ func isReloadEvent(evt fsnotify.Event) bool {
 
 func isAtomicUpdateEvent(evt fsnotify.Event) bool {
 	return evt.Has(fsnotify.Chmod)
+}
+
+func loadStore(path, password string) (store, error) {
+	data, err := readFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	ks, err := newKeyStoreFromPEMBytes(data, password)
+	if err == nil {
+		return ks, nil
+	}
+
+	cs, bundleErr := newCertificateStoreFromPEMBytes(data)
+	if bundleErr == nil {
+		return cs, nil
+	}
+
+	if errors.Is(err, errNoKeyMaterialPresent) {
+		return nil, bundleErr
+	}
+
+	return nil, err
 }

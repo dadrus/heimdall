@@ -18,7 +18,6 @@ package pem
 
 import (
 	"bytes"
-	"crypto"
 	"crypto/ecdh"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -29,8 +28,6 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"math/big"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -42,93 +39,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
-
-func TestNewKeyStoreFromPEMFile(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		pemFile func(*testing.T) string
-		assert  func(*testing.T, keyStore, error)
-	}{
-		"returns configuration error if file does not exist": {
-			pemFile: func(t *testing.T) string {
-				t.Helper()
-
-				return filepath.Join(t.TempDir(), "missing.pem")
-			},
-			assert: func(t *testing.T, _ keyStore, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, provider.ErrConfiguration)
-			},
-		},
-		"returns configuration error if path points to directory": {
-			pemFile: func(t *testing.T) string {
-				t.Helper()
-
-				return t.TempDir()
-			},
-			assert: func(t *testing.T, _ keyStore, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, provider.ErrConfiguration)
-				require.ErrorContains(t, err, "is not a file")
-			},
-		},
-		"returns configuration error if file cannot be read": {
-			pemFile: func(t *testing.T) string {
-				t.Helper()
-
-				path := filepath.Join(t.TempDir(), "unreadable.pem")
-				err := os.WriteFile(path, []byte("invalid"), 0o600)
-				require.NoError(t, err)
-				require.NoError(t, os.Chmod(path, 0o000))
-
-				return path
-			},
-			assert: func(t *testing.T, _ keyStore, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, provider.ErrConfiguration)
-				require.ErrorContains(t, err, "failed to read")
-			},
-		},
-		"returns configuration error if pem has no key material": {
-			pemFile: func(t *testing.T) string {
-				t.Helper()
-
-				ca, err := testsupport.NewRootCA("PEM Test CA", 24*time.Hour)
-				require.NoError(t, err)
-
-				pemBytes, err := pemx.BuildPEM(pemx.WithX509Certificate(ca.Certificate))
-				require.NoError(t, err)
-
-				path := filepath.Join(t.TempDir(), "cert-only.pem")
-				err = os.WriteFile(path, pemBytes, 0o600)
-				require.NoError(t, err)
-
-				return path
-			},
-			assert: func(t *testing.T, _ keyStore, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, provider.ErrConfiguration)
-				require.ErrorContains(t, err, "no key material present")
-			},
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
-
-			ks, err := newKeyStoreFromPEMFile(tc.pemFile(t), "")
-			tc.assert(t, ks, err)
-		})
-	}
-}
 
 func TestNewKeyStoreFromPEMBytes(t *testing.T) {
 	t.Parallel()
@@ -285,6 +195,46 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 				require.Error(t, err)
 				require.ErrorIs(t, err, provider.ErrInternal)
 				require.ErrorContains(t, err, "failed to parse")
+			},
+		},
+		"returns internal error for malformed certificate data": {
+			pemBytes: func(t *testing.T) []byte {
+				t.Helper()
+
+				return []byte(`
+-----BEGIN CERTIFICATE-----
+MHcCAQEEIAcCM9VY6RRiUlz3UoywbT9yN9UlWEEWKIPqiA2D86pCoAoGCCqGSM49
+AwEHoUQDQgAEPEmirqVF2KoNguFuh4GGyShM3OIZt/yD6WESlOvAJhJX6HZyOgFu
+xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
+-----END CERTIFICATE-----
+`)
+			},
+			assert: func(t *testing.T, _ keyStore, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, provider.ErrInternal)
+				require.ErrorContains(t, err, "failed to parse")
+			},
+		},
+		"returns configuration error if no key material is present": {
+			pemBytes: func(t *testing.T) []byte {
+				t.Helper()
+
+				ca, err := testsupport.NewRootCA("PEM Test CA", 24*time.Hour)
+				require.NoError(t, err)
+
+				pemBytes, err := pemx.BuildPEM(pemx.WithX509Certificate(ca.Certificate))
+				require.NoError(t, err)
+
+				return pemBytes
+			},
+			assert: func(t *testing.T, _ keyStore, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, provider.ErrConfiguration)
+				require.ErrorIs(t, err, errNoKeyMaterialPresent)
 			},
 		},
 		"returns configuration error for duplicate key id": {
@@ -450,145 +400,7 @@ xijD/4gPFRBfs2GsfVZzSL9kH7HH0chB9w==
 	}
 }
 
-func TestFindChain(t *testing.T) {
-	t.Parallel()
-
-	rootCA, intermediateCA, leafCert, privateKey := createLeafWithIntermediateCA(t)
-
-	for uc, tc := range map[string]struct {
-		pool   []*x509.Certificate
-		key    crypto.PublicKey
-		assert func(*testing.T, []*x509.Certificate)
-	}{
-		"returns full chain": {
-			pool: []*x509.Certificate{
-				leafCert,
-				intermediateCA.Certificate,
-				rootCA.Certificate,
-			},
-			key: privateKey.Public(),
-			assert: func(t *testing.T, chain []*x509.Certificate) {
-				t.Helper()
-
-				require.Len(t, chain, 3)
-				assert.True(t, chain[0].Equal(leafCert))
-				assert.True(t, chain[1].Equal(intermediateCA.Certificate))
-				assert.True(t, chain[2].Equal(rootCA.Certificate))
-			},
-		},
-		"returns only the leaf certificate if intermediate is missing": {
-			pool: []*x509.Certificate{
-				leafCert,
-				rootCA.Certificate,
-			},
-			key: privateKey.Public(),
-			assert: func(t *testing.T, chain []*x509.Certificate) {
-				t.Helper()
-
-				require.Len(t, chain, 1)
-				assert.True(t, chain[0].Equal(leafCert))
-			},
-		},
-		"returns nil if no matching certificate exists": {
-			pool: []*x509.Certificate{
-				rootCA.Certificate,
-				intermediateCA.Certificate,
-			},
-			key: privateKey.Public(),
-			assert: func(t *testing.T, chain []*x509.Certificate) {
-				t.Helper()
-
-				assert.Nil(t, chain)
-			},
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
-
-			tc.assert(t, findChain(tc.key, tc.pool))
-		})
-	}
-}
-
-func TestValidateChain(t *testing.T) {
-	t.Parallel()
-
-	rootCA, intermediateCA, leafCert, _ := createLeafWithIntermediateCA(t)
-	badRootCA, err := testsupport.NewRootCA("PEM Bad Root CA", 24*time.Hour)
-	require.NoError(t, err)
-
-	for uc, tc := range map[string]struct {
-		chain  []*x509.Certificate
-		assert func(*testing.T, error)
-	}{
-		"accepts valid chain": {
-			chain: []*x509.Certificate{
-				leafCert,
-				intermediateCA.Certificate,
-				rootCA.Certificate,
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-			},
-		},
-		"returns configuration error for incomplete chain": {
-			chain: []*x509.Certificate{
-				leafCert,
-				rootCA.Certificate,
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, provider.ErrConfiguration)
-				require.ErrorContains(t, err, "invalid certificate chain")
-			},
-		},
-		"returns configuration error for malformed issuer": {
-			chain: []*x509.Certificate{
-				leafCert,
-				intermediateCA.Certificate,
-				badRootCA.Certificate,
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, provider.ErrConfiguration)
-				require.ErrorContains(t, err, "invalid certificate chain")
-			},
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
-
-			tc.assert(t, validateChain(tc.chain))
-		})
-	}
-}
-
-func TestNewKeyStoreFromKey(t *testing.T) {
-	t.Parallel()
-
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	require.NoError(t, err)
-
-	ks, err := newKeyStoreFromKey("test", key)
-	require.NoError(t, err)
-	require.Len(t, ks, 1)
-
-	secret, ok := ks[0].(provider.AsymmetricKeySecret)
-	require.True(t, ok)
-
-	assert.Equal(t, provider.SecretKindAsymmetricKey, secret.Kind())
-	assert.IsType(t, &rsa.PrivateKey{}, secret.PrivateKey())
-	assert.NotEmpty(t, secret.KeyID())
-	assert.Equal(t, secret.Selector(), secret.KeyID())
-}
-
-func TestKeyStoreGet(t *testing.T) {
+func TestKeyStoreGetSecret(t *testing.T) {
 	t.Parallel()
 
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -601,33 +413,125 @@ func TestKeyStoreGet(t *testing.T) {
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
-		keyID  string
-		assert func(*testing.T, error)
+		ks        keyStore
+		selector provider.Selector
+		assert   func(*testing.T, provider.Secret, error)
 	}{
-		"returns entry for existing key": {
-			keyID: "first",
-			assert: func(t *testing.T, err error) {
+		"returns first entry for empty selector": {
+			ks: ks,
+			assert: func(t *testing.T, secret provider.Secret, err error) {
 				t.Helper()
+
 				require.NoError(t, err)
+				require.NotNil(t, secret)
+				assert.Equal(t, "first", secret.Selector())
+			},
+		},
+		"returns entry for existing key": {
+			ks:ks,
+			selector: provider.Selector{Value: "first"},
+			assert: func(t *testing.T, secret provider.Secret, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, secret)
+				assert.Equal(t, "first", secret.Selector())
 			},
 		},
 		"returns error for missing key": {
-			keyID: "missing",
-			assert: func(t *testing.T, err error) {
+			ks: ks,
+			selector: provider.Selector{Value: "missing"},
+			assert: func(t *testing.T, secret provider.Secret, err error) {
 				t.Helper()
+
 				require.Error(t, err)
 				require.ErrorIs(t, err, provider.ErrSecretNotFound)
+				require.Nil(t, secret)
+			},
+		},
+		"returns error if store is empty": {
+			ks: keyStore{},
+			assert: func(t *testing.T, secret provider.Secret, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, provider.ErrSecretNotFound)
+				require.Nil(t, secret)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			_, err := ks.get(tc.keyID)
-			tc.assert(t, err)
+			secret, err := tc.ks.getSecret(t.Context(), tc.selector)
+
+			tc.assert(t, secret, err)
 		})
 	}
 }
+
+func TestKeyStoreGetSecretSet(t *testing.T) {
+	t.Parallel()
+
+	key1, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+	key2, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	pemBytes, err := pemx.BuildPEM(
+		pemx.WithRSAPrivateKey(key1, pemx.WithHeader("X-Key-ID", "first")),
+		pemx.WithRSAPrivateKey(key2, pemx.WithHeader("X-Key-ID", "second")),
+	)
+	require.NoError(t, err)
+
+	ks, err := newKeyStoreFromPEMBytes(pemBytes, "")
+	require.NoError(t, err)
+
+	secrets, err := ks.getSecretSet(t.Context(), provider.Selector{Value: "ignored"})
+
+	require.NoError(t, err)
+	require.Len(t, secrets, 2)
+	assert.Equal(t, "first", secrets[0].Selector())
+	assert.Equal(t, "second", secrets[1].Selector())
+}
+
+func TestKeyStoreGetCertificateBundle(t *testing.T) {
+	t.Parallel()
+
+	ks := keyStore{}
+
+	bundle, err := ks.getCertificateBundle(t.Context(), provider.Selector{})
+
+	require.Error(t, err)
+	require.ErrorIs(t, err, provider.ErrUnsupportedOperation)
+	require.Nil(t, bundle)
+}
+
+func TestKeyStoreSameKind(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		other store
+		want  bool
+	}{
+		"returns true for key store": {
+			other: keyStore{},
+			want:  true,
+		},
+		"returns false for certificate store": {
+			other: certStore{},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			ks := keyStore{}
+
+			assert.Equal(t, tc.want, ks.sameKind(tc.other))
+		})
+	}
+}
+
 
 func createLeafAndCA(t *testing.T, subjectKeyID []byte) (*ecdsa.PrivateKey, *x509.Certificate, *testsupport.CA) {
 	t.Helper()
@@ -656,51 +560,6 @@ func createLeafAndCA(t *testing.T, subjectKeyID []byte) (*ecdsa.PrivateKey, *x50
 	require.NoError(t, err)
 
 	return privateKey, cert, ca
-}
-
-func createLeafWithIntermediateCA(
-	t *testing.T,
-) (*testsupport.CA, *testsupport.CA, *x509.Certificate, *ecdsa.PrivateKey) {
-	t.Helper()
-
-	rootCA, err := testsupport.NewRootCA("PEM Test Root CA", 24*time.Hour)
-	require.NoError(t, err)
-
-	intermediateKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	require.NoError(t, err)
-
-	intermediateCert, err := rootCA.IssueCertificate(
-		testsupport.WithSubject(x509pkix.Name{
-			CommonName:   "PEM Test Intermediate CA",
-			Organization: []string{"Heimdall"},
-			Country:      []string{"EU"},
-		}),
-		testsupport.WithValidity(time.Now(), time.Hour),
-		testsupport.WithSubjectPubKey(&intermediateKey.PublicKey, x509.ECDSAWithSHA384),
-		testsupport.WithIsCA(),
-		testsupport.WithGeneratedSubjectKeyID(),
-	)
-	require.NoError(t, err)
-
-	intermediateCA := testsupport.NewCA(intermediateKey, intermediateCert)
-
-	privateKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	require.NoError(t, err)
-
-	leafCert, err := intermediateCA.IssueCertificate(
-		testsupport.WithSubject(x509pkix.Name{
-			CommonName:   "PEM Test EE",
-			Organization: []string{"Heimdall"},
-			Country:      []string{"EU"},
-		}),
-		testsupport.WithValidity(time.Now(), time.Hour),
-		testsupport.WithSubjectPubKey(&privateKey.PublicKey, x509.ECDSAWithSHA384),
-		testsupport.WithKeyUsage(x509.KeyUsageDigitalSignature),
-		testsupport.WithGeneratedSubjectKeyID(),
-	)
-	require.NoError(t, err)
-
-	return rootCA, intermediateCA, leafCert, privateKey
 }
 
 func createLeafWithMalformedIntermediateCA(t *testing.T) (*ecdsa.PrivateKey, *x509.Certificate, *x509.Certificate) {
