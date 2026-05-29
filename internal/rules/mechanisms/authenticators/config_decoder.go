@@ -26,7 +26,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
-	"github.com/dadrus/heimdall/internal/truststore"
 )
 
 func decodeConfig(
@@ -43,7 +42,6 @@ func decodeConfig(
 			mapstructure.StringToTimeDurationHookFunc(),
 			extractors.DecodeCompositeExtractStrategyHookFunc(),
 			oauth2.DecodeScopesMatcherHookFunc(),
-			truststore.DecodeTrustStoreHookFunc(),
 			template.DecodeTemplateHookFunc(opts...),
 			DecodeAttributeRefs(),
 		),
