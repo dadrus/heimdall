@@ -159,9 +159,7 @@ func (s *secretSource) Unschedule(reason error) {
 	s.CancelSchedule()
 
 	if reason != nil {
-		s.logger.Warn().
-			Err(reason).
-			Msg("Failed scheduling secret source restart task")
+		s.logger.Warn().Err(reason).Msg("Failed scheduling secret source restart task")
 	}
 }
 

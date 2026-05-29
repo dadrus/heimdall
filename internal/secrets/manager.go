@@ -68,6 +68,7 @@ func (r *manager) Start(ctx context.Context) error {
 	}
 
 	r.resolver.Start()
+	r.logger.Info().Msg("Waiting for referenced secrets to become available")
 
 	if err := r.resolver.AwaitReady(ctx); err != nil {
 		_ = r.repository.Stop(ctx)
