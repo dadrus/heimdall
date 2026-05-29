@@ -1005,6 +1005,158 @@ func TestCertificateBundleInformerRegistersOnUpdateCallback(t *testing.T) {
 	require.True(t, userCallbackCalled)
 }
 
+func TestRefreshOnUpdate(t *testing.T) {
+	t.Parallel()
+
+	strategy := RefreshOnUpdate()
+
+	calls := 0
+
+	for range 2 {
+		err := strategy.Apply(t.Context(), func(context.Context) error {
+			calls++
+
+			return nil
+		})
+
+		require.NoError(t, err)
+	}
+
+	require.Equal(t, 2, calls)
+}
+
+func TestRefreshInitialOnly(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		updates []error
+		want    int
+		wantErr error
+	}{
+		"runs first successful update only": {
+			updates: []error{nil, nil},
+			want:    1,
+		},
+		"retries until first successful update": {
+			updates: []error{assert.AnError, nil, nil},
+			want:    2,
+			wantErr: assert.AnError,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			strategy := RefreshInitialOnly()
+
+			calls := 0
+
+			for _, updateErr := range tc.updates {
+				err := strategy.Apply(t.Context(), func(context.Context) error {
+					calls++
+
+					return updateErr
+				})
+
+				if updateErr != nil {
+					require.Error(t, err)
+					require.ErrorIs(t, err, updateErr)
+
+					continue
+				}
+
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tc.want, calls)
+		})
+	}
+}
+
+func TestCertificateBundleInformerUsesRefreshInitialOnly(t *testing.T) {
+	t.Parallel()
+
+	first := types.NewCertificateBundle("first", nil)
+	second := types.NewCertificateBundle("second", nil)
+
+	handle := newTestHandle[CertificateBundle]()
+	resolver := &testResolver{certificateBundleHandle: handle}
+
+	converterCalls := 0
+	callbackCalls := 0
+
+	informer, err := NewCertificateBundleInformer(
+		resolver,
+		Reference{Source: "src", Selector: "selector"},
+		WithConverter(func(bundle CertificateBundle) (string, error) {
+			converterCalls++
+
+			return bundle.Selector(), nil
+		}),
+		WithUpdateCallback(func(_ context.Context, _ CertificateBundle, _ string) error {
+			callbackCalls++
+
+			return nil
+		}),
+		WithRefreshStrategy[CertificateBundle, string](RefreshInitialOnly()),
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, handle.emit(t.Context(), first))
+	require.NoError(t, handle.emit(t.Context(), second))
+
+	got, ok := informer.Get()
+
+	require.True(t, ok)
+	require.Equal(t, "first", got)
+	require.Equal(t, 1, converterCalls)
+	require.Equal(t, 1, callbackCalls)
+}
+
+func TestCertificateBundleInformerRefreshInitialOnlyRetriesAfterConversionError(t *testing.T) {
+	t.Parallel()
+
+	bad := types.NewCertificateBundle("bad", nil)
+	good := types.NewCertificateBundle("good", nil)
+	ignored := types.NewCertificateBundle("ignored", nil)
+
+	handle := newTestHandle[CertificateBundle]()
+	resolver := &testResolver{certificateBundleHandle: handle}
+
+	converterCalls := 0
+
+	informer, err := NewCertificateBundleInformer(
+		resolver,
+		Reference{Source: "src", Selector: "selector"},
+		WithConverter(func(bundle CertificateBundle) (string, error) {
+			converterCalls++
+
+			if bundle.Selector() == "bad" {
+				return "", assert.AnError
+			}
+
+			return bundle.Selector(), nil
+		}),
+		WithRefreshStrategy[CertificateBundle, string](RefreshInitialOnly()),
+	)
+	require.NoError(t, err)
+
+	err = handle.emit(t.Context(), bad)
+	require.Error(t, err)
+	require.ErrorIs(t, err, assert.AnError)
+
+	_, ok := informer.Get()
+	require.False(t, ok)
+
+	require.NoError(t, handle.emit(t.Context(), good))
+	require.NoError(t, handle.emit(t.Context(), ignored))
+
+	got, ok := informer.Get()
+
+	require.True(t, ok)
+	require.Equal(t, "good", got)
+	require.Equal(t, 2, converterCalls)
+}
+
 func wrapSecretConverters(
 	opts []SecretInformerOption[string],
 	calls *int,

@@ -29,6 +29,10 @@ type (
 
 	InformerOption[S, T any] func(*informerOptions[S, T])
 
+	RefreshStrategy interface {
+		Apply(ctx context.Context, update func(context.Context) error) error
+	}
+
 	SecretConverter[T any]            = Converter[Secret, T]
 	CredentialsConverter[T any]       = Converter[Credentials, T]
 	CertificateBundleConverter[T any] = Converter[CertificateBundle, T]
@@ -46,9 +50,49 @@ type (
 	}
 )
 
+type refreshOnUpdate struct{}
+
+func RefreshOnUpdate() RefreshStrategy {
+	return refreshOnUpdate{}
+}
+
+func (refreshOnUpdate) Apply(ctx context.Context, update func(context.Context) error) error {
+	return update(ctx)
+}
+
+type refreshInitialOnly struct {
+	mu      sync.Mutex
+	updated bool
+}
+
+func RefreshInitialOnly() RefreshStrategy {
+	return &refreshInitialOnly{}
+}
+
+func (s *refreshInitialOnly) Apply(ctx context.Context, update func(context.Context) error) error {
+	s.mu.Lock()
+	if s.updated {
+		s.mu.Unlock()
+
+		return nil
+	}
+	s.mu.Unlock()
+
+	if err := update(ctx); err != nil {
+		return err
+	}
+
+	s.mu.Lock()
+	s.updated = true
+	s.mu.Unlock()
+
+	return nil
+}
+
 type informerOptions[S, T any] struct {
 	converter Converter[S, T]
 	onUpdate  UpdateCallback[S, T]
+	refresh   RefreshStrategy
 }
 
 type informerState[T any] struct {
@@ -88,6 +132,14 @@ func WithUpdateCallback[S, T any](
 	}
 }
 
+func WithRefreshStrategy[S, T any](
+	strategy RefreshStrategy,
+) InformerOption[S, T] {
+	return func(opts *informerOptions[S, T]) {
+		opts.refresh = strategy
+	}
+}
+
 func NewSecretInformer[T any](
 	resolver Resolver,
 	reference Reference,
@@ -104,20 +156,9 @@ func NewSecretInformer[T any](
 	registerReadiness(hdl, state.awaitReady)
 
 	hdl.OnUpdate(func(ctx context.Context, secret Secret) error {
-		value, err := cfg.converter(secret)
-		if err != nil {
-			state.setLastErr(err)
-
-			return err
-		}
-
-		state.store(value)
-
-		if cfg.onUpdate != nil {
-			return cfg.onUpdate(ctx, secret, value)
-		}
-
-		return nil
+		return cfg.refresh.Apply(ctx, func(ctx context.Context) error {
+			return applyUpdate(ctx, state, cfg, secret)
+		})
 	})
 
 	return &SecretInformer[T]{
@@ -145,20 +186,9 @@ func NewCredentialsInformer[T any](
 	registerReadiness(hdl, state.awaitReady)
 
 	hdl.OnUpdate(func(ctx context.Context, credentials Credentials) error {
-		value, err := cfg.converter(credentials)
-		if err != nil {
-			state.setLastErr(err)
-
-			return err
-		}
-
-		state.store(value)
-
-		if cfg.onUpdate != nil {
-			return cfg.onUpdate(ctx, credentials, value)
-		}
-
-		return nil
+		return cfg.refresh.Apply(ctx, func(ctx context.Context) error {
+			return applyUpdate(ctx, state, cfg, credentials)
+		})
 	})
 
 	return &CredentialsInformer[T]{
@@ -186,20 +216,9 @@ func NewCertificateBundleInformer[T any](
 	registerReadiness(hdl, state.awaitReady)
 
 	hdl.OnUpdate(func(ctx context.Context, bundle CertificateBundle) error {
-		value, err := cfg.converter(bundle)
-		if err != nil {
-			state.setLastErr(err)
-
-			return err
-		}
-
-		state.store(value)
-
-		if cfg.onUpdate != nil {
-			return cfg.onUpdate(ctx, bundle, value)
-		}
-
-		return nil
+		return cfg.refresh.Apply(ctx, func(ctx context.Context) error {
+			return applyUpdate(ctx, state, cfg, bundle)
+		})
 	})
 
 	return &CertificateBundleInformer[T]{
@@ -224,6 +243,10 @@ func applyInformerOptions[S, T any](
 
 	if cfg.converter == nil {
 		cfg.converter = identityConverter[S, T]
+	}
+
+	if cfg.refresh == nil {
+		cfg.refresh = RefreshOnUpdate()
 	}
 
 	return cfg
@@ -287,6 +310,28 @@ func (s *informerState[T]) getLastErr() error {
 	}
 
 	return stored.err
+}
+
+func applyUpdate[S, T any](
+	ctx context.Context,
+	state *informerState[T],
+	cfg informerOptions[S, T],
+	source S,
+) error {
+	value, err := cfg.converter(source)
+	if err != nil {
+		state.setLastErr(err)
+
+		return err
+	}
+
+	state.store(value)
+
+	if cfg.onUpdate != nil {
+		return cfg.onUpdate(ctx, source, value)
+	}
+
+	return nil
 }
 
 func identityConverter[S, T any](source S) (T, error) {
