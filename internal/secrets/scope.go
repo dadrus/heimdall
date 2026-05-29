@@ -41,6 +41,15 @@ func withID(id string) scopeOption {
 	}
 }
 
+func withInternalScope(value bool) scopeOption {
+	return func(s *scope) {
+		if value {
+			s.namespace = ""
+			s.refFactory = internalRef
+		}
+	}
+}
+
 type scope struct {
 	bindings   bindingProvider
 	refFactory referenceFactory

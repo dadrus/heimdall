@@ -59,7 +59,8 @@ type (
 	ScopeOption func(*scopeOptions)
 
 	scopeOptions struct {
-		namespace string
+		namespace  string
+		isInternal bool
 	}
 
 	ScopedResolverFactory interface {
@@ -70,5 +71,11 @@ type (
 func WithNamespace(namespace string) ScopeOption {
 	return func(opts *scopeOptions) {
 		opts.namespace = namespace
+	}
+}
+
+func WithInternalScope() ScopeOption {
+	return func(opts *scopeOptions) {
+		opts.isInternal = true
 	}
 }

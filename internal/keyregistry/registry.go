@@ -83,12 +83,12 @@ func (r *registry) doNotify(ctx context.Context, ref secrets.Reference) {
 	parent := ref.Parent()
 	id := publicationID(parent)
 
-	scope := r.srf.Create(id)
+	scope := r.srf.Create(id, secrets.WithInternalScope())
 	defer scope.Release()
 
 	handle, err := scope.SecretSet(parent)
 	if err != nil {
-		r.logger.Warn().
+		r.logger.Error().
 			Err(err).
 			Str("_source", parent.Source).
 			Str("_selector", parent.Selector).
@@ -98,7 +98,7 @@ func (r *registry) doNotify(ctx context.Context, ref secrets.Reference) {
 	}
 
 	if err = scope.AwaitReady(ctx); err != nil {
-		r.logger.Warn().
+		r.logger.Error().
 			Err(err).
 			Str("_source", parent.Source).
 			Str("_selector", parent.Selector).

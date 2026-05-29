@@ -64,6 +64,7 @@ func TestNewScope(t *testing.T) {
 					bindings,
 					withID("foo"),
 					withNamespace("team-a"),
+					withInternalScope(false),
 				)
 			},
 			assert: func(t *testing.T, scp *scope) {
@@ -77,6 +78,31 @@ func TestNewScope(t *testing.T) {
 				require.Equal(t, referenceScopeRule, ref.scope)
 				require.Equal(t, "foo", scp.id)
 				require.Equal(t, "team-a", scp.namespace)
+				require.NotNil(t, scp.leases)
+			},
+		},
+		"internal option overrides rule scoped setting": {
+			setup: func(t *testing.T, bindings *BindingProviderMock) *scope {
+				t.Helper()
+
+				return newScope(
+					bindings,
+					withID("foo"),
+					withNamespace("team-a"),
+					withInternalScope(true),
+				)
+			},
+			assert: func(t *testing.T, scp *scope) {
+				t.Helper()
+
+				ref := scp.refFactory(Reference{Source: "src", Selector: "selector"})
+
+				require.Equal(t, "src", ref.Source)
+				require.Equal(t, "selector", ref.Selector)
+				require.Empty(t, ref.namespace)
+				require.Equal(t, referenceScopeInternal, ref.scope)
+				require.Equal(t, "foo", scp.id)
+				require.Empty(t, scp.namespace)
 				require.NotNil(t, scp.leases)
 			},
 		},

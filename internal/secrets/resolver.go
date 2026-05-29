@@ -175,6 +175,7 @@ func (r *resolver) scopedResolver(id string, opts ...ScopeOption) ScopedResolver
 		r,
 		withID(id),
 		withNamespace(cfg.namespace),
+		withInternalScope(cfg.isInternal),
 	)
 }
 
