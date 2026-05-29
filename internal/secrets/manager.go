@@ -76,6 +76,8 @@ func (r *manager) Start(ctx context.Context) error {
 		return err
 	}
 
+	r.logger.Info().Msg("Secrets manager started")
+
 	return nil
 }
 
@@ -85,6 +87,10 @@ func (r *manager) Stop(ctx context.Context) error {
 	err := r.repository.Stop(ctx)
 
 	r.resolver.Stop()
+
+	if err != nil {
+		r.logger.Info().Msg("Secrets manager stopped")
+	}
 
 	return err
 }
