@@ -383,22 +383,13 @@ func (s *RegistryTestSuite) TestDoNotify() {
 			scope := secretsmocks.NewScopedResolverMock(s.T())
 			handle := secretsmocks.NewSecretSetHandleMock(s.T())
 
-			srf.EXPECT().
-				Create(publicationID(parent)).
-				Return(scope)
+			srf.EXPECT().Create(publicationID(parent), mock.Anything).Return(scope)
 
 			scope.EXPECT().SecretSet(parent).Return(handle, nil)
+			scope.EXPECT().AwaitReady(mock.Anything).Return(nil)
+			scope.EXPECT().Release()
 
-			scope.EXPECT().
-				AwaitReady(mock.Anything).
-				Return(nil)
-
-			handle.EXPECT().
-				Get().
-				Return(tc.secretSet, true)
-
-			scope.EXPECT().
-				Release()
+			handle.EXPECT().Get().Return(tc.secretSet, true)
 
 			reg := newTestRegistry(s.T(), srf)
 
@@ -420,15 +411,11 @@ func (s *RegistryTestSuite) TestDoNotifyLogsIgnoredNonAsymmetricSecrets() {
 	scope := secretsmocks.NewScopedResolverMock(s.T())
 	handle := secretsmocks.NewSecretSetHandleMock(s.T())
 
-	srf.EXPECT().
-		Create(id).
-		Return(scope)
+	srf.EXPECT().Create(id, mock.Anything).Return(scope)
 
 	scope.EXPECT().SecretSet(parent).Return(handle, nil)
-
-	scope.EXPECT().
-		AwaitReady(mock.Anything).
-		Return(nil)
+	scope.EXPECT().AwaitReady(mock.Anything).Return(nil)
+	scope.EXPECT().Release()
 
 	handle.EXPECT().
 		Get().
@@ -441,9 +428,6 @@ func (s *RegistryTestSuite) TestDoNotifyLogsIgnoredNonAsymmetricSecrets() {
 				nil,
 			),
 		}, true)
-
-	scope.EXPECT().
-		Release()
 
 	reg := &registry{
 		logger: zerolog.New(&logs),
@@ -486,15 +470,11 @@ func (s *RegistryTestSuite) TestDoNotifyReplacesExistingPublicationSet() {
 	scope := secretsmocks.NewScopedResolverMock(s.T())
 	handle := secretsmocks.NewSecretSetHandleMock(s.T())
 
-	srf.EXPECT().
-		Create(id).
-		Return(scope)
+	srf.EXPECT().Create(id, mock.Anything).Return(scope)
 
 	scope.EXPECT().SecretSet(parent).Return(handle, nil)
-
-	scope.EXPECT().
-		AwaitReady(mock.Anything).
-		Return(nil)
+	scope.EXPECT().AwaitReady(mock.Anything).Return(nil)
+	scope.EXPECT().Release()
 
 	handle.EXPECT().
 		Get().
@@ -506,9 +486,6 @@ func (s *RegistryTestSuite) TestDoNotifyReplacesExistingPublicationSet() {
 				[]*x509.Certificate{s.ee3.Certificate, s.intCA2.Certificate},
 			),
 		}, true)
-
-	scope.EXPECT().
-		Release()
 
 	reg.doNotify(context.Background(), ref)
 
@@ -543,14 +520,12 @@ func (s *RegistryTestSuite) TestDoNotifyAggregatesDifferentPublicationSets() {
 	handle1 := secretsmocks.NewSecretSetHandleMock(s.T())
 
 	srf.EXPECT().
-		Create(id1).
+		Create(id1, mock.Anything).
 		Return(scope1)
 
 	scope1.EXPECT().SecretSet(parent1).Return(handle1, nil)
-
-	scope1.EXPECT().
-		AwaitReady(mock.Anything).
-		Return(nil)
+	scope1.EXPECT().AwaitReady(mock.Anything).Return(nil)
+	scope1.EXPECT().Release()
 
 	handle1.EXPECT().
 		Get().
@@ -563,9 +538,6 @@ func (s *RegistryTestSuite) TestDoNotifyAggregatesDifferentPublicationSets() {
 			),
 		}, true)
 
-	scope1.EXPECT().
-		Release()
-
 	reg.doNotify(context.Background(), ref1)
 
 	ref2 := secrets.Reference{Source: "pem", Selector: "hms/signing/2026-05"}
@@ -575,15 +547,11 @@ func (s *RegistryTestSuite) TestDoNotifyAggregatesDifferentPublicationSets() {
 	scope2 := secretsmocks.NewScopedResolverMock(s.T())
 	handle2 := secretsmocks.NewSecretSetHandleMock(s.T())
 
-	srf.EXPECT().
-		Create(id2).
-		Return(scope2)
+	srf.EXPECT().Create(id2, mock.Anything).Return(scope2)
 
 	scope2.EXPECT().SecretSet(parent2).Return(handle2, nil)
-
-	scope2.EXPECT().
-		AwaitReady(mock.Anything).
-		Return(nil)
+	scope2.EXPECT().AwaitReady(mock.Anything).Return(nil)
+	scope2.EXPECT().Release()
 
 	handle2.EXPECT().
 		Get().
@@ -595,9 +563,6 @@ func (s *RegistryTestSuite) TestDoNotifyAggregatesDifferentPublicationSets() {
 				nil,
 			),
 		}, true)
-
-	scope2.EXPECT().
-		Release()
 
 	reg.doNotify(context.Background(), ref2)
 
@@ -631,14 +596,10 @@ func (s *RegistryTestSuite) TestDoNotifyFailsWithoutReplacingExistingSet() {
 
 				parent := ref.Parent()
 
-				srf.EXPECT().
-					Create(publicationID(parent)).
-					Return(scope)
+				srf.EXPECT().Create(publicationID(parent), mock.Anything).Return(scope)
 
 				scope.EXPECT().SecretSet(parent).Return(nil, assert.AnError)
-
-				scope.EXPECT().
-					Release()
+				scope.EXPECT().Release()
 			},
 			assertLogs: "Failed creating verification key set handle",
 		},
@@ -654,18 +615,11 @@ func (s *RegistryTestSuite) TestDoNotifyFailsWithoutReplacingExistingSet() {
 				parent := ref.Parent()
 				handle := secretsmocks.NewSecretSetHandleMock(t)
 
-				srf.EXPECT().
-					Create(publicationID(parent)).
-					Return(scope)
+				srf.EXPECT().Create(publicationID(parent), mock.Anything).Return(scope)
 
 				scope.EXPECT().SecretSet(parent).Return(handle, nil)
-
-				scope.EXPECT().
-					AwaitReady(mock.Anything).
-					Return(assert.AnError)
-
-				scope.EXPECT().
-					Release()
+				scope.EXPECT().AwaitReady(mock.Anything).Return(assert.AnError)
+				scope.EXPECT().Release()
 			},
 			assertLogs: "Failed resolving verification key set",
 		},
@@ -724,14 +678,12 @@ func (s *RegistryTestSuite) TestNotifyPublishesVerificationSet() {
 		handle := secretsmocks.NewSecretSetHandleMock(t)
 
 		srf.EXPECT().
-			Create(id).
+			Create(id, mock.Anything).
 			Return(scope)
 
 		scope.EXPECT().SecretSet(parent).Return(handle, nil)
-
-		scope.EXPECT().
-			AwaitReady(mock.Anything).
-			Return(nil)
+		scope.EXPECT().AwaitReady(mock.Anything).Return(nil)
+		scope.EXPECT().Release()
 
 		handle.EXPECT().
 			Get().
@@ -743,9 +695,6 @@ func (s *RegistryTestSuite) TestNotifyPublishesVerificationSet() {
 					nil,
 				),
 			}, true)
-
-		scope.EXPECT().
-			Release()
 
 		reg := newTestRegistry(t, srf)
 
@@ -776,12 +725,9 @@ func (s *RegistryTestSuite) TestNotifyTimesOutVerificationSetPublication() {
 		scope := secretsmocks.NewScopedResolverMock(t)
 		handle := secretsmocks.NewSecretSetHandleMock(t)
 
-		srf.EXPECT().
-			Create(id).
-			Return(scope)
+		srf.EXPECT().Create(id, mock.Anything).Return(scope)
 
 		scope.EXPECT().SecretSet(parent).Return(handle, nil)
-
 		scope.EXPECT().
 			AwaitReady(mock.Anything).
 			RunAndReturn(func(ctx context.Context) error {
@@ -789,9 +735,7 @@ func (s *RegistryTestSuite) TestNotifyTimesOutVerificationSetPublication() {
 
 				return ctx.Err()
 			})
-
-		scope.EXPECT().
-			Release()
+		scope.EXPECT().Release()
 
 		reg := &registry{
 			logger: zerolog.New(&logs),

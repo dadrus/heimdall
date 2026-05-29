@@ -316,7 +316,7 @@ func TestSecretSourceRun(t *testing.T) {
 				prv.EXPECT().Stop(mock.Anything).Return(assert.AnError)
 			},
 			setupObserver: func(*ObserverMock) {},
-			wantLog:       "Stopping secret source failed",
+			wantLog:       "Tearing down secret source failed",
 		},
 		"does not notify if start fails": {
 			setupProvider: func(prv *providermocks.ProviderMock) {
