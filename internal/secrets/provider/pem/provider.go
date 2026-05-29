@@ -70,6 +70,8 @@ type pemProvider struct {
 }
 
 func newProvider(args provider.Args) (provider.Provider, error) {
+	logger := args.Logger
+
 	type config struct {
 		Path     string `mapstructure:"path"     validate:"required"`
 		Password string `mapstructure:"password"`
@@ -83,6 +85,8 @@ func newProvider(args provider.Args) (provider.Provider, error) {
 		return nil, err
 	}
 
+	logger.Info().Msg("Loading pem file")
+
 	store, err := loadStore(cfg.Path, cfg.Password)
 	if err != nil {
 		return nil, err
@@ -92,7 +96,7 @@ func newProvider(args provider.Args) (provider.Provider, error) {
 		path:     cfg.Path,
 		password: cfg.Password,
 		watch:    cfg.Watch,
-		logger:   args.Logger,
+		logger:   logger,
 		observer: args.Observer,
 		store:    store,
 	}, nil

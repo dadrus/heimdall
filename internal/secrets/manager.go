@@ -42,12 +42,14 @@ func NewManager(
 	return &manager{
 		repository: repository,
 		resolver:   resolver,
+		logger:     logger,
 	}, nil
 }
 
 type manager struct {
 	repository source.Repository
 	resolver   *resolver
+	logger     zerolog.Logger
 }
 
 func (r *manager) Resolver() Resolver {
@@ -59,6 +61,8 @@ func (r *manager) ScopedResolverFactory() ScopedResolverFactory {
 }
 
 func (r *manager) Start(ctx context.Context) error {
+	r.logger.Info().Msg("Starting secrets manager")
+
 	if err := r.repository.Start(ctx); err != nil {
 		return err
 	}
@@ -76,6 +80,8 @@ func (r *manager) Start(ctx context.Context) error {
 }
 
 func (r *manager) Stop(ctx context.Context) error {
+	r.logger.Info().Msg("Tearing down secrets manager")
+
 	err := r.repository.Stop(ctx)
 
 	r.resolver.Stop()

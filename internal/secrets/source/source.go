@@ -81,6 +81,8 @@ func newSecretSource(
 		Str("_secret_provider", conf.Type).
 		Logger()
 
+	sourceLogger.Info().Msg("Creating secret source")
+
 	observer := &providerObserver{name: name, o: so}
 	resolver := &secretsResolver{name: name, r: dr}
 	src := &secretSource{
@@ -116,8 +118,18 @@ func (s *secretSource) AccessFromRulesAllowed() bool    { return s.allowInRules 
 func (s *secretSource) Dependencies() []types.Reference { return slices.Clone(s.sr.deps) }
 func (s *secretSource) IsNamespaceAware() bool          { return s.p.IsNamespaceAware() }
 func (s *secretSource) DependsOn(evt Event) bool        { return s.sr.dependsOn(evt) }
-func (s *secretSource) Start(ctx context.Context) error { return s.p.Start(ctx) }
-func (s *secretSource) Stop(ctx context.Context) error  { return s.p.Stop(ctx) }
+
+func (s *secretSource) Start(ctx context.Context) error {
+	s.logger.Info().Msg("Starting secret source")
+
+	return s.p.Start(ctx)
+}
+
+func (s *secretSource) Stop(ctx context.Context) error {
+	s.logger.Info().Msg("Tearing down secret source")
+
+	return s.p.Stop(ctx)
+}
 
 func (s *secretSource) GetSecret(ctx context.Context, selector Selector) (types.Secret, error) {
 	return s.p.GetSecret(ctx, selector)
