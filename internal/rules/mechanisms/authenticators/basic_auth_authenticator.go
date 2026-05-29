@@ -61,20 +61,13 @@ func init() {
 // key derivation/password hash function, like SCrypt or Argon2. This will be
 // implemented later.
 type credentialsChecker struct {
-	userID       string
-	passwordHash string
-}
-
-func newCredentialsChecker(userID, passwordHash string) credentialsChecker {
-	return credentialsChecker{
-		userID:       userID,
-		passwordHash: passwordHash,
-	}
+	UserID   string `json:"user_id"  validate:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
 func (c credentialsChecker) check(userID, password string) error {
-	match, _ := argon2id.ComparePasswordAndHash(password, c.passwordHash)
-	res := subtle.ConstantTimeCompare(stringx.ToBytes(userID), stringx.ToBytes(c.userID))
+	match, _ := argon2id.ComparePasswordAndHash(password, c.Password)
+	res := subtle.ConstantTimeCompare(stringx.ToBytes(userID), stringx.ToBytes(c.UserID))
 
 	match = match && res == 1
 
@@ -322,16 +315,11 @@ func (*basicAuthAuthenticator) IsInsecure() bool        { return false }
 
 func toCredentialsChecker(df encoding.DecoderFactory) func(creds secrets.Credentials) (credentialsChecker, error) {
 	return func(creds secrets.Credentials) (credentialsChecker, error) {
-		type credentials struct {
-			UserID   string `json:"user_id"  validate:"required"`
-			Password string `json:"password" validate:"required"`
-		}
-
-		var data credentials
+		var data credentialsChecker
 		if err := df.Decoder().DecodeMap(&data, creds.Values()); err != nil {
 			return credentialsChecker{}, err
 		}
 
-		return newCredentialsChecker(data.UserID, data.Password), nil
+		return data, nil
 	}
 }
