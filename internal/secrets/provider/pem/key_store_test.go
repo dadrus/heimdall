@@ -413,7 +413,7 @@ func TestKeyStoreGetSecret(t *testing.T) {
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
-		ks        keyStore
+		ks       keyStore
 		selector provider.Selector
 		assert   func(*testing.T, provider.Secret, error)
 	}{
@@ -428,7 +428,7 @@ func TestKeyStoreGetSecret(t *testing.T) {
 			},
 		},
 		"returns entry for existing key": {
-			ks:ks,
+			ks:       ks,
 			selector: provider.Selector{Value: "first"},
 			assert: func(t *testing.T, secret provider.Secret, err error) {
 				t.Helper()
@@ -439,7 +439,7 @@ func TestKeyStoreGetSecret(t *testing.T) {
 			},
 		},
 		"returns error for missing key": {
-			ks: ks,
+			ks:       ks,
 			selector: provider.Selector{Value: "missing"},
 			assert: func(t *testing.T, secret provider.Secret, err error) {
 				t.Helper()
@@ -531,7 +531,6 @@ func TestKeyStoreSameKind(t *testing.T) {
 		})
 	}
 }
-
 
 func createLeafAndCA(t *testing.T, subjectKeyID []byte) (*ecdsa.PrivateKey, *x509.Certificate, *testsupport.CA) {
 	t.Helper()

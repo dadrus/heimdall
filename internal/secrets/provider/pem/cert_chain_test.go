@@ -10,10 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/secrets/provider"
-	"github.com/dadrus/heimdall/internal/x/testsupport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/secrets/provider"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestFindChain(t *testing.T) {

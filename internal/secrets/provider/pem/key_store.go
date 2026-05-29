@@ -173,4 +173,3 @@ func generateKeyID(chain []*x509.Certificate, signer crypto.Signer) (string, err
 
 	return hex.EncodeToString(keyID), nil
 }
-
