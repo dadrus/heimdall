@@ -1520,10 +1520,9 @@
               "description": "Whether the certificate chain (if present) in the JWK should be validated",
               "default": true
             },
-            "trust_store": {
-              "type": "string",
-              "description": "The path to the trust store PEM file, which contains the trust anchors used for JWK certificate verification purposes",
-              "default": "system trust store"
+            "trust_anchors": {
+              "description": "The reference to the trust anchors used for validating the JWK. Defaults to system trust store.",
+              "$ref": "#/definitions/secretReference"
             },
             "error_signaling": {
               "$ref": "#/definitions/bearerTokenUsageErrorSignaling"

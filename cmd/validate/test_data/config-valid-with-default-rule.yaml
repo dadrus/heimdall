@@ -18,6 +18,10 @@ secret_management:
     type: pem
     config:
       path: "${TEST_KEYSTORE_FILE}"
+  trust_store:
+    type: pem
+    config:
+      path: "${TEST_TRUSTSTORE_FILE}"
 
 serve:
   port: 4468
@@ -217,6 +221,8 @@ mechanisms:
           issuers:
             - bla
         validate_jwk: true
+        trust_anchors:
+          source: trust_store
     - id: basic_auth_authenticator
       type: basic_auth
       config:

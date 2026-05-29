@@ -23,16 +23,21 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestValidateConfig(t *testing.T) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	ca, err := testsupport.NewRootCA("PEM Test CA", 1*time.Hour)
 	require.NoError(t, err)
 
 	pemBytes, err := pemx.BuildPEM(
@@ -41,12 +46,23 @@ func TestValidateConfig(t *testing.T) {
 	require.NoError(t, err)
 
 	testDir := t.TempDir()
-	pemFile := filepath.Join(testDir, "keystore.pem")
+	keyStoreFile := filepath.Join(testDir, "keystore.pem")
 
-	err = os.WriteFile(pemFile, pemBytes, 0o600)
+	err = os.WriteFile(keyStoreFile, pemBytes, 0o600)
 	require.NoError(t, err)
 
-	t.Setenv("TEST_KEYSTORE_FILE", pemFile)
+	pemBytes, err = pemx.BuildPEM(
+		pemx.WithX509Certificate(ca.Certificate),
+	)
+	require.NoError(t, err)
+
+	certStoreFile := filepath.Join(testDir, "certstore.pem")
+
+	err = os.WriteFile(certStoreFile, pemBytes, 0o600)
+	require.NoError(t, err)
+
+	t.Setenv("TEST_KEYSTORE_FILE", keyStoreFile)
+	t.Setenv("TEST_TRUSTSTORE_FILE", certStoreFile)
 
 	for name, tc := range map[string]struct {
 		args   []string

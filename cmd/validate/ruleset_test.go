@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/drone/envsubst/v2"
 	"github.com/stretchr/testify/require"
@@ -30,10 +31,14 @@ import (
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/stringx"
+	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestValidateRuleset(t *testing.T) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	require.NoError(t, err)
+
+	ca, err := testsupport.NewRootCA("PEM Test CA", 1*time.Hour)
 	require.NoError(t, err)
 
 	pemBytes, err := pemx.BuildPEM(
@@ -42,13 +47,21 @@ func TestValidateRuleset(t *testing.T) {
 	require.NoError(t, err)
 
 	testDir := t.TempDir()
-	pemFile := filepath.Join(testDir, "keystore.pem")
-	configFile := filepath.Join(testDir, "test-config.yaml")
-
-	t.Setenv("TEST_KEYSTORE_FILE", pemFile)
-
-	err = os.WriteFile(pemFile, pemBytes, 0o600)
+	keyStoreFile := filepath.Join(testDir, "keystore.pem")
+	err = os.WriteFile(keyStoreFile, pemBytes, 0o600)
 	require.NoError(t, err)
+
+	pemBytes, err = pemx.BuildPEM(
+		pemx.WithX509Certificate(ca.Certificate),
+	)
+	require.NoError(t, err)
+
+	certStoreFile := filepath.Join(testDir, "certstore.pem")
+	err = os.WriteFile(certStoreFile, pemBytes, 0o600)
+	require.NoError(t, err)
+
+	t.Setenv("TEST_KEYSTORE_FILE", keyStoreFile)
+	t.Setenv("TEST_TRUSTSTORE_FILE", certStoreFile)
 
 	raw, err := os.ReadFile("test_data/config-valid-with-default-rule.yaml")
 	require.NoError(t, err)
@@ -56,6 +69,7 @@ func TestValidateRuleset(t *testing.T) {
 	content, err := envsubst.EvalEnv(stringx.ToString(raw))
 	require.NoError(t, err)
 
+	configFile := filepath.Join(testDir, "test-config.yaml")
 	err = os.WriteFile(configFile, []byte(content), 0o600)
 	require.NoError(t, err)
 

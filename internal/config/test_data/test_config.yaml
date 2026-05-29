@@ -13,11 +13,15 @@ secret_management:
   jwt_secrets:
     type: pem
     config:
-      path: "${TEST_KEYSTORE_FILE}"
+      path: /path/to/jwt_secrets.pem
   tls_keys:
     type: pem
     config:
-      path: "${TEST_KEYSTORE_FILE}"
+      path: /path/to/tls_secrets.pem
+  trust_store:
+    type: pem
+    config:
+      path: /path/to/ca_bundle.pem
 
 serve:
   host: 127.0.0.1
@@ -316,7 +320,8 @@ mechanisms:
           id: "identity.id"
         cache_ttl: 5m
         validate_jwk: true
-        trust_store: /opt/heimdall/trust_store.pem
+        trust_anchors:
+          source: trust_store
     - id: jwt_authenticator_using_metadata_endpoint
       type: jwt
       config:
