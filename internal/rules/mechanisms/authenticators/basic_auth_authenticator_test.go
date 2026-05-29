@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/alexedwards/argon2id"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -688,6 +689,9 @@ func TestBasicAuthAuthenticatorCreateStep(t *testing.T) {
 func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 	t.Parallel()
 
+	hash, err := argon2id.CreateHash("pa$$word", argon2id.DefaultParams)
+	require.NoError(t, err)
+
 	type HandlerIdentifier interface {
 		ID() string
 	}
@@ -899,7 +903,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 		"default principal is created for valid credentials": {
 			handleValue: secrettypes.NewCredentials("bar", map[string]any{
 				"user_id":  "bar",
-				"password": "baz",
+				"password": hash,
 			}),
 			handleOK: true,
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
@@ -907,7 +911,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Header("Authorization").
-					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("bar:baz")))
+					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("bar:pa$$word")))
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
@@ -925,7 +929,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 			stepDef: types.StepDefinition{Principal: "baz"},
 			handleValue: secrettypes.NewCredentials("bar", map[string]any{
 				"user_id":  "bar",
-				"password": "baz",
+				"password": hash,
 			}),
 			handleOK: true,
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
@@ -933,7 +937,7 @@ func TestBasicAuthAuthenticatorExecute(t *testing.T) {
 
 				fnt := mocks.NewRequestFunctionsMock(t)
 				fnt.EXPECT().Header("Authorization").
-					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("bar:baz")))
+					Return("Basic " + base64.StdEncoding.EncodeToString([]byte("bar:pa$$word")))
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},

@@ -5,6 +5,7 @@ go 1.26.2
 require (
 	github.com/DmitriyVTitov/size v1.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
+	github.com/alexedwards/argon2id v1.0.0
 	github.com/alicebob/miniredis/v2 v2.37.0
 	github.com/ccoveille/go-safecast/v2 v2.0.0
 	github.com/dadrus/httpsig v0.0.0-20260320084101-37048551fc59
@@ -81,6 +82,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.43.0
 	go.uber.org/fx v1.24.0
 	gocloud.dev v0.45.0
+	golang.org/x/sync v0.20.0
 	golang.org/x/text v0.35.0
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260414002931-afd174a4e478
 	google.golang.org/grpc v1.80.0
@@ -214,7 +216,6 @@ require (
 	golang.org/x/exp v0.0.0-20240823005443-9b4947da3948 // indirect
 	golang.org/x/net v0.52.0 // indirect
 	golang.org/x/oauth2 v0.35.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 	golang.org/x/term v0.41.0 // indirect
 	golang.org/x/time v0.14.0 // indirect

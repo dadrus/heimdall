@@ -17,12 +17,12 @@
 package authenticators
 
 import (
-	"crypto/sha512"
 	"crypto/subtle"
 	"encoding/base64"
 	"net/http"
 	"strings"
 
+	"github.com/alexedwards/argon2id"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -61,36 +61,31 @@ func init() {
 // key derivation/password hash function, like SCrypt or Argon2. This will be
 // implemented later.
 type credentialsChecker struct {
-	value [sha512.Size]byte
+	userID       string
+	passwordHash string
 }
 
-func newCredentialsChecker(userID, password string) credentialsChecker {
-	return credentialsChecker{value: hash(userID, password)}
+func newCredentialsChecker(userID, passwordHash string) credentialsChecker {
+	return credentialsChecker{
+		userID:       userID,
+		passwordHash: passwordHash,
+	}
 }
 
 func (c credentialsChecker) check(userID, password string) error {
-	value := hash(userID, password)
+	match, _ := argon2id.ComparePasswordAndHash(password, c.passwordHash)
+	res := subtle.ConstantTimeCompare(stringx.ToBytes(userID), stringx.ToBytes(c.userID))
 
-	if subtle.ConstantTimeCompare(c.value[:], value[:]) != 1 {
+	match = match && res == 1
+
+	if !match {
 		return errorchain.NewWithMessage(
 			pipeline.ErrAuthentication,
 			"invalid user credentials",
-		).
-			CausedBy(pipeline.ErrAuthentication)
+		).CausedBy(pipeline.ErrAuthentication)
 	}
 
 	return nil
-}
-
-func hash(userID, password string) [sha512.Size]byte {
-	md := sha512.New()
-	md.Write(stringx.ToBytes(userID))
-	md.Write(stringx.ToBytes(password))
-
-	var result [sha512.Size]byte
-	md.Sum(result[:0])
-
-	return result
 }
 
 type basicAuthAuthenticator struct {
