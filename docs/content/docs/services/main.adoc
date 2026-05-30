@@ -106,9 +106,9 @@ NOTE: This mapping is only applicable if the HTTP status code is set by heimdall
 serve:
   host: 172.17.0.2
   tls:
-    key_store:
-      path: /path/to/keystore.pem
-      password: VerySecure!
+    secret:
+      source: key_store
+      selector: tls_key
   timeout:
     read: 1s
     write: 2s

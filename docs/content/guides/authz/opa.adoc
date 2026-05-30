@@ -97,8 +97,9 @@ config:
     auth:
       type: basic_auth
       config:
-        user: MyOpaUser
-        password: SuperSecretPassword
+        credentials:
+          source: some_secret_source
+          selector: opa_credentials
   payload: |
     { "input": { "user": {{ quote .Subject.ID }} } }
 ----

@@ -306,6 +306,12 @@ Example: `{{ atIndex 2 [1,2,3,4,5] }}` evaluates to `3` (behaves the same way as
 +
 Example: `{{ splitList "/" "/foo/bar" }}` evaluates to the `["", "foo", "bar"]` array.
 
+* `secret` - Allows using configured secrets (See also link:{{< relref "/docs/operations/secret_management.adoc" >}}[Secret Management])
++
+Example: `{{ secret "some_source" "my_api_key" }}` references a key via `"my_api_key"` selector in `"some_source"` secret source.
++
+NOTE: Usage of secrets from rules is only possible if the referenced secrets source allows that (see link:{{< relref "/docs/operations/secret_management.adoc#_secret_source_configuration" >}}[Secret Source Configuration] for more details).
+
 
 .Rendering a JSON object
 ====

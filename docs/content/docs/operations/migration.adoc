@@ -2,10 +2,10 @@
 title: "Upgrade & Migration"
 date: 2025-10-11T11:53:52+01:00
 draft: false
-weight: 37
+weight: 38
 menu:
   docs:
-    weight: 7
+    weight: 8
     parent: "Operations"
 description: Describes the upgrade and migration process for heimdall releases introducing breaking changes.
 ---

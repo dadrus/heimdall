@@ -15,6 +15,37 @@ Below you can find possible contents (not exhaustive) for Heimdall's `config.yam
 
 [source, yaml]
 ----
+secret_management:
+  tls_store:
+    type: pem
+    config:
+      path: /path/to/tls/secrets.pem
+      watch: true
+  redis_store:
+    type: pem
+    config:
+      path: /path/to/redis/client_secrets.prm
+      watch: true
+  jwt_keys:
+    type: pem
+    config:
+      path: /path/to/jwt/keys.pem
+      watch: true
+  mechanism_secrets:
+    type: inline
+    config:
+      basic_auth_hpc:
+        user_id: foo
+        password: $argon2id$v=19$m=65536,t=3,p=4$VmRjaCtoa2ZtS0p3WWhSWmhlTE1lZz09$DWtHZtrpHruhAcl41alOWMmNYqVFN/6FoIYKK9SzDkg
+      kratos_credentials:
+        user_id: ${KRATOS_BASIC_AUTH_USER}
+        password: ${KRATOS_BASIC_AUTH_PASSWORD}
+      hydra_api_key: ${HYDRA_API_KEY}
+      auth_server_client_credentials:
+        client_id: ${AUTH_SERVER_CLIENT_ID}
+        client_secret: ${AUTH_SERVER_CLIENT_SECRET}
+      authz_system_api_key: ${AUTHZ_SYSTEM_API_KEY}
+
 serve:
   host: 127.0.0.1
   port: 4469
@@ -49,10 +80,9 @@ serve:
     allow_credentials: true
     max_age: 1m
   tls:
-    key_store:
-      path: /path/to/key/store.pem
-      password: VerySecure!
-    key_id: first_entry
+    secret:
+      source: tls_store
+      selector: main_key
     min_version: TLS1.2
     cipher_suites:
       - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -82,8 +112,9 @@ management:
     allow_credentials: true
     max_age: 1m
   tls:
-    key_store:
-      path: /path/to/key/store.pem
+    secret:
+      source: tls_store
+      selector: mgmt_key
     min_version: TLS1.2
 
 cache:
@@ -97,9 +128,9 @@ cache:
     credentials:
       path: /path/to/credentials.yaml
     tls:
-      key_store:
-        path: /path/to/redis_client_keystore.pem
-      key_id: bf5d129a7fec8b1fde11eab459784cc2f14e6c1d
+      secret:
+        source: redis_store
+        selector: key1
       min_version: TLS1.2
       cipher_suites:
         - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -140,8 +171,9 @@ mechanisms:
   - id: foo
     type: basic_auth
     config:
-      user_id: bar
-      password: baz
+      credentials:
+        source: mechanism_secrets
+        selector: basic_auth_hpc
       error_signaling:
         enabled: true
         realm: example
@@ -154,8 +186,9 @@ mechanisms:
           auth:
             type: basic_auth
             config:
-              user: foo
-              password: bar
+              credentials:
+                source: mechanism_secrets
+                selector: kratos_credentials
         retry:
           max_delay: 300ms
           give_up_after: 2s
@@ -181,7 +214,9 @@ mechanisms:
           config:
             in: header
             name: X-Api-Key
-            value: VerySecret!
+            secret:
+              source: mechanism_secrets
+              selector: hydra_api_key
       token_source:
         - header: Authorization
           scheme: Bearer
@@ -219,8 +254,9 @@ mechanisms:
               type: oauth2_client_credentials
               config:
                 token_url: https://auth-server/token
-                client_id: foo
-                client_secret: bar
+                credentials:
+                  source: mechanism_secrets
+                  selector: auth_server_client_credentials
             retry:
               give_up_after: 1m
               max_delay: 5s
@@ -259,7 +295,7 @@ mechanisms:
     type: remote
     config:
       endpoint:
-        url: https://my-authz-system/{{ .Values.some-key }}
+        url: https://my-authz-system/{{ .Values.some-parameter }}
         method: POST
         headers:
           foo-bar: "{{ .Subject.ID }}"
@@ -268,9 +304,11 @@ mechanisms:
           config:
             in: header
             name: X-API-Key
-            value: super duper secret
+            secret:
+             source: mechanism_secrets
+             selector: authz_system_api_key1
       values:
-        some-key: some-value
+        some-parameter: some-value
       payload: "https://bla.bar"
       expressions:
         - expression: |
@@ -298,10 +336,10 @@ mechanisms:
         auth:
           type: oauth2_client_credentials
           config:
-            auth_method: request_body
-            token_url: https://bar.foo
-            client_id: foo
-            client_secret: bar
+            token_url: https://auth-server/token
+            credentials:
+              source: mechanism_secrets
+              selector: auth_server_client_credentials
             cache_ttl: 20s
             header:
               name: X-Foo
@@ -321,10 +359,9 @@ mechanisms:
     config:
       signer:
         name: foobar
-        key_store:
-          path: /opt/heimdall/keystore.pem
-          password: VeryInsecure!
-        key_id: foo
+        secret:
+          source: jwt_keys
+          selector: key-1
       ttl: 5m
       header:
         name: Foo
@@ -343,11 +380,12 @@ mechanisms:
   - id: get_token
     type: oauth2_client_credentials
     config:
+      token_url: https://auth-server/token
+      credentials:
+        source: mechanism_secrets
+        selector: auth_server_client_credentials
       header:
         name: X-Token
-      token_url: https://my-oauth-provider.com/token
-      client_id: my_client
-      client_secret: VerySecret!
       auth_method: basic_auth
       cache_ttl: 5m
       scopes:
@@ -419,8 +457,8 @@ providers:
     auth_class: foo
     tls:
       key_id: foo
-      key_store:
-        path: /path/to/pem.file
-        password: VerySecret!
+      secret:
+        source: tls_store
+        selector: k8s_key
       min_version: TLS1.3
 ----

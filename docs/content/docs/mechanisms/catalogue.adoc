@@ -105,8 +105,9 @@ mechanisms:
     type: jwt
     config:
       signer:
-        key_store:
-          path: /etc/heimdall/signer.pem
+        secret:
+          source: key_store
+          selector: signer_key
       ttl: 5m
       claims: |
           {

@@ -147,8 +147,10 @@ http_endpoint:
         type: api_key
         config:
           name: X-Api-Key
-          value: super-secret
           in: header
+          secret:
+            source: some_source
+            selector: foo_bar_api_key
 ----
 ====
 
@@ -312,7 +314,7 @@ kubernetes:
   auth_class: foo
   tls:
     # below is the minimal required configuration
-    key_store:
-      path: /path/to/file.pem
+    secret:
+      source: key_store
 ----
 ====

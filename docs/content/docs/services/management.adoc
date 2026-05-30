@@ -73,9 +73,9 @@ NOTE: Although this property is optional, heimdall enforces its usage by default
 management:
   host: 127.0.0.1
   tls:
-    key_store:
-      path: /path/to/keystore.pem
-      password: VerySecure!
+    secret:
+      source: key_store
+      password: tls_key
   timeout:
     read: 1s
     write: 2s

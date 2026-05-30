@@ -62,13 +62,19 @@ serve: # <2>
     trusted_proxies:
     - 0.0.0.0/0
 
-mechanisms: # <3>
+secret_management: # <3>
+  signer_store:
+    type: pem
+    config:
+      path: /etc/heimdall/signer.pem
+
+mechanisms: # <4>
   authenticators:
-    - id: deny_all # <4>
+    - id: deny_all # <5>
       type: unauthorized
-    - id: anon # <5>
+    - id: anon # <6>
       type: anonymous
-    - id: jwt_auth # <6>
+    - id: jwt_auth # <7>
       type: jwt
       config:
         jwks_endpoint: http://idp:8080/.well-known/jwks
@@ -76,7 +82,7 @@ mechanisms: # <3>
           issuers:
             - demo_issuer
   authorizers:
-    - id: opa # <7>
+    - id: opa # <8>
       type: remote
       config:
         endpoint: http://opa:8181/v1/data/{{ .Values.policy }}
@@ -85,22 +91,22 @@ mechanisms: # <3>
           - expression: |
               Payload.result == true
   finalizers:
-    - id: create_jwt # <8>
+    - id: create_jwt # <9>
       type: jwt
       config:
         signer:
-          key_store:
-            path: /etc/heimdall/signer.pem
-    - id: noop # <9>
+          secret:
+            source: signer_store
+    - id: noop # <10>
       type: noop
 
-default_rule: # <10>
+default_rule: # <11>
   execute:
     - authenticator: deny_all
     - finalizer: create_jwt
 
 providers:
-  file_system: # <11>
+  file_system: # <12>
     src: /etc/heimdall/rules.yaml
     watch: true
 ----
@@ -108,17 +114,18 @@ providers:
 <2> This configuration instructs heimdall to trust `X-Forwarded-*` headers from any source. We need this for integration with Traefik, which uses these headers while forwarding requests to heimdall. The IP address used depends on your local Docker configuration.
 +
 WARNING: Never use this in production - always restrict trusted IPs instead! Refer to the documentation on the link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[trusted_proxies] property and link:{{< relref "/docs/operations/security.adoc#_http_header" >}}[Security Considerations] for more details.
-<3> Here, we define our link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue of mechanisms] to be used in link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream service-specific rules]. In this case, we define authenticators, an authorizer, and finalizers.
-<4> These two lines define the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_unauthorized" >}}[unauthorized]` authenticator named `deny_all`, which rejects all requests.
-<5> These two lines define the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_anonymous" >}}[anonymous]` authenticator named `anon`, which allows any request and creates a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc/#_principal">}}[Principal] with its `ID` set to `anonymous`.
-<6> This and the following lines define and configure the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_jwt" >}}[jwt]` authenticator named `jwt_auth`. With this configuration, it will check if a request contains an `Authorization` header with a bearer token in JWT format and validate it using key material fetched from the JWKS endpoint. It will reject requests without a valid JWT or create a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc/#_principal">}}[Principal] with its `ID` set to the token's `sub` value and its `Attribute` property containing all the available claims.
-<7> Here, we define and configure a `link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[remote]` authorizer named `opa`. Note how we allow for the overriding of particular settings, which will be specified below when we define the rules.
-<8> The following lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. This configuration will generate a JWT from the link:{{< relref "/docs/mechanisms/evaluation_objects/#_subject">}}[`Subject`] object with the standard claims and the `sub` claim set to the ID of the default principal from the created `Subject` object. The key material used for signing is pulled from the referenced key store.
-<9> These two lines conclude the definition of our mechanisms catalogue and define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_noop" >}}[noop]` finalizer, which, as the name implies, does nothing.
-<10> With the mechanisms catalogue in place, we can now define a link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule]. This rule will be used if no other rule matches the request. It also acts as a link:{{< relref "/docs/concepts/rules.adoc#_default_rule_inheritance" >}}[base] for defining regular (upstream service-specific) rules. This rule defines a secure default link:{{< relref "/docs/concepts/pipelines.adoc#_authentication_authorization_pipeline" >}}[authentication & authorization pipeline], which denies any request using the `deny_all` authenticator. If overridden by a regular rule, it will create a JWT using the `jwt` finalizer.
-<11> The last few lines configure the link:{{< relref "/docs/rules/providers.adoc#_filesystem" >}}[`file_system`] provider, which allows loading regular rules from the file system. The provider is also configured to watch for changes, so you can modify the rules in real time.
+<3> Here, we configure the secret material required for the setup. In the cases a secret source to load a key from a pem file to be used by the `jwt` finalizer some lines below.
+<4> Here, we define our link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue of mechanisms] to be used in link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream service-specific rules]. In this case, we define authenticators, an authorizer, and finalizers.
+<5> These two lines define the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_unauthorized" >}}[unauthorized]` authenticator named `deny_all`, which rejects all requests.
+<6> These two lines define the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_anonymous" >}}[anonymous]` authenticator named `anon`, which allows any request and creates a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc/#_principal">}}[Principal] with its `ID` set to `anonymous`.
+<7> This and the following lines define and configure the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_jwt" >}}[jwt]` authenticator named `jwt_auth`. With this configuration, it will check if a request contains an `Authorization` header with a bearer token in JWT format and validate it using key material fetched from the JWKS endpoint. It will reject requests without a valid JWT or create a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc/#_principal">}}[Principal] with its `ID` set to the token's `sub` value and its `Attribute` property containing all the available claims.
+<8> Here, we define and configure a `link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[remote]` authorizer named `opa`. Note how we allow for the overriding of particular settings, which will be specified below when we define the rules.
+<9> The following lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. This configuration will generate a JWT from the link:{{< relref "/docs/mechanisms/evaluation_objects/#_subject">}}[`Subject`] object with the standard claims and the `sub` claim set to the ID of the default principal from the created `Subject` object. The key material used for signing is pulled from the referenced secret source.
+<10> These two lines conclude the definition of our mechanisms catalogue and define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_noop" >}}[noop]` finalizer, which, as the name implies, does nothing.
+<11> With the mechanisms catalogue in place, we can now define a link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule]. This rule will be used if no other rule matches the request. It also acts as a link:{{< relref "/docs/concepts/rules.adoc#_default_rule_inheritance" >}}[base] for defining regular (upstream service-specific) rules. This rule defines a secure default link:{{< relref "/docs/concepts/pipelines.adoc#_authentication_authorization_pipeline" >}}[authentication & authorization pipeline], which denies any request using the `deny_all` authenticator. If overridden by a regular rule, it will create a JWT using the `jwt` finalizer.
+<12> The last few lines configure the link:{{< relref "/docs/rules/providers.adoc#_filesystem" >}}[`file_system`] provider, which allows loading regular rules from the file system. The provider is also configured to watch for changes, so you can modify the rules in real time.
 
-. Create a file named `signer.pem` with the following content. This file is our key store with a private key, which you’ll see referenced in the configuration above.
+. Create a file named `signer.pem` with the following content. This file is referenced in the secret management configuration above.
 +
 [source, yaml]
 ----
