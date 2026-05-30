@@ -241,6 +241,10 @@ func (p *pemProvider) reload() {
 }
 
 func (p *pemProvider) runWatcher(ctx context.Context, watcher *fsnotify.Watcher) {
+	p.logger.Info().
+		Str("_file", p.path).
+		Msg("Watching pem file for changes")
+
 	defer p.watcherWg.Done()
 	defer func() {
 		_ = watcher.Close()

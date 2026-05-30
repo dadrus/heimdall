@@ -78,7 +78,7 @@ func newSecretSource(
 ) (*secretSource, error) {
 	sourceLogger := logger.With().
 		Str("_secret_source", name).
-		Str("_secret_provider", conf.Type).
+		Str("_backend", conf.Type).
 		Logger()
 
 	sourceLogger.Info().Msg("Creating secret source")
@@ -132,25 +132,25 @@ func (s *secretSource) Stop(ctx context.Context) error {
 }
 
 func (s *secretSource) GetSecret(ctx context.Context, selector Selector) (types.Secret, error) {
-	s.logger.Debug().Str("_selector", selector.Value).Msg("Loading secret")
+	s.logger.Debug().Str("_selector", selector.Value).Msg("Getting secret")
 
 	return s.p.GetSecret(ctx, selector)
 }
 
 func (s *secretSource) GetSecretSet(ctx context.Context, selector Selector) ([]types.Secret, error) {
-	s.logger.Debug().Str("_selector", selector.Value).Msg("Loading secret set")
+	s.logger.Debug().Str("_selector", selector.Value).Msg("Getting secret set")
 
 	return s.p.GetSecretSet(ctx, selector)
 }
 
 func (s *secretSource) GetCredentials(ctx context.Context, selector Selector) (types.Credentials, error) {
-	s.logger.Debug().Str("_selector", selector.Value).Msg("Loading credentials")
+	s.logger.Debug().Str("_selector", selector.Value).Msg("Getting credentials")
 
 	return s.p.GetCredentials(ctx, selector)
 }
 
 func (s *secretSource) GetCertificateBundle(ctx context.Context, selector Selector) (types.CertificateBundle, error) {
-	s.logger.Debug().Str("_selector", selector.Value).Msg("Loading certificate bundle")
+	s.logger.Debug().Str("_selector", selector.Value).Msg("Getting certificate bundle")
 
 	return s.p.GetCertificateBundle(ctx, selector)
 }

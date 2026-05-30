@@ -27,6 +27,8 @@ func NewManager(
 ) (Manager, error) {
 	proxy := &dependencyResolverProxy{}
 
+	logger.Info().Msg("Initializing secrets manager")
+
 	repository, err := source.NewRepository(cfg, logger, df, proxy)
 	if err != nil {
 		return nil, err
@@ -36,6 +38,8 @@ func NewManager(
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Info().Msg("Secrets manager initialized")
 
 	proxy.resolver = resolver
 

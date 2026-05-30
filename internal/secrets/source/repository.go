@@ -113,6 +113,8 @@ func NewRepository(
 ) (Repository, error) {
 	const numberOfWorkers = 4
 
+	logger.Info().Msg("Loding secret sources")
+
 	executor, err := task.NewExecutor(numberOfWorkers) //nolint:mnd
 	if err != nil {
 		return nil, errorchain.NewWithMessage(

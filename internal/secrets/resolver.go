@@ -462,6 +462,10 @@ func (r *resolver) scheduleResolve(tsk task.Task) {
 }
 
 func (r *resolver) handleSourceEvent(evt source.Event) {
+	r.logger.Debug().
+		Str("_source", evt.Source).
+		Msg("Handling source event")
+
 	// Source events force a refresh of already known bindings.
 	for _, tsk := range r.match(evt) {
 		r.scheduleResolve(tsk)
