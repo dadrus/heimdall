@@ -295,9 +295,9 @@ WARNING: Using `query` strategy will expose the api key to access logs and traci
 +
 The name of either the header or the cookie.
 
-* *`value`*: _string_ (mandatory)
+* *`secret`*: _link:{{< relref "/docs/operations/secret_management.adoc#_secret_references" >}}[Secret Reference]_ (mandatory)
 +
-The value of the api key.
+Reference to the api key. The selector must reference a single string value.
 
 .API Key Strategy configuration
 ====
@@ -309,7 +309,9 @@ type: api_key
 config:
   in: header
   name: X-My-API-Key
-  value: super-duper-secret-key
+  secret:
+    source: my_secrets
+    selector: my_api_key
 ----
 ====
 
@@ -319,25 +321,27 @@ This strategy can be used if your endpoint is protected by HTTP basic authentica
 
 `type` must be set to `basic_auth`. `config` supports the following properties:
 
-* *`user`*: _string_ (mandatory)
+* *`credentials`*: _link:{{< relref "/docs/operations/secret_management.adoc#_secret_references" >}}[Secret Reference]_ (mandatory)
 +
-The user-id.
-
-* *`password`*: _string_ (mandatory)
+Credentials to use for authentication purposes. The credentials object must include a `user_id` and a `password` entries:
 +
-The password.
+[source, yaml]
+----
+# contents of a credentials object
+user_id: Aladdin
+password: SesameOpen!
+----
 
 .Basic Auth Strategy configuration
 ====
-
-The following snippet shows how to configure this strategy with user set to "Alladin" and password set to "open sesame"
 
 [source, yaml]
 ----
 type: basic_auth
 config:
-  user: Alladin
-  password: open sesame
+  credentials:
+    source: my_secrets
+    selector: creds
 ----
 ====
 
@@ -375,8 +379,8 @@ config:
   components: ["@method", "content-digest", "@authority", "x-my-fancy-header"]
   signer:
     name: bar
-    key-store:
-      path: /path/to/key.pem
+    secret:
+      source: my_keys_source
 ----
 ====
 
@@ -393,13 +397,16 @@ The token endpoint of the authorization server.
 +
 NOTE: Usage of TLS is enforced as long as heimdall is not started with `--insecure-skip-egress-tls-enforcement` flag, which allows insecure communication to any of the configured services.
 
-* *`client_id`*: _string_ (mandatory)
+* *`credentials`*: _link:{{< relref "/docs/operations/secret_management.adoc#_secret_references" >}}[Secret Reference]_ (mandatory, not overridable)
 +
-The client identifier for heimdall.
-
-* *`client_secret`*: _string_ (mandatory)
+Reference to client credentials to be used for authentication purposes. The credentials object must include a `client_id` and a `client_secret` entries:
 +
-The client secret for heimdall.
+[source, yaml]
+----
+# contents of a credentials object
+client_id: Aladdin
+client_secret: SesameOpen!
+----
 
 * *`auth_method`*: _string_ (optional)
 +
@@ -434,8 +441,9 @@ config:
   header:
     name: X-My-Token
   token_url: https://my-auth.provider/token
-  client_id: foo
-  client_secret: bar
+  credentials:
+    source: my_secrets
+    selector: my_client_creds
   auth_method: basic_auth
   ttl: 10m
   scopes:
@@ -641,8 +649,10 @@ auth:
   type: api_key
   config:
     name: foo
-    value: bar
     in: cookie
+    secret:
+      source: my_secrets
+      selector: my_api_key
 headers:
   X-My-First-Header: foobar
   X-My-Second-Header: barfoo
@@ -677,38 +687,6 @@ Defaults to `false` if not otherwise stated in the description of the configurat
 * *`cache_ttl`* _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
 Specifies how long heimdall should cache the response if it does not contain any explicit expiration time (no heuristic freshness lifetime is calculated). If this property is not set, heimdall considers such responses uncacheable. Unless specified otherwise in the configuration type description utilizing the HTTP Cache settings, the default value is `0s`.
-
-== Key Store
-
-This type configures a key store holding keys and corresponding certificate chains. PKCS#1, as well as PKCS#8 encodings are supported for private keys.
-
-While loading a key store following verifications are done:
-
-. Uniqueness of key ids and rejection of key stores which violate this condition (see also link:{{< relref "#_key_id_lookup" >}}[Key-Id Lookup])
-. Correlation of keys and certificates to build a valid certificate chain for every given key if certificates are present. If the correlation fails, an error is raised and heimdall will refuse to start.
-. Certificate chain validation. If the chain is invalid, an error is raised and heimdall will refuse to start.
-
-Following configuration properties are available:
-
-* *`path`*: _string_ (mandatory)
-+
-The path to the PEM file with the cryptographic material. Watching for secrets rotation is supported.
-
-* *`password`*: _string_ (optional)
-+
-If the key material is protected with a password, this property can be set to decipher it. Password protection is only supported for PKCS#8 encoded keys
-+
-CAUTION: If the key store contains multiple keys and these keys are password protected, same password must be used for all of these.
-
-
-.Example configuration
-====
-[source, yaml]
-----
-path: /path/to/keystore.pem
-password: VeryInsecure!
-----
-====
 
 == Respond
 
@@ -1056,11 +1034,3 @@ cipher_suites:
   - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
 ----
 ====
-
-== Key-Id Lookup
-
-When heimdall loads a key store, following algorithm is used to get the key id for the key:
-
-* if the PEM entry with the private key has `X-Key-ID` header specified, this value is used as key id
-* Otherwise, if an X.509 certificate is present for the private key, and it has the `Subject Key Identifier` extension set, the hex representation of it is used as key id.
-* Otherwise, heimdall calculates the value for the `Subject Key Identifier` according to https://www.ietf.org/rfc/rfc3280.html#section-4.2.1.2[RFC 3280, Section 4.2.1.2] and uses hex representation of it as key id.

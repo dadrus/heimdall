@@ -12,11 +12,11 @@ description: The dynamic nature of mechanisms is given by the ability to work on
 
 :toc:
 
-E.g. in one case, you want to have access to a particular request header. In another case you would like to add specific data to the resulting JWT created by heimdall. And in yet another case, you may want to check whether some expectations apply. These capabilities are described on this page.
+Mechanisms in heimdall are dynamic: they can inspect request data, act on authenticated subject information, and produce output that subsequent pipeline steps can use. This page describes the objects available during rule execution, and the templating and expression capabilities that operate on them.
 
 == Objects
 
-Objects represent state during the execution of a particular rule. These are entities either created or used by specific mechanisms, and can represent things like the actual request, the authenticated subject of the request, and many others.
+Objects represent state during the execution of a particular rule. These are entities either created or used by specific mechanisms, and can represent things like the actual request, the authenticated subject of the request, and many others. Which objects are available in a particular mechanism is documented at each mechanism's configuration reference.
 
 === Principal
 
@@ -82,7 +82,9 @@ The unique identifier of the Subject. Its value is taken from the Principal name
 +
 A key-value map containing all attributes of the Principal named "default".
 
-Each object of this type can be thought as a JSON object. Here an example:
+NOTE: `Subject.ID` and `Subject.Attributes` are syntactic sugar for `Subject.default.ID` and `Subject.default.Attributes` respectively.
+
+Each object of this type can be thought of as a JSON object. Here is an example:
 
 .Subject created by two authenticators — one authenticating the user and one the device being used
 ====
@@ -158,19 +160,19 @@ This method returns the URL as valid URL string of a form `scheme:host/path?quer
 +
 The list of IP addresses the request passed through with the first entry being the ultimate client of the request. Only available if heimdall is configured to trust the client, sending this information, e.g. in the `X-Forwarded-From` header (see also link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[trusted_proxies] configuration for more details).
 
-* *`Header(name)`*: _method_,
+* *`Header(name)`*: _method_
 +
 This method expects the name of a header as input and returns its value as a `string`. If the header is not present in the HTTP request an empty string (`""`) is returned. If a header appears multiple times in the request, the returned `string` is a comma separated list of all values.
 +
-NOTE: A single header may be a comma separated list of actual values as well. Best example is the `Accept` header, which might be set to e.g. `text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`).
+NOTE: A single header may be a comma-separated list of actual values as well. Best example is the `Accept` header, which might be set to e.g. `text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8`.
 
-* *`Cookie(name)`*: _method_,
+* *`Cookie(name)`*: _method_
 +
 This method expects the name of a cookie as input and returns the value of it as `string`. If the cookie is not present in the HTTP request an empty string (`""`) is returned.
 
-* *`Body()`*: _method_,
+* *`Body()`*: _method_
 +
-The parsed body with contents depending on the `Content-Type` header. Supported content types are any MIME types with `json` or `yaml` subtype, as well as `application/x-www-form-urlencoded`. If MIME type is unsupported, the method returns a string with the actual body contents.
+The parsed body with contents depending on the `Content-Type` header. Supported content types are any MIME types with `json` or `yaml` subtype, as well as `application/x-www-form-urlencoded`. If the MIME type is unsupported or no `Content-Type` header is present, the method returns the raw body as a string.
 +
 NOTE: The actual request body is parsed only on the first use of this function. All subsequent calls return the cached result.
 +
@@ -222,7 +224,7 @@ Request = {
 
 === Outputs
 
-This object represents a pipeline execution specific key value map. It is used by pipeline steps to store or read results of particular step executions. Step id is used as a key and the value is the corresponding result.
+This object represents a pipeline execution-specific key-value map used by pipeline steps to store and share results. Each step stores its result under its own ID as the key.
 
 Example:
 
@@ -238,7 +240,7 @@ Outputs = {
 
 This object represents the contents of a payload, like the request body or a response body. The contents depend on the MIME-Type of the payload. For `json`, `yaml` or `x-www-form-urlencoded` encoded payload, the object is transformed to a JSON object. Otherwise, it is just a string.
 
-Here some examples:
+Here are some examples:
 
 .Structured payload
 ====
@@ -261,21 +263,21 @@ Payload = "SomeStringValue"
 
 === Error
 
-This object represents an error, which has been raised during the execution of a rule and is available in `if` link:{{< relref "#_expressions">}}[CEL expressions] of link:{{< relref "error_handlers.adoc">}}[Error Handlers]. Following properties are available:
+This object represents an error raised during the execution of a rule. It is available in `if` link:{{< relref "#_expressions">}}[CEL expressions] of link:{{< relref "error_handlers.adoc">}}[Error Handlers] and is not available in templates. The following properties are available:
 
 * *`Source`*: _string_
 +
-The ID of the mechanism, which raised the error.
+The ID of the mechanism which raised the error.
 
 * *`StepID`*: _string_
 +
-The ID of the pipeline step, which raised the error
+The ID of the pipeline step which raised the error.
 
 Proper error handling requires attention to the actual _link:{{< relref "/docs/configuration/types.adoc#_errorstate_type" >}}[error type]_ available via `type(Error)`.
 
 === Values
 
-This object represents a key value map, with both, the key and the value being of string type. Though, the actual values can be templated (see (link:{{< relref "#_templating" >}}[Templating]). The contents and the variables available in templates depend on the configuration of the particular mechanism, respectively the corresponding override in a rule.
+This object represents a key-value map, with both the key and value being of string type. The actual values can be templated (see link:{{< relref "#_templating" >}}[Templating]). The contents and the variables available in templates depend on the configuration of the particular mechanism, respectively the corresponding override in a rule.
 
 Here is an example:
 
@@ -292,30 +294,29 @@ Values = {
 
 == Templating
 
-Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_principal" >}}[Principal], link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
+Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on the objects described above — which exactly are available is documented at each mechanism's configuration reference.
 
 To ease the usage, all https://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
 
-* `urlenc` - Encodes a given string using url encoding. Is handy if you need to generate request body or query parameters e.g. for communication with further systems.
+* `urlenc` - Encodes a given string using URL encoding. Useful when generating request bodies or query parameters for communication with upstream systems.
 
-* `atIndex` - Implements python-like access to arrays and takes as a single argument the index to access the element in the array at. With index being a positive values it works exactly the same way, as with the usage of the built-in index function to access array elements. With negative index value, one can access the array elements from the tail of the array. -1 is the index of the last element, -2 the index of the element before the last one, etc.
+* `atIndex` - Implements Python-like access to arrays. Takes a single integer argument as the index. A positive index behaves like standard array access. A negative index accesses elements from the end of the array (`-1` is the last element, `-2` the second-last, etc.).
 +
-Example: `{{ atIndex 2 [1,2,3,4,5] }}` evaluates to `3` (behaves the same way as the `index` function) and `{{ atIndex -2 [1,2,3,4,5] }}` evaluates to `4`.
+Example: `{{ atIndex 2 [1,2,3,4,5] }}` evaluates to `3` and `{{ atIndex -2 [1,2,3,4,5] }}` evaluates to `4`.
 
-* `splitList` - Splits a given string using a separator (part of the sprig library, but not documented). The result is a string array.
+* `splitList` - Splits a given string using a separator. The result is a string array.
 +
 Example: `{{ splitList "/" "/foo/bar" }}` evaluates to the `["", "foo", "bar"]` array.
 
-* `secret` - Allows using configured secrets (See also link:{{< relref "/docs/operations/secret_management.adoc" >}}[Secret Management])
+* `secret` - Reads a secret value from a configured secret source (see link:{{< relref "/docs/operations/secret_management.adoc" >}}[Secret Management]).
 +
-Example: `{{ secret "some_source" "my_api_key" }}` references a key via `"my_api_key"` selector in `"some_source"` secret source.
+Example: `{{ secret "some_source" "my_api_key" }}` reads the value at selector `"my_api_key"` from the `"some_source"` secret source.
 +
-NOTE: Usage of secrets from rules is only possible if the referenced secrets source allows that (see link:{{< relref "/docs/operations/secret_management.adoc#_secret_source_configuration" >}}[Secret Source Configuration] for more details).
-
+NOTE: If this function is used in a rule, the referenced secret source must have `allow_in_rules: true` set, otherwise the rule will fail to load.
 
 .Rendering a JSON object
 ====
-Imagine, we have a `POST` request for the URL `\https://foobar.baz/zab?foo=bar`, with a header `X-Foo` set to `bar` value, for which heimdall was able to identify a subject consisting of a single "default" principal with `ID=foo` and which `Attributes` contain an entry `email: foo@bar`, then you can generate a JSON object with this information with the following template:
+Imagine we have a `POST` request for the URL `\https://foobar.baz/zab?foo=bar`, with a header `X-Foo` set to `bar`, for which heimdall was able to identify a subject consisting of a single "default" principal with `ID=foo` and `Attributes` containing an entry `email: foo@bar`. The following template generates a JSON object from this information:
 
 [source, gotemplate]
 ----
@@ -330,9 +331,7 @@ Imagine, we have a `POST` request for the URL `\https://foobar.baz/zab?foo=bar`,
 }
 ----
 
-NOTE: Please note that `.Subject.ID` and `.Subject.Attribute` is a syntactic sugar for `.Subject.default.ID`, respectively `.Subject.default.Attributes`.
-
-NOTE: Please also note how the access to the `foo` query parameter is done. Since `.Request.URL.Query.foo` returns an array of strings, the first element is taken to render the value for the `foo_value` key.
+NOTE: `.Request.URL.Query.foo` returns an array of strings, so the first element is accessed explicitly via `index`.
 
 This will result in the following JSON object:
 
@@ -352,7 +351,7 @@ This will result in the following JSON object:
 
 .Access to captured path segments
 ====
-Imagine, we have a `POST` request to the URL `\https://foobar.baz/zab/1234`, with `1234` being the identifier of a file, which should be updated with the contents sent in the body of the request, and you would like to control access to the aforesaid object using e.g. OpenFGA. This can be achieved with the following authorizer:
+Imagine we have a `POST` request to the URL `\https://foobar.baz/zab/1234`, with `1234` being the identifier of a file to be updated with the request body, and access control is handled via OpenFGA. This can be achieved with the following authorizer:
 
 [source, yaml]
 ----
@@ -372,7 +371,7 @@ config:
       Payload.allowed == true
 ----
 
-Please note how the `"object"` is set in the `payload` property above. When the `payload` template is rendered and for the above said request heimdall was able to identify the subject with `ID=foo`, following JSON object will be created:
+When the `payload` template is rendered for the above request with `Subject.ID=foo`, the following JSON object is produced:
 
 [source, json]
 ----
@@ -384,38 +383,51 @@ Please note how the `"object"` is set in the `payload` property above. When the 
 ----
 ====
 
-You can find further examples as part of mechanism descriptions, supporting templating.
+You can find further examples as part of the mechanism descriptions that support templating.
 
 == Expressions
 
-Expressions can be used to execute conditional logic. Currently, only https://github.com/google/cel-spec[CEL] is supported as expression language. All standard CEL functions, as well as https://pkg.go.dev/github.com/google/cel-go/ext#pkg-functions[extension functions], are available. The set of available link:{{<  relref "#_objects" >}}[evaluation objects] depends on the specific mechanism in use.
+Expressions can be used to execute conditional logic. Currently, only https://github.com/google/cel-spec[CEL] is supported as expression language. All standard CEL functions, as well as https://pkg.go.dev/github.com/google/cel-go/ext#pkg-functions[extension functions], are available. Which objects are available in a particular expression is documented at each mechanism's configuration reference. The link:{{< relref "#_error" >}}[Error] object is only available in Error Handler expressions.
 
-In addition to the built-in CEL functions, extension methods, and methods on evaluation objects, the following custom functions are also available:
+In addition to the built-in CEL functions and extension methods, the following custom functions are also available:
 
 * `at` - Provides Python-like access to array elements. A positive index behaves like standard `[]` array access. A negative index accesses elements from the end of the array (`-1` is the last element, `-2` the second-last, etc.).
 +
 Example: `[1,2,3,4,5].at(2)` returns `3` and `[1,2,3,4,5].at(-2)` returns `4`.
 
-* `last` - returns the last element of an array, or nil if the array is empty.
+* `last` - Returns the last element of an array, or nil if the array is empty.
 +
-Example: `[1,2,3,4,5].last()` returns `5`
+Example: `[1,2,3,4,5].last()` returns `5`.
 
-* `regexFind` - returns the first (leftmost) match of a regular expression within a string.
+* `regexFind` - Returns the first (leftmost) match of a regular expression within a string. Returns an empty string if no match is found.
 +
 Example: `"abcd1234".regexFind("[a-zA-Z][1-9]")` returns `"d1"`.
 
-* `regexFindAll` - returns an array of all matches of a regular expression within a string.
+* `regexFindAll` - Returns an array of all matches of a regular expression within a string. Returns an empty array if no match is found.
 +
 Example: `"123456789".regexFindAll("[2,4,6,8]")` returns `["2","4","6","8"]`.
 
-* `split` - splits a string by the given separator and returns an array of strings.
+* `split` - Splits a string by the given separator and returns an array of strings.
 +
 Example: `"/foo/bar/baz".split("/")` returns `["", "foo", "bar", "baz"]`.
 
-* `networks` - accepts a single CIDR string or an array of CIDR strings, and returns a matcher object that can be used to check whether an IP address belongs to one of the specified ranges.
+* `networks` - Accepts a single CIDR string or an array of CIDR strings, and returns a matcher object that can be used to check whether an IP address belongs to one of the specified ranges.
 +
-Example: `Request.ClientIPAddresses.all(ip in networks(["172.16.0.0/12", "192.168.0.0/16"]))` checks whether all IPs in the `Request.ClientIPAddresses` array belong to the specified IP ranges.
-
+Examples:
++
+Check whether *all* client IPs are within the specified private ranges (e.g., to enforce that a request only arrived via internal networks):
++
+[source, cel]
+----
+Request.ClientIPAddresses.all(ip, ip in networks(["172.16.0.0/12", "192.168.0.0/16"]))
+----
++
+Check whether *at least one* client IP is within a specific range (e.g., to detect that the request passed through a known proxy):
++
+[source, cel]
+----
+Request.ClientIPAddresses.exists(ip, ip in networks("10.0.0.0/8"))
+----
 
 Some examples:
 
@@ -429,7 +441,7 @@ Given the following Payload object
 Payload = { "result": true }
 ----
 
-a CEL expression to check whether the `result` attribute is set to `true`, would look as follows:
+a CEL expression to check whether the `result` attribute is set to `true` would look as follows:
 
 [source, cel]
 ----
@@ -445,8 +457,7 @@ has(Subject.Attributes.groups) &&
    Subject.Attributes.groups.exists(g, g == "admin")
 ----
 
-As with templates `Subject.ID` and `Subject.Attributes` is a syntactic sugar for `Subject.default.ID`, respectively `Subject.default.Attributes`
-
+As with templates, `Subject.ID` and `Subject.Attributes` are syntactic sugar for `Subject.default.ID` and `Subject.default.Attributes` respectively.
 ====
 
 .Access the last path part of the matched URL
@@ -463,4 +474,6 @@ Request.URL.Path.split("/").last()
 ----
 type(Error) == authentication_error && Error.Source == "foo"
 ----
+
+For available error types, see link:{{< relref "/docs/configuration/types.adoc#_errorstate_type" >}}[Error State Types].
 ====

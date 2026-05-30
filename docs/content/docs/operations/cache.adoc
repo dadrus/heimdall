@@ -77,9 +77,9 @@ All types use pipelining to increase performance and do also make use of client 
 
 All Redis cache backend types support the following configuration options:
 
-* *`credentials`*: _Credentials_ (optional)
+* *`credentials`*: _link:{{< relref "/docs/operations/secret_management.adoc#_secret_references" >}}[Secret Reference]_ (optional)
 +
-Herewith you can define the credentials to be used for connection purposes to the Redis DB/Cluster. The credentials object must include a `username` (optional) and a `password` entries:
+Reference to the credentials to be used for connection purposes to the Redis DB/Cluster. The credentials object must include a `username` (optional) and a `password` entries:
 +
 [source, yaml]
 ----
