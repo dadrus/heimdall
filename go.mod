@@ -6,7 +6,7 @@ require (
 	github.com/DmitriyVTitov/size v1.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/alicebob/miniredis/v2 v2.38.0
-	github.com/ccoveille/go-safecast/v2 v2.0.0
+	github.com/ccoveille/go-safecast/v2 v2.0.1
 	github.com/dadrus/httpsig v0.9.0
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
 	github.com/elnormous/contenttype v1.0.4
