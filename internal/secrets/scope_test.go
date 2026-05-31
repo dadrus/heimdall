@@ -60,11 +60,9 @@ func TestNewScope(t *testing.T) {
 			setup: func(t *testing.T, bindings *BindingProviderMock) *scope {
 				t.Helper()
 
-				return newScope(
-					bindings,
-					withID("foo"),
-					withNamespace("team-a"),
-					withInternalScope(false),
+				return newScope(bindings,
+					WithID("foo"),
+					WithNamespace("team-a"),
 				)
 			},
 			assert: func(t *testing.T, scp *scope) {
@@ -81,16 +79,11 @@ func TestNewScope(t *testing.T) {
 				require.NotNil(t, scp.leases)
 			},
 		},
-		"internal option overrides rule scoped setting": {
+		"creates internal scope if only id is provided": {
 			setup: func(t *testing.T, bindings *BindingProviderMock) *scope {
 				t.Helper()
 
-				return newScope(
-					bindings,
-					withID("foo"),
-					withNamespace("team-a"),
-					withInternalScope(true),
-				)
+				return newScope(bindings, WithID("foo"))
 			},
 			assert: func(t *testing.T, scp *scope) {
 				t.Helper()
@@ -104,22 +97,6 @@ func TestNewScope(t *testing.T) {
 				require.Equal(t, "foo", scp.id)
 				require.Empty(t, scp.namespace)
 				require.NotNil(t, scp.leases)
-			},
-		},
-		"ignores nil options": {
-			setup: func(t *testing.T, bindings *BindingProviderMock) *scope {
-				t.Helper()
-
-				return newScope(bindings, nil)
-			},
-			assert: func(t *testing.T, scp *scope) {
-				t.Helper()
-
-				ref := scp.refFactory(Reference{Source: "src", Selector: "selector"})
-
-				require.Equal(t, referenceScopeInternal, ref.scope)
-				require.Empty(t, scp.id)
-				require.Empty(t, scp.namespace)
 			},
 		},
 	} {
@@ -713,8 +690,8 @@ func TestScopeUsesScopedReferences(t *testing.T) {
 
 	scp := newScope(
 		bindings,
-		withID("foo"),
-		withNamespace("team-a"),
+		WithID("foo"),
+		WithNamespace("team-a"),
 	)
 
 	handle, err := scp.Secret(
@@ -760,8 +737,8 @@ func TestScopeRelease(t *testing.T) {
 
 				scp := newScope(
 					bindings,
-					withID("foo"),
-					withNamespace("team-a"),
+					WithID("foo"),
+					WithNamespace("team-a"),
 				)
 				scp.leases[keyA] = 2
 				scp.leases[keyB] = 1
@@ -844,8 +821,8 @@ func TestScopeReleaseIsIdempotent(t *testing.T) {
 
 	scp := newScope(
 		bindings,
-		withID("foo"),
-		withNamespace("team-a"),
+		WithID("foo"),
+		WithNamespace("team-a"),
 	)
 	scp.leases[key] = 1
 

@@ -100,10 +100,10 @@ func (r *manager) Stop(ctx context.Context) error {
 	return err
 }
 
-type scopedResolverFactoryFunc func(id string, opts ...ScopeOption) ScopedResolver
+type scopedResolverFactoryFunc func(opts ...ScopeOption) ScopedResolver
 
-func (f scopedResolverFactoryFunc) Create(id string, opts ...ScopeOption) ScopedResolver {
-	return f(id, opts...)
+func (f scopedResolverFactoryFunc) Create(opts ...ScopeOption) ScopedResolver {
+	return f(opts...)
 }
 
 type dependencyResolverProxy struct {

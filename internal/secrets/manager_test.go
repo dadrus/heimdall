@@ -62,7 +62,7 @@ func TestManagerScopedResolverFactory(t *testing.T) {
 	factory := mgr.ScopedResolverFactory()
 	require.NotNil(t, factory)
 
-	scoped := factory.Create("ruleset-a", WithNamespace("team-a"))
+	scoped := factory.Create(WithID("ruleset-a"), WithNamespace("team-a"))
 	require.NotNil(t, scoped)
 
 	scope := scoped.(*scope) //nolint:forcetypeassert

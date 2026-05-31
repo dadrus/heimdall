@@ -26,30 +26,6 @@ type bindingProvider interface {
 	releaseBinding(key bindingKey, count int)
 }
 
-type scopeOption func(*scope)
-
-func withNamespace(namespace string) scopeOption {
-	return func(s *scope) {
-		s.namespace = namespace
-		s.refFactory = namespacedRuleRef(namespace)
-	}
-}
-
-func withID(id string) scopeOption {
-	return func(s *scope) {
-		s.id = id
-	}
-}
-
-func withInternalScope(value bool) scopeOption {
-	return func(s *scope) {
-		if value {
-			s.namespace = ""
-			s.refFactory = internalRef
-		}
-	}
-}
-
 type scope struct {
 	bindings   bindingProvider
 	refFactory referenceFactory
@@ -67,7 +43,7 @@ type scope struct {
 
 func newScope(
 	bindings bindingProvider,
-	opts ...scopeOption,
+	opts ...ScopeOption,
 ) *scope {
 	scp := &scope{
 		bindings:   bindings,

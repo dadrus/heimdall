@@ -38,18 +38,6 @@ func (fn sourceObserverFunc) Notify(evt source.Event) {
 	fn(evt)
 }
 
-func applyScopeOptions(opts ...ScopeOption) scopeOptions {
-	resolved := scopeOptions{}
-
-	for _, opt := range opts {
-		if opt != nil {
-			opt(&resolved)
-		}
-	}
-
-	return resolved
-}
-
 type resolverState int8
 
 const (
@@ -168,15 +156,8 @@ func (r *resolver) globalResolver() Resolver {
 	return r.appScope
 }
 
-func (r *resolver) scopedResolver(id string, opts ...ScopeOption) ScopedResolver {
-	cfg := applyScopeOptions(opts...)
-
-	return newScope(
-		r,
-		withID(id),
-		withNamespace(cfg.namespace),
-		withInternalScope(cfg.isInternal),
-	)
+func (r *resolver) scopedResolver(opts ...ScopeOption) ScopedResolver {
+	return newScope(r, opts...)
 }
 
 func (r *resolver) secretBinding(

@@ -264,7 +264,7 @@ func (p *ruleSetProcessor) newScope(ruleSet v1beta1.RuleSet) ruleSetScope {
 	return ruleSetScope{
 		id: ruleSet.ID,
 		resolver: p.sf.Create(
-			ruleSet.ID,
+			secrets.WithID(ruleSet.ID),
 			secrets.WithNamespace(ruleSet.Namespace),
 		),
 	}

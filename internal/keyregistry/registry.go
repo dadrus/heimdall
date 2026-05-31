@@ -83,7 +83,7 @@ func (r *registry) doNotify(ctx context.Context, ref secrets.Reference) {
 	parent := ref.Parent()
 	id := publicationID(parent)
 
-	scope := r.srf.Create(id, secrets.WithInternalScope())
+	scope := r.srf.Create(secrets.WithID(id))
 	defer scope.Release()
 
 	handle, err := scope.SecretSet(parent)

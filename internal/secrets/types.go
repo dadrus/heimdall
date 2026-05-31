@@ -56,26 +56,22 @@ type (
 		Release()
 	}
 
-	ScopeOption func(*scopeOptions)
-
-	scopeOptions struct {
-		namespace  string
-		isInternal bool
-	}
+	ScopeOption func(*scope)
 
 	ScopedResolverFactory interface {
-		Create(id string, opts ...ScopeOption) ScopedResolver
+		Create(opts ...ScopeOption) ScopedResolver
 	}
 )
 
 func WithNamespace(namespace string) ScopeOption {
-	return func(opts *scopeOptions) {
-		opts.namespace = namespace
+	return func(scp *scope) {
+		scp.namespace = namespace
+		scp.refFactory = namespacedRuleRef(namespace)
 	}
 }
 
-func WithInternalScope() ScopeOption {
-	return func(opts *scopeOptions) {
-		opts.isInternal = true
+func WithID(id string) ScopeOption {
+	return func(scp *scope) {
+		scp.id = id
 	}
 }

@@ -37,14 +37,13 @@ func (_m *ScopedResolverFactoryMock) EXPECT() *ScopedResolverFactoryMock_Expecte
 }
 
 // Create provides a mock function for the type ScopedResolverFactoryMock
-func (_mock *ScopedResolverFactoryMock) Create(id string, opts ...secrets.ScopeOption) secrets.ScopedResolver {
+func (_mock *ScopedResolverFactoryMock) Create(opts ...secrets.ScopeOption) secrets.ScopedResolver {
 	// secrets.ScopeOption
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
 	}
 	var _ca []interface{}
-	_ca = append(_ca, id)
 	_ca = append(_ca, _va...)
 	ret := _mock.Called(_ca...)
 
@@ -53,8 +52,8 @@ func (_mock *ScopedResolverFactoryMock) Create(id string, opts ...secrets.ScopeO
 	}
 
 	var r0 secrets.ScopedResolver
-	if returnFunc, ok := ret.Get(0).(func(string, ...secrets.ScopeOption) secrets.ScopedResolver); ok {
-		r0 = returnFunc(id, opts...)
+	if returnFunc, ok := ret.Get(0).(func(...secrets.ScopeOption) secrets.ScopedResolver); ok {
+		r0 = returnFunc(opts...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(secrets.ScopedResolver)
@@ -69,30 +68,24 @@ type ScopedResolverFactoryMock_Create_Call struct {
 }
 
 // Create is a helper method to define mock.On call
-//   - id string
 //   - opts ...secrets.ScopeOption
-func (_e *ScopedResolverFactoryMock_Expecter) Create(id interface{}, opts ...interface{}) *ScopedResolverFactoryMock_Create_Call {
+func (_e *ScopedResolverFactoryMock_Expecter) Create(opts ...interface{}) *ScopedResolverFactoryMock_Create_Call {
 	return &ScopedResolverFactoryMock_Create_Call{Call: _e.mock.On("Create",
-		append([]interface{}{id}, opts...)...)}
+		append([]interface{}{}, opts...)...)}
 }
 
-func (_c *ScopedResolverFactoryMock_Create_Call) Run(run func(id string, opts ...secrets.ScopeOption)) *ScopedResolverFactoryMock_Create_Call {
+func (_c *ScopedResolverFactoryMock_Create_Call) Run(run func(opts ...secrets.ScopeOption)) *ScopedResolverFactoryMock_Create_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 []secrets.ScopeOption
-		variadicArgs := make([]secrets.ScopeOption, len(args)-1)
-		for i, a := range args[1:] {
+		var arg0 []secrets.ScopeOption
+		variadicArgs := make([]secrets.ScopeOption, len(args)-0)
+		for i, a := range args[0:] {
 			if a != nil {
 				variadicArgs[i] = a.(secrets.ScopeOption)
 			}
 		}
-		arg1 = variadicArgs
+		arg0 = variadicArgs
 		run(
-			arg0,
-			arg1...,
+			arg0...,
 		)
 	})
 	return _c
@@ -103,7 +96,7 @@ func (_c *ScopedResolverFactoryMock_Create_Call) Return(scopedResolver secrets.S
 	return _c
 }
 
-func (_c *ScopedResolverFactoryMock_Create_Call) RunAndReturn(run func(id string, opts ...secrets.ScopeOption) secrets.ScopedResolver) *ScopedResolverFactoryMock_Create_Call {
+func (_c *ScopedResolverFactoryMock_Create_Call) RunAndReturn(run func(opts ...secrets.ScopeOption) secrets.ScopedResolver) *ScopedResolverFactoryMock_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }

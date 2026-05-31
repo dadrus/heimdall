@@ -84,7 +84,10 @@ func (rv *rulesetValidator) Handle(ctx context.Context, req *request) *response 
 
 	var errs []metav1.StatusCause
 
-	sr := rv.rf.Create(ruleSet.ID, secrets.WithNamespace(ruleSet.Namespace))
+	sr := rv.rf.Create(
+		secrets.WithID(ruleSet.ID),
+		secrets.WithNamespace(ruleSet.Namespace),
+	)
 	defer sr.Release()
 
 	for idx, rc := range ruleSet.Rules {

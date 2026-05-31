@@ -35,40 +35,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x/task"
 )
 
-func TestApplyScopeOptions(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		opts []ScopeOption
-		want string
-	}{
-		"defaults to empty namespace": {},
-		"applies namespace": {
-			opts: []ScopeOption{WithNamespace("team-a")},
-			want: "team-a",
-		},
-		"applies last namespace": {
-			opts: []ScopeOption{
-				WithNamespace("team-a"),
-				WithNamespace("team-b"),
-			},
-			want: "team-b",
-		},
-		"ignores nil options": {
-			opts: []ScopeOption{nil, WithNamespace("team-a")},
-			want: "team-a",
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
-
-			got := applyScopeOptions(tc.opts...)
-
-			require.Equal(t, tc.want, got.namespace)
-		})
-	}
-}
-
 func TestSourceObserverFuncNotify(t *testing.T) {
 	t.Parallel()
 
@@ -314,9 +280,9 @@ func TestResolverScopedResolver(t *testing.T) {
 
 	res := newEmptyTestResolver(t)
 
-	scopedA := res.scopedResolver("ruleset-a", WithNamespace("team-a"))
-	scopedAAgain := res.scopedResolver("ruleset-a", WithNamespace("team-a"))
-	scopedB := res.scopedResolver("ruleset-b")
+	scopedA := res.scopedResolver(WithID("ruleset-a"), WithNamespace("team-a"))
+	scopedAAgain := res.scopedResolver(WithID("ruleset-a"), WithNamespace("team-a"))
+	scopedB := res.scopedResolver(WithID("ruleset-b"))
 
 	require.NotNil(t, scopedA)
 	require.NotNil(t, scopedAAgain)

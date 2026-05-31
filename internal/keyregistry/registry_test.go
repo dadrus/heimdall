@@ -383,7 +383,7 @@ func (s *RegistryTestSuite) TestDoNotify() {
 			scope := secretsmocks.NewScopedResolverMock(s.T())
 			handle := secretsmocks.NewSecretSetHandleMock(s.T())
 
-			srf.EXPECT().Create(publicationID(parent), mock.Anything).Return(scope)
+			srf.EXPECT().Create(mock.Anything).Return(scope)
 
 			scope.EXPECT().SecretSet(parent).Return(handle, nil)
 			scope.EXPECT().AwaitReady(mock.Anything).Return(nil)
@@ -403,7 +403,6 @@ func (s *RegistryTestSuite) TestDoNotify() {
 func (s *RegistryTestSuite) TestDoNotifyLogsIgnoredNonAsymmetricSecrets() {
 	ref := secrets.Reference{Source: "pem", Selector: "jwt/signing/2026-05"}
 	parent := ref.Parent()
-	id := publicationID(parent)
 
 	var logs bytes.Buffer
 
@@ -411,7 +410,7 @@ func (s *RegistryTestSuite) TestDoNotifyLogsIgnoredNonAsymmetricSecrets() {
 	scope := secretsmocks.NewScopedResolverMock(s.T())
 	handle := secretsmocks.NewSecretSetHandleMock(s.T())
 
-	srf.EXPECT().Create(id, mock.Anything).Return(scope)
+	srf.EXPECT().Create(mock.Anything).Return(scope)
 
 	scope.EXPECT().SecretSet(parent).Return(handle, nil)
 	scope.EXPECT().AwaitReady(mock.Anything).Return(nil)
@@ -470,7 +469,7 @@ func (s *RegistryTestSuite) TestDoNotifyReplacesExistingPublicationSet() {
 	scope := secretsmocks.NewScopedResolverMock(s.T())
 	handle := secretsmocks.NewSecretSetHandleMock(s.T())
 
-	srf.EXPECT().Create(id, mock.Anything).Return(scope)
+	srf.EXPECT().Create(mock.Anything).Return(scope)
 
 	scope.EXPECT().SecretSet(parent).Return(handle, nil)
 	scope.EXPECT().AwaitReady(mock.Anything).Return(nil)
@@ -519,9 +518,7 @@ func (s *RegistryTestSuite) TestDoNotifyAggregatesDifferentPublicationSets() {
 	scope1 := secretsmocks.NewScopedResolverMock(s.T())
 	handle1 := secretsmocks.NewSecretSetHandleMock(s.T())
 
-	srf.EXPECT().
-		Create(id1, mock.Anything).
-		Return(scope1)
+	srf.EXPECT().Create(mock.Anything).Return(scope1).Once()
 
 	scope1.EXPECT().SecretSet(parent1).Return(handle1, nil)
 	scope1.EXPECT().AwaitReady(mock.Anything).Return(nil)
@@ -547,7 +544,7 @@ func (s *RegistryTestSuite) TestDoNotifyAggregatesDifferentPublicationSets() {
 	scope2 := secretsmocks.NewScopedResolverMock(s.T())
 	handle2 := secretsmocks.NewSecretSetHandleMock(s.T())
 
-	srf.EXPECT().Create(id2, mock.Anything).Return(scope2)
+	srf.EXPECT().Create(mock.Anything).Return(scope2).Once()
 
 	scope2.EXPECT().SecretSet(parent2).Return(handle2, nil)
 	scope2.EXPECT().AwaitReady(mock.Anything).Return(nil)
@@ -596,7 +593,7 @@ func (s *RegistryTestSuite) TestDoNotifyFailsWithoutReplacingExistingSet() {
 
 				parent := ref.Parent()
 
-				srf.EXPECT().Create(publicationID(parent), mock.Anything).Return(scope)
+				srf.EXPECT().Create(mock.Anything).Return(scope)
 
 				scope.EXPECT().SecretSet(parent).Return(nil, assert.AnError)
 				scope.EXPECT().Release()
@@ -615,7 +612,7 @@ func (s *RegistryTestSuite) TestDoNotifyFailsWithoutReplacingExistingSet() {
 				parent := ref.Parent()
 				handle := secretsmocks.NewSecretSetHandleMock(t)
 
-				srf.EXPECT().Create(publicationID(parent), mock.Anything).Return(scope)
+				srf.EXPECT().Create(mock.Anything).Return(scope)
 
 				scope.EXPECT().SecretSet(parent).Return(handle, nil)
 				scope.EXPECT().AwaitReady(mock.Anything).Return(assert.AnError)
@@ -677,9 +674,7 @@ func (s *RegistryTestSuite) TestNotifyPublishesVerificationSet() {
 		scope := secretsmocks.NewScopedResolverMock(t)
 		handle := secretsmocks.NewSecretSetHandleMock(t)
 
-		srf.EXPECT().
-			Create(id, mock.Anything).
-			Return(scope)
+		srf.EXPECT().Create(mock.Anything).Return(scope)
 
 		scope.EXPECT().SecretSet(parent).Return(handle, nil)
 		scope.EXPECT().AwaitReady(mock.Anything).Return(nil)
@@ -725,7 +720,7 @@ func (s *RegistryTestSuite) TestNotifyTimesOutVerificationSetPublication() {
 		scope := secretsmocks.NewScopedResolverMock(t)
 		handle := secretsmocks.NewSecretSetHandleMock(t)
 
-		srf.EXPECT().Create(id, mock.Anything).Return(scope)
+		srf.EXPECT().Create(mock.Anything).Return(scope)
 
 		scope.EXPECT().SecretSet(parent).Return(handle, nil)
 		scope.EXPECT().

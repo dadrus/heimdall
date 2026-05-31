@@ -78,9 +78,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 			) {
 				t.Helper()
 
-				scopeFactory.EXPECT().
-					Create("test", mock.Anything).
-					Return(resolver)
+				scopeFactory.EXPECT().Create(mock.Anything, mock.Anything).Return(resolver)
 
 				factory.EXPECT().
 					CreateRule(
@@ -92,9 +90,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 					).
 					Return(nil, assert.AnError)
 
-				resolver.EXPECT().
-					Release().
-					Once()
+				resolver.EXPECT().Release()
 			},
 			assert: func(t *testing.T, processor *ruleSetProcessor, err error) {
 				t.Helper()
@@ -123,9 +119,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 
 				rul := mocks.NewRuleMock(t)
 
-				scopeFactory.EXPECT().
-					Create("test", mock.Anything).
-					Return(resolver)
+				scopeFactory.EXPECT().Create(mock.Anything, mock.Anything).Return(resolver)
 
 				factory.EXPECT().
 					CreateRule(
@@ -137,13 +131,8 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 					).
 					Return(rul, nil)
 
-				resolver.EXPECT().
-					AwaitReady(mock.Anything).
-					Return(assert.AnError)
-
-				resolver.EXPECT().
-					Release().
-					Once()
+				resolver.EXPECT().AwaitReady(mock.Anything).Return(assert.AnError)
+				resolver.EXPECT().Release()
 			},
 			assert: func(t *testing.T, processor *ruleSetProcessor, err error) {
 				t.Helper()
@@ -172,9 +161,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 
 				rul := mocks.NewRuleMock(t)
 
-				scopeFactory.EXPECT().
-					Create("test", mock.Anything).
-					Return(resolver)
+				scopeFactory.EXPECT().Create(mock.Anything, mock.Anything).Return(resolver)
 
 				factory.EXPECT().
 					CreateRule(
@@ -186,9 +173,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 					).
 					Return(rul, nil)
 
-				resolver.EXPECT().
-					AwaitReady(mock.Anything).
-					Return(nil)
+				resolver.EXPECT().AwaitReady(mock.Anything).Return(nil)
 
 				repo.EXPECT().
 					AddRuleSet(
@@ -204,9 +189,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 					).
 					Return(assert.AnError)
 
-				resolver.EXPECT().
-					Release().
-					Once()
+				resolver.EXPECT().Release()
 			},
 			assert: func(t *testing.T, processor *ruleSetProcessor, err error) {
 				t.Helper()
@@ -234,9 +217,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 
 				rul := mocks.NewRuleMock(t)
 
-				scopeFactory.EXPECT().
-					Create("test", mock.Anything).
-					Return(resolver)
+				scopeFactory.EXPECT().Create(mock.Anything, mock.Anything).Return(resolver)
 
 				factory.EXPECT().
 					CreateRule(
@@ -248,9 +229,7 @@ func TestRuleSetProcessorOnCreated(t *testing.T) {
 					).
 					Return(rul, nil)
 
-				resolver.EXPECT().
-					AwaitReady(mock.Anything).
-					Return(nil)
+				resolver.EXPECT().AwaitReady(mock.Anything).Return(nil)
 
 				repo.EXPECT().
 					AddRuleSet(
@@ -373,9 +352,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 					id:       "test",
 				}
 
-				scopeFactory.EXPECT().
-					Create("test", mock.Anything).
-					Return(newResolver)
+				scopeFactory.EXPECT().Create(mock.Anything, mock.Anything).Return(newResolver)
 
 				factory.EXPECT().
 					CreateRule(
@@ -387,9 +364,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 					).
 					Return(nil, assert.AnError)
 
-				newResolver.EXPECT().
-					Release().
-					Once()
+				newResolver.EXPECT().Release()
 			},
 			assert: func(
 				t *testing.T,
@@ -434,9 +409,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 					id:       "test",
 				}
 
-				scopeFactory.EXPECT().
-					Create("test", mock.Anything).
-					Return(newResolver)
+				scopeFactory.EXPECT().Create(mock.Anything, mock.Anything).Return(newResolver)
 
 				factory.EXPECT().
 					CreateRule(
@@ -448,13 +421,8 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 					).
 					Return(rul, nil)
 
-				newResolver.EXPECT().
-					AwaitReady(mock.Anything).
-					Return(assert.AnError)
-
-				newResolver.EXPECT().
-					Release().
-					Once()
+				newResolver.EXPECT().AwaitReady(mock.Anything).Return(assert.AnError)
+				newResolver.EXPECT().Release()
 			},
 			assert: func(
 				t *testing.T,
@@ -499,9 +467,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 					id:       "test",
 				}
 
-				scopeFactory.EXPECT().
-					Create("test", mock.Anything).
-					Return(newResolver)
+				scopeFactory.EXPECT().Create(mock.Anything, mock.Anything).Return(newResolver)
 
 				factory.EXPECT().
 					CreateRule(
@@ -513,9 +479,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 					).
 					Return(rul, nil)
 
-				newResolver.EXPECT().
-					AwaitReady(mock.Anything).
-					Return(nil)
+				newResolver.EXPECT().AwaitReady(mock.Anything).Return(nil)
 
 				repo.EXPECT().
 					UpdateRuleSet(
@@ -531,9 +495,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 					).
 					Return(assert.AnError)
 
-				newResolver.EXPECT().
-					Release().
-					Once()
+				newResolver.EXPECT().Release()
 			},
 			assert: func(
 				t *testing.T,
@@ -577,9 +539,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 					id:       "test",
 				}
 
-				scopeFactory.EXPECT().
-					Create("test", mock.Anything).
-					Return(newResolver)
+				scopeFactory.EXPECT().Create(mock.Anything, mock.Anything).Return(newResolver)
 
 				factory.EXPECT().
 					CreateRule(
@@ -591,9 +551,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 					).
 					Return(rul, nil)
 
-				newResolver.EXPECT().
-					AwaitReady(mock.Anything).
-					Return(nil)
+				newResolver.EXPECT().AwaitReady(mock.Anything).Return(nil)
 
 				repo.EXPECT().
 					UpdateRuleSet(
@@ -609,9 +567,7 @@ func TestRuleSetProcessorOnUpdated(t *testing.T) {
 					).
 					Return(nil)
 
-				oldResolver.EXPECT().
-					Release().
-					Once()
+				oldResolver.EXPECT().Release()
 			},
 			assert: func(
 				t *testing.T,
@@ -679,9 +635,7 @@ func TestRuleSetProcessorOnUpdatedWithoutPreviousRuleSet(t *testing.T) {
 		scopeFactory,
 	).(*ruleSetProcessor)
 
-	scopeFactory.EXPECT().
-		Create("test", mock.Anything).
-		Return(resolver)
+	scopeFactory.EXPECT().Create(mock.Anything, mock.Anything).Return(resolver)
 
 	factory.EXPECT().
 		CreateRule(
@@ -693,9 +647,7 @@ func TestRuleSetProcessorOnUpdatedWithoutPreviousRuleSet(t *testing.T) {
 		).
 		Return(rul, nil)
 
-	resolver.EXPECT().
-		AwaitReady(mock.Anything).
-		Return(nil)
+	resolver.EXPECT().AwaitReady(mock.Anything).Return(nil)
 
 	repo.EXPECT().
 		UpdateRuleSet(
@@ -880,10 +832,7 @@ func TestRuleSetProcessorNewScope(t *testing.T) {
 	scopeFactory := secretsmocks.NewScopedResolverFactoryMock(t)
 	resolver := secretsmocks.NewScopedResolverMock(t)
 
-	scopeFactory.EXPECT().
-		Create("test", mock.Anything).
-		Return(resolver).
-		Once()
+	scopeFactory.EXPECT().Create(mock.Anything, mock.Anything).Return(resolver)
 
 	processor := NewRuleSetProcessor(
 		config.DecisionMode,
