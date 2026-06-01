@@ -2488,6 +2488,11 @@
             "text"
           ],
           "default": "gelf"
+        },
+        "access_log_enabled": {
+          "description": "Set to false if you don't need Heimdall to perform access logging (like TX started / TX finished). Defaults to true.",
+          "type": "boolean",
+          "default": true
         }
       }
     },

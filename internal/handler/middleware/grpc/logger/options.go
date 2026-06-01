@@ -1,4 +1,4 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,25 +14,16 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package config
+package logger
 
-import (
-	"github.com/rs/zerolog"
+type config struct {
+	accessLogEnabled bool
+}
 
-	"github.com/dadrus/heimdall/internal/x"
-)
+type Option func(*config)
 
-type LogFormat int
-
-const (
-	LogTextFormat LogFormat = iota
-	LogGelfFormat
-)
-
-func (f LogFormat) String() string { return x.IfThenElse(f == LogTextFormat, "text", "gelf") }
-
-type LoggingConfig struct {
-	Format           LogFormat     `koanf:"format,string"`
-	Level            zerolog.Level `koanf:"level,string"`
-	AccessLogEnabled bool          `koanf:"access_log_enabled"`
+func WithAccessLogEnabled(flag bool) Option {
+	return func(c *config) {
+		c.accessLogEnabled = flag
+	}
 }

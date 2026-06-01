@@ -100,7 +100,7 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 
 	logger = logger.With().Str("_provider_type", ProviderType).Logger()
 	authClass := x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass)
-	adc := admissioncontroller.New(providerConf.TLS, logger, authClass, factory)
+	adc := admissioncontroller.New(providerConf.TLS, logger, authClass, factory, app.Config().Log.AccessLogEnabled)
 	instanceID, _ := os.Hostname()
 
 	logger.Info().Msg("Rule provider configured.")

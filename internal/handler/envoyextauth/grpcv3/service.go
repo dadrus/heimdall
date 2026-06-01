@@ -43,7 +43,7 @@ func newService(
 	exec rule.Executor,
 ) *grpc.Server {
 	cfg := conf.Serve
-	logHandler := loggermiddleware.New(logger)
+	logHandler := loggermiddleware.New(logger, loggermiddleware.WithAccessLogEnabled(conf.Log.AccessLogEnabled))
 	recoveryHandler := recovery.WithRecoveryHandler(func(any) error {
 		return status.Error(codes.Internal, "internal error")
 	})

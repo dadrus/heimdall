@@ -47,6 +47,7 @@ func newService(
 	ruleFactory rule.Factory,
 	authClass string,
 	log zerolog.Logger,
+	accessLogEnabled bool,
 ) *http.Server {
 	hc := alice.New(
 		recovery.New(errorHandlerFunc(func(rw http.ResponseWriter, _ *http.Request, _ error) {
@@ -62,7 +63,7 @@ func newService(
 			otelmetrics.WithSubsystem("validating admission webhook"),
 			otelmetrics.WithServerName(serviceName),
 		),
-		logger.New(log),
+		logger.New(log, logger.WithAccessLogEnabled(accessLogEnabled)),
 		dump.New(),
 	).Then(newHandler(ruleFactory, authClass))
 
