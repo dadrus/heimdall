@@ -390,6 +390,49 @@ func TestLogInterceptorWithAccessLogDisabled(t *testing.T) {
 	handler.AssertExpectations(t)
 }
 
+func TestLogInterceptorStreamWithAccessLogDisabled(t *testing.T) {
+	otel.SetTracerProvider(sdktrace.NewTracerProvider())
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
+
+	lis := bufconn.Listen(1024 * 1024)
+	tb := &testsupport.TestingLog{TB: t}
+	logger := zerolog.New(zerolog.TestWriter{T: tb})
+	handler := &mocks2.MockHandler{}
+
+	conn, err := grpc.NewClient("passthrough://bufnet",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+
+	defer conn.Close()
+
+	srv := grpc.NewServer(
+		grpc.UnknownServiceHandler(func(_ interface{}, _ grpc.ServerStream) error {
+			return status.Error(codes.Unknown, "unknown service or method")
+		}),
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.ChainStreamInterceptor(New(logger, WithAccessLogEnabled(false)).StreamServerInterceptor()),
+	)
+	envoy_auth.RegisterAuthorizationServer(srv, handler)
+
+	go func() {
+		srv.Serve(lis)
+	}()
+
+	client := mocks2.NewTestClient(conn)
+
+	// WHEN
+	_, err = client.Test(t.Context(), &mocks2.TestRequest{})
+
+	// THEN
+	require.Error(t, err)
+	srv.Stop()
+	handler.AssertExpectations(t)
+
+	// no TX events must be emitted
+	assert.Empty(t, strings.TrimSpace(tb.CollectedLog()))
+}
+
 func TestLogInterceptorForUnknownService(t *testing.T) {
 	otel.SetTracerProvider(sdktrace.NewTracerProvider())
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
