@@ -136,6 +136,7 @@ func (t *target) refreshLocked(watcher *fsnotify.Watcher) (targetState, error) {
 
 func (t *target) concernsLocked(path string) bool {
 	if t.isDir {
+		// Keep root events so refreshLocked can detect directory target rebinds.
 		return path == t.path || isDirectChild(t.path, path)
 	}
 

@@ -347,16 +347,23 @@ func TestTargetHandleFileSymlinkTargetChange(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	firstTarget := filepath.Join(dir, "key_and_cert-v1.pem")
-	secondTarget := filepath.Join(dir, "key_and_cert-v2.pem")
-	link := filepath.Join(dir, "key_and_cert.pem")
 
-	require.NoError(t, os.WriteFile(firstTarget, []byte("content"), 0o600))
-	require.NoError(t, os.WriteFile(secondTarget, []byte("content"), 0o600))
-	require.NoError(t, os.Symlink(firstTarget, link))
+	firstDataDir := filepath.Join(dir, "1")
+	secondDataDir := filepath.Join(dir, "2")
+	dataLink := filepath.Join(dir, "data")
+	nextDataLink := filepath.Join(dir, "data_tmp")
+	path := filepath.Join(dir, "key_and_cert.pem")
 
-	tgt, err := newTarget(link)
+	require.NoError(t, os.Mkdir(firstDataDir, 0o755))
+	require.NoError(t, os.Mkdir(secondDataDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(firstDataDir, "key_and_cert.pem"), []byte("initial"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(secondDataDir, "key_and_cert.pem"), []byte("updated"), 0o600))
+	require.NoError(t, os.Symlink(firstDataDir, dataLink))
+	require.NoError(t, os.Symlink(filepath.Join("data", "key_and_cert.pem"), path))
+
+	tgt, err := newTarget(path)
 	require.NoError(t, err)
+	require.Equal(t, filepath.Join(firstDataDir, "key_and_cert.pem"), tgt.resolvedPath)
 
 	watcher, err := fsnotify.NewWatcher()
 	require.NoError(t, err)
@@ -367,17 +374,18 @@ func TestTargetHandleFileSymlinkTargetChange(t *testing.T) {
 
 	require.NoError(t, tgt.addWatch(watcher))
 
-	require.NoError(t, os.Remove(link))
-	require.NoError(t, os.Symlink(secondTarget, link))
+	require.NoError(t, os.Symlink(secondDataDir, nextDataLink))
+	require.NoError(t, os.Rename(nextDataLink, dataLink))
+	require.NoError(t, os.RemoveAll(firstDataDir))
 
 	evt, ok := tgt.handle(watcher, fsnotify.Event{
-		Name: link,
+		Name: path,
 		Op:   fsnotify.Chmod,
 	}, zerolog.Nop())
 
 	require.True(t, ok)
-	assert.Equal(t, Event{Path: filepath.Clean(link), Op: OpChanged}, evt)
-	assert.Equal(t, filepath.Clean(secondTarget), tgt.resolvedPath)
+	assert.Equal(t, Event{Path: filepath.Clean(path), Op: OpChanged}, evt)
+	assert.Equal(t, filepath.Join(secondDataDir, "key_and_cert.pem"), tgt.resolvedPath)
 	assert.False(t, tgt.isDir)
 }
 
@@ -389,16 +397,21 @@ func TestTargetHandleDirectorySymlinkTargetChange(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	firstTarget := filepath.Join(dir, "rules-v1")
-	secondTarget := filepath.Join(dir, "rules-v2")
-	link := filepath.Join(dir, "rules")
 
-	require.NoError(t, os.Mkdir(firstTarget, 0o755))
-	require.NoError(t, os.Mkdir(secondTarget, 0o755))
-	require.NoError(t, os.Symlink(firstTarget, link))
+	firstDataDir := filepath.Join(dir, "1")
+	secondDataDir := filepath.Join(dir, "2")
+	dataLink := filepath.Join(dir, "data")
+	nextDataLink := filepath.Join(dir, "data_tmp")
+	path := filepath.Join(dir, "rules")
 
-	tgt, err := newTarget(link)
+	require.NoError(t, os.MkdirAll(filepath.Join(firstDataDir, "rules"), 0o755))
+	require.NoError(t, os.MkdirAll(filepath.Join(secondDataDir, "rules"), 0o755))
+	require.NoError(t, os.Symlink(firstDataDir, dataLink))
+	require.NoError(t, os.Symlink(filepath.Join("data", "rules"), path))
+
+	tgt, err := newTarget(path)
 	require.NoError(t, err)
+	require.Equal(t, filepath.Join(firstDataDir, "rules"), tgt.resolvedPath)
 
 	watcher, err := fsnotify.NewWatcher()
 	require.NoError(t, err)
@@ -409,17 +422,18 @@ func TestTargetHandleDirectorySymlinkTargetChange(t *testing.T) {
 
 	require.NoError(t, tgt.addWatch(watcher))
 
-	require.NoError(t, os.Remove(link))
-	require.NoError(t, os.Symlink(secondTarget, link))
+	require.NoError(t, os.Symlink(secondDataDir, nextDataLink))
+	require.NoError(t, os.Rename(nextDataLink, dataLink))
+	require.NoError(t, os.RemoveAll(firstDataDir))
 
 	evt, ok := tgt.handle(watcher, fsnotify.Event{
-		Name: link,
+		Name: filepath.Join(path, "any.yaml"),
 		Op:   fsnotify.Chmod,
 	}, zerolog.Nop())
 
 	require.True(t, ok)
-	assert.Equal(t, Event{Path: filepath.Clean(link), Op: OpChanged}, evt)
-	assert.Equal(t, filepath.Clean(secondTarget), tgt.resolvedPath)
+	assert.Equal(t, Event{Path: filepath.Clean(path), Op: OpChanged}, evt)
+	assert.Equal(t, filepath.Join(secondDataDir, "rules"), tgt.resolvedPath)
 	assert.True(t, tgt.isDir)
 }
 

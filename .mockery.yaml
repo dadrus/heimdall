@@ -149,3 +149,11 @@ packages:
           filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
           pkgname: "{{ .SrcPackageName }}"
           structname: "{{ .InterfaceName }}Mock"
+  github.com/dadrus/heimdall/internal/x/fswatch:
+    interfaces:
+      EventHandler:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
+          structname: "{{ .InterfaceName }}Mock"
