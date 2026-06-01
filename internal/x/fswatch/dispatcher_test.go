@@ -43,6 +43,7 @@ func TestEventDispatcherDispatchesEventsInOrder(t *testing.T) {
 		HandleEvent(mock.Anything).
 		RunAndReturn(func(evt Event) error {
 			mu.Lock()
+
 			events = append(events, evt)
 			mu.Unlock()
 
@@ -54,6 +55,7 @@ func TestEventDispatcherDispatchesEventsInOrder(t *testing.T) {
 	dispatcher := newEventDispatcher(handler, zerolog.Nop())
 
 	require.NoError(t, dispatcher.Start())
+
 	defer func() {
 		require.NoError(t, dispatcher.Stop())
 	}()
@@ -71,6 +73,7 @@ func TestEventDispatcherDispatchesEventsInOrder(t *testing.T) {
 	requireHandled(t, handled, len(expected))
 
 	mu.Lock()
+
 	actual := append([]Event(nil), events...)
 	mu.Unlock()
 
@@ -94,6 +97,7 @@ func TestEventDispatcherContinuesAfterHandlerError(t *testing.T) {
 		HandleEvent(mock.Anything).
 		RunAndReturn(func(evt Event) error {
 			mu.Lock()
+
 			events = append(events, evt)
 			mu.Unlock()
 
@@ -109,6 +113,7 @@ func TestEventDispatcherContinuesAfterHandlerError(t *testing.T) {
 	dispatcher := newEventDispatcher(handler, zerolog.Nop())
 
 	require.NoError(t, dispatcher.Start())
+
 	defer func() {
 		require.NoError(t, dispatcher.Stop())
 	}()
