@@ -113,7 +113,6 @@ func TestNewRequestContextXForwardedForCSV(t *testing.T) {
 	md.Set("x-forwarded-for", "127.0.0.1, 192.168.1.1")
 
 	cf := newContextFactory()
-
 	ctx := cf.Create(
 		metadata.NewIncomingContext(
 			t.Context(),
@@ -148,7 +147,6 @@ func TestNewRequestContextXForwardedForMixedValues(t *testing.T) {
 	md.Set("x-forwarded-for", "127.0.0.1", "192.168.1.1, 10.0.0.2", "   ")
 
 	cf := newContextFactory()
-
 	ctx := cf.Create(
 		metadata.NewIncomingContext(
 			t.Context(),

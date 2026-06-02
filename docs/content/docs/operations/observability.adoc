@@ -35,6 +35,19 @@ log:
 ----
 ====
 
+* *`access_log_enabled`*: _boolean_ (optional)
++
+Controls whether the per-request access log events (`TX started` and `TX finished`, see <<_access_log_events>>) are emitted by the HTTP and gRPC endpoints. Defaults to `true`. Set this to `false` if your traffic is fronted by another component (e.g. an ingress controller or service mesh) that already produces an access log and you want to avoid the duplicate volume.
++
+.Disabling access log events.
+====
+[source, yaml]
+----
+log:
+  access_log_enabled: false
+----
+====
+
 * *`level`*: _string_ (optional)
 +
 Following log levels are available: `trace`, `debug`, `info`, `warn`, `error`, `fatal`, and `panic`. By default, the level is set to `error`.
@@ -123,7 +136,7 @@ Each log statement for incoming requests also includes the following fields in b
 
 === Access Log Events
 
-In addition to regular logs, heimdall emits access log events. These events are always emitted, regardless of the configured log level, and always use `INFO` in log output.
+In addition to regular logs, heimdall emits access logs. The log level of these events in the log output is always `INFO`, regardless the configured log level. Emission of these events can be turned off via the `access_log_enabled` configuration option (see <<_configuration>>).
 
 Each request to any heimdall endpoint produces two access log events:
 

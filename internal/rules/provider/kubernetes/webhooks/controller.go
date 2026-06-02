@@ -46,6 +46,7 @@ func New(
 	logger zerolog.Logger,
 	authClass string,
 	ruleFactory rule.Factory,
+	accessLogEnabled bool,
 ) AdmissionController {
 	if tlsConf == nil {
 		return noopController{}
@@ -54,7 +55,7 @@ func New(
 	return &fxlcm.LifecycleManager{
 		ServiceName:    "Kubernetes Admission Controller",
 		ServiceAddress: listeningAddress,
-		Server:         newService(listeningAddress, ruleFactory, authClass, logger),
+		Server:         newService(listeningAddress, ruleFactory, authClass, logger, accessLogEnabled),
 		Logger:         logger,
 		TLSConf:        tlsConf,
 	}

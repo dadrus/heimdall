@@ -39,6 +39,60 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
+func TestHandlerWithAccessLogDisabled(t *testing.T) {
+	// GIVEN
+	otel.SetTracerProvider(sdktrace.NewTracerProvider())
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
+
+	tb := &testsupport.TestingLog{TB: t}
+	logger := zerolog.New(zerolog.TestWriter{T: tb})
+
+	srv := httptest.NewServer(
+		alice.New(
+			func(next http.Handler) http.Handler {
+				return otelhttp.NewHandler(
+					next,
+					"",
+					otelhttp.WithTracerProvider(otel.GetTracerProvider()),
+					otelhttp.WithServerName("proxy"),
+					otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
+						return "EntryPoint " + strings.ToLower(req.URL.Scheme) + " " +
+							httpx.LocalAddress(req) + req.URL.Path
+					}),
+				)
+			},
+			New(logger, WithAccessStatusEnabled(true), WithAccessLogEnabled(false)),
+		).ThenFunc(func(rw http.ResponseWriter, req *http.Request) {
+			zerolog.Ctx(req.Context()).Info().Msg("test called")
+			rw.WriteHeader(http.StatusOK)
+		}),
+	)
+
+	defer srv.Close()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/test", nil)
+	require.NoError(t, err)
+
+	// WHEN
+	resp, err := srv.Client().Do(req)
+
+	// THEN
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	events := strings.Split(strings.TrimRight(tb.CollectedLog(), "\n"), "}")
+	// only the "test called" log event must be present, no TX started / finished
+	require.Len(t, events, 2)
+
+	var logLine map[string]any
+	require.NoError(t, json.Unmarshal([]byte(events[0]+"}"), &logLine))
+
+	assert.Equal(t, "test called", logLine["message"])
+	assert.Equal(t, "info", logLine["level"])
+	assert.Contains(t, logLine, "_trace_id")
+	assert.Contains(t, logLine, "_span_id")
+}
+
 func TestHandlerExecution(t *testing.T) {
 	// GIVEN
 	otel.SetTracerProvider(sdktrace.NewTracerProvider())

@@ -251,7 +251,7 @@ func TestControllerLifecycle(t *testing.T) {
 
 			listeningAddress = fmt.Sprintf("127.0.0.1:%d", port)
 
-			controller := New(tc.tls, log.Logger, "", mocks.NewFactoryMock(t))
+			controller := New(tc.tls, log.Logger, "", mocks.NewFactoryMock(t), true)
 			baseURL := fmt.Sprintf("%s://%s",
 				x.IfThenElse(tc.tls != nil, "https", "http"),
 				listeningAddress,

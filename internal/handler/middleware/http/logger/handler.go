@@ -33,7 +33,7 @@ import (
 func New(logger zerolog.Logger, opts ...Option) func(http.Handler) http.Handler {
 	accessLog := logger.Level(zerolog.InfoLevel).With().Logger()
 
-	conf := config{}
+	conf := config{accessLogEnabled: true}
 	for _, opt := range opts {
 		opt(&conf)
 	}
@@ -41,11 +41,21 @@ func New(logger zerolog.Logger, opts ...Option) func(http.Handler) http.Handler 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			start := time.Now()
-			ctx := accesscontext.New(req.Context())
-			traceCtx := tracecontext.Extract(ctx)
-			req = req.WithContext(withTraceData(logger.With(), &traceCtx).Logger().WithContext(ctx))
-			host := httpx.IPFromHostPort(req.RemoteAddr)
+			traceCtx := tracecontext.Extract(req.Context())
+			ctx := req.Context()
+			if conf.accessLogEnabled {
+				ctx = accesscontext.New(ctx)
+			}
 
+			req = req.WithContext(withTraceData(logger.With(), &traceCtx).Logger().WithContext(ctx))
+
+			if !conf.accessLogEnabled {
+				next.ServeHTTP(rw, req)
+
+				return
+			}
+
+			host := httpx.IPFromHostPort(req.RemoteAddr)
 			logEvt := logCommonData(accessLog.Info(), start, host, req, &traceCtx)
 			logEvt.Msg("TX started")
 
