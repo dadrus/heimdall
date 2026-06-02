@@ -1,6 +1,7 @@
 secret_management:
   inline_secrets:
     type: inline
+    allow_in_rules: true
     config:
       client_credentials:
         client_id: test-client-id
@@ -16,7 +17,14 @@ secret_management:
   tls_keys:
     type: pem
     config:
-      path: /ath/to/other.pem
+      path: /path/to/other.pem
+      watch: true
+  other_secrets:
+    type: file
+    allow_in_rules: true
+    config:
+      path: /path/to/secrets.yaml
+      watch: true
 
 serve:
   port: 4468
