@@ -75,7 +75,10 @@ func newService(
 			otelmetrics.WithSubsystem("decision"),
 			otelmetrics.WithServerName(cfg.Address()),
 		),
-		logger.New(log, logger.WithAccessStatusEnabled(true)),
+		logger.New(log,
+			logger.WithAccessStatusEnabled(true),
+			logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled),
+		),
 		dump.New(),
 		cachemiddleware.New(cch),
 	).Then(service.NewHandler(newContextFactory(acceptedCode), exec, eh))
