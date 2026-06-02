@@ -318,7 +318,9 @@ func TestProviderStart(t *testing.T) {
 
 			err = prv.Start(t.Context())
 
-			defer prv.Stop(t.Context())
+			t.Cleanup(func() {
+				_ = prv.Stop(context.Background())
+			})
 
 			tc.assert(t, err, prv.(*fileProvider))
 		})
