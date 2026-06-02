@@ -20,25 +20,24 @@ import (
 	"context"
 	"errors"
 	"os"
-	"path/filepath"
 	"sync"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/secrets/provider"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/x/fswatch"
 )
 
-const ProviderType = "pem"
+const providerType = "pem"
 
 // by intention. Used only during application bootstrap.
 //
 //nolint:gochecknoinits
 func init() {
-	registry.Register(ProviderType, provider.FactoryFunc(newProvider))
+	registry.Register(providerType, provider.FactoryFunc(newProvider))
 }
 
 type store interface {
@@ -52,21 +51,13 @@ type store interface {
 type pemProvider struct {
 	path     string
 	password string
-	watch    bool
 
-	watchMu      sync.Mutex
-	started      bool
-	resolvedPath string
-
-	logger zerolog.Logger
+	observer provider.ChangeObserver
+	watcher  *fswatch.Watcher
+	logger   zerolog.Logger
 
 	mu    sync.RWMutex
 	store store
-
-	observer provider.ChangeObserver
-
-	watchStop context.CancelFunc
-	watcherWg sync.WaitGroup
 }
 
 func newProvider(args provider.Args) (provider.Provider, error) {
@@ -85,28 +76,36 @@ func newProvider(args provider.Args) (provider.Provider, error) {
 		return nil, err
 	}
 
-	logger.Info().
-		Str("_file", cfg.Path).
-		Msg("Loading pem file")
-
-	store, err := loadStore(cfg.Path, cfg.Password)
-	if err != nil {
-		return nil, err
-	}
-
-	return &pemProvider{
+	prv := &pemProvider{
 		path:     cfg.Path,
 		password: cfg.Password,
-		watch:    cfg.Watch,
 		logger:   logger,
 		observer: args.Observer,
-		store:    store,
-	}, nil
+	}
+
+	if !cfg.Watch {
+		return prv, nil
+	}
+
+	watcher, err := fswatch.New(
+		fswatch.EventHandlerFunc(prv.reload),
+		fswatch.WithLogger(logger),
+	)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(
+			provider.ErrInternal,
+			"failed to initialize pem provider watcher",
+		).CausedBy(err)
+	}
+
+	prv.watcher = watcher
+
+	return prv, nil
 }
 
 func (*pemProvider) Dependencies() []provider.Reference { return nil }
 func (*pemProvider) IsNamespaceAware() bool             { return false }
-func (*pemProvider) Type() string                       { return ProviderType }
+func (*pemProvider) Type() string                       { return providerType }
 
 func (p *pemProvider) GetSecret(
 	ctx context.Context,
@@ -146,208 +145,90 @@ func (p *pemProvider) GetCertificateBundle(
 }
 
 func (p *pemProvider) Start(ctx context.Context) error {
-	if !p.watch {
+	p.logger.Info().
+		Str("_file", p.path).
+		Msg("Loading pem file")
+
+	store, err := loadStore(p.path, p.password)
+	if err != nil {
+		return err
+	}
+
+	p.mu.Lock()
+	p.store = store
+	p.mu.Unlock()
+
+	if p.watcher == nil {
 		return nil
 	}
 
-	p.watchMu.Lock()
-	defer p.watchMu.Unlock()
-
-	if p.started {
-		return nil
+	if err = p.watcher.Add(p.path); err != nil {
+		return errorchain.NewWithMessagef(
+			provider.ErrInternal,
+			"failed to register pem provider watch for %s", p.path,
+		).CausedBy(err)
 	}
 
-	resolvedPath, err := filepath.EvalSymlinks(p.path)
-	if err != nil {
-		return errorchain.NewWithMessagef(provider.ErrInternal,
-			"failed to resolve pem provider watch path %s", p.path).CausedBy(err)
-	}
-
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return errorchain.NewWithMessage(provider.ErrInternal,
-			"failed to initialize fsnotify watcher for pem provider").CausedBy(err)
-	}
-
-	if err = watcher.Add(p.path); err != nil {
-		_ = watcher.Close()
-
-		return errorchain.NewWithMessagef(provider.ErrInternal,
-			"failed to register pem provider watch for %s", p.path).CausedBy(err)
-	}
-
-	runCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
-
-	p.resolvedPath = resolvedPath
-	p.watchStop = cancel
-	p.started = true
-
-	p.watcherWg.Add(1)
-
-	go p.runWatcher(runCtx, watcher)
-
-	return nil
-}
-
-func (p *pemProvider) Stop(_ context.Context) error {
-	p.watchMu.Lock()
-
-	cancel := p.watchStop
-	started := p.started
-
-	p.watchStop = nil
-	p.started = false
-	p.resolvedPath = ""
-
-	p.watchMu.Unlock()
-
-	if started && cancel != nil {
-		cancel()
-		p.watcherWg.Wait()
+	if err = p.watcher.Start(context.WithoutCancel(ctx)); err != nil {
+		return errorchain.NewWithMessagef(
+			provider.ErrInternal,
+			"failed to start pem provider watch for %s", p.path,
+		).CausedBy(err)
 	}
 
 	return nil
 }
 
-func (p *pemProvider) reload() {
+func (p *pemProvider) Stop(ctx context.Context) error {
+	if p.watcher == nil {
+		return nil
+	}
+
+	watcher := p.watcher
+	p.watcher = nil
+
+	return watcher.Stop(ctx)
+}
+
+func (p *pemProvider) reload(evt fswatch.Event) error {
+	if evt.Op != fswatch.OpChanged {
+		return nil
+	}
+
 	next, err := loadStore(p.path, p.password)
 	if err != nil {
-		p.logger.Warn().
-			Err(err).
-			Str("_file", p.path).
-			Msg("Reloading pem file failed")
-
-		return
+		return err
 	}
 
 	p.mu.Lock()
 
 	if !p.store.sameKind(next) {
 		p.mu.Unlock()
-		p.logger.Warn().
-			Str("_file", p.path).
-			Msg("Reloading pem file failed because store kind changed")
 
-		return
+		return errorchain.NewWithMessage(
+			provider.ErrConfiguration,
+			"Reloading pem file failed because store kind changed",
+		)
 	}
 
 	p.store = next
 
 	p.mu.Unlock()
 
-	p.observer.Notify(provider.ChangeEvent{})
-
 	p.logger.Info().
 		Str("_file", p.path).
 		Msg("pem file reloaded")
-}
 
-func (p *pemProvider) runWatcher(ctx context.Context, watcher *fsnotify.Watcher) {
-	p.logger.Info().
-		Str("_file", p.path).
-		Msg("Watching pem file for changes")
+	p.observer.Notify(provider.ChangeEvent{})
 
-	defer p.watcherWg.Done()
-	defer func() {
-		_ = watcher.Close()
-	}()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-
-		case evt, ok := <-watcher.Events:
-			if !ok {
-				return
-			}
-
-			shouldReload := isReloadEvent(evt)
-
-			if isAtomicUpdateEvent(evt) {
-				shouldReload = shouldReload || p.updateWatchForAtomicUpdate(watcher, p.path)
-			}
-
-			if shouldReload {
-				p.reload()
-			}
-
-		case err, ok := <-watcher.Errors:
-			if !ok {
-				return
-			}
-
-			p.logger.Warn().
-				Err(err).
-				Str("_file", p.path).
-				Msg("pem file watching error")
-		}
-	}
-}
-
-func (p *pemProvider) updateWatchForAtomicUpdate(watcher *fsnotify.Watcher, path string) bool {
-	if _, err := os.Stat(path); err != nil {
-		if os.IsNotExist(err) {
-			_ = watcher.Remove(path)
-
-			return false
-		}
-
-		p.logger.Warn().
-			Err(err).
-			Str("_file", path).
-			Msg("Checking pem file for atomic update failed")
-
-		return false
-	}
-
-	resolvedPath, err := filepath.EvalSymlinks(path)
-	if err != nil {
-		p.logger.Warn().
-			Err(err).
-			Str("_file", path).
-			Msg("Resolving pem file symlink target failed")
-
-		return false
-	}
-
-	p.watchMu.Lock()
-	defer p.watchMu.Unlock()
-
-	if p.resolvedPath == resolvedPath {
-		return false
-	}
-
-	_ = watcher.Remove(path)
-
-	p.resolvedPath = resolvedPath
-
-	if err = watcher.Add(path); err != nil {
-		p.logger.Warn().
-			Err(err).
-			Str("_file", path).
-			Msg("Re-registering pem file watch after atomic update failed")
-
-		return false
-	}
-
-	return true
-}
-
-func isReloadEvent(evt fsnotify.Event) bool {
-	return evt.Has(fsnotify.Write) ||
-		evt.Has(fsnotify.Create) ||
-		evt.Has(fsnotify.Rename)
-}
-
-func isAtomicUpdateEvent(evt fsnotify.Event) bool {
-	return evt.Has(fsnotify.Chmod)
+	return nil
 }
 
 func loadStore(path, password string) (store, error) {
-	data, err := readFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, errorchain.NewWithMessagef(provider.ErrConfiguration,
+			"failed to read pem file %s", path).CausedBy(err)
 	}
 
 	ks, err := newKeyStoreFromPEMBytes(data, password)

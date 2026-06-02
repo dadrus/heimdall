@@ -17,7 +17,6 @@
 package pem
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
@@ -26,57 +25,148 @@ import (
 	"testing"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/secrets/provider"
 	"github.com/dadrus/heimdall/internal/secrets/provider/mocks"
-	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/validation"
+	"github.com/dadrus/heimdall/internal/x/fswatch"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
+func TestLoadStore(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		path   func(t *testing.T) string
+		assert func(t *testing.T, st store, err error)
+	}{
+		"loads key store from pem file": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "keys.pem")
+				writePEMFile(t, path, "first", "second")
+
+				return path
+			},
+			assert: func(t *testing.T, st store, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				ks, ok := st.(keyStore)
+				require.True(t, ok)
+				require.Len(t, ks, 2)
+				require.Equal(t, "first", ks[0].Selector())
+				require.Equal(t, "second", ks[1].Selector())
+			},
+		},
+		"loads certificate store from pem file": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "certs.pem")
+				writeCertificatePEMFile(t, path, "first", "second")
+
+				return path
+			},
+			assert: func(t *testing.T, st store, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				cs, ok := st.(certStore)
+				require.True(t, ok)
+				require.Len(t, cs, 2)
+				require.Equal(t, "first", cs[0].Subject.CommonName)
+				require.Equal(t, "second", cs[1].Subject.CommonName)
+			},
+		},
+		"fails if file does not exist": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				return filepath.Join(t.TempDir(), "missing.pem")
+			},
+			assert: func(t *testing.T, st store, err error) {
+				t.Helper()
+
+				require.Nil(t, st)
+				require.Error(t, err)
+				require.ErrorIs(t, err, provider.ErrConfiguration)
+				require.ErrorContains(t, err, "failed to read pem file")
+			},
+		},
+		"fails if pem file cannot be parsed": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "keys.pem")
+				require.NoError(t, os.WriteFile(path, []byte("not a pem file"), 0o600))
+
+				return path
+			},
+			assert: func(t *testing.T, st store, err error) {
+				t.Helper()
+
+				require.Nil(t, st)
+				require.Error(t, err)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			st, err := loadStore(tc.path(t), "")
+			tc.assert(t, st, err)
+		})
+	}
+}
+
 func TestNewProvider(t *testing.T) {
 	t.Parallel()
 
-	pemFile := createPEMFile(t, "first", "second")
-	certFile := createCertificatePEMFile(t, "first", "second")
+	pemFile := filepath.Join(t.TempDir(), "keys.pem")
 
 	for uc, tc := range map[string]struct {
 		conf   map[string]any
-		assert func(*testing.T, error, provider.Provider)
+		assert func(t *testing.T, err error, prv *pemProvider)
 	}{
-		"successfully creates provider with key store": {
+		"creates provider": {
 			conf: map[string]any{"path": pemFile},
-			assert: func(t *testing.T, err error, provider provider.Provider) {
+			assert: func(t *testing.T, err error, prv *pemProvider) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.Equal(t, "pem", provider.Type())
+				assert.Equal(t, providerType, prv.Type())
+				assert.Empty(t, prv.Dependencies())
+				assert.False(t, prv.IsNamespaceAware())
+				assert.Nil(t, prv.watcher)
+				assert.Equal(t, pemFile, prv.path)
 			},
 		},
-		"successfully creates provider with certificate store": {
-			conf: map[string]any{"path": certFile},
-			assert: func(t *testing.T, err error, prv provider.Provider) {
+		"creates provider with watch enabled": {
+			conf: map[string]any{"path": pemFile, "watch": true},
+			assert: func(t *testing.T, err error, prv *pemProvider) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.Equal(t, "pem", prv.Type())
-
-				bundle, err := prv.GetCertificateBundle(t.Context(), provider.Selector{})
-				require.NoError(t, err)
-				require.Len(t, bundle.Certificates(), 2)
-				require.Equal(t, "first", bundle.Certificates()[0].Subject.CommonName)
-				require.Equal(t, "second", bundle.Certificates()[1].Subject.CommonName)
+				assert.Equal(t, providerType, prv.Type())
+				assert.Empty(t, prv.Dependencies())
+				assert.False(t, prv.IsNamespaceAware())
+				assert.NotNil(t, prv.watcher)
+				assert.Equal(t, pemFile, prv.path)
 			},
 		},
 		"fails for missing path config": {
 			conf: map[string]any{},
-			assert: func(t *testing.T, err error, _ provider.Provider) {
+			assert: func(t *testing.T, err error, _ *pemProvider) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -85,20 +175,11 @@ func TestNewProvider(t *testing.T) {
 		},
 		"fails for invalid watch field": {
 			conf: map[string]any{"path": pemFile, "watch": "yes"},
-			assert: func(t *testing.T, err error, _ provider.Provider) {
+			assert: func(t *testing.T, err error, _ *pemProvider) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorContains(t, err, "watch")
-			},
-		},
-		"fails for invalid path": {
-			conf: map[string]any{"path": "does_not_exist.pem"},
-			assert: func(t *testing.T, err error, _ provider.Provider) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorContains(t, err, "does_not_exist.pem")
 			},
 		},
 	} {
@@ -108,11 +189,273 @@ func TestNewProvider(t *testing.T) {
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
 			prv, err := newProvider(provider.Args{
 				Config:         tc.conf,
 				Logger:         zerolog.Nop(),
-				DecoderFactory: encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
+				DecoderFactory: df,
+				Observer:       mocks.NewChangeObserverMock(t),
 			})
+
+			var pemPrv *pemProvider
+			if err == nil {
+				pemPrv = prv.(*pemProvider)
+			}
+
+			tc.assert(t, err, pemPrv)
+		})
+	}
+}
+
+func TestProviderStart(t *testing.T) {
+	t.Parallel()
+
+	pemFile := filepath.Join(t.TempDir(), "keys.pem")
+	writePEMFile(t, pemFile, "first")
+
+	for uc, tc := range map[string]struct {
+		conf   map[string]any
+		assert func(t *testing.T, err error, prv *pemProvider)
+	}{
+		"fails loading pem file": {
+			conf: map[string]any{"path": filepath.Join(t.TempDir(), "missing.pem")},
+			assert: func(t *testing.T, err error, prv *pemProvider) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, provider.ErrConfiguration)
+				require.ErrorContains(t, err, "failed to read pem file")
+				assert.Nil(t, prv.store)
+			},
+		},
+		"successfully loads pem file and starts without watching for changes": {
+			conf: map[string]any{"path": pemFile, "watch": false},
+			assert: func(t *testing.T, err error, prv *pemProvider) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotNil(t, prv.store)
+				assert.Nil(t, prv.watcher)
+
+				ks, ok := prv.store.(keyStore)
+				require.True(t, ok)
+				require.Len(t, ks, 1)
+				assert.Equal(t, "first", ks[0].Selector())
+			},
+		},
+		"successfully loads pem file and starts with watching for changes": {
+			conf: map[string]any{"path": pemFile, "watch": true},
+			assert: func(t *testing.T, err error, prv *pemProvider) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.NotNil(t, prv.store)
+				assert.NotNil(t, prv.watcher)
+
+				ks, ok := prv.store.(keyStore)
+				require.True(t, ok)
+				require.Len(t, ks, 1)
+				assert.Equal(t, "first", ks[0].Selector())
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
+			prv, err := newProvider(provider.Args{
+				Config:         tc.conf,
+				Logger:         zerolog.Nop(),
+				DecoderFactory: df,
+				Observer:       mocks.NewChangeObserverMock(t),
+			})
+			require.NoError(t, err)
+
+			err = prv.Start(t.Context())
+
+			t.Cleanup(func() {
+				_ = prv.Stop(context.Background())
+			})
+
+			tc.assert(t, err, prv.(*pemProvider))
+		})
+	}
+}
+
+func TestProviderReload(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		path   func(t *testing.T) string
+		event  fswatch.Event
+		setup  func(t *testing.T, path string, om *mocks.ChangeObserverMock)
+		assert func(t *testing.T, err error, prv *pemProvider)
+	}{
+		"ignores non-change events": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "keys.pem")
+				writePEMFile(t, path, "first")
+
+				return path
+			},
+			event: fswatch.Event{},
+			setup: func(t *testing.T, path string, _ *mocks.ChangeObserverMock) {
+				t.Helper()
+
+				writePEMFile(t, path, "second")
+			},
+			assert: func(t *testing.T, err error, prv *pemProvider) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				ks, ok := prv.store.(keyStore)
+				require.True(t, ok)
+				require.Len(t, ks, 1)
+				require.Equal(t, "first", ks[0].Selector())
+			},
+		},
+		"reloads key material and emits source event": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "keys.pem")
+				writePEMFile(t, path, "first")
+
+				return path
+			},
+			event: fswatch.Event{Op: fswatch.OpChanged},
+			setup: func(t *testing.T, path string, om *mocks.ChangeObserverMock) {
+				t.Helper()
+
+				writePEMFile(t, path, "second")
+
+				om.EXPECT().Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
+					return len(e.Selectors) == 0
+				}))
+			},
+			assert: func(t *testing.T, err error, prv *pemProvider) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				ks, ok := prv.store.(keyStore)
+				require.True(t, ok)
+				require.Len(t, ks, 1)
+				require.Equal(t, "second", ks[0].Selector())
+			},
+		},
+		"reloads certificate bundle and emits source event": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "certs.pem")
+				writeCertificatePEMFile(t, path, "first")
+
+				return path
+			},
+			event: fswatch.Event{Op: fswatch.OpChanged},
+			setup: func(t *testing.T, path string, om *mocks.ChangeObserverMock) {
+				t.Helper()
+
+				writeCertificatePEMFile(t, path, "second")
+
+				om.EXPECT().Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
+					return len(e.Selectors) == 0
+				}))
+			},
+			assert: func(t *testing.T, err error, prv *pemProvider) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				cs, ok := prv.store.(certStore)
+				require.True(t, ok)
+				require.Len(t, cs, 1)
+				require.Equal(t, "second", cs[0].Subject.CommonName)
+			},
+		},
+		"keeps last-known-good key material if reload fails": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "keys.pem")
+				writePEMFile(t, path, "first")
+
+				return path
+			},
+			event: fswatch.Event{Op: fswatch.OpChanged},
+			setup: func(t *testing.T, path string, _ *mocks.ChangeObserverMock) {
+				t.Helper()
+
+				require.NoError(t, os.WriteFile(path, []byte("not a pem file"), 0o600))
+			},
+			assert: func(t *testing.T, err error, prv *pemProvider) {
+				t.Helper()
+
+				require.Error(t, err)
+
+				ks, ok := prv.store.(keyStore)
+				require.True(t, ok)
+				require.Len(t, ks, 1)
+				require.Equal(t, "first", ks[0].Selector())
+			},
+		},
+		"keeps last-known-good material if store kind changed": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "keys.pem")
+				writePEMFile(t, path, "first")
+
+				return path
+			},
+			event: fswatch.Event{Op: fswatch.OpChanged},
+			setup: func(t *testing.T, path string, _ *mocks.ChangeObserverMock) {
+				t.Helper()
+
+				writeCertificatePEMFile(t, path, "certificate")
+			},
+			assert: func(t *testing.T, err error, prv *pemProvider) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, provider.ErrConfiguration)
+				require.ErrorContains(t, err, "store kind changed")
+
+				ks, ok := prv.store.(keyStore)
+				require.True(t, ok)
+				require.Len(t, ks, 1)
+				require.Equal(t, "first", ks[0].Selector())
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			path := tc.path(t)
+
+			st, err := loadStore(path, "")
+			require.NoError(t, err)
+
+			om := mocks.NewChangeObserverMock(t)
+			tc.setup(t, path, om)
+
+			prv := &pemProvider{
+				path:     path,
+				logger:   zerolog.Nop(),
+				observer: om,
+				store:    st,
+			}
+
+			err = prv.reload(tc.event)
 
 			tc.assert(t, err, prv)
 		})
@@ -123,57 +466,35 @@ func TestProviderWatch(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		createPath func(t *testing.T) string
-		setup      func(t *testing.T, om *mocks.ChangeObserverMock)
-		action     func(t *testing.T, prv provider.Provider, path string)
+		path   func(t *testing.T) string
+		setup  func(t *testing.T, om *mocks.ChangeObserverMock)
+		action func(t *testing.T, prv provider.Provider, path string)
 	}{
-		"does nothing if watch is disabled": {
-			setup: func(t *testing.T, _ *mocks.ChangeObserverMock) {
-				t.Helper()
-			},
-			action: func(t *testing.T, prv provider.Provider, _ string) {
-				t.Helper()
-
-				require.NoError(t, prv.Start(context.Background()))
-				require.NoError(t, prv.Stop(context.Background()))
-			},
-		},
-		"returns error if watch target cannot be resolved": {
-			setup: func(t *testing.T, _ *mocks.ChangeObserverMock) {
-				t.Helper()
-			},
-			action: func(t *testing.T, prv provider.Provider, path string) {
-				t.Helper()
-
-				require.NoError(t, os.Remove(path))
-
-				err := prv.Start(context.Background())
-				require.Error(t, err)
-				require.ErrorContains(t, err, "failed to resolve pem provider watch path")
-			},
-		},
 		"reloads source on file change and emits source event": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "keys.pem")
+				writePEMFile(t, path, "first")
+
+				return path
+			},
 			setup: func(t *testing.T, om *mocks.ChangeObserverMock) {
 				t.Helper()
 
-				om.EXPECT().
-					Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
-						return len(e.Selectors) == 0
-					}))
+				om.EXPECT().Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
+					return len(e.Selectors) == 0
+				}))
 			},
 			action: func(t *testing.T, prv provider.Provider, path string) {
 				t.Helper()
+				t.Cleanup(func() { require.NoError(t, prv.Stop(context.Background())) })
 
-				t.Cleanup(func() {
-					_ = prv.Stop(context.Background())
-				})
-
-				require.NoError(t, prv.Start(context.Background()))
-
+				require.NoError(t, prv.Start(t.Context()))
 				writePEMFile(t, path, "second")
 
 				require.Eventually(t, func() bool {
-					secret, err := prv.GetSecret(context.Background(), provider.Selector{})
+					secret, err := prv.GetSecret(t.Context(), provider.Selector{})
 					if err != nil {
 						return false
 					}
@@ -183,32 +504,30 @@ func TestProviderWatch(t *testing.T) {
 			},
 		},
 		"reloads certificate bundle on file change and emits source event": {
-			createPath: func(t *testing.T) string {
+			path: func(t *testing.T) string {
 				t.Helper()
 
-				return createCertificatePEMFile(t, "first")
+				path := filepath.Join(t.TempDir(), "certs.pem")
+				writeCertificatePEMFile(t, path, "first")
+
+				return path
 			},
 			setup: func(t *testing.T, om *mocks.ChangeObserverMock) {
 				t.Helper()
 
-				om.EXPECT().
-					Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
-						return len(e.Selectors) == 0
-					}))
+				om.EXPECT().Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
+					return len(e.Selectors) == 0
+				}))
 			},
 			action: func(t *testing.T, prv provider.Provider, path string) {
 				t.Helper()
+				t.Cleanup(func() { require.NoError(t, prv.Stop(context.Background())) })
 
-				t.Cleanup(func() {
-					_ = prv.Stop(context.Background())
-				})
-
-				require.NoError(t, prv.Start(context.Background()))
-
+				require.NoError(t, prv.Start(t.Context()))
 				writeCertificatePEMFile(t, path, "second")
 
 				require.Eventually(t, func() bool {
-					bundle, err := prv.GetCertificateBundle(context.Background(), provider.Selector{})
+					bundle, err := prv.GetCertificateBundle(t.Context(), provider.Selector{})
 					if err != nil {
 						return false
 					}
@@ -220,11 +539,10 @@ func TestProviderWatch(t *testing.T) {
 			},
 		},
 		"reloads source on atomic symlink update and emits source event": {
-			createPath: func(t *testing.T) string {
+			path: func(t *testing.T) string {
 				t.Helper()
 
 				dir := t.TempDir()
-
 				target := filepath.Join(dir, "keys-1.pem")
 				writePEMFile(t, target, "first")
 
@@ -236,33 +554,27 @@ func TestProviderWatch(t *testing.T) {
 			setup: func(t *testing.T, om *mocks.ChangeObserverMock) {
 				t.Helper()
 
-				om.EXPECT().
-					Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
-						return len(e.Selectors) == 0
-					}))
+				om.EXPECT().Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
+					return len(e.Selectors) == 0
+				}))
 			},
 			action: func(t *testing.T, prv provider.Provider, path string) {
 				t.Helper()
+				t.Cleanup(func() { require.NoError(t, prv.Stop(context.Background())) })
 
-				t.Cleanup(func() {
-					_ = prv.Stop(context.Background())
-				})
-
-				require.NoError(t, prv.Start(context.Background()))
+				require.NoError(t, prv.Start(t.Context()))
 
 				dir := filepath.Dir(path)
-
 				oldTarget := filepath.Join(dir, "keys-1.pem")
 				newTarget := filepath.Join(dir, "keys-2.pem")
-				writePEMFile(t, newTarget, "second")
 
+				writePEMFile(t, newTarget, "second")
 				require.NoError(t, os.Remove(path))
 				require.NoError(t, os.Symlink(newTarget, path))
-
 				require.NoError(t, os.Chmod(oldTarget, 0o644))
 
 				require.Eventually(t, func() bool {
-					secret, err := prv.GetSecret(context.Background(), provider.Selector{})
+					secret, err := prv.GetSecret(t.Context(), provider.Selector{})
 					if err != nil {
 						return false
 					}
@@ -272,51 +584,87 @@ func TestProviderWatch(t *testing.T) {
 			},
 		},
 		"keeps last-known-good key material if reload fails": {
-			setup: func(t *testing.T, _ *mocks.ChangeObserverMock) {
+			path: func(t *testing.T) string {
 				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "keys.pem")
+				writePEMFile(t, path, "first")
+
+				return path
 			},
+			setup: func(t *testing.T, _ *mocks.ChangeObserverMock) { t.Helper() },
 			action: func(t *testing.T, prv provider.Provider, path string) {
 				t.Helper()
+				t.Cleanup(func() { require.NoError(t, prv.Stop(context.Background())) })
 
-				t.Cleanup(func() {
-					_ = prv.Stop(context.Background())
-				})
+				require.NoError(t, prv.Start(t.Context()))
 
-				require.NoError(t, prv.Start(context.Background()))
+				time.Sleep(50 * time.Millisecond)
 
 				require.NoError(t, os.WriteFile(path, []byte("not a pem file"), 0o600))
 
-				secret, err := prv.GetSecret(context.Background(), provider.Selector{})
+				time.Sleep(50 * time.Millisecond)
+
+				secret, err := prv.GetSecret(t.Context(), provider.Selector{})
+				require.NoError(t, err)
+				require.Equal(t, "first", secret.Selector())
+			},
+		},
+		"keeps last-known-good key material if file is gone": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "keys.pem")
+				writePEMFile(t, path, "first")
+
+				return path
+			},
+			setup: func(t *testing.T, _ *mocks.ChangeObserverMock) { t.Helper() },
+			action: func(t *testing.T, prv provider.Provider, path string) {
+				t.Helper()
+				t.Cleanup(func() { require.NoError(t, prv.Stop(context.Background())) })
+
+				require.NoError(t, prv.Start(t.Context()))
+
+				time.Sleep(50 * time.Millisecond)
+
+				require.NoError(t, os.Remove(path))
+
+				time.Sleep(50 * time.Millisecond)
+
+				secret, err := prv.GetSecret(t.Context(), provider.Selector{})
 				require.NoError(t, err)
 				require.Equal(t, "first", secret.Selector())
 			},
 		},
 		"watcher is detached from startup context": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "keys.pem")
+				writePEMFile(t, path, "first")
+
+				return path
+			},
 			setup: func(t *testing.T, om *mocks.ChangeObserverMock) {
 				t.Helper()
 
-				om.EXPECT().
-					Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
-						return len(e.Selectors) == 0
-					}))
+				om.EXPECT().Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
+					return len(e.Selectors) == 0
+				}))
 			},
 			action: func(t *testing.T, prv provider.Provider, path string) {
 				t.Helper()
+				t.Cleanup(func() { require.NoError(t, prv.Stop(context.Background())) })
 
-				t.Cleanup(func() {
-					_ = prv.Stop(context.Background())
-				})
-
-				startCtx, cancelStart := context.WithCancel(context.Background())
-
+				startCtx, cancelStart := context.WithCancel(t.Context())
 				require.NoError(t, prv.Start(startCtx))
-
 				cancelStart()
 
 				writePEMFile(t, path, "second")
 
 				require.Eventually(t, func() bool {
-					secret, err := prv.GetSecret(context.Background(), provider.Selector{})
+					secret, err := prv.GetSecret(t.Context(), provider.Selector{})
 					if err != nil {
 						return false
 					}
@@ -329,381 +677,28 @@ func TestProviderWatch(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			pemFile := createPEMFile(t, "first")
-			if tc.createPath != nil {
-				pemFile = tc.createPath(t)
-			}
-
-			watch := uc != "does nothing if watch is disabled"
-
-			validator, err := validation.NewValidator()
-			require.NoError(t, err)
+			path := tc.path(t)
 
 			om := mocks.NewChangeObserverMock(t)
 			tc.setup(t, om)
 
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
 			prv, err := newProvider(provider.Args{
-				Config:         map[string]any{"path": pemFile, "watch": watch},
+				Config: map[string]any{
+					"path":  path,
+					"watch": true,
+				},
 				Logger:         zerolog.Nop(),
-				DecoderFactory: encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
+				DecoderFactory: df,
 				Observer:       om,
 			})
 			require.NoError(t, err)
 
-			tc.action(t, prv, pemFile)
-		})
-	}
-}
-
-func TestProviderUpdateWatchForAtomicUpdate(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, dir string) (path string, resolvedPath string)
-		update func(t *testing.T, path string)
-		assert func(t *testing.T, prv *pemProvider, logs *bytes.Buffer, changed bool)
-	}{
-		"returns false if resolved path did not change": {
-			setup: func(t *testing.T, dir string) (string, string) {
-				t.Helper()
-
-				target := filepath.Join(dir, "keys-1.pem")
-				writePEMFile(t, target, "first")
-
-				path := filepath.Join(dir, "keys.pem")
-				require.NoError(t, os.Symlink(target, path))
-
-				resolvedPath, err := filepath.EvalSymlinks(path)
-				require.NoError(t, err)
-
-				return path, resolvedPath
-			},
-			update: func(t *testing.T, _ string) {
-				t.Helper()
-			},
-			assert: func(t *testing.T, prv *pemProvider, _ *bytes.Buffer, changed bool) {
-				t.Helper()
-
-				require.False(t, changed)
-
-				resolvedPath, err := filepath.EvalSymlinks(prv.path)
-				require.NoError(t, err)
-				require.Equal(t, resolvedPath, prv.resolvedPath)
-			},
-		},
-		"returns true and updates resolved path if symlink target changed": {
-			setup: func(t *testing.T, dir string) (string, string) {
-				t.Helper()
-
-				target := filepath.Join(dir, "keys-1.pem")
-				writePEMFile(t, target, "first")
-
-				path := filepath.Join(dir, "keys.pem")
-				require.NoError(t, os.Symlink(target, path))
-
-				resolvedPath, err := filepath.EvalSymlinks(path)
-				require.NoError(t, err)
-
-				return path, resolvedPath
-			},
-			update: func(t *testing.T, path string) {
-				t.Helper()
-
-				target := filepath.Join(filepath.Dir(path), "keys-2.pem")
-				writePEMFile(t, target, "second")
-
-				require.NoError(t, os.Remove(path))
-				require.NoError(t, os.Symlink(target, path))
-			},
-			assert: func(t *testing.T, prv *pemProvider, _ *bytes.Buffer, changed bool) {
-				t.Helper()
-
-				require.True(t, changed)
-
-				resolvedPath, err := filepath.EvalSymlinks(prv.path)
-				require.NoError(t, err)
-				require.Equal(t, resolvedPath, prv.resolvedPath)
-			},
-		},
-		"returns false if watched path disappeared": {
-			setup: func(t *testing.T, dir string) (string, string) {
-				t.Helper()
-
-				path := filepath.Join(dir, "keys.pem")
-				writePEMFile(t, path, "first")
-
-				resolvedPath, err := filepath.EvalSymlinks(path)
-				require.NoError(t, err)
-
-				return path, resolvedPath
-			},
-			update: func(t *testing.T, path string) {
-				t.Helper()
-
-				require.NoError(t, os.Remove(path))
-			},
-			assert: func(t *testing.T, _ *pemProvider, _ *bytes.Buffer, changed bool) {
-				t.Helper()
-
-				require.False(t, changed)
-			},
-		},
-		"returns false if symlink target disappeared": {
-			setup: func(t *testing.T, dir string) (string, string) {
-				t.Helper()
-
-				target := filepath.Join(dir, "keys-1.pem")
-				writePEMFile(t, target, "first")
-
-				path := filepath.Join(dir, "keys.pem")
-				require.NoError(t, os.Symlink(target, path))
-
-				resolvedPath, err := filepath.EvalSymlinks(path)
-				require.NoError(t, err)
-
-				return path, resolvedPath
-			},
-			update: func(t *testing.T, path string) {
-				t.Helper()
-
-				require.NoError(t, os.Remove(path))
-				require.NoError(t, os.Symlink(filepath.Join(filepath.Dir(path), "missing.pem"), path))
-			},
-			assert: func(t *testing.T, _ *pemProvider, logs *bytes.Buffer, changed bool) {
-				t.Helper()
-
-				require.False(t, changed)
-				require.Empty(t, logs.String())
-			},
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
-
-			dir := t.TempDir()
-
-			path, resolvedPath := tc.setup(t, dir)
-
-			watcher, err := fsnotify.NewWatcher()
-			require.NoError(t, err)
-
-			t.Cleanup(func() {
-				_ = watcher.Close()
-			})
-
-			require.NoError(t, watcher.Add(path))
-
-			var logs bytes.Buffer
-
-			prv := &pemProvider{
-				path:         path,
-				resolvedPath: resolvedPath,
-				logger:       zerolog.New(&logs),
-			}
-
-			tc.update(t, path)
-
-			changed := prv.updateWatchForAtomicUpdate(watcher, path)
-
-			tc.assert(t, prv, &logs, changed)
-		})
-	}
-}
-
-func TestProviderReload(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		createPath func(t *testing.T) string
-		setup      func(t *testing.T, path string, om *mocks.ChangeObserverMock)
-		assert     func(t *testing.T, prv *pemProvider, logs *bytes.Buffer)
-	}{
-		"reloads key material and emits source event": {
-			setup: func(t *testing.T, path string, om *mocks.ChangeObserverMock) {
-				t.Helper()
-
-				writePEMFile(t, path, "second")
-
-				om.EXPECT().
-					Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
-						return len(e.Selectors) == 0
-					}))
-			},
-			assert: func(t *testing.T, prv *pemProvider, logs *bytes.Buffer) {
-				t.Helper()
-
-				prv.mu.RLock()
-				st := prv.store
-				prv.mu.RUnlock()
-
-				ks, ok := st.(keyStore)
-				require.True(t, ok)
-
-				require.Len(t, ks, 1)
-				require.Equal(t, "second", ks[0].Selector())
-				require.Contains(t, logs.String(), "pem file reloaded")
-			},
-		},
-		"reloads certificate bundle and emits source event": {
-			createPath: func(t *testing.T) string {
-				t.Helper()
-
-				return createCertificatePEMFile(t, "first")
-			},
-			setup: func(t *testing.T, path string, om *mocks.ChangeObserverMock) {
-				t.Helper()
-
-				writeCertificatePEMFile(t, path, "second")
-
-				om.EXPECT().
-					Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
-						return len(e.Selectors) == 0
-					}))
-			},
-			assert: func(t *testing.T, prv *pemProvider, logs *bytes.Buffer) {
-				t.Helper()
-
-				prv.mu.RLock()
-				st := prv.store
-				prv.mu.RUnlock()
-
-				cs, ok := st.(certStore)
-				require.True(t, ok)
-
-				require.Len(t, cs, 1)
-				require.Equal(t, "second", cs[0].Subject.CommonName)
-				require.Contains(t, logs.String(), "pem file reloaded")
-			},
-		},
-		"keeps last-known-good key material and logs if reload fails": {
-			setup: func(t *testing.T, path string, _ *mocks.ChangeObserverMock) {
-				t.Helper()
-
-				require.NoError(t, os.WriteFile(path, []byte("not a pem file"), 0o600))
-			},
-			assert: func(t *testing.T, prv *pemProvider, logs *bytes.Buffer) {
-				t.Helper()
-
-				prv.mu.RLock()
-				st := prv.store
-				prv.mu.RUnlock()
-
-				ks, ok := st.(keyStore)
-				require.True(t, ok)
-
-				require.Len(t, ks, 1)
-				require.Equal(t, "first", ks[0].Selector())
-				require.Contains(t, logs.String(), "Reloading pem file failed")
-			},
-		},
-		"keeps last-known-good material and logs if store kind changed": {
-			setup: func(t *testing.T, path string, _ *mocks.ChangeObserverMock) {
-				t.Helper()
-
-				writeCertificatePEMFile(t, path, "certificate")
-			},
-			assert: func(t *testing.T, prv *pemProvider, logs *bytes.Buffer) {
-				t.Helper()
-
-				prv.mu.RLock()
-				st := prv.store
-				prv.mu.RUnlock()
-
-				ks, ok := st.(keyStore)
-				require.True(t, ok)
-
-				require.Len(t, ks, 1)
-				require.Equal(t, "first", ks[0].Selector())
-				require.Contains(t, logs.String(), "Reloading pem file failed because store kind changed")
-			},
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
-
-			path := createPEMFile(t, "first")
-			if tc.createPath != nil {
-				path = tc.createPath(t)
-			}
-
-			store, err := loadStore(path, "")
-			require.NoError(t, err)
-
-			var logs bytes.Buffer
-
-			om := mocks.NewChangeObserverMock(t)
-			tc.setup(t, path, om)
-
-			prv := &pemProvider{
-				path:     path,
-				logger:   zerolog.New(&logs),
-				observer: om,
-				store:    store,
-			}
-
-			prv.reload()
-
-			tc.assert(t, prv, &logs)
-		})
-	}
-}
-
-func TestIsReloadEvent(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		event fsnotify.Event
-		want  bool
-	}{
-		"write reloads": {
-			event: fsnotify.Event{Op: fsnotify.Write},
-			want:  true,
-		},
-		"create reloads": {
-			event: fsnotify.Event{Op: fsnotify.Create},
-			want:  true,
-		},
-		"rename reloads": {
-			event: fsnotify.Event{Op: fsnotify.Rename},
-			want:  true,
-		},
-		"chmod does not directly reload": {
-			event: fsnotify.Event{Op: fsnotify.Chmod},
-		},
-		"remove does not reload": {
-			event: fsnotify.Event{Op: fsnotify.Remove},
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
-
-			require.Equal(t, tc.want, isReloadEvent(tc.event))
-		})
-	}
-}
-
-func TestIsAtomicUpdateEvent(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		event fsnotify.Event
-		want  bool
-	}{
-		"chmod is atomic update event": {
-			event: fsnotify.Event{Op: fsnotify.Chmod},
-			want:  true,
-		},
-		"write is not atomic update event": {
-			event: fsnotify.Event{Op: fsnotify.Write},
-		},
-		"rename is not atomic update event": {
-			event: fsnotify.Event{Op: fsnotify.Rename},
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
-
-			require.Equal(t, tc.want, isAtomicUpdateEvent(tc.event))
+			tc.action(t, prv, path)
 		})
 	}
 }
@@ -711,242 +706,269 @@ func TestIsAtomicUpdateEvent(t *testing.T) {
 func TestProviderGetSecret(t *testing.T) {
 	t.Parallel()
 
+	path := filepath.Join(t.TempDir(), "keys.pem")
+	writePEMFile(t, path, "first", "second")
+
+	validator, err := validation.NewValidator()
+	require.NoError(t, err)
+
+	df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
+	prv, err := newProvider(provider.Args{
+		Config:         map[string]any{"path": path, "watch": false},
+		Logger:         zerolog.Nop(),
+		DecoderFactory: df,
+		Observer:       mocks.NewChangeObserverMock(t),
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, prv.Start(t.Context()))
+
+	t.Cleanup(func() {
+		_ = prv.Stop(context.Background())
+	})
+
 	for uc, tc := range map[string]struct {
 		selector provider.Selector
-		provider *pemProvider
-		assert   func(*testing.T, error, types.Secret)
+		assert   func(t *testing.T, err error, secret provider.Secret)
 	}{
 		"returns first secret for empty selector": {
-			provider: newPEMProviderForTest(t, "first", "second"),
 			selector: provider.Selector{},
-			assert: func(t *testing.T, err error, secret types.Secret) {
+			assert: func(t *testing.T, err error, secret provider.Secret) {
 				t.Helper()
 
 				require.NoError(t, err)
+				require.NotNil(t, secret)
 				require.Equal(t, "first", secret.Selector())
 			},
 		},
 		"returns matching secret for explicit selector": {
-			provider: newPEMProviderForTest(t, "first", "second"),
 			selector: provider.Selector{Value: "second"},
-			assert: func(t *testing.T, err error, secret types.Secret) {
+			assert: func(t *testing.T, err error, secret provider.Secret) {
 				t.Helper()
 
 				require.NoError(t, err)
+				require.NotNil(t, secret)
 				require.Equal(t, "second", secret.Selector())
 			},
 		},
 		"fails for unknown selector": {
-			provider: newPEMProviderForTest(t, "first", "second"),
 			selector: provider.Selector{Value: "third"},
-			assert: func(t *testing.T, err error, _ types.Secret) {
+			assert: func(t *testing.T, err error, _ provider.Secret) {
 				t.Helper()
 
-				require.ErrorIs(t, err, types.ErrSecretNotFound)
-			},
-		},
-		"fails if key store is empty": {
-			provider: &pemProvider{store: keyStore{}},
-			assert: func(t *testing.T, err error, _ types.Secret) {
-				t.Helper()
-
-				require.ErrorIs(t, err, types.ErrSecretNotFound)
-			},
-		},
-		"fails if provider is backed by certificate store": {
-			provider: newCertificatePEMProviderForTest(t, "first"),
-			assert: func(t *testing.T, err error, _ types.Secret) {
-				t.Helper()
-
-				require.ErrorIs(t, err, types.ErrUnsupportedOperation)
+				require.ErrorIs(t, err, provider.ErrSecretNotFound)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			secret, err := tc.provider.GetSecret(t.Context(), tc.selector)
+			secret, err := prv.GetSecret(t.Context(), tc.selector)
 
 			tc.assert(t, err, secret)
 		})
 	}
 }
 
+func TestProviderGetSecretFailsForCertificateStore(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "certs.pem")
+	writeCertificatePEMFile(t, path, "first")
+
+	validator, err := validation.NewValidator()
+	require.NoError(t, err)
+
+	df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
+	prv, err := newProvider(provider.Args{
+		Config:         map[string]any{"path": path, "watch": false},
+		Logger:         zerolog.Nop(),
+		DecoderFactory: df,
+		Observer:       mocks.NewChangeObserverMock(t),
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, prv.Start(t.Context()))
+
+	t.Cleanup(func() {
+		_ = prv.Stop(context.Background())
+	})
+
+	secret, err := prv.GetSecret(t.Context(), provider.Selector{})
+
+	require.ErrorIs(t, err, provider.ErrUnsupportedOperation)
+	require.Nil(t, secret)
+}
+
 func TestProviderGetSecretSet(t *testing.T) {
 	t.Parallel()
 
+	path := filepath.Join(t.TempDir(), "keys.pem")
+	writePEMFile(t, path, "first", "second")
+
+	validator, err := validation.NewValidator()
+	require.NoError(t, err)
+
+	df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
+	prv, err := newProvider(provider.Args{
+		Config:         map[string]any{"path": path, "watch": false},
+		Logger:         zerolog.Nop(),
+		DecoderFactory: df,
+		Observer:       mocks.NewChangeObserverMock(t),
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, prv.Start(t.Context()))
+
+	t.Cleanup(func() {
+		_ = prv.Stop(context.Background())
+	})
+
 	for uc, tc := range map[string]struct {
 		selector provider.Selector
-		provider *pemProvider
-		assert   func(*testing.T, error, []types.Secret)
+		assert   func(t *testing.T, err error, secretSet []provider.Secret)
 	}{
 		"returns all secrets for empty selector": {
-			provider: newPEMProviderForTest(t, "first", "second"),
-			assert: func(t *testing.T, err error, secretSet []types.Secret) {
+			selector: provider.Selector{},
+			assert: func(t *testing.T, err error, secretSet []provider.Secret) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.Len(t, secretSet, 2)
-				require.Equal(t, []string{"first", "second"}, selectorsFromSecretSet(secretSet))
+				require.Equal(t, "first", secretSet[0].Selector())
+				require.Equal(t, "second", secretSet[1].Selector())
 			},
 		},
 		"returns all secrets regardless of selector": {
-			provider: newPEMProviderForTest(t, "first", "second"),
 			selector: provider.Selector{Value: "ignored"},
-			assert: func(t *testing.T, err error, secretSet []types.Secret) {
+			assert: func(t *testing.T, err error, secretSet []provider.Secret) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.Len(t, secretSet, 2)
-				require.Equal(t, []string{"first", "second"}, selectorsFromSecretSet(secretSet))
-			},
-		},
-		"returns empty set if key store is empty": {
-			provider: &pemProvider{store: keyStore{}},
-			assert: func(t *testing.T, err error, secretSet []types.Secret) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.Empty(t, secretSet)
-			},
-		},
-		"fails if provider is backed by certificate store": {
-			provider: newCertificatePEMProviderForTest(t, "first"),
-			assert: func(t *testing.T, err error, secretSet []types.Secret) {
-				t.Helper()
-
-				require.ErrorIs(t, err, types.ErrUnsupportedOperation)
-				require.Nil(t, secretSet)
+				require.Equal(t, "first", secretSet[0].Selector())
+				require.Equal(t, "second", secretSet[1].Selector())
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			secretSet, err := tc.provider.GetSecretSet(t.Context(), tc.selector)
+			secretSet, err := prv.GetSecretSet(t.Context(), tc.selector)
 
 			tc.assert(t, err, secretSet)
 		})
 	}
 }
 
+func TestProviderGetSecretSetFailsForCertificateStore(t *testing.T) {
+	t.Parallel()
+
+	path := filepath.Join(t.TempDir(), "certs.pem")
+	writeCertificatePEMFile(t, path, "first")
+
+	validator, err := validation.NewValidator()
+	require.NoError(t, err)
+
+	df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
+	prv, err := newProvider(provider.Args{
+		Config:         map[string]any{"path": path, "watch": false},
+		Logger:         zerolog.Nop(),
+		DecoderFactory: df,
+		Observer:       mocks.NewChangeObserverMock(t),
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, prv.Start(t.Context()))
+
+	t.Cleanup(func() {
+		_ = prv.Stop(context.Background())
+	})
+
+	secretSet, err := prv.GetSecretSet(t.Context(), provider.Selector{})
+
+	require.ErrorIs(t, err, provider.ErrUnsupportedOperation)
+	require.Nil(t, secretSet)
+}
+
 func TestProviderGetCredentials(t *testing.T) {
 	t.Parallel()
 
-	prov := &pemProvider{}
+	prv := &pemProvider{}
 
-	_, err := prov.GetCredentials(t.Context(), provider.Selector{})
+	_, err := prv.GetCredentials(t.Context(), provider.Selector{})
 
-	require.ErrorIs(t, err, types.ErrUnsupportedOperation)
+	require.ErrorIs(t, err, provider.ErrUnsupportedOperation)
 }
 
 func TestProviderGetCertificateBundle(t *testing.T) {
 	t.Parallel()
 
-	for uc, tc := range map[string]struct {
-		provider *pemProvider
-		assert   func(*testing.T, error, types.CertificateBundle)
-	}{
-		"returns certificate bundle": {
-			provider: newCertificatePEMProviderForTest(t, "first", "second"),
-			assert: func(t *testing.T, err error, bundle types.CertificateBundle) {
-				t.Helper()
+	path := filepath.Join(t.TempDir(), "certs.pem")
+	writeCertificatePEMFile(t, path, "first", "second")
 
-				require.NoError(t, err)
-				require.NotNil(t, bundle)
-				require.Empty(t, bundle.Selector())
-				require.Len(t, bundle.Certificates(), 2)
-				require.Equal(t, "first", bundle.Certificates()[0].Subject.CommonName)
-				require.Equal(t, "second", bundle.Certificates()[1].Subject.CommonName)
-			},
-		},
-		"fails if provider is backed by key store": {
-			provider: newPEMProviderForTest(t, "first"),
-			assert: func(t *testing.T, err error, bundle types.CertificateBundle) {
-				t.Helper()
+	validator, err := validation.NewValidator()
+	require.NoError(t, err)
 
-				require.ErrorIs(t, err, types.ErrUnsupportedOperation)
-				require.Nil(t, bundle)
-			},
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
+	df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
 
-			bundle, err := tc.provider.GetCertificateBundle(t.Context(), provider.Selector{})
+	prv, err := newProvider(provider.Args{
+		Config:         map[string]any{"path": path, "watch": false},
+		Logger:         zerolog.Nop(),
+		DecoderFactory: df,
+		Observer:       mocks.NewChangeObserverMock(t),
+	})
+	require.NoError(t, err)
 
-			tc.assert(t, err, bundle)
-		})
-	}
+	require.NoError(t, prv.Start(t.Context()))
+
+	t.Cleanup(func() {
+		_ = prv.Stop(context.Background())
+	})
+
+	bundle, err := prv.GetCertificateBundle(t.Context(), provider.Selector{})
+
+	require.NoError(t, err)
+	require.NotNil(t, bundle)
+	require.Empty(t, bundle.Selector())
+	require.Len(t, bundle.Certificates(), 2)
+	require.Equal(t, "first", bundle.Certificates()[0].Subject.CommonName)
+	require.Equal(t, "second", bundle.Certificates()[1].Subject.CommonName)
 }
 
-func createPEMFile(t *testing.T, keyIDs ...string) string {
-	t.Helper()
+func TestProviderGetCertificateBundleFailsForKeyStore(t *testing.T) {
+	t.Parallel()
 
 	path := filepath.Join(t.TempDir(), "keys.pem")
-	writePEMFile(t, path, keyIDs...)
-
-	return path
-}
-
-func createCertificatePEMFile(t *testing.T, names ...string) string {
-	t.Helper()
-
-	path := filepath.Join(t.TempDir(), "certs.pem")
-	writeCertificatePEMFile(t, path, names...)
-
-	return path
-}
-
-func newPEMProviderForTest(t *testing.T, keyIDs ...string) *pemProvider {
-	t.Helper()
-
-	pemFile := createPEMFile(t, keyIDs...)
+	writePEMFile(t, path, "first")
 
 	validator, err := validation.NewValidator()
 	require.NoError(t, err)
 
-	prov, err := newProvider(provider.Args{
-		Config:         map[string]any{"path": pemFile},
+	df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
+	prv, err := newProvider(provider.Args{
+		Config:         map[string]any{"path": path, "watch": false},
 		Logger:         zerolog.Nop(),
-		DecoderFactory: encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
+		DecoderFactory: df,
+		Observer:       mocks.NewChangeObserverMock(t),
 	})
 	require.NoError(t, err)
 
-	concrete, ok := prov.(*pemProvider)
-	require.True(t, ok)
+	require.NoError(t, prv.Start(t.Context()))
 
-	return concrete
-}
-
-func newCertificatePEMProviderForTest(t *testing.T, names ...string) *pemProvider {
-	t.Helper()
-
-	pemFile := createCertificatePEMFile(t, names...)
-
-	validator, err := validation.NewValidator()
-	require.NoError(t, err)
-
-	prov, err := newProvider(provider.Args{
-		Config:         map[string]any{"path": pemFile},
-		Logger:         zerolog.Nop(),
-		DecoderFactory: encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)),
+	t.Cleanup(func() {
+		_ = prv.Stop(context.Background())
 	})
-	require.NoError(t, err)
 
-	concrete, ok := prov.(*pemProvider)
-	require.True(t, ok)
+	bundle, err := prv.GetCertificateBundle(t.Context(), provider.Selector{})
 
-	return concrete
-}
-
-func selectorsFromSecretSet(secretSet []types.Secret) []string {
-	selectors := make([]string, len(secretSet))
-	for idx, secret := range secretSet {
-		selectors[idx] = secret.Selector()
-	}
-
-	return selectors
+	require.ErrorIs(t, err, provider.ErrUnsupportedOperation)
+	require.Nil(t, bundle)
 }
 
 func writePEMFile(t *testing.T, path string, keyIDs ...string) {
