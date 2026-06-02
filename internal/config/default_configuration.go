@@ -75,8 +75,9 @@ func defaultConfig() Configuration {
 			Config: map[string]any{},
 		},
 		Log: LoggingConfig{
-			Level:  zerolog.ErrorLevel,
-			Format: LogTextFormat,
+			Level:            zerolog.ErrorLevel,
+			Format:           LogTextFormat,
+			AccessLogEnabled: true,
 		},
 		Tracing: TracingConfig{
 			Enabled:           true,

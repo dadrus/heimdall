@@ -122,6 +122,7 @@ secrets_reload_enabled: true
 log:
   level: warn
   format: text
+  access_log_enabled: true
 
 tracing:
   enabled: true

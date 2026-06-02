@@ -442,7 +442,7 @@ func TestControllerLifecycle(t *testing.T) {
 			rf := mocks.NewFactoryMock(t)
 			setupMock(t, rf)
 
-			controller := New(tc.tls, log.Logger, authClass, rf)
+			controller := New(tc.tls, log.Logger, authClass, rf, true)
 			serviceAddress := fmt.Sprintf("%s://%s/validate-ruleset",
 				x.IfThenElse(tc.tls != nil, "https", "http"),
 				listeningAddress,
