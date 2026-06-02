@@ -138,7 +138,7 @@ github:
 				t.Helper()
 
 				path := filepath.Join(t.TempDir(), "secrets.yaml")
-				content := `"api_token: ["`
+				content := `api_token: [`
 
 				err := os.WriteFile(path, []byte(content), 0o600)
 				require.NoError(t, err)
@@ -431,7 +431,12 @@ func TestProviderWatch(t *testing.T) {
 				t.Cleanup(func() { require.NoError(t, prv.Stop(context.Background())) })
 
 				require.NoError(t, prv.Start(t.Context()))
+
+				time.Sleep(50 * time.Millisecond)
+
 				require.NoError(t, os.WriteFile(path, []byte(`api_token: 42`), 0o600))
+
+				time.Sleep(50 * time.Millisecond)
 
 				secret, err := prv.GetSecret(t.Context(), provider.Selector{Value: "api_token"})
 				require.NoError(t, err)

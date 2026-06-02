@@ -84,7 +84,7 @@ func newProvider(args provider.Args) (provider.Provider, error) {
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
 			provider.ErrInternal,
-			"failed to initialize pem provider watcher",
+			"failed to initialize file provider watcher",
 		).CausedBy(err)
 	}
 
@@ -119,7 +119,7 @@ func (p *fileProvider) Start(ctx context.Context) error {
 	if err = p.watcher.Add(p.file); err != nil {
 		return errorchain.NewWithMessagef(
 			provider.ErrInternal,
-			"failed to register pem provider watch for %s", p.file,
+			"failed to register file provider watch for %s", p.file,
 		).CausedBy(err)
 	}
 
