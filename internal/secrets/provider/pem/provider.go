@@ -85,7 +85,9 @@ func newProvider(args provider.Args) (provider.Provider, error) {
 		return nil, err
 	}
 
-	logger.Info().Msg("Loading pem file")
+	logger.Info().
+		Str("_file", cfg.Path).
+		Msg("Loading pem file")
 
 	store, err := loadStore(cfg.Path, cfg.Password)
 	if err != nil {
