@@ -42,6 +42,7 @@ func New(logger zerolog.Logger, opts ...Option) func(http.Handler) http.Handler 
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			start := time.Now()
 			traceCtx := tracecontext.Extract(req.Context())
+
 			ctx := req.Context()
 			if conf.accessLogEnabled {
 				ctx = accesscontext.New(ctx)

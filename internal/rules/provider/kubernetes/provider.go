@@ -472,6 +472,7 @@ func (p *Provider) updateStatusWithRetry(
 	modRS.Status.ActiveIn = x.IfThenElse(len(modRS.Status.ActiveIn) == 0, "0/0", modRS.Status.ActiveIn)
 	usedBy := strings.Split(modRS.Status.ActiveIn, "/")
 	loadedBy, _ := strconv.Atoi(usedBy[0])
+
 	matchedBy, _ := strconv.Atoi(usedBy[1])
 	if !retry || currentCondition == nil {
 		modRS.Status.ActiveIn = fmt.Sprintf("%d/%d", loadedBy+usageIncrement, matchedBy+matchIncrement)

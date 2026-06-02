@@ -1607,13 +1607,16 @@ func TestRuleSetStatusUpdate(t *testing.T) {
 				require.NoError(t, err)
 
 				var found bool
+
 				for _, op := range patch {
 					if op.Path == "/status/activeIn" {
 						found = true
+
 						assert.Equal(t, "replace", op.Type)
 						assert.Equal(t, "1/2", op.Value)
 					}
 				}
+
 				assert.True(t, found)
 
 				_, rawPatch, _ = mock2.ArgumentCaptor3From[
