@@ -28,6 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	_ "github.com/dadrus/heimdall/internal/secrets/provider/file"
 	_ "github.com/dadrus/heimdall/internal/secrets/provider/inline"
 	_ "github.com/dadrus/heimdall/internal/secrets/provider/pem"
 	"github.com/dadrus/heimdall/internal/secrets/types"
