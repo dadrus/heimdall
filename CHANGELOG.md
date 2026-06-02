@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.17.16](https://github.com/dadrus/heimdall/compare/v0.17.15...v0.17.16) (2026-06-02)
+
+
+### Bug Fixes
+
+* Allow operators to disable unavoidable access logs ([#3292](https://github.com/dadrus/heimdall/issues/3292)) ([fa1f0b5](https://github.com/dadrus/heimdall/commit/fa1f0b5cb25b7934b9b19b6fcf1c6583c22a48da))
+
+
+### Dependencies
+
+* update module github.com/ccoveille/go-safecast/v2 to v2.0.1 ([#3288](https://github.com/dadrus/heimdall/issues/3288)) ([aa7aab3](https://github.com/dadrus/heimdall/commit/aa7aab3011cdda7ee91745e5aca642c121413c30))
+* update module github.com/go-playground/validator/v10 to v10.30.3 ([#3289](https://github.com/dadrus/heimdall/issues/3289)) ([5ddcc48](https://github.com/dadrus/heimdall/commit/5ddcc48727805af503279158a2fc2badc31c4a88))
+* update module github.com/knadh/koanf/v2 to v2.3.5 ([#3291](https://github.com/dadrus/heimdall/issues/3291)) ([d226445](https://github.com/dadrus/heimdall/commit/d22644564f41ad35aba3385c51b9bf4339148864))
+* update opentelemetry-go monorepo to v1.44.0 ([#3286](https://github.com/dadrus/heimdall/issues/3286)) ([f00962c](https://github.com/dadrus/heimdall/commit/f00962c80690d2fc816bc8a164280d8d1d870d95))
+* update opentelemetry-go-contrib monorepo to v0.69.0 ([#3287](https://github.com/dadrus/heimdall/issues/3287)) ([db77f85](https://github.com/dadrus/heimdall/commit/db77f859028fff904ee28398cd0f451c2c298e93))
+
 ## [0.17.15](https://github.com/dadrus/heimdall/compare/v0.17.14...v0.17.15) (2026-05-26)
 
 
