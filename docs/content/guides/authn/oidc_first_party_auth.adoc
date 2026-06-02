@@ -124,7 +124,7 @@ providers: # <12>
     watch: true
 ----
 <1> By default, heimdall emits logs on `error` level, but to better understand its operations, we’re setting the log level to `debug`. This way, you'll see not only the results of rule executions (which is what you would see if we set the log level to `info`), but also detailed information about what’s happening within each rule. We’re also disabling tracing and metrics collection to avoid errors related to the missing OTEL agent, which is used by default. For more details on logging and other observability options, see the link:{{< relref "/docs/operations/observability.adoc#_logging" >}}[Observability] chapter.
-<2> Here we configure secret sources to get key material from. In this particular case a secret source named `jwt_key_store` is baked by the `pem` backend, which loads the referenced pem file.
+<2> Here we configure secret sources to get key material from. In this particular case a secret source named `jwt_key_store` is baked by the `pem` provider, which loads the referenced pem file.
 <3> We define our link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue of mechanisms] for use in our link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule] and link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream service-specific rules].
 <4> These lines define the `unauthorized` authenticator, named `deny_all`, which rejects all requests.
 <5> These lines define the `anonymous` authenticator, named `anon`, which allows all requests and creates a subject with the ID set to `anonymous`. More information about subjects and other objects can be found link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[here].

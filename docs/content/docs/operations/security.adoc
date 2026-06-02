@@ -100,9 +100,9 @@ The verification of TLS server certificates is not the single configuration opti
 
 == Secret Management & Rotation
 
-In a typical production scenario, there is a need for proper key and certificate management. This is supported by heimdall via link:{{< relref "/docs/operations/secret_management.adoc" >}}[secret management], which allows configuring different secret sources baked by different secret backends to load and reload secrets, credentials, key material, and certificate bundles from.
+In a typical production scenario, there is a need for proper key and certificate management. This is supported by heimdall via link:{{< relref "/docs/operations/secret_management.adoc" >}}[secret management], which allows configuring different secret sources baked by different secret providers to load and reload secrets, credentials, key material, and certificate bundles from.
 
-When configuring the actual secret backend – which in a simple form could be a PEM file containing keys and certificates
+When configuring the actual secret provider – which in a simple form could be a PEM file containing keys and certificates
 
 * make use of key ids. Usage of key ids allows for seamless key rotation in setups which do not support or allow usage of secret management systems.
 
