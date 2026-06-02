@@ -1,6 +1,7 @@
 secret_management:
   inline_secrets:
     type: inline
+    allow_in_rules: true
     config:
       client_credentials:
         client_id: test-client-id
@@ -13,15 +14,22 @@ secret_management:
   jwt_secrets:
     type: pem
     config:
-      path: "${TEST_KEYSTORE_FILE}"
+      path: /path/to/jwt/secret.pem
+      watch: true
   tls_keys:
     type: pem
     config:
-      path: "${TEST_KEYSTORE_FILE}"
+      path: /path/to/tls/key_and_cert.pem
+      watch: true
   trust_store:
     type: pem
     config:
-      path: "${TEST_TRUSTSTORE_FILE}"
+      path: /path/to/ca_bundle.pem
+  secrets_from_file:
+    type: file
+    allow_in_rules: true
+    config:
+      path: /path/to/secrets.json
 
 serve:
   port: 4468

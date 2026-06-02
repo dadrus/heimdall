@@ -18,10 +18,17 @@ secret_management:
     type: pem
     config:
       path: /path/to/tls_secrets.pem
+      password: "${TLS_PEM_FILE_SECRET}"
+      watch: true
   trust_store:
     type: pem
     config:
       path: /path/to/ca_bundle.pem
+  secret_file:
+    type: file
+    config:
+      path: /path/to/secrets.json
+      watch: true
 
 serve:
   host: 127.0.0.1
