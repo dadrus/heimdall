@@ -1,5 +1,45 @@
 # Changelog
 
+## [0.17.16](https://github.com/dadrus/heimdall/compare/v0.17.15...v0.17.16) (2026-06-02)
+
+
+### Bug Fixes
+
+* Allow operators to disable unavoidable access logs ([#3292](https://github.com/dadrus/heimdall/issues/3292)) by [@kvlunar](https://github.com/kvlunar) ([fa1f0b5](https://github.com/dadrus/heimdall/commit/fa1f0b5cb25b7934b9b19b6fcf1c6583c22a48da))
+
+
+### Dependencies
+
+* update module github.com/ccoveille/go-safecast/v2 to v2.0.1 ([#3288](https://github.com/dadrus/heimdall/issues/3288)) ([aa7aab3](https://github.com/dadrus/heimdall/commit/aa7aab3011cdda7ee91745e5aca642c121413c30))
+* update module github.com/go-playground/validator/v10 to v10.30.3 ([#3289](https://github.com/dadrus/heimdall/issues/3289)) ([5ddcc48](https://github.com/dadrus/heimdall/commit/5ddcc48727805af503279158a2fc2badc31c4a88))
+* update module github.com/knadh/koanf/v2 to v2.3.5 ([#3291](https://github.com/dadrus/heimdall/issues/3291)) ([d226445](https://github.com/dadrus/heimdall/commit/d22644564f41ad35aba3385c51b9bf4339148864))
+* update opentelemetry-go monorepo to v1.44.0 ([#3286](https://github.com/dadrus/heimdall/issues/3286)) ([f00962c](https://github.com/dadrus/heimdall/commit/f00962c80690d2fc816bc8a164280d8d1d870d95))
+* update opentelemetry-go-contrib monorepo to v0.69.0 ([#3287](https://github.com/dadrus/heimdall/issues/3287)) ([db77f85](https://github.com/dadrus/heimdall/commit/db77f859028fff904ee28398cd0f451c2c298e93))
+
+## [0.17.15](https://github.com/dadrus/heimdall/compare/v0.17.14...v0.17.15) (2026-05-26)
+
+
+### Bug Fixes
+
+* Made HTTP Message Signatures auth type usable in endpoint configuration ([#3280](https://github.com/dadrus/heimdall/issues/3280)) ([ef3baaa](https://github.com/dadrus/heimdall/commit/ef3baaabb818e02c36234e999dc8d5d92d406af9))
+
+
+### Dependencies
+
+* update golang to v1.26.3 ([#3242](https://github.com/dadrus/heimdall/issues/3242)) ([5710356](https://github.com/dadrus/heimdall/commit/571035603c6d5638ff8c525d79685725c84334da))
+* update google.golang.org/genproto/googleapis/rpc digest to 0a33c5d ([#3279](https://github.com/dadrus/heimdall/issues/3279)) ([d46c903](https://github.com/dadrus/heimdall/commit/d46c903c7ab1666136f2e5ac971759f730acc1e8))
+* update kubernetes monorepo to v0.36.1 ([#3258](https://github.com/dadrus/heimdall/issues/3258)) ([e9f46e4](https://github.com/dadrus/heimdall/commit/e9f46e4a4b83f2a52ad3a808be981e5aad9dd1c6))
+* update module github.com/dadrus/httpsig to v0.9.0 ([#3263](https://github.com/dadrus/heimdall/issues/3263)) ([b1c6ccc](https://github.com/dadrus/heimdall/commit/b1c6ccc2d41a856063edc4f05c46af5059635480))
+* update module github.com/fsnotify/fsnotify to v1.10.1 ([#3239](https://github.com/dadrus/heimdall/issues/3239)) ([48d6eee](https://github.com/dadrus/heimdall/commit/48d6eeee46104406d258f7f507f2c3a0c8acf48a))
+* update module github.com/go-co-op/gocron/v2 to v2.21.2 ([#3255](https://github.com/dadrus/heimdall/issues/3255)) ([b8d7ac1](https://github.com/dadrus/heimdall/commit/b8d7ac1d8d4bcc28fd6fd9d75d330dd164a6290a))
+* update module github.com/google/cel-go to v0.28.1 ([#3257](https://github.com/dadrus/heimdall/issues/3257)) ([088e94c](https://github.com/dadrus/heimdall/commit/088e94cd7a3b3b5d76f167c67e891e0f11a14920))
+* update module github.com/redis/rueidis to v1.0.75 ([#3254](https://github.com/dadrus/heimdall/issues/3254)) ([71a7899](https://github.com/dadrus/heimdall/commit/71a7899fb137a80c2e23ad8e496a6edb1535211e))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.75 ([#3254](https://github.com/dadrus/heimdall/issues/3254)) ([71a7899](https://github.com/dadrus/heimdall/commit/71a7899fb137a80c2e23ad8e496a6edb1535211e))
+* update module github.com/rs/zerolog to v1.35.1 ([#3216](https://github.com/dadrus/heimdall/issues/3216)) ([a7b7392](https://github.com/dadrus/heimdall/commit/a7b7392cd3158477035437b1722af3f294c57cdc))
+* update module github.com/tidwall/gjson to v1.19.0 ([#3245](https://github.com/dadrus/heimdall/issues/3245)) ([a306a33](https://github.com/dadrus/heimdall/commit/a306a33bc51d89ac947079b3d0b4ca57c0745ff1))
+* update module google.golang.org/grpc to v1.81.1 ([#3261](https://github.com/dadrus/heimdall/issues/3261)) ([09cb299](https://github.com/dadrus/heimdall/commit/09cb29993ffef0cd5a6367491917272b2767f40a))
+
+
 ## [0.17.14](https://github.com/dadrus/heimdall/compare/v0.17.13...v0.17.14) (2026-04-19)
 
 

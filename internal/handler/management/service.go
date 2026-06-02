@@ -62,7 +62,7 @@ func newService(
 			otelmetrics.WithServerName(cfg.Address()),
 			otelmetrics.WithOperationFilter(opFilter),
 		),
-		logger.New(log),
+		logger.New(log, logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled)),
 		dump.New(),
 		x.IfThenElseExec(cfg.CORS != nil,
 			func() func(http.Handler) http.Handler {

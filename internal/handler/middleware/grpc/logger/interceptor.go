@@ -37,24 +37,36 @@ type ServerInterceptor interface {
 	StreamServerInterceptor() grpc.StreamServerInterceptor
 }
 
-func New(logger zerolog.Logger) ServerInterceptor {
+func New(logger zerolog.Logger, opts ...Option) ServerInterceptor {
+	conf := config{accessLogEnabled: true}
+	for _, opt := range opts {
+		opt(&conf)
+	}
+
 	return &logInterceptor{
-		logger:       logger,
-		accessLogger: logger.Level(zerolog.InfoLevel).With().Logger(),
+		logger:           logger,
+		accessLogger:     logger.Level(zerolog.InfoLevel).With().Logger(),
+		accessLogEnabled: conf.accessLogEnabled,
 	}
 }
 
 type logInterceptor struct {
-	logger       zerolog.Logger
-	accessLogger zerolog.Logger
+	logger           zerolog.Logger
+	accessLogger     zerolog.Logger
+	accessLogEnabled bool
 }
 
 func (li *logInterceptor) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+		traceCtx := tracecontext.Extract(ctx)
+
+		if !li.accessLogEnabled {
+			return handler(withTraceData(li.logger.With(), &traceCtx).Logger().WithContext(ctx), req)
+		}
+
 		start := time.Now()
 		requestMD, _ := metadata.FromIncomingContext(ctx)
 		peerAddr := peerFromCtx(ctx)
-		traceCtx := tracecontext.Extract(ctx)
 		ctx = accesscontext.New(ctx)
 
 		logEvt := logCommonData(li.accessLogger.Info(), start, peerAddr, info.FullMethod, traceCtx, requestMD)
@@ -77,11 +89,16 @@ func (li *logInterceptor) StreamServerInterceptor() grpc.StreamServerInterceptor
 	return func(
 		srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler,
 	) error {
-		start := time.Now()
 		ctx := stream.Context()
+		traceCtx := tracecontext.Extract(ctx)
+
+		if !li.accessLogEnabled {
+			return handler(srv, stream)
+		}
+
+		start := time.Now()
 		requestMD, _ := metadata.FromIncomingContext(ctx)
 		peerAddr := peerFromCtx(ctx)
-		traceCtx := tracecontext.Extract(ctx)
 		ctx = accesscontext.New(ctx)
 
 		logEvt := logCommonData(li.accessLogger.Info(), start, peerAddr, info.FullMethod, traceCtx, requestMD)

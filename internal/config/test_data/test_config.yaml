@@ -151,6 +151,7 @@ cache:
 log:
   level: warn
   format: text
+  access_log_enabled: true
 
 tracing:
   enabled: true
@@ -425,7 +426,7 @@ mechanisms:
           my_endpoint: "https://some-other.service/users/{{ .Values.user_id }}"
         values:
           user_id: "{{ .Subject.ID }}"
-    - id: profile_data_contextualizer
+    - id: contextualizer_with_api_key_usage
       type: generic
       config:
         endpoint:
@@ -440,6 +441,24 @@ mechanisms:
               secret:
                 source: inline_secrets
                 selector: bar_foo_key
+        values:
+          some-key: some-value
+    - id: contextualizer_with_http_sig_usage
+      type: generic
+      config:
+        endpoint:
+          url: http://profile/{{ .Subject.ID }}
+          headers:
+            foo: bar
+          auth:
+            type: http_message_signatures
+            config:
+              components: ["@method", "content-digest", "@authority", "@target-uri", "@scheme"]
+              signer:
+                name: heimdall
+                secret:
+                  source: inline_secrets
+                  selector: bar_foo_key
         values:
           some-key: some-value
   finalizers:

@@ -889,8 +889,8 @@
                       "1h",
                       "1m",
                       "30s"
-                    ]
-                  }
+                  ]
+                }
                 }
               }
             }
@@ -1078,7 +1078,7 @@
       "required": ["type"],
       "properties": {
         "type": {
-          "enum": ["api_key", "basic_auth", "oauth2_client_credentials"]
+          "enum": ["api_key", "basic_auth", "oauth2_client_credentials", "http_message_signatures"]
         }
       },
       "allOf": [
@@ -1102,6 +1102,13 @@
             "properties": { "type": { "const": "oauth2_client_credentials" } }
           },
           "then": { "$ref": "#/definitions/endpointAuth2ClientCredentialsProperties" }
+        },
+        {
+          "if": {
+            "required": ["type"],
+            "properties": { "type": { "const": "http_message_signatures" } }
+          },
+          "then": { "$ref": "#/definitions/endpointAuthHTTPMessageSignaturesProperties" }
         }
       ]
     },
@@ -1182,6 +1189,70 @@
         },
         "config": {
           "$ref": "#/definitions/oauth2ClientCredentialsFlowConfig"
+        }
+      }
+    },
+    "endpointAuthHTTPMessageSignaturesProperties": {
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "config"
+      ],
+      "properties": {
+        "type": {
+          "const": "http_message_signatures"
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "components",
+            "signer"
+          ],
+          "properties": {
+            "components": {
+              "description": "The components to be covered by the signature.",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "label": {
+              "description": "The label to use. Defaults to sig.",
+              "type": "string",
+              "default": "sig"
+            },
+            "ttl": {
+              "type": "string",
+              "description": "The TTL of the resulting signature. Defaults to 1m. Responsible for setting created and expires parameters in the resulting signature.",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "1m",
+              "examples": [
+                "1h",
+                "1m",
+                "30s"
+              ]
+            },
+            "signer": {
+              "description": "The configuration of the key material used for signature creation purposes, as well as the name used for the tag parameter in the resulting signature.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "secret"
+              ],
+              "properties": {
+                "name": {
+                  "description": "The name of the signer. Used for the 'tag' parameter in the resulting signature.",
+                  "type": "string",
+                  "default": "heimdall"
+                },
+                "secret": {
+                  "description": "The secret containing the key material used for signature creation",
+                  "$ref": "#/definitions/secretReference"
+                }
+              }
+            }
+          }
         }
       }
     },
@@ -2657,6 +2728,11 @@
             "text"
           ],
           "default": "gelf"
+        },
+        "access_log_enabled": {
+          "description": "Set to false if you don't need Heimdall to perform access logging (like TX started / TX finished). Defaults to true.",
+          "type": "boolean",
+          "default": true
         }
       }
     },
