@@ -154,6 +154,87 @@ func TestEventDispatcherContinuesAfterHandlerError(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
+func TestEventDispatcherStopWaitsForRunningHandler(t *testing.T) {
+	t.Parallel()
+
+	started := make(chan struct{})
+	release := make(chan struct{})
+
+	dispatcher := newEventDispatcher(EventHandlerFunc(func(Event) error {
+		close(started)
+		<-release
+
+		return nil
+	}), zerolog.Nop())
+
+	require.NoError(t, dispatcher.Start())
+
+	dispatcher.Enqueue(Event{Path: "/tmp/one.yaml", Op: OpChanged})
+
+	require.Eventually(t, func() bool {
+		select {
+		case <-started:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
+
+	stopped := make(chan error, 1)
+
+	go func() {
+		stopped <- dispatcher.Stop()
+	}()
+
+	require.Never(t, func() bool {
+		select {
+		case <-stopped:
+			return true
+		default:
+			return false
+		}
+	}, 50*time.Millisecond, 10*time.Millisecond)
+
+	close(release)
+
+	require.Eventually(t, func() bool {
+		select {
+		case err := <-stopped:
+			require.NoError(t, err)
+
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
+}
+
+func TestEventDispatcherEnqueueAfterStopIsIgnored(t *testing.T) {
+	t.Parallel()
+
+	unexpected := make(chan Event, 1)
+
+	dispatcher := newEventDispatcher(EventHandlerFunc(func(Event) error {
+		unexpected <- Event{}
+
+		return nil
+	}), zerolog.Nop())
+
+	require.NoError(t, dispatcher.Start())
+	require.NoError(t, dispatcher.Stop())
+
+	dispatcher.Enqueue(Event{Path: "/tmp/one.yaml", Op: OpChanged})
+
+	require.Never(t, func() bool {
+		select {
+		case <-unexpected:
+			return true
+		default:
+			return false
+		}
+	}, 50*time.Millisecond, 10*time.Millisecond)
+}
+
 func TestEventDispatcherRunStopsWithoutDrainingQueue(t *testing.T) {
 	t.Parallel()
 

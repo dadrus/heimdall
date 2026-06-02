@@ -27,10 +27,12 @@ import (
 type eventDispatcher struct {
 	task.StateMachine
 
-	handler  EventHandler
-	executor *task.Executor
-	logger   zerolog.Logger
-	stopCh   chan struct{}
+	handler EventHandler
+	logger  zerolog.Logger
+
+	lifecycleMu sync.RWMutex
+	executor    *task.Executor
+	stopCh      chan struct{}
 
 	queueMu sync.Mutex
 	queue   []Event
@@ -44,6 +46,9 @@ func newEventDispatcher(handler EventHandler, logger zerolog.Logger) *eventDispa
 }
 
 func (d *eventDispatcher) Start() error {
+	d.lifecycleMu.Lock()
+	defer d.lifecycleMu.Unlock()
+
 	executor, err := task.NewExecutor(1)
 	if err != nil {
 		return err
@@ -56,19 +61,31 @@ func (d *eventDispatcher) Start() error {
 }
 
 func (d *eventDispatcher) Stop() error {
+	d.lifecycleMu.Lock()
+	defer d.lifecycleMu.Unlock()
+
 	if d.executor == nil {
 		return nil
 	}
 
 	close(d.stopCh)
+	d.StateMachine.Stop()
 
 	d.executor.Stop()
 	d.executor = nil
+	d.stopCh = nil
 
 	return nil
 }
 
 func (d *eventDispatcher) Enqueue(evt Event) {
+	d.lifecycleMu.RLock()
+	defer d.lifecycleMu.RUnlock()
+
+	if d.executor == nil {
+		return
+	}
+
 	d.queueMu.Lock()
 	d.queue = append(d.queue, evt)
 	d.queueMu.Unlock()

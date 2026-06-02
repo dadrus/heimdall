@@ -196,12 +196,13 @@ func (w *Watcher) Stop(ctx context.Context) error {
 	cancel()
 
 	_ = fsWatcher.Close()
-	_ = dispatcher.Stop()
 
 	done := make(chan struct{})
 
 	go func() {
 		w.wg.Wait()
+
+		_ = dispatcher.Stop()
 
 		close(done)
 	}()

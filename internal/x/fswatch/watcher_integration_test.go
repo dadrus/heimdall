@@ -91,6 +91,39 @@ func TestWatcherIntegrationObservesFileDeletion(t *testing.T) {
 	})
 }
 
+func TestWatcherIntegrationObservesFileReplacementByRename(t *testing.T) {
+	t.Parallel()
+
+	events := make(chan Event, 16)
+	dir := t.TempDir()
+	path := filepath.Join(dir, "key_and_cert.pem")
+	nextPath := filepath.Join(dir, "key_and_cert.pem.tmp")
+
+	require.NoError(t, os.WriteFile(path, []byte("initial"), 0o600))
+
+	watcher, err := New(EventHandlerFunc(func(evt Event) error {
+		events <- evt
+
+		return nil
+	}), WithLogger(zerolog.Nop()))
+	require.NoError(t, err)
+
+	require.NoError(t, watcher.Add(path))
+	require.NoError(t, watcher.Start(context.Background()))
+
+	t.Cleanup(func() {
+		require.NoError(t, watcher.Stop(context.Background()))
+	})
+
+	require.NoError(t, os.WriteFile(nextPath, []byte("updated"), 0o600))
+	require.NoError(t, os.Rename(nextPath, path))
+
+	requireEventuallyReceives(t, events, Event{
+		Path: filepath.Clean(path),
+		Op:   OpChanged,
+	})
+}
+
 func TestWatcherIntegrationObservesDirectoryChildCreation(t *testing.T) {
 	t.Parallel()
 
