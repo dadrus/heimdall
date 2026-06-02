@@ -30,6 +30,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var noopEventHandler = EventHandlerFunc(func(Event) error { //nolint:gochecknoglobals
+	return nil
+})
+
 func TestNew(t *testing.T) {
 	t.Parallel()
 
@@ -46,7 +50,7 @@ func TestNew(t *testing.T) {
 			},
 		},
 		"with handler": {
-			handler: NewEventHandlerMock(t),
+			handler: noopEventHandler,
 			assert: func(t *testing.T, watcher *Watcher, err error) {
 				t.Helper()
 
@@ -172,7 +176,7 @@ func TestWatcherAdd(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			watcher, err := New(NewEventHandlerMock(t), WithLogger(zerolog.Nop()))
+			watcher, err := New(noopEventHandler, WithLogger(zerolog.Nop()))
 			require.NoError(t, err)
 
 			if tc.startWatcher {
@@ -270,7 +274,7 @@ func TestWatcherRemove(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			watcher, err := New(NewEventHandlerMock(t), WithLogger(zerolog.Nop()))
+			watcher, err := New(noopEventHandler, WithLogger(zerolog.Nop()))
 			require.NoError(t, err)
 
 			if tc.startWatcher {
@@ -362,7 +366,7 @@ func TestWatcherStart(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			watcher, err := New(NewEventHandlerMock(t), WithLogger(zerolog.Nop()))
+			watcher, err := New(noopEventHandler, WithLogger(zerolog.Nop()))
 			require.NoError(t, err)
 
 			if tc.setup != nil {
@@ -437,7 +441,7 @@ func TestWatcherStop(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			watcher, err := New(NewEventHandlerMock(t), WithLogger(zerolog.Nop()))
+			watcher, err := New(noopEventHandler, WithLogger(zerolog.Nop()))
 			require.NoError(t, err)
 
 			if tc.setup != nil {
@@ -454,7 +458,6 @@ func TestWatcherStop(t *testing.T) {
 func TestWatcherHandleEventDispatchesMatchingEvent(t *testing.T) {
 	t.Parallel()
 
-	handler := NewEventHandlerMock(t)
 	handled := make(chan struct{}, 1)
 
 	dir := t.TempDir()
@@ -467,15 +470,13 @@ func TestWatcherHandleEventDispatchesMatchingEvent(t *testing.T) {
 		Op:   OpChanged,
 	}
 
-	handler.EXPECT().
-		HandleEvent(expected).
-		RunAndReturn(func(Event) error {
+	watcher, err := New(EventHandlerFunc(func(evt Event) error {
+		if evt == expected {
 			handled <- struct{}{}
+		}
 
-			return nil
-		})
-
-	watcher, err := New(handler, WithLogger(zerolog.Nop()))
+		return nil
+	}), WithLogger(zerolog.Nop()))
 	require.NoError(t, err)
 	require.NoError(t, watcher.Add(path))
 	require.NoError(t, watcher.dispatcher.Start())
@@ -502,7 +503,7 @@ func TestWatcherHandleEventDispatchesMatchingEvent(t *testing.T) {
 func TestWatcherHandleEventIgnoresUnrelatedEvent(t *testing.T) {
 	t.Parallel()
 
-	handler := NewEventHandlerMock(t)
+	unexpected := make(chan Event, 1)
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "key_and_cert.pem")
@@ -511,7 +512,11 @@ func TestWatcherHandleEventIgnoresUnrelatedEvent(t *testing.T) {
 	require.NoError(t, os.WriteFile(path, []byte("content"), 0o600))
 	require.NoError(t, os.WriteFile(otherPath, []byte("content"), 0o600))
 
-	watcher, err := New(handler, WithLogger(zerolog.Nop()))
+	watcher, err := New(EventHandlerFunc(func(evt Event) error {
+		unexpected <- evt
+
+		return nil
+	}), WithLogger(zerolog.Nop()))
 	require.NoError(t, err)
 	require.NoError(t, watcher.Add(path))
 	require.NoError(t, watcher.dispatcher.Start())
@@ -524,12 +529,21 @@ func TestWatcherHandleEventIgnoresUnrelatedEvent(t *testing.T) {
 		Name: otherPath,
 		Op:   fsnotify.Write,
 	})
+
+	require.Never(t, func() bool {
+		select {
+		case <-unexpected:
+			return true
+		default:
+			return false
+		}
+	}, 50*time.Millisecond, 10*time.Millisecond)
 }
 
 func TestWatcherRunReturnsOnContextCancellation(t *testing.T) {
 	t.Parallel()
 
-	watcher, err := New(NewEventHandlerMock(t), WithLogger(zerolog.Nop()))
+	watcher, err := New(noopEventHandler, WithLogger(zerolog.Nop()))
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -560,7 +574,7 @@ func TestWatcherRunReturnsOnContextCancellation(t *testing.T) {
 func TestWatcherRunReturnsWhenEventsChannelIsClosed(t *testing.T) {
 	t.Parallel()
 
-	watcher, err := New(NewEventHandlerMock(t), WithLogger(zerolog.Nop()))
+	watcher, err := New(noopEventHandler, WithLogger(zerolog.Nop()))
 	require.NoError(t, err)
 
 	fsWatcher := &fsnotify.Watcher{
@@ -590,7 +604,7 @@ func TestWatcherRunReturnsWhenEventsChannelIsClosed(t *testing.T) {
 func TestWatcherRunReturnsWhenErrorsChannelIsClosed(t *testing.T) {
 	t.Parallel()
 
-	watcher, err := New(NewEventHandlerMock(t), WithLogger(zerolog.Nop()))
+	watcher, err := New(noopEventHandler, WithLogger(zerolog.Nop()))
 	require.NoError(t, err)
 
 	fsWatcher := &fsnotify.Watcher{
@@ -620,7 +634,7 @@ func TestWatcherRunReturnsWhenErrorsChannelIsClosed(t *testing.T) {
 func TestWatcherRunContinuesAfterWatcherError(t *testing.T) {
 	t.Parallel()
 
-	watcher, err := New(NewEventHandlerMock(t), WithLogger(zerolog.Nop()))
+	watcher, err := New(noopEventHandler, WithLogger(zerolog.Nop()))
 	require.NoError(t, err)
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -662,7 +676,6 @@ func TestWatcherRunContinuesAfterWatcherError(t *testing.T) {
 func TestWatcherRunHandlesWatcherEvent(t *testing.T) {
 	t.Parallel()
 
-	handler := NewEventHandlerMock(t)
 	handled := make(chan struct{}, 1)
 
 	dir := t.TempDir()
@@ -675,15 +688,13 @@ func TestWatcherRunHandlesWatcherEvent(t *testing.T) {
 		Op:   OpChanged,
 	}
 
-	handler.EXPECT().
-		HandleEvent(expected).
-		RunAndReturn(func(Event) error {
+	watcher, err := New(EventHandlerFunc(func(evt Event) error {
+		if evt == expected {
 			handled <- struct{}{}
+		}
 
-			return nil
-		})
-
-	watcher, err := New(handler, WithLogger(zerolog.Nop()))
+		return nil
+	}), WithLogger(zerolog.Nop()))
 	require.NoError(t, err)
 	require.NoError(t, watcher.Add(path))
 	require.NoError(t, watcher.dispatcher.Start())

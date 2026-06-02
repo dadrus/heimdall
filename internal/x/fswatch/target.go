@@ -35,6 +35,7 @@ type target struct {
 	path         string
 	resolvedPath string
 	isDir        bool
+	info         os.FileInfo
 
 	watchMu sync.Mutex
 }
@@ -56,6 +57,7 @@ func newTarget(path string) (*target, error) {
 		path:         path,
 		resolvedPath: filepath.Clean(resolvedPath),
 		isDir:        info.IsDir(),
+		info:         info,
 	}, nil
 }
 
@@ -130,7 +132,7 @@ func (t *target) refreshLocked(watcher *fsnotify.Watcher) (targetState, error) {
 	resolvedPath = filepath.Clean(resolvedPath)
 	isDir := info.IsDir()
 
-	if t.resolvedPath == resolvedPath && t.isDir == isDir {
+	if t.resolvedPath == resolvedPath && t.isDir == isDir && os.SameFile(t.info, info) {
 		return targetState{exists: true}, nil
 	}
 
@@ -140,6 +142,7 @@ func (t *target) refreshLocked(watcher *fsnotify.Watcher) (targetState, error) {
 
 	t.resolvedPath = resolvedPath
 	t.isDir = isDir
+	t.info = info
 
 	if watcher != nil {
 		if err = watcher.Add(t.path); err != nil {

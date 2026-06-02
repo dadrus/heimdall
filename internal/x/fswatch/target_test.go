@@ -217,6 +217,29 @@ func TestTargetHandle(t *testing.T) {
 			},
 			ok: true,
 		},
+		"file replaced by rename as changed": {
+			setup: func(t *testing.T) (*target, *fsnotify.Watcher, fsnotify.Event, Event) {
+				t.Helper()
+
+				dir := t.TempDir()
+				file := filepath.Join(dir, "key_and_cert.pem")
+				nextFile := filepath.Join(dir, "key_and_cert.pem.tmp")
+
+				require.NoError(t, os.WriteFile(file, []byte("content"), 0o600))
+
+				tgt, err := newTarget(file)
+				require.NoError(t, err)
+
+				require.NoError(t, os.WriteFile(nextFile, []byte("updated"), 0o600))
+				require.NoError(t, os.Rename(nextFile, file))
+
+				return tgt,
+					nil,
+					fsnotify.Event{Name: file, Op: fsnotify.Rename},
+					Event{Path: filepath.Clean(file), Op: OpChanged}
+			},
+			ok: true,
+		},
 		"unrelated file event": {
 			setup: func(t *testing.T) (*target, *fsnotify.Watcher, fsnotify.Event, Event) {
 				t.Helper()
