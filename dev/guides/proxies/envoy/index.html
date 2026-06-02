@@ -17,7 +17,7 @@ On this page
     <span class=na>type</span><span class=pi>:</span> <span class=s>strict_dns</span>
     <span class=na>typed_extension_protocol_options</span><span class=pi>:</span> <i class=conum data-value=2></i><b>(2)</b>
       <span class=na>envoy.extensions.upstreams.http.v3.HttpProtocolOptions</span><span class=pi>:</span>
-        <span class=s2>&#34;</span><span class=s>@type&#34;</span><span class=err>:</span> <span class=s2>&#34;</span><span class=s>type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions&#34;</span>
+        <span class=na>&#34;@type&#34;</span><span class=pi>:</span> <span class=s2>&#34;</span><span class=s>type.googleapis.com/envoy.extensions.upstreams.http.v3.HttpProtocolOptions&#34;</span>
         <span class=na>explicit_http_config</span><span class=pi>:</span>
           <span class=na>http2_protocol_options</span><span class=pi>:</span> <span class=pi>{}</span>
     <span class=na>load_assignment</span><span class=pi>:</span> <i class=conum data-value=3></i><b>(3)</b>
@@ -33,7 +33,7 @@ On this page
   <span class=c1># other http filter</span>
   <span class=pi>-</span> <span class=na>name</span><span class=pi>:</span> <span class=s>envoy.filters.http.ext_authz</span>
     <span class=na>typed_config</span><span class=pi>:</span>
-      <span class=s2>&#34;</span><span class=s>@type&#34;</span><span class=err>:</span> <span class=s2>&#34;</span><span class=s>type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz&#34;</span> <i class=conum data-value=1></i><b>(1)</b>
+      <span class=na>&#34;@type&#34;</span><span class=pi>:</span> <span class=s2>&#34;</span><span class=s>type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz&#34;</span> <i class=conum data-value=1></i><b>(1)</b>
       <span class=na>transport_api_version</span><span class=pi>:</span> <span class=s>V3</span> <i class=conum data-value=2></i><b>(2)</b>
       <span class=na>http_service</span><span class=pi>:</span>
         <span class=na>server_uri</span><span class=pi>:</span> <i class=conum data-value=3></i><b>(3)</b>
@@ -54,7 +54,7 @@ On this page
   <span class=c1># other http filter</span>
   <span class=pi>-</span> <span class=na>name</span><span class=pi>:</span> <span class=s>envoy.filters.http.ext_authz</span>
     <span class=na>typed_config</span><span class=pi>:</span>
-      <span class=s2>&#34;</span><span class=s>@type&#34;</span><span class=err>:</span> <span class=s2>&#34;</span><span class=s>type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz&#34;</span> <i class=conum data-value=1></i><b>(1)</b>
+      <span class=na>&#34;@type&#34;</span><span class=pi>:</span> <span class=s2>&#34;</span><span class=s>type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz&#34;</span> <i class=conum data-value=1></i><b>(1)</b>
       <span class=na>transport_api_version</span><span class=pi>:</span> <span class=s>V3</span> <i class=conum data-value=2></i><b>(2)</b>
       <span class=na>grpc_service</span><span class=pi>:</span> <i class=conum data-value=3></i><b>(3)</b>
         <span class=na>envoy_grpc</span><span class=pi>:</span>
@@ -83,12 +83,12 @@ On this page
         <span class=pi>-</span> <span class=na>filters</span><span class=pi>:</span>
           <span class=pi>-</span> <span class=na>name</span><span class=pi>:</span> <span class=s>envoy.filters.network.http_connection_manager</span>
             <span class=na>typed_config</span><span class=pi>:</span>
-              <span class=s2>&#34;</span><span class=s>@type&#34;</span><span class=err>:</span> <span class=s2>&#34;</span><span class=s>type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager&#34;</span>
+              <span class=na>&#34;@type&#34;</span><span class=pi>:</span> <span class=s2>&#34;</span><span class=s>type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager&#34;</span>
               <span class=na>stat_prefix</span><span class=pi>:</span> <span class=s>edge</span>
               <span class=na>http_filters</span><span class=pi>:</span>
                 <span class=pi>-</span> <span class=na>name</span><span class=pi>:</span> <span class=s>envoy.filters.http.ext_authz</span>
                   <span class=na>typed_config</span><span class=pi>:</span>
-                    <span class=s2>&#34;</span><span class=s>@type&#34;</span><span class=err>:</span> <span class=s2>&#34;</span><span class=s>type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz&#34;</span>
+                    <span class=na>&#34;@type&#34;</span><span class=pi>:</span> <span class=s2>&#34;</span><span class=s>type.googleapis.com/envoy.extensions.filters.http.ext_authz.v3.ExtAuthz&#34;</span>
                     <span class=na>transport_api_version</span><span class=pi>:</span> <span class=s>V3</span>
                     <span class=na>http_service</span><span class=pi>:</span>
                       <span class=na>server_uri</span><span class=pi>:</span>
@@ -107,7 +107,7 @@ On this page
                             <span class=pi>-</span> <span class=na>exact</span><span class=pi>:</span> <span class=s>authorization</span>
                 <span class=pi>-</span> <span class=na>name</span><span class=pi>:</span> <span class=s>envoy.filters.http.router</span>
                   <span class=na>typed_config</span><span class=pi>:</span>
-                    <span class=s2>&#34;</span><span class=s>@type&#34;</span><span class=err>:</span> <span class=s2>&#34;</span><span class=s>type.googleapis.com/envoy.extensions.filters.http.router.v3.Router&#34;</span>
+                    <span class=na>&#34;@type&#34;</span><span class=pi>:</span> <span class=s2>&#34;</span><span class=s>type.googleapis.com/envoy.extensions.filters.http.router.v3.Router&#34;</span>
               <span class=na>route_config</span><span class=pi>:</span>
                 <span class=na>virtual_hosts</span><span class=pi>:</span>
                   <span class=pi>-</span> <span class=na>name</span><span class=pi>:</span> <span class=s>direct_response_service</span>
