@@ -42,7 +42,6 @@ func init() {
 
 type fileProvider struct {
 	file     string
-	watch    bool
 	logger   zerolog.Logger
 	observer provider.ChangeObserver
 
@@ -66,14 +65,32 @@ func newProvider(args provider.Args) (provider.Provider, error) {
 		return nil, err
 	}
 
-	return &fileProvider{
+	prv := &fileProvider{
 		file:        cfg.Path,
-		watch:       cfg.Watch,
 		logger:      args.Logger,
 		observer:    args.Observer,
 		secrets:     make(map[string]provider.Secret),
 		credentials: make(map[string]provider.Credentials),
-	}, nil
+	}
+
+	if !cfg.Watch {
+		return prv, nil
+	}
+
+	watcher, err := fswatch.New(
+		fswatch.EventHandlerFunc(prv.reload),
+		fswatch.WithLogger(args.Logger),
+	)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(
+			provider.ErrInternal,
+			"failed to initialize pem provider watcher",
+		).CausedBy(err)
+	}
+
+	prv.watcher = watcher
+
+	return prv, nil
 }
 
 func (*fileProvider) Dependencies() []provider.Reference { return nil }
@@ -95,36 +112,23 @@ func (p *fileProvider) Start(ctx context.Context) error {
 	p.credentials = credentials
 	p.mu.Unlock()
 
-	if !p.watch {
+	if p.watcher == nil {
 		return nil
 	}
 
-	watcher, err := fswatch.New(
-		fswatch.EventHandlerFunc(p.reload),
-		fswatch.WithLogger(p.logger),
-	)
-	if err != nil {
-		return errorchain.NewWithMessage(
-			provider.ErrInternal,
-			"failed to initialize file provider watcher",
-		).CausedBy(err)
-	}
-
-	if err = watcher.Add(p.file); err != nil {
+	if err = p.watcher.Add(p.file); err != nil {
 		return errorchain.NewWithMessagef(
 			provider.ErrInternal,
-			"failed to register file provider watch for %s", p.file,
+			"failed to register pem provider watch for %s", p.file,
 		).CausedBy(err)
 	}
 
-	if err = watcher.Start(context.WithoutCancel(ctx)); err != nil {
+	if err = p.watcher.Start(context.WithoutCancel(ctx)); err != nil {
 		return errorchain.NewWithMessagef(
 			provider.ErrInternal,
 			"failed to start file provider watch for %s", p.file,
 		).CausedBy(err)
 	}
-
-	p.watcher = watcher
 
 	return nil
 }

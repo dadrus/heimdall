@@ -205,7 +205,7 @@ func TestNewProvider(t *testing.T) {
 				assert.Equal(t, providerType, prv.Type())
 				assert.Empty(t, prv.Dependencies())
 				assert.False(t, prv.IsNamespaceAware())
-				assert.False(t, prv.watch)
+				assert.Nil(t, prv.watcher)
 				assert.Equal(t, secretsFile, prv.file)
 			},
 		},
@@ -218,7 +218,7 @@ func TestNewProvider(t *testing.T) {
 				assert.Equal(t, providerType, prv.Type())
 				assert.Empty(t, prv.Dependencies())
 				assert.False(t, prv.IsNamespaceAware())
-				assert.True(t, prv.watch)
+				assert.NotNil(t, prv.watcher)
 				assert.Equal(t, secretsFile, prv.file)
 			},
 		},
