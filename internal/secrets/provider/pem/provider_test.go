@@ -542,12 +542,39 @@ func TestProviderWatch(t *testing.T) {
 			path: func(t *testing.T) string {
 				t.Helper()
 
-				dir := t.TempDir()
-				target := filepath.Join(dir, "keys-1.pem")
-				writePEMFile(t, target, "first")
+				return writeKubernetesProjectedPEMFile(t, "keys.pem", "first")
+			},
+			setup: func(t *testing.T, om *mocks.ChangeObserverMock) {
+				t.Helper()
 
-				path := filepath.Join(dir, "keys.pem")
-				require.NoError(t, os.Symlink(target, path))
+				om.EXPECT().Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
+					return len(e.Selectors) == 0
+				}))
+			},
+			action: func(t *testing.T, prv provider.Provider, path string) {
+				t.Helper()
+				t.Cleanup(func() { require.NoError(t, prv.Stop(context.Background())) })
+
+				require.NoError(t, prv.Start(t.Context()))
+
+				updateKubernetesProjectedPEMFile(t, path, "second")
+
+				require.Eventually(t, func() bool {
+					secret, err := prv.GetSecret(t.Context(), provider.Selector{})
+					if err != nil {
+						return false
+					}
+
+					return secret.Selector() == "second"
+				}, time.Second, 20*time.Millisecond)
+			},
+		},
+		"reloads source on file replacement by rename and emits source event": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "keys.pem")
+				writePEMFile(t, path, "first")
 
 				return path
 			},
@@ -564,14 +591,9 @@ func TestProviderWatch(t *testing.T) {
 
 				require.NoError(t, prv.Start(t.Context()))
 
-				dir := filepath.Dir(path)
-				oldTarget := filepath.Join(dir, "keys-1.pem")
-				newTarget := filepath.Join(dir, "keys-2.pem")
-
-				writePEMFile(t, newTarget, "second")
-				require.NoError(t, os.Remove(path))
-				require.NoError(t, os.Symlink(newTarget, path))
-				require.NoError(t, os.Chmod(oldTarget, 0o644))
+				nextPath := path + ".tmp"
+				writePEMFile(t, nextPath, "second")
+				require.NoError(t, os.Rename(nextPath, path))
 
 				require.Eventually(t, func() bool {
 					secret, err := prv.GetSecret(t.Context(), provider.Selector{})
@@ -701,6 +723,42 @@ func TestProviderWatch(t *testing.T) {
 			tc.action(t, prv, path)
 		})
 	}
+}
+
+func writeKubernetesProjectedPEMFile(t *testing.T, name, keyID string) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	dataDir := filepath.Join(dir, "..2026_06_02_01_00_00.000000001")
+
+	require.NoError(t, os.Mkdir(dataDir, 0o755))
+	writePEMFile(t, filepath.Join(dataDir, name), keyID)
+	require.NoError(t, os.Symlink(filepath.Base(dataDir), filepath.Join(dir, "..data")))
+
+	path := filepath.Join(dir, name)
+	require.NoError(t, os.Symlink(filepath.Join("..data", name), path))
+
+	return path
+}
+
+func updateKubernetesProjectedPEMFile(t *testing.T, path, keyID string) {
+	t.Helper()
+
+	dir := filepath.Dir(path)
+	name := filepath.Base(path)
+	dataLink := filepath.Join(dir, "..data")
+
+	oldDataDir, err := os.Readlink(dataLink)
+	require.NoError(t, err)
+
+	nextDataDir := filepath.Join(dir, "..2026_06_02_01_00_01.000000002")
+	nextDataLink := filepath.Join(dir, "..data_tmp")
+
+	require.NoError(t, os.Mkdir(nextDataDir, 0o755))
+	writePEMFile(t, filepath.Join(nextDataDir, name), keyID)
+	require.NoError(t, os.Symlink(filepath.Base(nextDataDir), nextDataLink))
+	require.NoError(t, os.Rename(nextDataLink, dataLink))
+	require.NoError(t, os.RemoveAll(filepath.Join(dir, oldDataDir)))
 }
 
 func TestProviderGetSecret(t *testing.T) {

@@ -374,12 +374,41 @@ func TestProviderWatch(t *testing.T) {
 			path: func(t *testing.T) string {
 				t.Helper()
 
-				dir := t.TempDir()
-				target := filepath.Join(dir, "secrets-1.yaml")
-				require.NoError(t, os.WriteFile(target, []byte(`api_token: first`), 0o600))
+				return writeKubernetesProjectedFile(t, "secrets.yaml", []byte(`api_token: first`))
+			},
+			setup: func(t *testing.T, om *mocks.ChangeObserverMock) {
+				t.Helper()
 
-				path := filepath.Join(dir, "secrets.yaml")
-				require.NoError(t, os.Symlink(target, path))
+				om.EXPECT().Notify(mock.MatchedBy(func(e provider.ChangeEvent) bool {
+					return len(e.Selectors) == 0
+				}))
+			},
+			action: func(t *testing.T, prv provider.Provider, path string) {
+				t.Helper()
+				t.Cleanup(func() { require.NoError(t, prv.Stop(context.Background())) })
+
+				require.NoError(t, prv.Start(t.Context()))
+
+				updateKubernetesProjectedFile(t, path, []byte(`api_token: second`))
+
+				require.Eventually(t, func() bool {
+					secret, err := prv.GetSecret(t.Context(), provider.Selector{Value: "api_token"})
+					if err != nil {
+						return false
+					}
+
+					stringSecret, ok := secret.(provider.StringSecret)
+
+					return ok && stringSecret.Value() == "second"
+				}, time.Second, 20*time.Millisecond)
+			},
+		},
+		"reloads source on file replacement by rename and emits source event": {
+			path: func(t *testing.T) string {
+				t.Helper()
+
+				path := filepath.Join(t.TempDir(), "secrets.yaml")
+				require.NoError(t, os.WriteFile(path, []byte(`api_token: first`), 0o600))
 
 				return path
 			},
@@ -396,13 +425,9 @@ func TestProviderWatch(t *testing.T) {
 
 				require.NoError(t, prv.Start(t.Context()))
 
-				dir := filepath.Dir(path)
-				oldTarget := filepath.Join(dir, "secrets-1.yaml")
-				newTarget := filepath.Join(dir, "secrets-2.yaml")
-				require.NoError(t, os.WriteFile(newTarget, []byte(`api_token: second`), 0o600))
-				require.NoError(t, os.Remove(path))
-				require.NoError(t, os.Symlink(newTarget, path))
-				require.NoError(t, os.Chmod(oldTarget, 0o644))
+				nextPath := path + ".tmp"
+				require.NoError(t, os.WriteFile(nextPath, []byte(`api_token: second`), 0o600))
+				require.NoError(t, os.Rename(nextPath, path))
 
 				require.Eventually(t, func() bool {
 					secret, err := prv.GetSecret(t.Context(), provider.Selector{Value: "api_token"})
@@ -542,6 +567,42 @@ func TestProviderWatch(t *testing.T) {
 			tc.action(t, prv, path)
 		})
 	}
+}
+
+func writeKubernetesProjectedFile(t *testing.T, name string, content []byte) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	dataDir := filepath.Join(dir, "..2026_06_02_01_00_00.000000001")
+
+	require.NoError(t, os.Mkdir(dataDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dataDir, name), content, 0o600))
+	require.NoError(t, os.Symlink(filepath.Base(dataDir), filepath.Join(dir, "..data")))
+
+	path := filepath.Join(dir, name)
+	require.NoError(t, os.Symlink(filepath.Join("..data", name), path))
+
+	return path
+}
+
+func updateKubernetesProjectedFile(t *testing.T, path string, content []byte) {
+	t.Helper()
+
+	dir := filepath.Dir(path)
+	name := filepath.Base(path)
+	dataLink := filepath.Join(dir, "..data")
+
+	oldDataDir, err := os.Readlink(dataLink)
+	require.NoError(t, err)
+
+	nextDataDir := filepath.Join(dir, "..2026_06_02_01_00_01.000000002")
+	nextDataLink := filepath.Join(dir, "..data_tmp")
+
+	require.NoError(t, os.Mkdir(nextDataDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(nextDataDir, name), content, 0o600))
+	require.NoError(t, os.Symlink(filepath.Base(nextDataDir), nextDataLink))
+	require.NoError(t, os.Rename(nextDataLink, dataLink))
+	require.NoError(t, os.RemoveAll(filepath.Join(dir, oldDataDir)))
 }
 
 func TestProviderGetSecret(t *testing.T) {
