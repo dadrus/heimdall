@@ -537,16 +537,6 @@ func TestProviderWatch(t *testing.T) {
 	}
 }
 
-func TestProviderGetSecretSet(t *testing.T) {
-	t.Parallel()
-
-	prv := &fileProvider{}
-
-	_, err := prv.GetSecretSet(t.Context(), provider.Selector{})
-
-	require.ErrorIs(t, err, provider.ErrUnsupportedOperation)
-}
-
 func TestProviderGetSecret(t *testing.T) {
 	t.Parallel()
 
@@ -558,6 +548,25 @@ github:
   client_secret: secret
 `
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+	validator, err := validation.NewValidator()
+	require.NoError(t, err)
+
+	df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
+	prv, err := newProvider(provider.Args{
+		Config:         map[string]any{"path": path, "watch": false},
+		Logger:         zerolog.Nop(),
+		DecoderFactory: df,
+		Observer:       mocks.NewChangeObserverMock(t),
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, prv.Start(t.Context()))
+
+	t.Cleanup(func() {
+		_ = prv.Stop(context.Background())
+	})
 
 	for uc, tc := range map[string]struct {
 		selector provider.Selector
@@ -591,28 +600,21 @@ github:
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			validator, err := validation.NewValidator()
-			require.NoError(t, err)
-
-			df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
-
-			prv, err := newProvider(provider.Args{
-				Config:         map[string]any{"path": path, "watch": false},
-				Logger:         zerolog.Nop(),
-				DecoderFactory: df,
-				Observer:       mocks.NewChangeObserverMock(t),
-			})
-			require.NoError(t, err)
-
-			require.NoError(t, prv.Start(t.Context()))
-
-			defer prv.Stop(t.Context())
-
 			secret, err := prv.GetSecret(t.Context(), tc.selector)
 
 			tc.assert(t, err, secret)
 		})
 	}
+}
+
+func TestProviderGetSecretSet(t *testing.T) {
+	t.Parallel()
+
+	prv := &fileProvider{}
+
+	_, err := prv.GetSecretSet(t.Context(), provider.Selector{})
+
+	require.ErrorIs(t, err, provider.ErrUnsupportedOperation)
 }
 
 func TestProviderGetCredentials(t *testing.T) {
@@ -626,6 +628,25 @@ github:
   client_secret: secret
 `
 	require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
+
+	validator, err := validation.NewValidator()
+	require.NoError(t, err)
+
+	df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
+	prv, err := newProvider(provider.Args{
+		Config:         map[string]any{"path": path, "watch": false},
+		Logger:         zerolog.Nop(),
+		DecoderFactory: df,
+		Observer:       mocks.NewChangeObserverMock(t),
+	})
+	require.NoError(t, err)
+
+	require.NoError(t, prv.Start(t.Context()))
+
+	t.Cleanup(func() {
+		_ = prv.Stop(context.Background())
+	})
 
 	for uc, tc := range map[string]struct {
 		selector provider.Selector
@@ -655,23 +676,6 @@ github:
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
-
-			validator, err := validation.NewValidator()
-			require.NoError(t, err)
-
-			df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
-
-			prv, err := newProvider(provider.Args{
-				Config:         map[string]any{"path": path, "watch": false},
-				Logger:         zerolog.Nop(),
-				DecoderFactory: df,
-				Observer:       mocks.NewChangeObserverMock(t),
-			})
-			require.NoError(t, err)
-
-			require.NoError(t, prv.Start(t.Context()))
-
-			defer prv.Stop(t.Context())
 
 			creds, err := prv.GetCredentials(t.Context(), tc.selector)
 

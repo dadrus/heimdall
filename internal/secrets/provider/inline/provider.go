@@ -18,20 +18,19 @@ package inline
 
 import (
 	"context"
-	"strings"
 
 	"github.com/dadrus/heimdall/internal/secrets/provider"
 	"github.com/dadrus/heimdall/internal/secrets/registry"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-const ProviderType = "inline"
+const providerType = "inline"
 
 // by intention. Used only during application bootstrap.
 //
 //nolint:gochecknoinits
 func init() {
-	registry.Register(ProviderType, provider.FactoryFunc(newProvider))
+	registry.Register(providerType, provider.FactoryFunc(newProvider))
 }
 
 type inlineProvider struct {
@@ -49,11 +48,6 @@ func newProvider(args provider.Args) (provider.Provider, error) {
 	credentials := make(map[string]provider.Credentials, len(args.Config))
 
 	for selector, value := range args.Config {
-		if strings.Contains(selector, "/") {
-			return nil, errorchain.NewWithMessagef(provider.ErrConfiguration,
-				"inline selector '%s' must not contain '/'", selector)
-		}
-
 		switch typed := value.(type) {
 		case string:
 			secrets[selector] = provider.NewStringSecret(selector, typed)
@@ -75,7 +69,7 @@ func newProvider(args provider.Args) (provider.Provider, error) {
 
 func (*inlineProvider) Dependencies() []provider.Reference { return nil }
 func (*inlineProvider) IsNamespaceAware() bool             { return false }
-func (*inlineProvider) Type() string                       { return ProviderType }
+func (*inlineProvider) Type() string                       { return providerType }
 func (*inlineProvider) Start(_ context.Context) error      { return nil }
 func (*inlineProvider) Stop(_ context.Context) error       { return nil }
 
@@ -96,21 +90,9 @@ func (p *inlineProvider) GetSecret(
 
 func (p *inlineProvider) GetSecretSet(
 	_ context.Context,
-	selector provider.Selector,
+	_ provider.Selector,
 ) ([]provider.Secret, error) {
-	if selector.Value != "" {
-		return nil, errorchain.NewWithMessagef(
-			provider.ErrUnsupportedOperation,
-			"inline secret sets are only supported for the provider root, got selector '%s'", selector.Value,
-		)
-	}
-
-	secrets := make([]provider.Secret, 0, len(p.secrets))
-	for _, entry := range p.secrets {
-		secrets = append(secrets, entry)
-	}
-
-	return secrets, nil
+	return nil, provider.ErrUnsupportedOperation
 }
 
 func (p *inlineProvider) GetCredentials(
