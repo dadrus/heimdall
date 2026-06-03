@@ -17,7 +17,6 @@
 package fxlcm
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"testing"
@@ -29,6 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/handler/fxlcm/mocks"
+	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -55,14 +55,14 @@ func TestLifecycleManagerStart(t *testing.T) {
 			setup: func(t *testing.T, srv *mocks.ServerMock) {
 				t.Helper()
 
-				srv.EXPECT().Serve(mock.Anything).Return(errors.New("test error"))
+				srv.EXPECT().Serve(mock.Anything).Return(assert.AnError)
 			},
 			assert: func(t *testing.T, exit *testsupport.PatchedOSExit, logs string) {
 				t.Helper()
 
 				require.True(t, exit.Called)
 				assert.Contains(t, logs, "Starting listening")
-				assert.Contains(t, logs, "test error")
+				assert.Contains(t, logs, assert.AnError.Error())
 			},
 		},
 		"started and resumed successfully": {
@@ -94,11 +94,14 @@ func TestLifecycleManagerStart(t *testing.T) {
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
 
+			lf, err := listener.NewFactory(fmt.Sprintf("127.0.0.1:%d", port), nil, nil)
+			require.NoError(t, err)
+
 			lcm := &LifecycleManager{
-				ServiceName:    "foo",
-				ServiceAddress: fmt.Sprintf("127.0.0.1:%d", port),
-				Server:         srv,
-				Logger:         logger,
+				ServiceName:     "foo",
+				Server:          srv,
+				ListenerFactory: lf,
+				Logger:          logger,
 			}
 
 			// WHEN
@@ -138,14 +141,14 @@ func TestLifecycleManagerStop(t *testing.T) {
 			setup: func(t *testing.T, srv *mocks.ServerMock) {
 				t.Helper()
 
-				srv.EXPECT().Shutdown(mock.Anything).Return(errors.New("test error"))
+				srv.EXPECT().Shutdown(mock.Anything).Return(assert.AnError)
 			},
 			assert: func(t *testing.T, err error, logs string) {
 				t.Helper()
 
 				require.Error(t, err)
 				assert.Contains(t, logs, "Tearing down service")
-				assert.Contains(t, logs, "test error")
+				assert.Contains(t, logs, assert.AnError.Error())
 			},
 		},
 	} {

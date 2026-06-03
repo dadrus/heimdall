@@ -18,7 +18,6 @@ package logger
 
 import (
 	"context"
-	"errors"
 	"net"
 	"net/http"
 	"strings"
@@ -152,7 +151,7 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 						},
 					),
 					mock.Anything,
-				).Return(nil, errors.New("test error"))
+				).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, logEvent1, logEvent2, logEvent3 map[string]any) {
 				t.Helper()
@@ -189,7 +188,7 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, logEvent1["_parent_id"], logEvent3["_parent_id"])
 				assert.Equal(t, logEvent1["_span_id"], logEvent3["_span_id"])
 				assert.Equal(t, false, logEvent3["_access_granted"]) //nolint:testifylint
-				assert.Equal(t, "test error", logEvent3["error"])
+				assert.Equal(t, assert.AnError.Error(), logEvent3["error"])
 				assert.Equal(t, "for=127.0.0.1", logEvent3["_forwarded"])
 				assert.Equal(t, "127.0.0.1", logEvent3["_x_forwarded_for"])
 				assert.InDelta(t, float64(codes.Unknown), logEvent3["_grpc_status_code"], 0.001)
@@ -210,7 +209,7 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 						func(ctx context.Context) bool {
 							zerolog.Ctx(ctx).Info().Msg("test called")
 							accesscontext.SetSubject(ctx, "bar")
-							accesscontext.SetError(ctx, errors.New("test error"))
+							accesscontext.SetError(ctx, assert.AnError)
 
 							return true
 						},
@@ -256,7 +255,7 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, logEvent1["_parent_id"], logEvent3["_parent_id"])
 				assert.Equal(t, false, logEvent3["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "bar", logEvent3["_subject"])
-				assert.Equal(t, "test error", logEvent3["error"])
+				assert.Equal(t, assert.AnError.Error(), logEvent3["error"])
 				assert.InDelta(t, float64(codes.OK), logEvent3["_grpc_status_code"], 0.001)
 				assert.Equal(t, "TX finished", logEvent3["message"])
 			},
@@ -321,6 +320,116 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 			handler.AssertExpectations(t)
 		})
 	}
+}
+
+func TestLogInterceptorWithAccessLogDisabled(t *testing.T) {
+	otel.SetTracerProvider(sdktrace.NewTracerProvider())
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
+
+	lis := bufconn.Listen(1024 * 1024)
+	tb := &testsupport.TestingLog{TB: t}
+	logger := zerolog.New(zerolog.TestWriter{T: tb})
+	handler := &mocks2.MockHandler{}
+
+	conn, err := grpc.NewClient("passthrough://bufnet",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+
+	defer conn.Close()
+
+	handler.On("Check", mock.MatchedBy(func(ctx context.Context) bool {
+		zerolog.Ctx(ctx).Info().Msg("test called")
+
+		return true
+	}), mock.Anything).Return(
+		&envoy_auth.CheckResponse{Status: &rpc_status.Status{Code: int32(envoy_type.StatusCode_OK)}},
+		nil,
+	)
+
+	srv := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.ChainUnaryInterceptor(New(logger, WithAccessLogEnabled(false)).UnaryServerInterceptor()),
+	)
+	envoy_auth.RegisterAuthorizationServer(srv, handler)
+
+	go func() {
+		srv.Serve(lis)
+	}()
+
+	client := envoy_auth.NewAuthorizationClient(conn)
+
+	// WHEN
+	_, err = client.Check(t.Context(), &envoy_auth.CheckRequest{
+		Attributes: &envoy_auth.AttributeContext{
+			Request: &envoy_auth.AttributeContext_Request{
+				Http: &envoy_auth.AttributeContext_HttpRequest{
+					Body:   "foo",
+					Method: http.MethodPost,
+					Path:   "/foobar",
+				},
+			},
+		},
+	})
+
+	// THEN
+	require.NoError(t, err)
+	srv.Stop()
+
+	events := strings.Split(strings.TrimRight(tb.CollectedLog(), "\n"), "}")
+	// only "test called" log event should be present, no TX started / finished
+	require.Len(t, events, 2)
+
+	var logLine map[string]any
+	require.NoError(t, json.Unmarshal([]byte(events[0]+"}"), &logLine))
+
+	assert.Equal(t, "test called", logLine["message"])
+	assert.Equal(t, "info", logLine["level"])
+
+	handler.AssertExpectations(t)
+}
+
+func TestLogInterceptorStreamWithAccessLogDisabled(t *testing.T) {
+	otel.SetTracerProvider(sdktrace.NewTracerProvider())
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
+
+	lis := bufconn.Listen(1024 * 1024)
+	tb := &testsupport.TestingLog{TB: t}
+	logger := zerolog.New(zerolog.TestWriter{T: tb})
+	handler := &mocks2.MockHandler{}
+
+	conn, err := grpc.NewClient("passthrough://bufnet",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
+		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+
+	defer conn.Close()
+
+	srv := grpc.NewServer(
+		grpc.UnknownServiceHandler(func(_ any, _ grpc.ServerStream) error {
+			return status.Error(codes.Unknown, "unknown service or method")
+		}),
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.ChainStreamInterceptor(New(logger, WithAccessLogEnabled(false)).StreamServerInterceptor()),
+	)
+	envoy_auth.RegisterAuthorizationServer(srv, handler)
+
+	go func() {
+		srv.Serve(lis)
+	}()
+
+	client := mocks2.NewTestClient(conn)
+
+	// WHEN
+	_, err = client.Test(t.Context(), &mocks2.TestRequest{})
+
+	// THEN
+	require.Error(t, err)
+	srv.Stop()
+	handler.AssertExpectations(t)
+
+	// no TX events must be emitted
+	assert.Empty(t, strings.TrimSpace(tb.CollectedLog()))
 }
 
 func TestLogInterceptorForUnknownService(t *testing.T) {

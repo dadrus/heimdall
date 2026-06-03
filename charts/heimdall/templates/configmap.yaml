@@ -23,6 +23,11 @@ metadata:
 {{ include "heimdall.labels" . | indent 4 }}
 data:
   heimdall.yaml: |
+    {{- with .Values.secret_management }}
+    secret_management:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
     {{- with .Values.serve }}
     serve:
       {{- toYaml . | nindent 6 }}

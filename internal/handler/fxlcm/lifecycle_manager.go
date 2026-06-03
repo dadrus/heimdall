@@ -24,11 +24,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/listener"
-	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -37,24 +33,23 @@ type Server interface {
 	Shutdown(ctx context.Context) error
 }
 
+type tlsAwareListener interface {
+	TLSEnabled() bool
+}
+
+type ListenerFactory interface {
+	Create(ctx context.Context) (net.Listener, error)
+}
+
 type LifecycleManager struct {
-	ServiceName    string
-	ServiceAddress string
-	Server         Server
-	Logger         zerolog.Logger
-	TLSConf        *config.TLS
-	FileWatcher    watcher.Watcher
-	KeyObserver    keyregistry.KeyObserver
+	ServiceName     string
+	Server          Server
+	ListenerFactory ListenerFactory
+	Logger          zerolog.Logger
 }
 
 func (m *LifecycleManager) Start(ctx context.Context) error {
-	ln, err := listener.New(
-		ctx,
-		m.ServiceAddress,
-		m.TLSConf,
-		m.FileWatcher,
-		m.KeyObserver,
-	)
+	ln, err := m.ListenerFactory.Create(ctx)
 	if err != nil {
 		return errorchain.NewWithMessagef(pipeline.ErrInternal,
 			"Could not create listener for %s service", m.ServiceName).
@@ -67,7 +62,7 @@ func (m *LifecycleManager) Start(ctx context.Context) error {
 			Str("_service", m.ServiceName).
 			Msg("Starting listening")
 
-		if m.TLSConf == nil {
+		if tlsAware, ok := ln.(tlsAwareListener); ok && !tlsAware.TLSEnabled() {
 			m.Logger.Warn().
 				Str("_service", m.ServiceName).
 				Msg("TLS is disabled.")

@@ -19,21 +19,15 @@ package keyregistry
 import (
 	"github.com/go-jose/go-jose/v4"
 
-	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/secrets"
 )
 
 type KeyObserver interface {
-	Notify(ki KeyInfo)
+	Notify(ref secrets.Reference)
 }
 
 type JWKSProvider interface {
 	Keys() []jose.JSONWebKey
-}
-
-type KeyInfo struct {
-	keystore.Entry
-
-	Exportable bool
 }
 
 type Registry interface {

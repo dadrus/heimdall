@@ -18,7 +18,6 @@ package encoding
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"testing"
 
@@ -106,7 +105,7 @@ func TestDecode(t *testing.T) {
 			opts: []DecoderOption{
 				WithSourceContentType("application/json"),
 				WithErrorOnUnused(true),
-				WithValidator(ValidatorFunc(func(any) error { return errors.New("test error") })),
+				WithValidator(ValidatorFunc(func(any) error { return assert.AnError })),
 			},
 			data: []byte(`{ "foo": "baz" }`),
 			assert: func(t *testing.T, err error, _ TestType) {
@@ -114,7 +113,7 @@ func TestDecode(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorIs(t, err, assert.AnError)
 			},
 		},
 		"successful decoding of a json object with env vars": {

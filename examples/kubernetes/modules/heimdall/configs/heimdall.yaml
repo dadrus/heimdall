@@ -11,21 +11,31 @@ metrics:
 tracing:
   enabled: ${tracing_enabled}
 
-secrets_reload_enabled: true
+secret_management:
+  tls_keys:
+    type: pem
+    config:
+      path: /etc/heimdall/certs/ssl/tls-combined.pem
+      watch: true
+  jwt_keys:
+    type: pem
+    config:
+      path: /etc/heimdall/certs/jwt/tls-combined.pem
+      watch: true
 
 serve:
   tls:
     min_version: TLS1.2
-    key_store:
-      path: /etc/heimdall/certs/ssl/tls-combined.pem
+    secret:
+      source: tls_keys
   trusted_proxies:
     - 0.0.0.0/0
 
 management:
   tls:
     min_version: TLS1.2
-    key_store:
-      path: /etc/heimdall/certs/ssl/tls-combined.pem
+    secret:
+      source: tls_keys
 
 mechanisms:
   authenticators:
@@ -43,8 +53,8 @@ mechanisms:
       type: jwt
       config:
         signer:
-          key_store:
-            path: /etc/heimdall/certs/jwt/tls-combined.pem
+          secret:
+            source: jwt_keys
   error_handlers:
     - id: redirect
       type: redirect
@@ -63,5 +73,5 @@ providers:
   kubernetes:
     tls:
       min_version: TLS1.2
-      key_store:
-        path: /etc/heimdall/certs/ssl/tls-combined.pem
+      secret:
+        source: tls_keys

@@ -20,9 +20,11 @@ import (
 	"reflect"
 
 	"github.com/go-viper/mapstructure/v2"
+
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 )
 
-func DecodeEndpointHookFunc() mapstructure.DecodeHookFunc {
+func DecodeEndpointHookFunc(opts ...template.Option) mapstructure.DecodeHookFunc {
 	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
 		var ep Endpoint
 
@@ -35,8 +37,11 @@ func DecodeEndpointHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		// Already checked above
-		// nolint: forcetypeassert
-		return Endpoint{URL: data.(string)}, nil
+		tpl, err := template.New(data.(string), opts...) //nolint:forcetypeassert
+		if err != nil {
+			return nil, err
+		}
+
+		return Endpoint{URL: tpl}, nil
 	}
 }

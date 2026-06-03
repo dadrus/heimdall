@@ -1,8 +1,28 @@
+secret_management:
+  inline_secrets:
+    type: inline
+    config:
+      client_credentials:
+        client_id: test-client-id
+        client_secret: test-client-secret
+      api_key: test-api-key
+      basic_auth:
+        user_id: foo
+        password: bar
+  jwt_secrets:
+    type: pem
+    config:
+      path: "${TEST_KEYSTORE_FILE}"
+  tls_keys:
+    type: pem
+    config:
+      path: "${TEST_KEYSTORE_FILE}"
+
 serve:
   port: 4468
   tls:
-    key_store:
-      path: /path/to/file.pem
+    secret:
+      source: tls_keys
     min_version: TLS1.2
     cipher_suites:
       - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
@@ -23,8 +43,8 @@ serve:
 
 management:
   tls:
-    key_store:
-      path: /path/to/file.pem
+    secret:
+      source: tls_keys
 
 log:
   level: debug
@@ -78,8 +98,9 @@ mechanisms:
           auth:
             type: basic_auth
             config:
-              user: foo
-              password: bar
+              credentials:
+                source: inline_secrets
+                selector: basic_auth
         token_source:
           - header: Authorization
             scheme: Bearer
@@ -105,16 +126,18 @@ mechanisms:
           auth:
             type: basic_auth
             config:
-              user: foo
-              password: bar
+              credentials:
+                source: inline_secrets
+                selector: basic_auth
           resolved_endpoints:
             introspection_endpoint:
               auth:
                 type: oauth2_client_credentials
                 config:
                   token_url: https://example.com/token
-                  client_id: foo
-                  client_secret: bar
+                  credentials:
+                    source: inline_secrets
+                    selector: client_credentials
               http_cache:
                 enabled: false
               retry:
@@ -149,7 +172,9 @@ mechanisms:
                 config:
                   in: header
                   name: X-API-Key
-                  value: very-secret
+                  secret:
+                    source: inline_secrets
+                    selector: api_key
               http_cache:
                 enabled: true
                 default_ttl: 10m
@@ -189,8 +214,9 @@ mechanisms:
     - id: basic_auth_authenticator
       type: basic_auth
       config:
-        user_id: foo
-        password: bar
+        credentials:
+          source: inline_secrets
+          selector: basic_auth
   authorizers:
     - id: allow_all_authorizer
       type: allow
@@ -246,9 +272,9 @@ mechanisms:
       config:
         signer:
           name: heimdall
-          key_id: "key"
-          key_store:
-            path: "${TEST_KEYSTORE_FILE}"
+          secret:
+            source: jwt_secrets
+            selector: key
         ttl: 5m
         claims: |
           {"user": {{ quote .Subject.ID }} }
@@ -304,7 +330,9 @@ providers:
           type: api_key
           config:
             name: foo
-            value: bar
+            secret:
+              source: inline_secrets
+              selector: api_key
             in: header
 
   cloud_blob:
@@ -319,8 +347,6 @@ providers:
   kubernetes:
     auth_class: foo
     tls:
-      key_id: foo
-      key_store:
-        path: /path/to/pem.file
-        password: VerySecret!
+      secret:
+        source: tls_keys
       min_version: TLS1.3

@@ -17,6 +17,7 @@
 package template_test
 
 import (
+	"crypto/sha256"
 	"net/http"
 	"net/url"
 	"testing"
@@ -29,36 +30,139 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 )
 
+func TestNew(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		raw    string
+		opts   []template.Option
+		assert func(t *testing.T, tpl template.Template, err error)
+	}{
+		"creates template": {
+			raw: `hello {{ .Name }}`,
+			assert: func(t *testing.T, tpl template.Template, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, tpl)
+				assert.Equal(t, `hello {{ .Name }}`, tpl.String())
+			},
+		},
+		"returns configuration error for malformed template": {
+			raw: `hello {{ .Name `,
+			assert: func(t *testing.T, tpl template.Template, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, `template: Heimdall`)
+				require.Nil(t, tpl)
+			},
+		},
+		"does not expose env function": {
+			raw: `{{ env "HOME" }}`,
+			assert: func(t *testing.T, tpl template.Template, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, `function "env" not defined`)
+				require.Nil(t, tpl)
+			},
+		},
+		"does not expose expandenv function": {
+			raw: `{{ expandenv "$HOME" }}`,
+			assert: func(t *testing.T, tpl template.Template, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, `function "expandenv" not defined`)
+				require.Nil(t, tpl)
+			},
+		},
+		"uses configured template name in parse error": {
+			raw: `hello {{ .Name `,
+			opts: []template.Option{
+				template.WithName("test-template"),
+			},
+			assert: func(t *testing.T, tpl template.Template, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, `template: test-template`)
+				require.Nil(t, tpl)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			tpl, err := template.New(tc.raw, tc.opts...)
+
+			tc.assert(t, tpl, err)
+		})
+	}
+}
+
+func TestMust(t *testing.T) {
+	t.Parallel()
+
+	t.Run("returns template", func(t *testing.T) {
+		t.Parallel()
+
+		tpl := template.Must(`hello {{ .Name }}`)
+
+		require.NotNil(t, tpl)
+
+		res, err := tpl.Render(map[string]any{"Name": "heimdall"})
+		require.NoError(t, err)
+		assert.Equal(t, "hello heimdall", res)
+	})
+
+	t.Run("panics on invalid template", func(t *testing.T) {
+		t.Parallel()
+
+		require.Panics(t, func() {
+			template.Must(`hello {{ .Name `)
+		})
+	})
+}
+
 func TestTemplateRender(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	reqf := mocks.NewRequestFunctionsMock(t)
-	reqf.EXPECT().Header("X-My-Header").Return("my-value")
-	reqf.EXPECT().Cookie("session_cookie").Return("session-value")
+	t.Run("renders template", func(t *testing.T) {
+		t.Parallel()
 
-	ctx := mocks.NewContextMock(t)
-	ctx.EXPECT().Request().Return(&pipeline.Request{
-		RequestFunctions: reqf,
-		Method:           http.MethodPatch,
-		URL: &pipeline.URL{
-			URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab", RawQuery: "my_query_param=query_value"},
-		},
-		ClientIPAddresses: []string{"192.168.1.1"},
-	})
+		// GIVEN
+		reqf := mocks.NewRequestFunctionsMock(t)
+		reqf.EXPECT().Header("X-My-Header").Return("my-value")
+		reqf.EXPECT().Cookie("session_cookie").Return("session-value")
 
-	sub := pipeline.Subject{
-		"default": &pipeline.Principal{
-			ID: "foo",
-			Attributes: map[string]any{
-				"name":    "bar",
-				"email":   "foo@bar.baz",
-				"complex": []string{"test1", "test2"},
+		ctx := mocks.NewContextMock(t)
+		ctx.EXPECT().Request().Return(&pipeline.Request{
+			RequestFunctions: reqf,
+			Method:           http.MethodPatch,
+			URL: &pipeline.URL{
+				URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab", RawQuery: "my_query_param=query_value"},
 			},
-		},
-	}
+			ClientIPAddresses: []string{"192.168.1.1"},
+		})
 
-	tpl, err := template.New(`{
+		sub := pipeline.Subject{
+			"default": &pipeline.Principal{
+				ID: "foo",
+				Attributes: map[string]any{
+					"name":    "bar",
+					"email":   "foo@bar.baz",
+					"complex": []string{"test1", "test2"},
+				},
+			},
+		}
+
+		tpl, err := template.New(`{
 "subject_id": {{ quote .Subject.ID }},
 "name": {{ quote .Subject.Attributes.name }},
 "email": {{ quote .Subject.Attributes.email }},
@@ -71,19 +175,19 @@ func TestTemplateRender(t *testing.T) {
 "ips": {{ range $i, $el := .Request.ClientIPAddresses -}}{{ if $i }} {{ end }}{{ quote $el }}{{ end }},
 "values": [{{ quote .Values.key1 }}, {{ quote .Values.key2 }}]
 }`)
-	require.NoError(t, err)
+		require.NoError(t, err)
 
-	// WHEN
-	res, err := tpl.Render(map[string]any{
-		"Request": ctx.Request(),
-		"Subject": sub,
-		"Values":  map[string]string{"key1": "foo", "key2": "bar"},
-	})
+		// WHEN
+		res, err := tpl.Render(map[string]any{
+			"Request": ctx.Request(),
+			"Subject": sub,
+			"Values":  map[string]string{"key1": "foo", "key2": "bar"},
+		})
 
-	// THEN
-	require.NoError(t, err)
+		// THEN
+		require.NoError(t, err)
 
-	assert.JSONEq(t, `{
+		assert.JSONEq(t, `{
 "subject_id": "foo",
 "name": "bar",
 "email": "foo@bar.baz",
@@ -96,44 +200,44 @@ func TestTemplateRender(t *testing.T) {
 "ips": "192.168.1.1",
 "values": ["foo", "bar"]
 }`, res)
+	})
+
+	t.Run("returns render error", func(t *testing.T) {
+		t.Parallel()
+
+		tpl, err := template.New(`{{ atIndex 2 .Values }}`)
+		require.NoError(t, err)
+
+		value, err := tpl.Render(map[string]any{
+			"Values": []string{"a"},
+		})
+
+		require.Error(t, err)
+		require.ErrorIs(t, err, template.ErrTemplateRender)
+		require.ErrorContains(t, err, "position is outside of the list boundaries")
+		assert.Empty(t, value)
+	})
 }
 
-func TestAtIndex(t *testing.T) {
+func TestTemplateHash(t *testing.T) {
 	t.Parallel()
 
-	for _, tc := range []struct {
-		val  any
-		expr string
-		res  string
-		err  string
-	}{
-		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex 0 .Slice }}", res: "1"},
-		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex 2 .Slice }}", res: "3"},
-		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex -1 .Slice }}", res: "4"},
-		{val: []int{1, 2, 3, 4}, expr: "{{ atIndex -3 .Slice }}", res: "2"},
-		{
-			val: []int{1, 2, 3, 4}, expr: "{{ atIndex 6 .Slice }}",
-			err: "cannot at(6), position is outside of the list boundaries",
-		},
-		{
-			val: []int{1, 2, 3, 4}, expr: "{{ atIndex -6 .Slice }}",
-			err: "cannot at(-6), position is outside of the list boundaries",
-		},
-		{val: "foo", expr: "{{ atIndex 1 .Slice }}", err: "cannot find at on type string"},
-		{val: []string{}, expr: "{{ atIndex 0 .Slice }}", res: "<no value>"},
-	} {
-		t.Run(tc.expr, func(t *testing.T) {
-			tmpl, err := template.New(tc.expr)
-			require.NoError(t, err)
+	raw := `hello {{ .Name }}`
+	expected := sha256.Sum256([]byte(raw))
 
-			res, err := tmpl.Render(map[string]any{"Slice": tc.val})
+	tpl, err := template.New(raw)
+	require.NoError(t, err)
 
-			if len(tc.err) != 0 {
-				require.Error(t, err)
-				require.ErrorContains(t, err, tc.err)
-			} else {
-				require.Equal(t, tc.res, res)
-			}
-		})
-	}
+	assert.Equal(t, expected[:], tpl.Hash())
+}
+
+func TestTemplateString(t *testing.T) {
+	t.Parallel()
+
+	raw := `hello {{ .Name }}`
+
+	tpl, err := template.New(raw)
+	require.NoError(t, err)
+
+	assert.Equal(t, raw, tpl.String())
 }

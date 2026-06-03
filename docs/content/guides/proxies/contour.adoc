@@ -43,13 +43,21 @@ spec:
 [source, yaml]
 ----
 # ...
+
+secret_management:
+  tls_keys:
+    type: pem
+    config:
+      # path to the pem file with key and certificates
+      path: /certs/tls-combined.pem
+# ...
+
 serve:
   tls:
     # important! see explanations above
     min_version: TLS1.2
-    key_store:
-      # path to the pem file with key and certificates
-      path: /certs/tls-combined.pem
+    secret:
+      source: tls_keys
 # ...
 ----
 

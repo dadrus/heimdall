@@ -25,9 +25,11 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -121,9 +123,13 @@ cookies:
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			sr := secretsmocks.NewResolverMock(t)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Return(sr)
 
 			// WHEN
 			mech, err := newCookieFinalizer(appCtx, uc, conf)
@@ -255,9 +261,13 @@ cookies:
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			sr := secretsmocks.NewResolverMock(t)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Return(sr)
 
 			mech, err := newCookieFinalizer(appCtx, uc, pc)
 			require.NoError(t, err)
@@ -266,7 +276,7 @@ cookies:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(tc.stepDef)
+			step, err := mech.CreateStep(sr, tc.stepDef)
 
 			// THEN
 			fin, ok := step.(*cookieFinalizer)
@@ -369,14 +379,18 @@ cookies:
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			sr := secretsmocks.NewResolverMock(t)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Return(sr)
 
 			mech, err := newCookieFinalizer(appCtx, uc, conf)
 			require.NoError(t, err)
 
-			step, err := mech.CreateStep(types.StepDefinition{ID: ""})
+			step, err := mech.CreateStep(sr, types.StepDefinition{ID: ""})
 			require.NoError(t, err)
 
 			// WHEN

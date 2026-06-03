@@ -20,27 +20,47 @@ import (
 	"context"
 	"crypto/sha256"
 	"net/http"
+	"sync/atomic"
 
+	"github.com/rs/zerolog"
+
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type APIKey struct {
-	In    string `mapstructure:"in"    validate:"required,oneof=cookie header query"`
-	Name  string `mapstructure:"name"  validate:"required"`
-	Value string `mapstructure:"value" validate:"required"`
+	In     string        `mapstructure:"in"     validate:"required,oneof=cookie header query"`
+	Name   string        `mapstructure:"name"   validate:"required"`
+	Secret config.Secret `mapstructure:"secret" validate:"required"`
+
+	informer *secrets.SecretInformer[string]
+	hash     atomic.Value
 }
 
-func (c *APIKey) Apply(_ context.Context, req *http.Request) error {
+func (c *APIKey) Apply(req *http.Request) error {
+	logger := zerolog.Ctx(req.Context())
+	logger.Debug().Msg("Applying api_key strategy to authenticate request")
+
+	creds, ok := c.informer.Get()
+	if !ok {
+		return errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"api key secret is not available",
+		)
+	}
+
 	switch c.In {
 	case "cookie":
-		req.AddCookie(&http.Cookie{Name: c.Name, Value: c.Value})
+		req.AddCookie(&http.Cookie{Name: c.Name, Value: creds})
 	case "header":
-		req.Header.Set(c.Name, c.Value)
+		req.Header.Set(c.Name, creds)
 	case "query":
 		query := req.URL.Query()
-		query.Set(c.Name, c.Value)
+		query.Set(c.Name, creds)
 		req.URL.RawQuery = query.Encode()
 	default:
 		return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
@@ -51,11 +71,49 @@ func (c *APIKey) Apply(_ context.Context, req *http.Request) error {
 }
 
 func (c *APIKey) Hash() []byte {
-	hash := sha256.New()
+	if hash, ok := c.hash.Load().([]byte); ok {
+		return hash
+	}
 
-	hash.Write(stringx.ToBytes(c.In))
-	hash.Write(stringx.ToBytes(c.Name))
-	hash.Write(stringx.ToBytes(c.Value))
+	return nil
+}
 
-	return hash.Sum(nil)
+func (c *APIKey) init(appCtx app.Context) error {
+	informer, err := secrets.NewSecretInformer(
+		appCtx.SecretResolver(),
+		secrets.Reference{Source: c.Secret.Source, Selector: c.Secret.Selector},
+		secrets.WithConverter(toStringSecret),
+		secrets.WithUpdateCallback(func(_ context.Context, _ secrets.Secret, value string) error {
+			hash := sha256.New()
+
+			hash.Write(stringx.ToBytes(c.In))
+			hash.Write(stringx.ToBytes(c.Name))
+			hash.Write(stringx.ToBytes(value))
+
+			var result [sha256.Size]byte
+
+			c.hash.Store(hash.Sum(result[:0]))
+
+			return nil
+		}),
+	)
+	if err != nil {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed resolving api key secret",
+		).CausedBy(err)
+	}
+
+	c.informer = informer
+
+	return nil
+}
+
+func toStringSecret(secret secrets.Secret) (string, error) {
+	ss, ok := secret.(secrets.StringSecret)
+	if !ok {
+		return "", secrets.ErrSecretKindMismatch
+	}
+
+	return ss.Value(), nil
 }

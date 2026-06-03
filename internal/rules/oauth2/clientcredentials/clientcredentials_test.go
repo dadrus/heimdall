@@ -18,7 +18,6 @@ package clientcredentials
 
 import (
 	"encoding/base64"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -124,7 +123,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything,
 					mock.MatchedBy(func(ttl time.Duration) bool {
 						return ttl.Round(time.Second) == 5*time.Minute-5*time.Second
@@ -170,7 +169,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assertRequest: func(t *testing.T, _ *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
@@ -191,7 +190,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assertRequest: func(t *testing.T, _ *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
@@ -212,7 +211,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool, _ *TokenInfo) {
 				t.Helper()
@@ -237,7 +236,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
@@ -355,7 +354,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
@@ -409,7 +408,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
@@ -531,7 +530,7 @@ func TestClientCredentialsToken(t *testing.T) {
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()

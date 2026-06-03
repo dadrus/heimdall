@@ -26,6 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -89,8 +90,6 @@ func newCELAuthorizer(app app.Context, name string, rawConfig map[string]any) (t
 	}, nil
 }
 
-func (a *celAuthorizer) Accept(_ pipeline.Visitor) {}
-
 func (a *celAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -119,7 +118,10 @@ func (a *celAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) erro
 	}, a)
 }
 
-func (a *celAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (a *celAuthorizer) CreateStep(
+	_ secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
@@ -157,7 +159,8 @@ func (a *celAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, err
 	}, nil
 }
 
-func (a *celAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
-func (a *celAuthorizer) Name() string     { return a.name }
-func (a *celAuthorizer) ID() string       { return a.id }
-func (a *celAuthorizer) Type() string     { return a.name }
+func (a *celAuthorizer) Name() string            { return a.name }
+func (a *celAuthorizer) ID() string              { return a.id }
+func (a *celAuthorizer) Type() string            { return a.name }
+func (*celAuthorizer) Accept(_ pipeline.Visitor) {}
+func (*celAuthorizer) Kind() types.Kind          { return types.KindAuthorizer }

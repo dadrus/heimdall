@@ -41,6 +41,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -109,15 +110,22 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 	}
 
 	var conf Config
-	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for remote authorizer '%s'", name).CausedBy(err)
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("authorizer."+AuthorizerRemote+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s authorizer '%s'", AuthorizerRemote, name,
+		).CausedBy(err)
 	}
 
 	env, err := cel.NewEnv(cellib.Library())
 	if err != nil {
-		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed creating CEL environment").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"failed creating CEL environment",
+		).CausedBy(err)
 	}
 
 	expressions, err := compileExpressions(conf.Expressions, env)
@@ -125,7 +133,7 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 		return nil, err
 	}
 
-	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
+	if strings.HasPrefix(conf.Endpoint.URL.String(), "http://") {
 		logger.Warn().
 			Str("_type", AuthorizerRemote).
 			Str("_name", name).
@@ -145,8 +153,6 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 		v:                  conf.Values,
 	}, nil
 }
-
-func (a *remoteAuthorizer) Accept(_ pipeline.Visitor) {}
 
 func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
@@ -202,7 +208,10 @@ func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 	return nil
 }
 
-func (a *remoteAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (a *remoteAuthorizer) CreateStep(
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return a, nil
 	}
@@ -224,7 +233,10 @@ func (a *remoteAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, 
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
+	if err := decodeConfig(a.app, def.Config, &conf,
+		template.WithName("authorizer."+AuthorizerRemote+"."+a.name),
+		template.WithSecretResolver(resolver),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for remote authorizer '%s'", a.name).CausedBy(err)
 	}
@@ -249,10 +261,11 @@ func (a *remoteAuthorizer) CreateStep(def types.StepDefinition) (pipeline.Step, 
 	}, nil
 }
 
-func (a *remoteAuthorizer) Kind() types.Kind { return types.KindAuthorizer }
-func (a *remoteAuthorizer) Name() string     { return a.name }
-func (a *remoteAuthorizer) ID() string       { return a.id }
-func (a *remoteAuthorizer) Type() string     { return a.name }
+func (a *remoteAuthorizer) Name() string            { return a.name }
+func (a *remoteAuthorizer) ID() string              { return a.id }
+func (a *remoteAuthorizer) Type() string            { return a.name }
+func (*remoteAuthorizer) Kind() types.Kind          { return types.KindAuthorizer }
+func (*remoteAuthorizer) Accept(_ pipeline.Visitor) {}
 
 func (a *remoteAuthorizer) doAuthorize(
 	ctx pipeline.Context,
@@ -263,22 +276,11 @@ func (a *remoteAuthorizer) doAuthorize(
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Calling remote authorization endpoint")
 
-	endpointRenderer := endpoint.RenderFunc(func(tplString string) (string, error) {
-		tpl, err := template.New(tplString)
-		if err != nil {
-			return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
-				WithAspects(a).
-				CausedBy(err)
-		}
-
-		return tpl.Render(map[string]any{
-			"Subject": sub,
-			"Values":  values,
-			"Outputs": ctx.Outputs(),
-		})
+	req, err := a.e.CreateRequest(ctx.Context(), strings.NewReader(payload), map[string]any{
+		"Subject": sub,
+		"Values":  values,
+		"Outputs": ctx.Outputs(),
 	})
-
-	req, err := a.e.CreateRequest(ctx.Context(), strings.NewReader(payload), endpointRenderer)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed creating request").
 			WithAspects(a).

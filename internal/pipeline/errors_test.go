@@ -17,7 +17,6 @@
 package pipeline
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -46,7 +45,7 @@ func (d testErrorResponseDecorator) DecorateErrorResponse(cause error, er *Error
 func TestNewResponseError(t *testing.T) {
 	t.Parallel()
 
-	originalCause := errors.New("test cause")
+	originalCause := assert.AnError
 
 	var seen error
 

@@ -5,7 +5,6 @@
 package mocks
 
 import (
-	"context"
 	"net/http"
 
 	mock "github.com/stretchr/testify/mock"
@@ -39,16 +38,16 @@ func (_m *AuthenticationStrategyMock) EXPECT() *AuthenticationStrategyMock_Expec
 }
 
 // Apply provides a mock function for the type AuthenticationStrategyMock
-func (_mock *AuthenticationStrategyMock) Apply(ctx context.Context, req *http.Request) error {
-	ret := _mock.Called(ctx, req)
+func (_mock *AuthenticationStrategyMock) Apply(req *http.Request) error {
+	ret := _mock.Called(req)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Apply")
 	}
 
 	var r0 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, *http.Request) error); ok {
-		r0 = returnFunc(ctx, req)
+	if returnFunc, ok := ret.Get(0).(func(*http.Request) error); ok {
+		r0 = returnFunc(req)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -61,25 +60,19 @@ type AuthenticationStrategyMock_Apply_Call struct {
 }
 
 // Apply is a helper method to define mock.On call
-//   - ctx context.Context
 //   - req *http.Request
-func (_e *AuthenticationStrategyMock_Expecter) Apply(ctx interface{}, req interface{}) *AuthenticationStrategyMock_Apply_Call {
-	return &AuthenticationStrategyMock_Apply_Call{Call: _e.mock.On("Apply", ctx, req)}
+func (_e *AuthenticationStrategyMock_Expecter) Apply(req interface{}) *AuthenticationStrategyMock_Apply_Call {
+	return &AuthenticationStrategyMock_Apply_Call{Call: _e.mock.On("Apply", req)}
 }
 
-func (_c *AuthenticationStrategyMock_Apply_Call) Run(run func(ctx context.Context, req *http.Request)) *AuthenticationStrategyMock_Apply_Call {
+func (_c *AuthenticationStrategyMock_Apply_Call) Run(run func(req *http.Request)) *AuthenticationStrategyMock_Apply_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
+		var arg0 *http.Request
 		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 *http.Request
-		if args[1] != nil {
-			arg1 = args[1].(*http.Request)
+			arg0 = args[0].(*http.Request)
 		}
 		run(
 			arg0,
-			arg1,
 		)
 	})
 	return _c
@@ -90,7 +83,7 @@ func (_c *AuthenticationStrategyMock_Apply_Call) Return(err error) *Authenticati
 	return _c
 }
 
-func (_c *AuthenticationStrategyMock_Apply_Call) RunAndReturn(run func(ctx context.Context, req *http.Request) error) *AuthenticationStrategyMock_Apply_Call {
+func (_c *AuthenticationStrategyMock_Apply_Call) RunAndReturn(run func(req *http.Request) error) *AuthenticationStrategyMock_Apply_Call {
 	_c.Call.Return(run)
 	return _c
 }

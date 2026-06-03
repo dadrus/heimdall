@@ -32,6 +32,7 @@ const (
 func (f LogFormat) String() string { return x.IfThenElse(f == LogTextFormat, "text", "gelf") }
 
 type LoggingConfig struct {
-	Format LogFormat     `koanf:"format,string"`
-	Level  zerolog.Level `koanf:"level,string"`
+	Format           LogFormat     `koanf:"format,string"`
+	Level            zerolog.Level `koanf:"level,string"`
+	AccessLogEnabled bool          `koanf:"access_log_enabled"`
 }

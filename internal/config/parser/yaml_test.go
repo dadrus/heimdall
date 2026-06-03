@@ -17,7 +17,6 @@
 package parser
 
 import (
-	"errors"
 	"io"
 	"os"
 	"testing"
@@ -65,12 +64,12 @@ nested_2:
 		},
 		"failed validation": {
 			config:    []byte(`some_string: foo`),
-			validator: func(_ io.Reader) error { return errors.New("test error") },
+			validator: func(_ io.Reader) error { return assert.AnError },
 			assert: func(t *testing.T, err error, _ *koanf.Koanf) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "test error")
+				require.ErrorIs(t, err, assert.AnError)
 			},
 		},
 		"valid content with env substitution and templates": {

@@ -26,6 +26,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -60,9 +61,14 @@ func newHeaderFinalizer(app app.Context, name string, rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for header finalizer '%s'", name).CausedBy(err)
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("finalizer."+FinalizerHeader+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s finalizer '%s'", FinalizerHeader, name,
+		).CausedBy(err)
 	}
 
 	return &headerFinalizer{
@@ -72,8 +78,6 @@ func newHeaderFinalizer(app app.Context, name string, rawConfig map[string]any) 
 		headers: conf.Headers,
 	}, nil
 }
-
-func (f *headerFinalizer) Accept(_ pipeline.Visitor) {}
 
 func (f *headerFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
@@ -109,7 +113,10 @@ func (f *headerFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 	return nil
 }
 
-func (f *headerFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (f *headerFinalizer) CreateStep(
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
@@ -126,9 +133,14 @@ func (f *headerFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, e
 	}
 
 	var conf Config
-	if err := decodeConfig(f.app.Validator(), def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for header finalizer '%s'", f.name).CausedBy(err)
+	if err := decodeConfig(f.app, def.Config, &conf,
+		template.WithName("finalizer."+FinalizerHeader+"."+f.name),
+		template.WithSecretResolver(resolver),
+	); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s finalizer '%s'", FinalizerHeader, f.name,
+		).CausedBy(err)
 	}
 
 	return &headerFinalizer{
@@ -139,7 +151,8 @@ func (f *headerFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, e
 	}, nil
 }
 
-func (f *headerFinalizer) Kind() types.Kind { return types.KindFinalizer }
-func (f *headerFinalizer) Name() string     { return f.name }
-func (f *headerFinalizer) ID() string       { return f.id }
-func (f *headerFinalizer) Type() string     { return f.name }
+func (f *headerFinalizer) Name() string            { return f.name }
+func (f *headerFinalizer) ID() string              { return f.id }
+func (f *headerFinalizer) Type() string            { return f.name }
+func (*headerFinalizer) Accept(_ pipeline.Visitor) {}
+func (*headerFinalizer) Kind() types.Kind          { return types.KindFinalizer }

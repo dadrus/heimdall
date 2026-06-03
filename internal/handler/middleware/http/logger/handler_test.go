@@ -17,7 +17,6 @@
 package logger
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -38,6 +37,60 @@ import (
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
+
+func TestHandlerWithAccessLogDisabled(t *testing.T) {
+	// GIVEN
+	otel.SetTracerProvider(sdktrace.NewTracerProvider())
+	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
+
+	tb := &testsupport.TestingLog{TB: t}
+	logger := zerolog.New(zerolog.TestWriter{T: tb})
+
+	srv := httptest.NewServer(
+		alice.New(
+			func(next http.Handler) http.Handler {
+				return otelhttp.NewHandler(
+					next,
+					"",
+					otelhttp.WithTracerProvider(otel.GetTracerProvider()),
+					otelhttp.WithServerName("proxy"),
+					otelhttp.WithSpanNameFormatter(func(_ string, req *http.Request) string {
+						return "EntryPoint " + strings.ToLower(req.URL.Scheme) + " " +
+							httpx.LocalAddress(req) + req.URL.Path
+					}),
+				)
+			},
+			New(logger, WithAccessStatusEnabled(true), WithAccessLogEnabled(false)),
+		).ThenFunc(func(rw http.ResponseWriter, req *http.Request) {
+			zerolog.Ctx(req.Context()).Info().Msg("test called")
+			rw.WriteHeader(http.StatusOK)
+		}),
+	)
+
+	defer srv.Close()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/test", nil)
+	require.NoError(t, err)
+
+	// WHEN
+	resp, err := srv.Client().Do(req)
+
+	// THEN
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	events := strings.Split(strings.TrimRight(tb.CollectedLog(), "\n"), "}")
+	// only the "test called" log event must be present, no TX started / finished
+	require.Len(t, events, 2)
+
+	var logLine map[string]any
+	require.NoError(t, json.Unmarshal([]byte(events[0]+"}"), &logLine))
+
+	assert.Equal(t, "test called", logLine["message"])
+	assert.Equal(t, "info", logLine["level"])
+	assert.Contains(t, logLine, "_trace_id")
+	assert.Contains(t, logLine, "_span_id")
+}
 
 func TestHandlerExecution(t *testing.T) {
 	// GIVEN
@@ -131,7 +184,7 @@ func TestHandlerExecution(t *testing.T) {
 			handleRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
-				accesscontext.SetError(req.Context(), errors.New("test error"))
+				accesscontext.SetError(req.Context(), assert.AnError)
 				rw.WriteHeader(http.StatusInternalServerError)
 			},
 			assert: func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2, logEvent3 map[string]any) {
@@ -181,7 +234,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.Contains(t, logEvent3, "_body_bytes_sent")
 				assert.InDelta(t, float64(http.StatusInternalServerError), logEvent3["_http_status_code"], 0.001)
 				assert.Equal(t, false, logEvent3["_access_granted"]) //nolint:testifylint
-				assert.Equal(t, "test error", logEvent3["error"])
+				assert.Equal(t, assert.AnError.Error(), logEvent3["error"])
 				assert.Contains(t, logEvent3, "_http_user_agent")
 				assert.Equal(t, "TX finished", logEvent3["message"])
 				assert.Equal(t, "https", logEvent3["_http_x_forwarded_proto"])
@@ -198,7 +251,7 @@ func TestHandlerExecution(t *testing.T) {
 				t.Helper()
 
 				accesscontext.SetSubject(req.Context(), "bar")
-				accesscontext.SetError(req.Context(), errors.New("test error"))
+				accesscontext.SetError(req.Context(), assert.AnError)
 				rw.WriteHeader(http.StatusUnauthorized)
 			},
 			assert: func(t *testing.T, clientReq *http.Request, logEvent1, logEvent2, logEvent3 map[string]any) {
@@ -245,7 +298,7 @@ func TestHandlerExecution(t *testing.T) {
 				assert.InDelta(t, float64(http.StatusUnauthorized), logEvent3["_http_status_code"], 0.001)
 				assert.Equal(t, false, logEvent3["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "bar", logEvent3["_subject"])
-				assert.Equal(t, "test error", logEvent3["error"])
+				assert.Equal(t, assert.AnError.Error(), logEvent3["error"])
 				assert.Contains(t, logEvent3, "_http_user_agent")
 				assert.Equal(t, "TX finished", logEvent3["message"])
 			},

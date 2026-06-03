@@ -2,10 +2,10 @@
 title: "Security"
 date: 2022-08-15T08:33:35+02:00
 draft: false
-weight: 36
+weight: 37
 menu:
   docs:
-    weight: 6
+    weight: 7
     parent: "Operations"
 description: To operate heimdall in a secure way, you should configure heimdall accordingly. Following sections address the corresponding areas.
 ---
@@ -98,22 +98,17 @@ docker run -t -p 4456:4456 \
 
 The verification of TLS server certificates is not the single configuration option. You should also ensure heimdall's services, you're using, are configured to be available via TLS as well. See link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS Configuration] for all available options.
 
-=== Security Considerations
-
-In a typical production scenario, there is a need for proper key and certificate management. This is supported by heimdall in the following way:
-
-* you can and should configure not only the private key for signature creation purposes, but also the corresponding certificate chain. This way your upstream services are able not only to verify the signatures of the signed objects for cryptographic validity, but also perform verification of the revocation status of used certificates and also their time validity. All of that is crucial for secure communication.
-+
-The cryptographic material for the above said verification purposes is available via the link:{{< relref "/openapi/#tag/Well-Known/operation/well_known_jwks" >}}[JWKS endpoint] for the upstream services.
-* you can configure multiple keys in heimdall's `key_store` and specify the `key_id` of the key to use. The easiest way to let heimdall use the key id, you need, is to set `X-Key-ID` header in the PEM block of the corresponding private key (as also shown in the example above). Usage of key ids allows for seamless key rotation in setups which do not support or allow usage of secret management systems, respectively hot reloading of the corresponding updates by heimdall.
-
 == Secret Management & Rotation
 
-When configuring heimdall, there are many places requiring secrets, like passwords, tokens, key material, etc. While you can directly configure these in heimdall's config file, there is a huge chance for leaking them. Please reference the secrets in the config file via link:{{< relref "/docs/operations/configuration.adoc#_configuration_file" >}}[environment variables], or make use of external files where possible instead, and let the contents of these be managed by a secret management system.
+In a typical production scenario, there is a need for proper key and certificate management. This is supported by heimdall via link:{{< relref "/docs/operations/secret_management.adoc" >}}[secret management], which allows configuring different secret sources baked by different secret providers to load and reload secrets, credentials, key material, and certificate bundles from.
 
-Usage of external files can even allow you to rotate the configured secrets without the need to restart heimdall if desired. Watching for secrets rotation is however disabled by default, but can be enabled by setting the `secrets_reload_enabled` property to `true` on the top level of heimdall's configuration.
+When configuring the actual secret provider – which in a simple form could be a PEM file containing keys and certificates
 
-NOTE: As of today secret reloading is only supported for link:{{< relref "/docs/configuration/types.adoc#_key_store" >}}[key stores] and link:{{< relref "/docs/operations/cache.adoc#_common_settings" >}}[Redis cache backend credentials].
+* make use of key ids. Usage of key ids allows for seamless key rotation in setups which do not support or allow usage of secret management systems.
+
+* you can and should configure not only the private key, e.g., for signature creation purposes, but also the corresponding certificate chain. This way your upstream services are able not only to verify the signatures of the signed objects for cryptographic validity, but also perform verification of the revocation status of used certificates and also their time validity. All of that is crucial for secure communication.
++
+The cryptographic material for the above said verification purposes is available via the link:{{< relref "/openapi/#tag/Well-Known/operation/well_known_jwks" >}}[JWKS endpoint] for the upstream services.
 
 == Verification of Heimdall Artifacts
 
@@ -168,7 +163,7 @@ On success, Cosign outputs JSON (similar to the example below) and exits with `0
       "1.3.6.1.4.1.57264.1.3": "04379639dc5f3fbfc260e883ee4938a35076d63e",
       "1.3.6.1.4.1.57264.1.4": "release",
       "1.3.6.1.4.1.57264.1.5": "dadrus/heimdall",
-      "1.3.6.1.4.1.57264.1.6": "refs/tags/v0.17.14",
+      "1.3.6.1.4.1.57264.1.6": "refs/tags/v0.17.16",
       "Bundle": {
         "SignedEntryTimestamp": "MEUCIFIvxs30zysroG6...tQ3U/2yx8Jqu8H75g6sihIcpg=",
         "Payload": {
@@ -179,9 +174,9 @@ On success, Cosign outputs JSON (similar to the example below) and exits with `0
         }
       },
       "Issuer": "https://token.actions.githubusercontent.com",
-      "Subject": "https://github.com/dadrus/heimdall/.github/workflows/release.yaml@refs/tags/v0.17.14",
+      "Subject": "https://github.com/dadrus/heimdall/.github/workflows/release.yaml@refs/tags/v0.17.16",
       "githubWorkflowName": "release",
-      "githubWorkflowRef": "refs/tags/v0.17.14",
+      "githubWorkflowRef": "refs/tags/v0.17.16",
       "githubWorkflowRepository": "dadrus/heimdall",
       "githubWorkflowSha": "04379639dc5f3fbfc260e883ee4938a35076d63e",
       "githubWorkflowTrigger": "push"
@@ -228,7 +223,7 @@ cosign verify ghcr.io/dadrus/heimdall/chart/heimdall:<tag> \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com | jq
 ----
 
-Replace `<tag>` with the chart version (e.g., `0.16.14`). On success, Cosign outputs JSON similar to the container image example and exits with `0`.
+Replace `<tag>` with the chart version (e.g., `0.16.16`). On success, Cosign outputs JSON similar to the container image example and exits with `0`.
 
 ==== Provenance Verification with slsa-verifier
 
@@ -249,7 +244,7 @@ slsa-verifier verify-image "${IMAGE}@${DIGEST}" \
   --source-tag <heimdall release version>
 ----
 
-Replace `<tag>` with the chart version (e.g., `0.16.14`), and use `--source-tag` matching the GitHub release. Please note that the `<tag>` of the chart image does not correspond to the heimdall release version. On success, `slsa-verifier` prints a success message and exits with `0`.
+Replace `<tag>` with the chart version (e.g., `0.16.16`), and use `--source-tag` matching the GitHub release. Please note that the `<tag>` of the chart image does not correspond to the heimdall release version. On success, `slsa-verifier` prints a success message and exits with `0`.
 
 === Release Binary Verification
 
@@ -279,7 +274,7 @@ slsa-verifier verify-artifact \
   /path/to/the/downloaded/<archive>
 ----
 
-Replace `<release version>` with the specific version tag of the release (e.g., `v0.17.14`) that corresponds to the archive.
+Replace `<release version>` with the specific version tag of the release (e.g., `v0.17.16`) that corresponds to the archive.
 
 On success, `slsa-verifier` prints a success message and exits with `0`.
 

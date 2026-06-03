@@ -26,21 +26,23 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
-	"github.com/dadrus/heimdall/internal/truststore"
 )
 
-func decodeConfig(app app.Context, input map[string]any, output any) error {
-	dec := encoding.NewDecoder(
+func decodeConfig(
+	app app.Context,
+	input map[string]any,
+	output any,
+	opts ...template.Option,
+) error {
+	dec := app.DecoderFactory().Decoder(
 		encoding.WithTagName("mapstructure"),
-		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
 		encoding.WithDecodeHooks(
 			authstrategy.DecodeAuthenticationStrategyHookFunc(app),
-			endpoint.DecodeEndpointHookFunc(),
+			endpoint.DecodeEndpointHookFunc(opts...),
 			mapstructure.StringToTimeDurationHookFunc(),
 			extractors.DecodeCompositeExtractStrategyHookFunc(),
 			oauth2.DecodeScopesMatcherHookFunc(),
-			truststore.DecodeTrustStoreHookFunc(),
-			template.DecodeTemplateHookFunc(),
+			template.DecodeTemplateHookFunc(opts...),
 			DecodeAttributeRefs(),
 		),
 	)

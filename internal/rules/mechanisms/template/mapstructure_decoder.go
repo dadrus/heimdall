@@ -22,7 +22,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 )
 
-func DecodeTemplateHookFunc() mapstructure.DecodeHookFunc {
+func DecodeTemplateHookFunc(opts ...Option) mapstructure.DecodeHookFunc {
 	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
 		var tpl Template
 
@@ -35,6 +35,6 @@ func DecodeTemplateHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		return New(data.(string)) //nolint: forcetypeassert
+		return New(data.(string), opts...) //nolint: forcetypeassert
 	}
 }

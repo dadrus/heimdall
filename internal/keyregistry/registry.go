@@ -18,75 +18,45 @@ package keyregistry
 
 import (
 	"context"
-	"crypto/x509"
 	"maps"
 	"slices"
-	"sort"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/metric"
+	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
+	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
+	"github.com/dadrus/heimdall/internal/secrets"
 )
 
-const (
-	certificateIssuerKey       = attribute.Key("issuer")
-	certificateSerialNumberKey = attribute.Key("serial_nr")
-	certificateSubjectKey      = attribute.Key("subject")
-	certificateDNSNameKey      = attribute.Key("dns_names")
-)
-
-type certID struct {
-	issuer string
-	serial string
-}
-
-type certEntry struct {
-	refCount int
-	notAfter time.Time
-	attrs    attribute.Set
-}
+const publicationTimeout = 15 * time.Second
 
 type registry struct {
 	mut sync.RWMutex
 
-	// Internal state used to calculate the keysSnapshot and the metricsState
-	state map[string]KeyInfo
+	logger zerolog.Logger
+	srf    secrets.ScopedResolverFactory
+
+	// Internal key sets used to calculate the snapshot.
+	//
+	// Each entry represents the complete verification key set for one
+	// publication reference. The outer map key is derived from the parent
+	// secret reference used for key publication.
+	sets map[string]map[string]secrets.AsymmetricKeySecret
 
 	// Immutable snapshot returned by Keys().
-	keysSnapshot []jose.JSONWebKey
-
-	// Prepared state for certificate-related metrics used during metrics gathering.
-	metricsState map[certID]certEntry
-
-	// The actual metric
-	certExpiry metric.Float64ObservableGauge
+	snapshot []jose.JSONWebKey
 }
 
-func newRegistry(meter metric.Meter) (Registry, error) {
-	certExpiry, err := meter.Float64ObservableGauge("certificate.expiry",
-		metric.WithDescription("Number of seconds until certificate expires"),
-		metric.WithUnit("s"),
-	)
-	if err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
-			"failed creating certificate.expiry gauge").CausedBy(err)
-	}
-
+func newRegistry(
+	logger zerolog.Logger,
+	srf secrets.ScopedResolverFactory,
+) (Registry, error) {
 	reg := &registry{
-		state:        make(map[string]KeyInfo, 10),
-		metricsState: make(map[certID]certEntry, 10),
-		certExpiry:   certExpiry,
-	}
-
-	if _, err = meter.RegisterCallback(reg.collect, certExpiry); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
-			"failed registering callback for metrics collection").CausedBy(err)
+		logger: logger,
+		srf:    srf,
+		sets:   make(map[string]map[string]secrets.AsymmetricKeySecret, 10),
 	}
 
 	return reg, nil
@@ -94,96 +64,128 @@ func newRegistry(meter metric.Meter) (Registry, error) {
 
 func (r *registry) Keys() []jose.JSONWebKey {
 	r.mut.RLock()
-	keys := r.keysSnapshot
+	keys := r.snapshot
 	r.mut.RUnlock()
 
 	return keys
 }
 
-func (r *registry) Notify(ki KeyInfo) {
+func (r *registry) Notify(ref secrets.Reference) {
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), publicationTimeout)
+		defer cancel()
+
+		r.doNotify(ctx, ref)
+	}()
+}
+
+func (r *registry) doNotify(ctx context.Context, ref secrets.Reference) {
+	parent := ref.Parent()
+	id := publicationID(parent)
+
+	scope := r.srf.Create(secrets.WithID(id))
+	defer scope.Release()
+
+	handle, err := scope.SecretSet(parent)
+	if err != nil {
+		r.logger.Error().
+			Err(err).
+			Str("_source", parent.Source).
+			Str("_selector", parent.Selector).
+			Msg("Failed creating verification key set handle")
+
+		return
+	}
+
+	if err = scope.AwaitReady(ctx); err != nil {
+		r.logger.Error().
+			Err(err).
+			Str("_source", parent.Source).
+			Str("_selector", parent.Selector).
+			Msg("Failed resolving verification key set")
+
+		return
+	}
+
+	secretSet, ok := handle.Get()
+	if !ok {
+		r.logger.Warn().
+			Str("_source", parent.Source).
+			Str("_selector", parent.Selector).
+			Msg("Verification key set is not available after readiness")
+
+		return
+	}
+
+	keys := make([]secrets.AsymmetricKeySecret, 0, len(secretSet))
+	for _, secret := range secretSet {
+		key, ok := secret.(secrets.AsymmetricKeySecret)
+		if !ok {
+			r.logger.Warn().
+				Str("_source", parent.Source).
+				Str("_selector", parent.Selector).
+				Str("_secret_selector", secret.Selector()).
+				Str("_secret_kind", string(secret.Kind())).
+				Msg("Ignoring non-asymmetric key secret in verification key set")
+
+			continue
+		}
+
+		keys = append(keys, key)
+	}
+
+	r.replaceSet(id, keys)
+}
+
+func (r *registry) replaceSet(id string, keys []secrets.AsymmetricKeySecret) {
 	r.mut.Lock()
 	defer r.mut.Unlock()
 
-	old := r.state[ki.KeyID]
-	r.state[ki.KeyID] = ki
+	if len(keys) == 0 {
+		delete(r.sets, id)
+		r.rebuildSnapshot()
 
-	r.updateMetricsData(old.CertChain, -1)
-	r.updateMetricsData(ki.CertChain, 1)
+		return
+	}
 
-	r.rebuildExportableKeys()
+	set := make(map[string]secrets.AsymmetricKeySecret, len(keys))
+	for _, key := range keys {
+		set[key.KeyID()] = key
+	}
+
+	r.sets[id] = set
+	r.rebuildSnapshot()
 }
 
-func (r *registry) updateMetricsData(chain []*x509.Certificate, delta int) {
-	for _, cert := range chain {
-		key := createCertID(cert)
-		entry, exists := r.metricsState[key]
-		entry.refCount += delta
+func (r *registry) rebuildSnapshot() {
+	keys := make(map[string]secrets.AsymmetricKeySecret)
 
-		if entry.refCount <= 0 {
-			delete(r.metricsState, key)
+	for _, set := range r.sets {
+		maps.Copy(keys, set)
+	}
+
+	keyIDs := slices.Collect(maps.Keys(keys))
+	slices.Sort(keyIDs)
+
+	snapshot := make([]jose.JSONWebKey, 0, len(keyIDs))
+
+	for _, keyID := range keyIDs {
+		jwk, err := joseadapter.ToJWK(keys[keyID])
+		if err != nil {
+			r.logger.Warn().
+				Err(err).
+				Str("_kid", keyID).
+				Msg("Failed converting verification key to JWK")
 
 			continue
 		}
 
-		if !exists && delta > 0 {
-			entry.notAfter = cert.NotAfter
-			entry.attrs = buildAttributes(cert)
-		}
-
-		r.metricsState[key] = entry
-	}
-}
-
-func createCertID(cert *x509.Certificate) certID {
-	return certID{
-		issuer: cert.Issuer.String(),
-		serial: cert.SerialNumber.String(),
-	}
-}
-
-func (r *registry) rebuildExportableKeys() {
-	snapshot := make([]jose.JSONWebKey, 0, len(r.state))
-
-	keys := slices.Collect(maps.Keys(r.state))
-	slices.Sort(keys)
-
-	for _, id := range keys {
-		key := r.state[id]
-		if !key.Exportable {
-			continue
-		}
-
-		snapshot = append(snapshot, key.JWK())
+		snapshot = append(snapshot, jwk)
 	}
 
-	r.keysSnapshot = snapshot
+	r.snapshot = snapshot
 }
 
-func (r *registry) collect(_ context.Context, observer metric.Observer) error {
-	now := time.Now()
-
-	r.mut.RLock()
-	defer r.mut.RUnlock()
-
-	for _, entry := range r.metricsState {
-		observer.ObserveFloat64(
-			r.certExpiry,
-			entry.notAfter.Sub(now).Seconds(),
-			metric.WithAttributeSet(entry.attrs),
-		)
-	}
-
-	return nil
-}
-
-func buildAttributes(cert *x509.Certificate) attribute.Set {
-	dnsNames := append([]string(nil), cert.DNSNames...)
-	sort.Strings(dnsNames)
-
-	return attribute.NewSet(
-		certificateIssuerKey.String(cert.Issuer.String()),
-		certificateSerialNumberKey.String(cert.SerialNumber.String()),
-		certificateSubjectKey.String(cert.Subject.String()),
-		certificateDNSNameKey.String(strings.Join(dnsNames, ",")),
-	)
+func publicationID(ref secrets.Reference) string {
+	return ref.Source + ":" + ref.Selector
 }

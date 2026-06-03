@@ -83,7 +83,7 @@ func TestAllowAuthorizerCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			conf, err := mech.CreateStep(tc.stepDef)
+			conf, err := mech.CreateStep(nil, tc.stepDef)
 
 			// THEN
 			authz, ok := conf.(*allowAuthorizer)
@@ -110,7 +110,7 @@ func TestAllowAuthorizerExecute(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, types.KindAuthorizer, mech.Kind())
 
-	step, err := mech.CreateStep(types.StepDefinition{ID: ""})
+	step, err := mech.CreateStep(nil, types.StepDefinition{ID: ""})
 	require.NoError(t, err)
 
 	// WHEN

@@ -26,6 +26,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authorizers"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contextualizers"
@@ -34,6 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 )
 
@@ -133,7 +135,9 @@ func TestAllMechanismsAreRegistered(t *testing.T) {
 
 	ctx := app.NewContextMock(t)
 	ctx.EXPECT().Logger().Return(log.Logger)
-	ctx.EXPECT().Validator().Maybe().Return(validator)
+	ctx.EXPECT().DecoderFactory().Maybe().
+		Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
+	ctx.EXPECT().SecretResolver().Return(secretsmocks.NewResolverMock(t))
 
 	for kind, types := range map[types.Kind][]string{
 		types.KindAuthenticator: {
@@ -168,7 +172,15 @@ func TestAllMechanismsAreRegistered(t *testing.T) {
 	} {
 		for _, typ := range types {
 			t.Run(fmt.Sprintf("%s %s is registered", typ, kind), func(t *testing.T) {
-				mech, err := registry.Create(ctx, kind, typ, "some name", nil)
+				mech, err := registry.Create(ctx, kind, typ, "some name",
+					// used here to avoid panic while creating basic auth authenticator
+					// other mechanisms ignore it.
+					map[string]any{
+						"credentials": map[string]any{
+							"user_id":  "foo",
+							"password": "bar",
+						},
+					})
 				if err != nil {
 					require.NotErrorIs(t, err, registry.ErrUnsupportedMechanismType)
 				} else {

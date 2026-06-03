@@ -56,13 +56,19 @@ tracing:
 metrics:
   enabled: false
 
-mechanisms: # <2>
+secret_management: # <2>
+  jwt_key_store:
+    type: pem
+    config:
+      path: /etc/heimdall/signer.pem
+
+mechanisms: # <3>
   authenticators:
-  - id: deny_all # <3>
+  - id: deny_all # <4>
     type: unauthorized
-  - id: anon # <4>
+  - id: anon # <5>
     type: anonymous
-  - id: auth # <5>
+  - id: auth # <6>
     type: generic
     config:
       identity_info_endpoint: http://oauth2-proxy:4180/oauth2/userinfo
@@ -74,25 +80,25 @@ mechanisms: # <2>
         id: "user"
 
   authorizers:
-    - id: cel # <6>
+    - id: cel # <7>
       type: cel
       config:
         expressions:
           - expression: "true == false"
 
   finalizers:
-  - id: create_jwt # <7>
+  - id: create_jwt # <8>
     type: jwt
     config:
       signer:
-        key_store:
-          path: /etc/heimdall/signer.pem
+        secret:
+          source: jwt_key_store
       claims: |
         {{- dict "attrs" .Subject.Attributes | toJson -}}
-  - id: noop # <8>
+  - id: noop # <9>
     type: noop
 
-  error_handlers: # <9>
+  error_handlers: # <10>
     - id: redirect_to_idp
       type: redirect
       config:
@@ -102,7 +108,7 @@ mechanisms: # <2>
       config:
         to: https://www.google.com/search?q=access+denied&udm=2
 
-default_rule: # <10>
+default_rule: # <11>
   execute:
     - authenticator: deny_all
     - finalizer: create_jwt
@@ -112,22 +118,23 @@ default_rule: # <10>
         type(Error) in [authorization_error, authentication_error] &&
         Request.Header("Accept").contains("text/html")
 
-providers: # <11>
+providers: # <12>
   file_system:
     src: /etc/heimdall/rules
     watch: true
 ----
 <1> By default, heimdall emits logs on `error` level, but to better understand its operations, we’re setting the log level to `debug`. This way, you'll see not only the results of rule executions (which is what you would see if we set the log level to `info`), but also detailed information about what’s happening within each rule. We’re also disabling tracing and metrics collection to avoid errors related to the missing OTEL agent, which is used by default. For more details on logging and other observability options, see the link:{{< relref "/docs/operations/observability.adoc#_logging" >}}[Observability] chapter.
-<2> We define our link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue of mechanisms] for use in our link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule] and link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream service-specific rules].
-<3> These lines define the `unauthorized` authenticator, named `deny_all`, which rejects all requests.
-<4> These lines define the `anonymous` authenticator, named `anon`, which allows all requests and creates a subject with the ID set to `anonymous`. More information about subjects and other objects can be found link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[here].
-<5> These and the following lines set up the `generic` authenticator, named `auth`. This configuration checks if a request includes a `Cookie` named `SESSION`, and then sends it to the `\http://oauth2-proxy:4180/oauth2/userinfo` endpoint to get user information. If successful, heimdall extracts the user identifier from the `user` property in the response. If there’s an error (e.g. the `SESSION` cookie is not present or the response from the OAuth2-Proxy contains an error), an authentication error is triggered.
-<6> These lines define a `cel` authorizer that is configured to always fail. We’ll improve this in our upstream-specific rule.
-<7> These lines define the `jwt` finalizer. It creates a JWT from the subject object with standard claims, setting the `sub` claim to the subject’s ID. The key for signing the JWT comes from a key store we’ll configure later.
-<8> These two lines define the `noop` finalizer, which we’ll use for public endpoints.
-<9> Here, we set up two `redirect` error handlers: one redirects to the `/oauth2/start` endpoint with a deep link to the current URL, and the other redirects to Google with the search query "access denied".
-<10> With all mechanisms defined, we configure our first rule - the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule]. This rule applies if no other rules match the request and serves as a link:{{< relref "/docs/concepts/rules.adoc#_default_rule_inheritance" >}}[base] for defining regular (upstream service-specific) rules as well. It sets up a default link:{{< relref "/docs/concepts/pipelines.adoc#_authentication_authorization_pipeline" >}}[authentication & authorization pipeline] that rejects all requests using the `deny_all` authenticator. This rejection triggers the `redirect_to_error_page` error handler. If a regular rule overrides this authenticator, a JWT is created using the `jwt` finalizer.
-<11> The last few lines configure the link:{{< relref "/docs/rules/providers.adoc#_filesystem" >}}[`file_system`] provider, which loads regular rules from the file system and watches for changes. This allows you to modify the rules while testing.
+<2> Here we configure secret sources to get key material from. In this particular case a secret source named `jwt_key_store` is baked by the `pem` provider, which loads the referenced pem file.
+<3> We define our link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue of mechanisms] for use in our link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule] and link:{{< relref "/docs/rules/regular_rule.adoc" >}}[upstream service-specific rules].
+<4> These lines define the `unauthorized` authenticator, named `deny_all`, which rejects all requests.
+<5> These lines define the `anonymous` authenticator, named `anon`, which allows all requests and creates a subject with the ID set to `anonymous`. More information about subjects and other objects can be found link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[here].
+<6> These and the following lines set up the `generic` authenticator, named `auth`. This configuration checks if a request includes a `Cookie` named `SESSION`, and then sends it to the `\http://oauth2-proxy:4180/oauth2/userinfo` endpoint to get user information. If successful, heimdall extracts the user identifier from the `user` property in the response. If there’s an error (e.g. the `SESSION` cookie is not present or the response from the OAuth2-Proxy contains an error), an authentication error is triggered.
+<7> These lines define a `cel` authorizer that is configured to always fail. We’ll improve this in our upstream-specific rule.
+<8> These lines define the `jwt` finalizer. It creates a JWT from the subject object with standard claims, setting the `sub` claim to the subject’s ID. The key for signing the JWT comes from a secret source we’ve configured above.
+<9> These two lines define the `noop` finalizer, which we’ll use for public endpoints.
+<10> Here, we set up two `redirect` error handlers: one redirects to the `/oauth2/start` endpoint with a deep link to the current URL, and the other redirects to Google with the search query "access denied".
+<11> With all mechanisms defined, we configure our first rule - the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule]. This rule applies if no other rules match the request and serves as a link:{{< relref "/docs/concepts/rules.adoc#_default_rule_inheritance" >}}[base] for defining regular (upstream service-specific) rules as well. It sets up a default link:{{< relref "/docs/concepts/pipelines.adoc#_authentication_authorization_pipeline" >}}[authentication & authorization pipeline] that rejects all requests using the `deny_all` authenticator. This rejection triggers the `redirect_to_error_page` error handler. If a regular rule overrides this authenticator, a JWT is created using the `jwt` finalizer.
+<12> The last few lines configure the link:{{< relref "/docs/rules/providers.adoc#_filesystem" >}}[`file_system`] provider, which loads regular rules from the file system and watches for changes. This allows you to modify the rules while testing.
 
 . Create a file named `signer.pem` and add the following content to it. This file should also be placed in the root directory and will act as our key store, containing the private key referenced in the configuration above.
 +

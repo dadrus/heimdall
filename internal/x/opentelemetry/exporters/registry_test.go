@@ -18,7 +18,6 @@ package exporters
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,7 +32,7 @@ func TestRegistryEmptyStore(t *testing.T) {
 	r := registry[trace.SpanExporter]{}
 
 	// WHEN
-	err := r.store("first", func(_ context.Context) (trace.SpanExporter, error) { return nil, errors.New("test error") })
+	err := r.store("first", func(_ context.Context) (trace.SpanExporter, error) { return nil, assert.AnError })
 
 	// THEN
 	require.NoError(t, err)
@@ -44,10 +43,10 @@ func TestRegistryNonEmptyStore(t *testing.T) {
 
 	// GIVEN
 	r := registry[trace.SpanExporter]{}
-	require.NoError(t, r.store("first", func(_ context.Context) (trace.SpanExporter, error) { return nil, errors.New("test error") }))
+	require.NoError(t, r.store("first", func(_ context.Context) (trace.SpanExporter, error) { return nil, assert.AnError }))
 
 	// WHEN
-	err := r.store("second", func(_ context.Context) (trace.SpanExporter, error) { return nil, errors.New("test error") })
+	err := r.store("second", func(_ context.Context) (trace.SpanExporter, error) { return nil, assert.AnError })
 
 	// THEN
 	require.NoError(t, err)
@@ -58,10 +57,10 @@ func TestRegistryDuplicateStore(t *testing.T) {
 
 	// GIVEN
 	r := registry[trace.SpanExporter]{}
-	require.NoError(t, r.store("first", func(_ context.Context) (trace.SpanExporter, error) { return nil, errors.New("test error") }))
+	require.NoError(t, r.store("first", func(_ context.Context) (trace.SpanExporter, error) { return nil, assert.AnError }))
 
 	// WHEN
-	err := r.store("first", func(_ context.Context) (trace.SpanExporter, error) { return nil, errors.New("test error") })
+	err := r.store("first", func(_ context.Context) (trace.SpanExporter, error) { return nil, assert.AnError })
 
 	// THEN
 	require.Error(t, err)
@@ -90,7 +89,7 @@ func TestRegistryExistentLoad(t *testing.T) {
 	reg := registry[trace.SpanExporter]{}
 
 	require.NoError(t, reg.store("existent",
-		func(_ context.Context) (trace.SpanExporter, error) { return nil, errors.New("for test purpose") }))
+		func(_ context.Context) (trace.SpanExporter, error) { return nil, assert.AnError }))
 
 	// WHEN
 	value, ok := reg.load("existent")
@@ -100,5 +99,5 @@ func TestRegistryExistentLoad(t *testing.T) {
 	assert.NotNil(t, value)
 
 	_, err := value(t.Context())
-	require.ErrorContains(t, err, "for test purpose")
+	require.ErrorIs(t, err, assert.AnError)
 }

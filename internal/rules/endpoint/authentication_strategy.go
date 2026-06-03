@@ -17,11 +17,10 @@
 package endpoint
 
 import (
-	"context"
 	"net/http"
 )
 
 type AuthenticationStrategy interface {
-	Apply(ctx context.Context, req *http.Request) error
+	Apply(req *http.Request) error
 	Hash() []byte
 }

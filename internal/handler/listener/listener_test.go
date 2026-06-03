@@ -17,6 +17,7 @@
 package listener
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -25,159 +26,239 @@ import (
 	"crypto/x509/pkix"
 	"math/big"
 	"net"
-	"os"
-	"path/filepath"
-	"strconv"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
+	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
-func freePort() (int, error) {
-	addr, err := net.ResolveTCPAddr("tcp", "localhost:0")
-	if err != nil {
-		return 0, err
-	}
-
-	ln, err := net.ListenTCP("tcp", addr)
-	if err != nil {
-		return 0, err
-	}
-
-	defer ln.Close()
-
-	return ln.Addr().(*net.TCPAddr).Port, nil // nolint: forcetypeassert
-}
-
-func TestNewListener(t *testing.T) {
+func TestFactoryCreate(t *testing.T) {
 	t.Parallel()
 
-	testDir := t.TempDir()
+	secret := newTLSSecret(t)
+	address := "127.0.0.1:8443"
 
-	privKey1, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
+	for uc, tc := range map[string]struct {
+		tlsConf *config.TLS
+		setup   func(
+			t *testing.T,
+			sr *secretsmocks.ResolverMock,
+			handle *secretsmocks.SecretHandleMock,
+		)
+		listener  net.Listener
+		listenErr error
+		assert    func(t *testing.T, err error, ln net.Listener, capturedAddress string)
+	}{
+		"creation fails": {
+			listenErr: assert.AnError,
+			assert: func(t *testing.T, err error, _ net.Listener, capturedAddress string) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, assert.AnError.Error())
+				assert.Equal(t, address, capturedAddress)
+			},
+		},
+		"without tls": {
+			listener: &acceptRecorder{},
+			assert: func(t *testing.T, err error, ln net.Listener, capturedAddress string) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ln)
+				assert.Equal(t, address, capturedAddress)
+
+				tlsAware, ok := ln.(Listener)
+				require.True(t, ok)
+				assert.False(t, tlsAware.TLSEnabled())
+			},
+		},
+		"fails if secret cannot be resolved": {
+			tlsConf: &config.TLS{
+				Secret: config.Secret{Source: "listener", Selector: "tls"},
+			},
+			listener: &acceptRecorder{},
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+			) {
+				t.Helper()
+
+				sr.EXPECT().
+					Secret(secrets.Reference{Source: "listener", Selector: "tls"}).
+					Return(nil, assert.AnError)
+			},
+			assert: func(t *testing.T, err error, _ net.Listener, capturedAddress string) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "failed resolving TLS secret")
+				assert.Empty(t, capturedAddress)
+			},
+		},
+		"successful with secret backed tls config": {
+			tlsConf: &config.TLS{
+				Secret:     config.Secret{Source: "listener", Selector: "tls"},
+				MinVersion: tls.VersionTLS12,
+			},
+			listener: &acceptRecorder{},
+			setup: func(
+				t *testing.T,
+				sr *secretsmocks.ResolverMock,
+				handle *secretsmocks.SecretHandleMock,
+			) {
+				t.Helper()
+
+				sr.EXPECT().
+					Secret(secrets.Reference{Source: "listener", Selector: "tls"}).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(context.Background(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
+			},
+			assert: func(t *testing.T, err error, ln net.Listener, capturedAddress string) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, ln)
+				assert.Equal(t, address, capturedAddress)
+
+				tlsAware, ok := ln.(Listener)
+				require.True(t, ok)
+				assert.True(t, tlsAware.TLSEnabled())
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			prevListen := listen
+
+			var capturedAddress string
+
+			t.Cleanup(func() { listen = prevListen })
+
+			listen = func(_ context.Context, currentAddress string) (net.Listener, error) {
+				capturedAddress = currentAddress
+
+				if tc.listenErr != nil {
+					return nil, tc.listenErr
+				}
+
+				return tc.listener, nil
+			}
+
+			sr := secretsmocks.NewResolverMock(t)
+			handle := secretsmocks.NewSecretHandleMock(t)
+
+			if tc.setup != nil {
+				tc.setup(t, sr, handle)
+			}
+
+			factory, err := NewFactory(address, tc.tlsConf, sr)
+			if err != nil {
+				tc.assert(t, err, nil, capturedAddress)
+
+				return
+			}
+
+			ln, err := factory.Create(t.Context())
+
+			defer func() {
+				if ln != nil {
+					_ = ln.Close()
+				}
+			}()
+
+			tc.assert(t, err, ln, capturedAddress)
+		})
+	}
+}
+
+func TestListenerAccept(t *testing.T) {
+	t.Parallel()
+
+	expectedConn := &connRecorder{}
+	expectedErr := assert.AnError
+
+	tests := map[string]struct {
+		listener net.Listener
+		assert   func(t *testing.T, accepted net.Conn, err error)
+	}{
+		"wraps accepted connection": {
+			listener: &acceptRecorder{conn: expectedConn},
+			assert: func(t *testing.T, accepted net.Conn, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				wrapped, ok := accepted.(*conn)
+				require.True(t, ok)
+				assert.Same(t, expectedConn, wrapped.Conn)
+			},
+		},
+		"returns accept error": {
+			listener: &acceptRecorder{err: expectedErr},
+			assert: func(t *testing.T, accepted net.Conn, err error) {
+				t.Helper()
+
+				require.ErrorIs(t, err, expectedErr)
+				assert.Nil(t, accepted)
+			},
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			conn, err := (&listener{Listener: tc.listener}).Accept()
+
+			tc.assert(t, conn, err)
+		})
+	}
+}
+
+type acceptRecorder struct {
+	conn net.Conn
+	err  error
+}
+
+func (r *acceptRecorder) Accept() (net.Conn, error) { return r.conn, r.err }
+func (r *acceptRecorder) Close() error              { return nil }
+func (r *acceptRecorder) Addr() net.Addr            { return &net.TCPAddr{} }
+
+func newTLSSecret(t *testing.T) secrets.AsymmetricKeySecret {
+	t.Helper()
+
+	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	privKey2, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
-	require.NoError(t, err)
-
-	cert, err := testsupport.NewCertificateBuilder(testsupport.WithValidity(time.Now(), 10*time.Hour),
+	cert, err := testsupport.NewCertificateBuilder(
+		testsupport.WithValidity(time.Now(), 10*time.Hour),
 		testsupport.WithSerialNumber(big.NewInt(1)),
 		testsupport.WithSubject(pkix.Name{
 			CommonName:   "test cert",
 			Organization: []string{"Test"},
 			Country:      []string{"EU"},
 		}),
-		testsupport.WithSubjectPubKey(&privKey1.PublicKey, x509.ECDSAWithSHA384),
+		testsupport.WithSubjectPubKey(&privKey.PublicKey, x509.ECDSAWithSHA384),
 		testsupport.WithSelfSigned(),
-		testsupport.WithSignaturePrivKey(privKey1)).
-		Build()
+		testsupport.WithSignaturePrivKey(privKey),
+	).Build()
 	require.NoError(t, err)
 
-	pemBytes, err := pemx.BuildPEM(
-		pemx.WithECDSAPrivateKey(privKey1, pemx.WithHeader("X-Key-ID", "key1")),
-		pemx.WithX509Certificate(cert),
-		pemx.WithECDSAPrivateKey(privKey2, pemx.WithHeader("X-Key-ID", "key2")),
-	)
-	require.NoError(t, err)
-
-	pemFile, err := os.Create(filepath.Join(testDir, "keystore.pem"))
-	require.NoError(t, err)
-
-	_, err = pemFile.Write(pemBytes)
-	require.NoError(t, err)
-
-	for uc, tc := range map[string]struct {
-		serviceConf config.ServeConfig
-		assert      func(t *testing.T, err error, ln net.Listener, port string)
-	}{
-		"creation fails": {
-			serviceConf: config.ServeConfig{
-				Host: ".....",
-			},
-			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorContains(t, err, "no such host")
-			},
-		},
-		"without TLS": {
-			serviceConf: config.ServeConfig{Host: "127.0.0.1"},
-			assert: func(t *testing.T, err error, ln net.Listener, port string) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, ln)
-
-				assert.Equal(t, "tcp", ln.Addr().Network())
-				assert.Equal(t, "127.0.0.1:"+port, ln.Addr().String())
-			},
-		},
-		"fails due to not existent key store for TLS usage": {
-			serviceConf: config.ServeConfig{
-				TLS: &config.TLS{KeyStore: config.KeyStore{Path: "/no/such/file"}},
-			},
-			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrInternal)
-				require.ErrorContains(t, err, "failed loading")
-			},
-		},
-		"fails due to not specified key store": {
-			serviceConf: config.ServeConfig{TLS: &config.TLS{}},
-			assert: func(t *testing.T, err error, _ net.Listener, _ string) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "no path to tls key store")
-			},
-		},
-		"successful with specified key id": {
-			serviceConf: config.ServeConfig{
-				TLS: &config.TLS{
-					KeyStore:   config.KeyStore{Path: pemFile.Name()},
-					KeyID:      "key1",
-					MinVersion: tls.VersionTLS12,
-				},
-			},
-			assert: func(t *testing.T, err error, ln net.Listener, port string) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, ln)
-				assert.Equal(t, "tcp", ln.Addr().Network())
-				assert.Contains(t, ln.Addr().String(), port)
-			},
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			port, err := freePort()
-			require.NoError(t, err)
-
-			tc.serviceConf.Port = port
-
-			// WHEN
-			ln, err := New(t.Context(), tc.serviceConf.Address(), tc.serviceConf.TLS, nil, nil)
-
-			// THEN
-			defer func() {
-				if ln != nil {
-					ln.Close()
-				}
-			}()
-
-			tc.assert(t, err, ln, strconv.Itoa(port))
-		})
-	}
+	return types.NewAsymmetricKeySecret("tls", "key1", privKey, []*x509.Certificate{cert})
 }

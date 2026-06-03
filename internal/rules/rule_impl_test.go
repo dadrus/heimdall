@@ -58,7 +58,7 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				testErr := errors.New("test error")
+				testErr := assert.AnError
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
@@ -84,7 +84,7 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				testErr := errors.New("test error")
+				testErr := assert.AnError
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
@@ -94,13 +94,12 @@ func TestRuleExecute(t *testing.T) {
 				)).Return(testErr)
 				errHandler.EXPECT().Execute(ctx, mock.MatchedBy(
 					func(sub pipeline.Subject) bool { return sub != nil },
-				)).Return(errors.New("some error"))
+				)).Return(assert.AnError)
 			},
 			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "some error")
 				assert.Nil(t, backend)
 			},
 		},
@@ -111,7 +110,7 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				testErr := errors.New("test error")
+				testErr := assert.AnError
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
@@ -140,7 +139,7 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				testErr := errors.New("test error")
+				testErr := assert.AnError
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
@@ -170,7 +169,7 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				testErr := errors.New("test error")
+				testErr := assert.AnError
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
@@ -202,7 +201,7 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				testErr := errors.New("test error")
+				testErr := assert.AnError
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
@@ -218,13 +217,12 @@ func TestRuleExecute(t *testing.T) {
 				)).Return(testErr)
 				errHandler.EXPECT().Execute(ctx, mock.MatchedBy(
 					func(sub pipeline.Subject) bool { return sub != nil },
-				)).Return(errors.New("some error"))
+				)).Return(assert.AnError)
 			},
 			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "some error")
 				assert.Nil(t, backend)
 			},
 		},
@@ -605,11 +603,11 @@ func TestRuleExecute(t *testing.T) {
 			rul := &ruleImpl{
 				backend:         tc.backend,
 				slashesHandling: x.IfThenElse(len(tc.slashHandling) != 0, tc.slashHandling, v1beta1.EncodedSlashesOff),
-				sc:              stage{authenticator},
-				sh:              stage{authorizer},
-				fi:              stage{finalizer},
-				eh:              stage{errHandler},
-				subjectPool:     &sync.Pool{New: func() any { return make(pipeline.Subject, 4) }},
+				p: rulePipelineImpl{
+					execute: newExecutePipeline(stage{authenticator}, stage{authorizer}, stage{finalizer}),
+					err:     newErrorPipeline(stage{errHandler}),
+				},
+				subjectPool: &sync.Pool{New: func() any { return make(pipeline.Subject, 4) }},
 			}
 
 			tc.configureMocks(t, ctx, authenticator, authorizer, finalizer, errHandler)

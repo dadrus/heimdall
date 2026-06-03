@@ -17,7 +17,6 @@
 package errorhandlers
 
 import (
-	"errors"
 	"net/url"
 	"slices"
 	"testing"
@@ -29,9 +28,11 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -104,7 +105,7 @@ foo: bar
 				assert.Nil(t, eh.body)
 				assert.Nil(t, eh.values)
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
-				assert.Equal(t, ErrorHandlerGeneric, eh.Type())
+				assert.Equal(t, "with unsupported fields", eh.Type())
 			},
 		},
 		"with full valid configuration": {
@@ -129,7 +130,7 @@ values:
 				assert.NotNil(t, eh.body)
 				assert.Len(t, eh.values, 1)
 				assert.Equal(t, types.KindErrorHandler, eh.Kind())
-				assert.Equal(t, ErrorHandlerGeneric, eh.Type())
+				assert.Equal(t, "with full valid configuration", eh.Type())
 
 				reqURL, err := url.Parse("https://foo.bar/baz")
 				require.NoError(t, err)
@@ -160,9 +161,13 @@ values:
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			sr := secretsmocks.NewResolverMock(t)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Return(sr)
 
 			// WHEN
 			mech, err := newGenericErrorHandler(appCtx, uc, conf)
@@ -363,9 +368,13 @@ values:
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			sr := secretsmocks.NewResolverMock(t)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Return(sr)
 
 			mech, err := newGenericErrorHandler(appCtx, uc, pc)
 			require.NoError(t, err)
@@ -374,7 +383,7 @@ values:
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(tc.stepDef)
+			step, err := mech.CreateStep(sr, tc.stepDef)
 
 			// THEN
 			eh, ok := step.(*genericErrorHandler)
@@ -403,7 +412,7 @@ code: 500
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
@@ -411,7 +420,7 @@ code: 500
 					assert.Nil(t, genErr.Headers)
 					assert.Empty(t, genErr.Body)
 					require.Error(t, genErr.Cause)
-					assert.Equal(t, "test error", genErr.Cause.Error())
+					assert.Equal(t, assert.AnError.Error(), genErr.Cause.Error())
 
 					return true
 				}))
@@ -432,7 +441,7 @@ headers:
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil).Times(2)
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
@@ -440,7 +449,7 @@ headers:
 					assert.Equal(t, map[string][]string{"X-Error-Reason": {"blocked"}}, genErr.Headers)
 					assert.Empty(t, genErr.Body)
 					require.Error(t, genErr.Cause)
-					assert.Equal(t, "test error", genErr.Cause.Error())
+					assert.Equal(t, assert.AnError.Error(), genErr.Cause.Error())
 
 					return true
 				}))
@@ -462,7 +471,7 @@ headers:
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil).Times(3)
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
@@ -470,7 +479,7 @@ headers:
 					assert.Equal(t, map[string][]string{"Set-Cookie": {"a=1", "b=2"}}, genErr.Headers)
 					assert.Empty(t, genErr.Body)
 					require.Error(t, genErr.Cause)
-					assert.Equal(t, "test error", genErr.Cause.Error())
+					assert.Equal(t, assert.AnError.Error(), genErr.Cause.Error())
 
 					return true
 				}))
@@ -490,7 +499,7 @@ body: blocked
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil).Times(2)
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
@@ -498,7 +507,7 @@ body: blocked
 					assert.Nil(t, genErr.Headers)
 					assert.Equal(t, "blocked", genErr.Body)
 					require.Error(t, genErr.Cause)
-					assert.Equal(t, "test error", genErr.Cause.Error())
+					assert.Equal(t, assert.AnError.Error(), genErr.Cause.Error())
 
 					return true
 				}))
@@ -625,7 +634,7 @@ values:
 				req := &pipeline.Request{URL: &pipeline.URL{URL: *reqURL}}
 
 				ctx.EXPECT().Request().Return(req).Times(4)
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 				ctx.EXPECT().SetError(mock.MatchedBy(func(genErr *pipeline.ResponseError) bool {
 					t.Helper()
 
@@ -636,7 +645,7 @@ values:
 						"X-Request-Host": {"foo.bar"},
 					}, genErr.Headers)
 					require.Error(t, genErr.Cause)
-					assert.Equal(t, "test error", genErr.Cause.Error())
+					assert.Equal(t, assert.AnError.Error(), genErr.Cause.Error())
 
 					return true
 				}))
@@ -661,13 +670,17 @@ values:
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
 
+			sr := secretsmocks.NewResolverMock(t)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Return(sr)
 
 			mech, err := newGenericErrorHandler(appCtx, "foo", conf)
 			require.NoError(t, err)
-			step, err := mech.CreateStep(types.StepDefinition{ID: ""})
+			step, err := mech.CreateStep(sr, types.StepDefinition{ID: ""})
 			require.NoError(t, err)
 
 			// WHEN

@@ -21,15 +21,15 @@ import (
 	"go.opentelemetry.io/otel/metric"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/keyregistry"
-	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/watcher"
+	"github.com/dadrus/heimdall/internal/secrets"
 )
 
 type Context interface {
-	Watcher() watcher.Watcher
 	KeyRegistry() keyregistry.Registry
-	Validator() validation.Validator
+	SecretResolver() secrets.Resolver
+	DecoderFactory() encoding.DecoderFactory
 	Config() *config.Configuration
 	Logger() zerolog.Logger
 	Meter() metric.Meter

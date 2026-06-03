@@ -27,6 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -63,7 +64,10 @@ func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("error_handler."+ErrorHandlerRedirect+"."+name),
+		template.WithSecretsForbidden(),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerRedirect, name).
 			CausedBy(err)
@@ -84,11 +88,11 @@ func newRedirectErrorHandler(app app.Context, name string, rawConfig map[string]
 	}, nil
 }
 
-func (eh *redirectErrorHandler) Accept(_ pipeline.Visitor) {}
-func (eh *redirectErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }
-func (eh *redirectErrorHandler) Name() string              { return eh.name }
-func (eh *redirectErrorHandler) ID() string                { return eh.id }
-func (eh *redirectErrorHandler) Type() string              { return eh.name }
+func (eh *redirectErrorHandler) Name() string           { return eh.name }
+func (eh *redirectErrorHandler) ID() string             { return eh.id }
+func (eh *redirectErrorHandler) Type() string           { return eh.name }
+func (*redirectErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }
+func (*redirectErrorHandler) Accept(_ pipeline.Visitor) {}
 
 func (eh *redirectErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
@@ -115,7 +119,10 @@ func (eh *redirectErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject
 	return nil
 }
 
-func (eh *redirectErrorHandler) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (eh *redirectErrorHandler) CreateStep(
+	_ secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return eh, nil
 	}

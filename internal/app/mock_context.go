@@ -6,9 +6,9 @@ package app
 
 import (
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/keyregistry"
-	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/watcher"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/rs/zerolog"
 	mock "github.com/stretchr/testify/mock"
 	"go.opentelemetry.io/otel/metric"
@@ -83,6 +83,52 @@ func (_c *ContextMock_Config_Call) Return(configuration *config.Configuration) *
 }
 
 func (_c *ContextMock_Config_Call) RunAndReturn(run func() *config.Configuration) *ContextMock_Config_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DecoderFactory provides a mock function for the type ContextMock
+func (_mock *ContextMock) DecoderFactory() encoding.DecoderFactory {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for DecoderFactory")
+	}
+
+	var r0 encoding.DecoderFactory
+	if returnFunc, ok := ret.Get(0).(func() encoding.DecoderFactory); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(encoding.DecoderFactory)
+		}
+	}
+	return r0
+}
+
+// ContextMock_DecoderFactory_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DecoderFactory'
+type ContextMock_DecoderFactory_Call struct {
+	*mock.Call
+}
+
+// DecoderFactory is a helper method to define mock.On call
+func (_e *ContextMock_Expecter) DecoderFactory() *ContextMock_DecoderFactory_Call {
+	return &ContextMock_DecoderFactory_Call{Call: _e.mock.On("DecoderFactory")}
+}
+
+func (_c *ContextMock_DecoderFactory_Call) Run(run func()) *ContextMock_DecoderFactory_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ContextMock_DecoderFactory_Call) Return(decoderFactory encoding.DecoderFactory) *ContextMock_DecoderFactory_Call {
+	_c.Call.Return(decoderFactory)
+	return _c
+}
+
+func (_c *ContextMock_DecoderFactory_Call) RunAndReturn(run func() encoding.DecoderFactory) *ContextMock_DecoderFactory_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -223,94 +269,48 @@ func (_c *ContextMock_Meter_Call) RunAndReturn(run func() metric.Meter) *Context
 	return _c
 }
 
-// Validator provides a mock function for the type ContextMock
-func (_mock *ContextMock) Validator() validation.Validator {
+// SecretResolver provides a mock function for the type ContextMock
+func (_mock *ContextMock) SecretResolver() secrets.Resolver {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
-		panic("no return value specified for Validator")
+		panic("no return value specified for SecretResolver")
 	}
 
-	var r0 validation.Validator
-	if returnFunc, ok := ret.Get(0).(func() validation.Validator); ok {
+	var r0 secrets.Resolver
+	if returnFunc, ok := ret.Get(0).(func() secrets.Resolver); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(validation.Validator)
+			r0 = ret.Get(0).(secrets.Resolver)
 		}
 	}
 	return r0
 }
 
-// ContextMock_Validator_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Validator'
-type ContextMock_Validator_Call struct {
+// ContextMock_SecretResolver_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'SecretResolver'
+type ContextMock_SecretResolver_Call struct {
 	*mock.Call
 }
 
-// Validator is a helper method to define mock.On call
-func (_e *ContextMock_Expecter) Validator() *ContextMock_Validator_Call {
-	return &ContextMock_Validator_Call{Call: _e.mock.On("Validator")}
+// SecretResolver is a helper method to define mock.On call
+func (_e *ContextMock_Expecter) SecretResolver() *ContextMock_SecretResolver_Call {
+	return &ContextMock_SecretResolver_Call{Call: _e.mock.On("SecretResolver")}
 }
 
-func (_c *ContextMock_Validator_Call) Run(run func()) *ContextMock_Validator_Call {
+func (_c *ContextMock_SecretResolver_Call) Run(run func()) *ContextMock_SecretResolver_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		run()
 	})
 	return _c
 }
 
-func (_c *ContextMock_Validator_Call) Return(validator validation.Validator) *ContextMock_Validator_Call {
-	_c.Call.Return(validator)
+func (_c *ContextMock_SecretResolver_Call) Return(resolver secrets.Resolver) *ContextMock_SecretResolver_Call {
+	_c.Call.Return(resolver)
 	return _c
 }
 
-func (_c *ContextMock_Validator_Call) RunAndReturn(run func() validation.Validator) *ContextMock_Validator_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// Watcher provides a mock function for the type ContextMock
-func (_mock *ContextMock) Watcher() watcher.Watcher {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Watcher")
-	}
-
-	var r0 watcher.Watcher
-	if returnFunc, ok := ret.Get(0).(func() watcher.Watcher); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(watcher.Watcher)
-		}
-	}
-	return r0
-}
-
-// ContextMock_Watcher_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Watcher'
-type ContextMock_Watcher_Call struct {
-	*mock.Call
-}
-
-// Watcher is a helper method to define mock.On call
-func (_e *ContextMock_Expecter) Watcher() *ContextMock_Watcher_Call {
-	return &ContextMock_Watcher_Call{Call: _e.mock.On("Watcher")}
-}
-
-func (_c *ContextMock_Watcher_Call) Run(run func()) *ContextMock_Watcher_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *ContextMock_Watcher_Call) Return(watcher1 watcher.Watcher) *ContextMock_Watcher_Call {
-	_c.Call.Return(watcher1)
-	return _c
-}
-
-func (_c *ContextMock_Watcher_Call) RunAndReturn(run func() watcher.Watcher) *ContextMock_Watcher_Call {
+func (_c *ContextMock_SecretResolver_Call) RunAndReturn(run func() secrets.Resolver) *ContextMock_SecretResolver_Call {
 	_c.Call.Return(run)
 	return _c
 }

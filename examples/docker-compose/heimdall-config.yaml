@@ -11,6 +11,12 @@ serve:
   trusted_proxies:
     - 0.0.0.0/0
 
+secret_management:
+  signer_keys:
+    type: pem
+    config:
+      path: /etc/heimdall/keys/signer.pem
+
 mechanisms:
   authenticators:
   - id: deny_all
@@ -38,8 +44,8 @@ mechanisms:
     type: jwt
     config:
       signer:
-        key_store:
-          path: /etc/heimdall/keys/signer.pem
+        secret:
+          source: signer_keys
   - id: noop
     type: noop
 

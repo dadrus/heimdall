@@ -20,26 +20,103 @@ import (
 	"context"
 	"crypto/sha256"
 	"net/http"
+	"sync/atomic"
 
+	"github.com/rs/zerolog"
+
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type BasicAuth struct {
-	User     string `mapstructure:"user"     validate:"required"`
-	Password string `mapstructure:"password" validate:"required"`
+type basicAuthCredentials struct {
+	UserID   string `json:"user_id"  validate:"required"`
+	Password string `json:"password" validate:"required"`
 }
 
-func (c *BasicAuth) Apply(_ context.Context, req *http.Request) error {
-	req.SetBasicAuth(c.User, c.Password)
+func (c basicAuthCredentials) Hash() []byte {
+	hash := sha256.New()
+
+	hash.Write(stringx.ToBytes(c.UserID))
+	hash.Write(stringx.ToBytes(c.Password))
+
+	var result [sha256.Size]byte
+
+	return hash.Sum(result[:0])
+}
+
+type BasicAuth struct {
+	Credentials config.Secret `mapstructure:"credentials" validate:"required"`
+
+	informer *secrets.CredentialsInformer[basicAuthCredentials]
+	hash     atomic.Value
+}
+
+func (c *BasicAuth) Apply(req *http.Request) error {
+	logger := zerolog.Ctx(req.Context())
+	logger.Debug().Msg("Applying basic_auth strategy to authenticate request")
+
+	creds, ok := c.informer.Get()
+	if !ok {
+		return errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"basic auth credentials are not available",
+		)
+	}
+
+	req.SetBasicAuth(creds.UserID, creds.Password)
 
 	return nil
 }
 
 func (c *BasicAuth) Hash() []byte {
-	hash := sha256.New()
+	if hash, ok := c.hash.Load().([]byte); ok {
+		return hash
+	}
 
-	hash.Write(stringx.ToBytes(c.User))
-	hash.Write(stringx.ToBytes(c.Password))
+	return nil
+}
 
-	return hash.Sum(nil)
+func (c *BasicAuth) init(appCtx app.Context) error {
+	informer, err := secrets.NewCredentialsInformer(
+		appCtx.SecretResolver(),
+		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
+		secrets.WithConverter(toBasicAuthCredentials(appCtx.DecoderFactory())),
+		secrets.WithUpdateCallback(func(_ context.Context, _ secrets.Credentials, creds basicAuthCredentials) error {
+			c.hash.Store(creds.Hash())
+
+			return nil
+		}),
+	)
+	if err != nil {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed resolving basic auth credentials",
+		).CausedBy(err)
+	}
+
+	c.informer = informer
+
+	return nil
+}
+
+func toBasicAuthCredentials(df encoding.DecoderFactory) func(creds secrets.Credentials) (basicAuthCredentials, error) {
+	return func(creds secrets.Credentials) (basicAuthCredentials, error) {
+		var data basicAuthCredentials
+
+		dec := df.Decoder()
+
+		if err := dec.DecodeMap(&data, creds.Values()); err != nil {
+			return basicAuthCredentials{}, errorchain.NewWithMessage(
+				pipeline.ErrConfiguration,
+				"failed decoding basic auth credentials",
+			).CausedBy(err)
+		}
+
+		return data, nil
+	}
 }

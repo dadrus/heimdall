@@ -77,30 +77,16 @@ All types use pipelining to increase performance and do also make use of client 
 
 All Redis cache backend types support the following configuration options:
 
-* *`credentials`*: _Credentials_ (optional)
+* *`credentials`*: _link:{{< relref "/docs/operations/secret_management.adoc#_secret_references" >}}[Secret Reference]_ (optional)
 +
-Herewith you can define the credentials to be used for connection purposes. Following settings are possible
-
-** *`path`*: _string_ (mandatory)
-+
-Path to a JSON/YAML file with credentials (supports watching for secrets rotation) specifying the `username` and `password` as shown below.
+Reference to the credentials to be used for connection purposes to the Redis DB/Cluster. The credentials object must include a `username` (optional) and a `password` entries:
 +
 [source, yaml]
 ----
-# contents of a credentials file
+# contents of a credentials object
 username: Aladdin
 password: SesameOpen!
 ----
-+
-If used no other properties can be configured for credentials.
-
-** *`username`*: _string_(optional)
-+
-The username to use to connect to the Redis DB/Cluster, and
-
-** *`password`*: _string_(mandatory)
-+
-The password to be used
 
 * *`client_cache`*: _ClientCache_ (optional)
 +
@@ -144,7 +130,9 @@ Data flush delay. When greater than zero, pauses pipeline write loop for some ti
 
 * *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
 +
-TLS settings. By default, the communication to Redis happens over TLS. This requires however a properly configured link:{{< relref "/docs/operations/security.adoc#_trust_store" >}}[trust store], as otherwise heimdall won't trust the certificates used by the Redis services. In addition to the referenced configuration options, you can also make use of the following properties:
+TLS client authentication settings.
++
+NOTE: Even without TLS client authentication configured, the communication to Redis happens over TLS by default. This requires however a properly configured link:{{< relref "/docs/operations/security.adoc#_trust_store" >}}[trust store], as otherwise heimdall won't trust the certificates used by the Redis services. In addition to the referenced configuration options, you can also make use of the following properties:
 
 ** *`disabled`*: _boolean_ (optional)
 +
@@ -188,9 +176,9 @@ cache:
     max_flush_delay: 20us
     tls:
       # TLS client auth is used here
-      key_store:
-        path: /path/to/keystore/file.pem
-        password: ${MY_REDIS_CLIENT_KEYSTORE}
+      secret:
+        source: key_store
+        selector: redis_key
       min_version: TLS1.2
 ----
 
@@ -215,8 +203,8 @@ cache:
     - foo:1234
     - bar:1234
     credentials:
-      username: ${MY_REDIS_USER}
-      password: ${MY_REDIS_PASSWORD}
+      source: some_source
+      selector: redis_creds
 ----
 
 === Redis Sentinel
@@ -237,7 +225,7 @@ Redis DB ID to use. Defaults to 0.
 +
 Sentinel master set name
 
-NOTE: Same credentials are used to connect to the sentinel service and to the Redis DB instances. This is also true if TLS client authentication is used.
+NOTE: The same credentials are used to connect to the sentinel service and to the Redis DB instances. This is also true if TLS client authentication is used.
 
 Here an example:
 
@@ -252,5 +240,6 @@ cache:
     db: 0
     master: whatever
     credentials:
-      path: /path/to/credentials.yaml
+      source: some_source
+      selector: redis_creds
 ----

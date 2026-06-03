@@ -28,6 +28,9 @@ linters:
       ignore-enum-members: POT.+
     funlen:
       lines: 80
+    gomoddirectives:
+      replace-allow-list:
+        - github.com/aws/aws-sdk-go-v2/service/s3
     mnd:
       ignored-functions:
         - ^make

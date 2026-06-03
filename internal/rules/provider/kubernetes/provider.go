@@ -47,6 +47,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/webhooks"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
@@ -84,7 +85,13 @@ type Provider struct {
 	rsInUse    map[types.UID]bool
 }
 
-func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, factory rule.Factory) (*Provider, error) {
+func NewProvider(
+	app app.Context,
+	k8sCF ConfigFactory,
+	rsp rule.SetProcessor,
+	rf rule.Factory,
+	srf secrets.ScopedResolverFactory,
+) (*Provider, error) {
 	rawConf := app.Config().Providers.Kubernetes
 	logger := app.Logger()
 
@@ -126,8 +133,21 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 
 	logger = logger.With().Str("_provider_type", ProviderType).Logger()
 	authClass := x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass)
-	adc := webhooks.New(providerConf.TLS, logger, authClass, factory)
 	instanceID, _ := os.Hostname()
+
+	adc, err := webhooks.New(
+		providerConf.TLS,
+		app.SecretResolver(),
+		srf,
+		logger,
+		authClass,
+		rf,
+		app.Config().Log.AccessLogEnabled,
+	)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
+			"failed to create webhook controller").CausedBy(err)
+	}
 
 	logger.Info().Msg("Rule provider configured.")
 
@@ -294,10 +314,10 @@ func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 	logger := zerolog.Ctx(ctx).With().Str("_src", conf.ID).Logger()
 	ctx = logger.WithContext(ctx)
 
-	logger.Info().Msg("Rule set update received")
+	logger.Info().Msg("RuleSet update received")
 
 	if err := p.p.OnUpdated(ctx, *conf); err != nil {
-		logger.Warn().Err(err).Msg("Failed to apply rule set updates")
+		logger.Warn().Err(err).Msg("Failed to apply RuleSet updates")
 
 		statusIncrement := x.IfThenElse(known && inUse, -1, 0)
 
@@ -315,7 +335,7 @@ func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 			p.id+" instance failed updating RuleSet, reason: "+err.Error(),
 		)
 	} else {
-		logger.Info().Msg("Rule set updates applied")
+		logger.Info().Msg("RuleSet updates applied")
 
 		statusIncrement := x.IfThenElse(known && inUse, 0, 1)
 
@@ -387,10 +407,63 @@ func (p *Provider) updateStatus(
 	usageIncrement int,
 	msg string,
 ) {
+	p.updateStatusWithRetry(ctx, rs, status, reason, matchIncrement, usageIncrement, msg, false)
+}
+
+func statusContribution(condition *metav1.Condition) (int, int) {
+	var (
+		usage int
+		match int
+	)
+
+	if condition == nil {
+		return usage, match
+	}
+
+	match = 1
+
+	if condition.Status == metav1.ConditionTrue {
+		usage = 1
+	}
+
+	return usage, match
+}
+
+func desiredStatusContribution(status metav1.ConditionStatus, reason ConditionReason) (int, int) {
+	var (
+		usage int
+		match int
+	)
+
+	if reason == ConditionControllerStopped || reason == ConditionRuleSetUnloaded {
+		return usage, match
+	}
+
+	match = 1
+
+	if status == metav1.ConditionTrue {
+		usage = 1
+	}
+
+	return usage, match
+}
+
+//nolint:cyclop, funlen
+func (p *Provider) updateStatusWithRetry(
+	ctx context.Context,
+	rs *v1beta1.RuleSet,
+	status metav1.ConditionStatus,
+	reason ConditionReason,
+	matchIncrement int,
+	usageIncrement int,
+	msg string,
+	retry bool,
+) {
 	logger := zerolog.Ctx(ctx)
 	modRS := rs.DeepCopy()
 	repository := p.cl.Repository(modRS.Namespace)
 	conditionType := p.id + "/Reconciliation"
+	currentCondition := meta.FindStatusCondition(modRS.Status.Conditions, conditionType)
 
 	logger.Debug().Msg("Updating RuleSet status")
 
@@ -419,8 +492,20 @@ func (p *Provider) updateStatus(
 	modRS.Status.ActiveIn = x.IfThenElse(len(modRS.Status.ActiveIn) == 0, "0/0", modRS.Status.ActiveIn)
 	usedBy := strings.Split(modRS.Status.ActiveIn, "/")
 	loadedBy, _ := strconv.Atoi(usedBy[0])
+
 	matchedBy, _ := strconv.Atoi(usedBy[1])
-	modRS.Status.ActiveIn = fmt.Sprintf("%d/%d", loadedBy+usageIncrement, matchedBy+matchIncrement)
+	if !retry || currentCondition == nil {
+		modRS.Status.ActiveIn = fmt.Sprintf("%d/%d", loadedBy+usageIncrement, matchedBy+matchIncrement)
+	} else {
+		prevUsage, prevMatch := statusContribution(currentCondition)
+		nextUsage, nextMatch := desiredStatusContribution(status, reason)
+
+		modRS.Status.ActiveIn = fmt.Sprintf(
+			"%d/%d",
+			loadedBy-prevUsage+nextUsage,
+			matchedBy-prevMatch+nextMatch,
+		)
+	}
 
 	_, err := repository.PatchStatus(ctx, patch.NewJSONPatch(rs, modRS, true), metav1.PatchOptions{})
 	if err == nil {
@@ -454,7 +539,7 @@ func (p *Provider) updateStatus(
 		if rs, err = repository.Get(ctx, rsKey, metav1.GetOptions{}); err != nil {
 			logger.Warn().Err(err).Msgf("Failed retrieving new RuleSet version for status update")
 		} else {
-			p.updateStatus(ctx, rs, status, reason, matchIncrement, usageIncrement, msg)
+			p.updateStatusWithRetry(ctx, rs, status, reason, matchIncrement, usageIncrement, msg, true)
 		}
 	case http.StatusUnprocessableEntity:
 		logger.Error().Err(err).

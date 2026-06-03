@@ -126,6 +126,10 @@ config:
   ttl: 5m
   header:
     name: X-Token
+  signer:
+    secret:
+      source: key_store
+      selector: jwt_key
   claims: |
     {
       {{ $user_name := .Subject.Attributes.identity.user_name -}}
@@ -164,13 +168,16 @@ Configuration using the `config` property is mandatory. Following properties are
 +
 The token endpoint of the authorization server.
 
-* *`client_id`*: _string_ (mandatory, not overridable)
+* *`credentials`*: _link:{{< relref "/docs/operations/secret_management.adoc#_secret_references" >}}[Secret Reference]_ (mandatory, not overridable)
 +
-The client identifier for heimdall.
-
-* *`client_secret`*: _string_ (mandatory, not overridable)
+Reference to client credentials to be used for authentication purposes. The credentials object must include a `client_id` and a `client_secret` entries:
 +
-The client secret for heimdall.
+[source, yaml]
+----
+# contents of a credentials object
+client_id: Aladdin
+client_secret: SesameOpen!
+----
 
 * *`auth_method`*: _string_ (optional, not overridable)
 +
@@ -206,8 +213,9 @@ config:
     name: X-Token
     scheme: MyScheme
   token_url: https://my-oauth-provider.com/token
-  client_id: my_client
-  client_secret: VerySecret!
+  credentials:
+    source: some_source
+    selector: client_creds
   auth_method: basic_auth
   scopes:
     - foo

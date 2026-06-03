@@ -1,13 +1,19 @@
+secret_management:
+  tls_keys:
+    type: pem
+    config:
+      path: "${TEST_KEYSTORE_FILE}"
+
 serve:
   port: 4468
   tls:
-    key_store:
-      path: /path/to/file.pem
+    secret:
+      source: tls_keys
 
 management:
   tls:
-    key_store:
-      path: /path/to/file.pem
+    secret:
+      source: tls_keys
 
 mechanisms:
   authenticators:

@@ -67,8 +67,9 @@ mechanisms:
     type: jwt
     config:
       signer:
-        key_store:
-          path: /etc/heimdall/signer.pem
+        secret:
+          source: key_store
+          selector: signer_key
 
 default_rule:
   execute:
@@ -88,19 +89,17 @@ mechanisms:
     config:
       introspection_endpoint:
         url: https://hydra:4445/oauth2/introspect
-        auth:
-          type: basic_auth
-          config: ${INTROSPECTION_EP_CREDENTIALS}
+        auth: ${INTROSPECTION_EP_AUTH}
   finalizers:
   - id: create_jwt
     type: jwt
     config:
       signer:
-        key_store:
-          path: ${SIGNER_KEY_STORE_FILE}
+        secret:
+          source: ${SIGNER_STORE_SOURCE}
 ----
 
-This example demonstrates the use of both simple and complex values in environment variables. For instance, `SIGNER_KEY_STORE_FILE` is a straightforward string specifying the path to a PEM file, whereas `INTROSPECTION_EP_CREDENTIALS` is more intricate, representing a structure required by the `basic_auth` authentication type: `{ "user": "someUser", "password": "VerySecure" }`.
+This example demonstrates the use of both simple and complex values in environment variables. For instance, `SIGNER_STORE_SOURCE` is a straightforward string specifying the source of the key to use for signing purposes, whereas `INTROSPECTION_EP_AUTH` is more intricate, representing the entire authentication structure: `{ "type": "basic_auth", "config": { "credentials": { "source": "some_source", "selector": "hydra_creds" }}}`.
 
 ====
 

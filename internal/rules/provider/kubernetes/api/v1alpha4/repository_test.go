@@ -17,7 +17,6 @@
 package v1alpha4
 
 import (
-	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -86,7 +85,7 @@ func TestRepositoryList(t *testing.T) {
 			restClient := &fake.RESTClient{
 				GroupVersion:         GroupVersion,
 				NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
-				Err:                  x.IfThenElse(tc.resp == nil, errors.New("test error"), nil),
+				Err:                  x.IfThenElse(tc.resp == nil, assert.AnError, nil),
 				Resp:                 tc.resp,
 			}
 
@@ -159,7 +158,7 @@ func TestRepositoryWatch(t *testing.T) {
 			restClient := &fake.RESTClient{
 				GroupVersion:         GroupVersion,
 				NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
-				Err:                  x.IfThenElse(tc.resp == nil, errors.New("test error"), nil),
+				Err:                  x.IfThenElse(tc.resp == nil, assert.AnError, nil),
 				Resp:                 tc.resp,
 			}
 
@@ -231,7 +230,7 @@ func TestRepositoryGet(t *testing.T) {
 			restClient := &fake.RESTClient{
 				GroupVersion:         GroupVersion,
 				NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
-				Err:                  x.IfThenElse(tc.resp == nil, errors.New("test error"), nil),
+				Err:                  x.IfThenElse(tc.resp == nil, assert.AnError, nil),
 				Resp:                 tc.resp,
 			}
 
@@ -261,7 +260,7 @@ func TestRepositoryPatchStatus(t *testing.T) {
 	}{
 		"with error while getting patch data": {
 			namespace: "baz",
-			patchErr:  errors.New("patch error"),
+			patchErr:  assert.AnError,
 			assert:    func(t *testing.T, _ *http.Request) { t.Helper() },
 		},
 		"successful without options": {
@@ -301,7 +300,7 @@ func TestRepositoryPatchStatus(t *testing.T) {
 			restClient := &fake.RESTClient{
 				GroupVersion:         GroupVersion,
 				NegotiatedSerializer: scheme.Codecs.WithoutConversion(),
-				Err:                  x.IfThenElse(tc.resp == nil, errors.New("test error"), nil),
+				Err:                  x.IfThenElse(tc.resp == nil, assert.AnError, nil),
 				Resp:                 tc.resp,
 			}
 			repo := ruleSetRepository{cl: restClient, ns: tc.namespace}

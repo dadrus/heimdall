@@ -41,6 +41,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -93,20 +94,25 @@ func newOAuth2IntrospectionAuthenticator(
 	}
 
 	var conf Config
-	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("authenticator."+AuthenticatorOAuth2Introspection+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorOAuth2Introspection, name).
 			CausedBy(err)
 	}
 
-	if conf.IntrospectionEndpoint != nil && strings.HasPrefix(conf.IntrospectionEndpoint.URL, "http://") {
+	if conf.IntrospectionEndpoint != nil &&
+		strings.HasPrefix(conf.IntrospectionEndpoint.URL.String(), "http://") {
 		logger.Warn().
 			Str("_type", AuthenticatorOAuth2Introspection).
 			Str("_name", name).
 			Msg("No TLS configured for the introspection endpoint used in authenticator")
 	}
 
-	if conf.MetadataEndpoint != nil && strings.HasPrefix(conf.MetadataEndpoint.URL, "http://") {
+	if conf.MetadataEndpoint != nil &&
+		strings.HasPrefix(conf.MetadataEndpoint.URL.String(), "http://") {
 		logger.Warn().
 			Str("_type", AuthenticatorOAuth2Introspection).
 			Str("_name", name).
@@ -142,17 +148,8 @@ func newOAuth2IntrospectionAuthenticator(
 		func() oauth2.ServerMetadataResolver {
 			ep := conf.IntrospectionEndpoint
 
-			if ep.Headers == nil {
-				ep.Headers = make(map[string]string)
-			}
-
-			if _, ok := ep.Headers["Content-Type"]; !ok {
-				ep.Headers["Content-Type"] = "application/x-www-form-urlencoded"
-			}
-
-			if _, ok := ep.Headers["Accept"]; !ok {
-				ep.Headers["Accept"] = "application/json"
-			}
+			ep.SetHeader("Content-Type", "application/x-www-form-urlencoded")
+			ep.SetHeader("Accept", "application/json")
 
 			if len(ep.Method) == 0 {
 				ep.Method = http.MethodPost
@@ -220,7 +217,10 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx pipeline.Context, sub pip
 	return nil
 }
 
-func (a *oauth2IntrospectionAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (a *oauth2IntrospectionAuthenticator) CreateStep(
+	_ secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
 	if def.IsEmpty() {
 		return a, nil
@@ -245,7 +245,9 @@ func (a *oauth2IntrospectionAuthenticator) CreateStep(def types.StepDefinition) 
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
+	if err := decodeConfig(a.app, def.Config, &conf,
+		template.WithName("authenticator."+AuthenticatorOAuth2Introspection+"."+a.name),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorOAuth2Introspection, a.name).
 			CausedBy(err)
@@ -269,12 +271,12 @@ func (a *oauth2IntrospectionAuthenticator) DecorateErrorResponse(err error, er *
 	a.ed.Decorate(err, a.a.ScopesMatcher.Scopes(), er)
 }
 
-func (a *oauth2IntrospectionAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
 func (a *oauth2IntrospectionAuthenticator) Name() string          { return a.name }
 func (a *oauth2IntrospectionAuthenticator) ID() string            { return a.id }
 func (a *oauth2IntrospectionAuthenticator) Type() string          { return a.name }
-func (a *oauth2IntrospectionAuthenticator) IsInsecure() bool      { return false }
 func (a *oauth2IntrospectionAuthenticator) PrincipalName() string { return a.principalName }
+func (*oauth2IntrospectionAuthenticator) IsInsecure() bool        { return false }
+func (*oauth2IntrospectionAuthenticator) Kind() types.Kind        { return types.KindAuthenticator }
 
 func (a *oauth2IntrospectionAuthenticator) serverMetadata(
 	ctx pipeline.Context, claims map[string]any,
@@ -386,23 +388,9 @@ func (a *oauth2IntrospectionAuthenticator) createRequest(
 			url.Values{
 				"token":           []string{token},
 				"token_type_hint": []string{"access_token"},
-			}.Encode()),
-		endpoint.RenderFunc(func(value string) (string, error) {
-			// ignoring closing braces here as it would anyway result in a broken template leading to an error
-			// if the token is not in a JWT format, there is nothing to render as well
-			if len(claims) == 0 || !strings.Contains(value, "{{") {
-				return value, nil
-			}
-
-			tpl, err := template.New(value)
-			if err != nil {
-				return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
-					WithAspects(a).
-					CausedBy(err)
-			}
-
-			return tpl.Render(map[string]any{"TokenIssuer": claims["iss"]})
-		}),
+			}.Encode(),
+		),
+		map[string]any{"TokenIssuer": claims["iss"]},
 	)
 	if err != nil {
 		return nil, errorchain.

@@ -17,7 +17,6 @@
 package errorhandlers
 
 import (
-	"errors"
 	"net/http"
 	"net/url"
 	"testing"
@@ -29,6 +28,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
@@ -152,7 +152,8 @@ code: 301
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
@@ -225,7 +226,8 @@ func TestRedirectErrorHandlerCreateStep(t *testing.T) {
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			mech, err := newRedirectErrorHandler(appCtx, uc, pc)
@@ -235,7 +237,7 @@ func TestRedirectErrorHandlerCreateStep(t *testing.T) {
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(tc.stepDef)
+			step, err := mech.CreateStep(nil, tc.stepDef)
 
 			// THEN
 			eh, ok := step.(*redirectErrorHandler)
@@ -285,7 +287,7 @@ func TestRedirectErrorHandlerExecute(t *testing.T) {
 
 					return true
 				}))
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -319,7 +321,7 @@ code: 300
 
 					return true
 				}))
-				ctx.EXPECT().Error().Return(errors.New("test error"))
+				ctx.EXPECT().Error().Return(assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -344,12 +346,13 @@ code: 300
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			mech, err := newRedirectErrorHandler(appCtx, "foo", conf)
 			require.NoError(t, err)
-			step, err := mech.CreateStep(types.StepDefinition{ID: ""})
+			step, err := mech.CreateStep(nil, types.StepDefinition{ID: ""})
 			require.NoError(t, err)
 
 			// WHEN

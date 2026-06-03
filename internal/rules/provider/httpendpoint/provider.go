@@ -35,6 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -57,13 +58,13 @@ func NewProvider(app app.Context, rsp rule.SetProcessor, cch cache.Cache) (*Prov
 		return &Provider{}, nil
 	}
 
-	dec := encoding.NewDecoder(
+	dec := app.DecoderFactory().Decoder(
 		encoding.WithTagName("mapstructure"),
 		encoding.WithErrorOnUnused(true),
-		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
 		encoding.WithDecodeHooks(
 			authstrategy.DecodeAuthenticationStrategyHookFunc(app),
 			endpoint.DecodeEndpointHookFunc(),
+			template.DecodeTemplateHookFunc(),
 			mapstructure.StringToTimeDurationHookFunc(),
 		),
 	)

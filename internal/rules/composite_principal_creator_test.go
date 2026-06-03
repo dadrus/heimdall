@@ -20,6 +20,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
@@ -40,7 +41,7 @@ func TestCompositePrincipalCreatorExecution(t *testing.T) {
 				auth1 := mocks.NewStepMock(t)
 				auth2 := mocks.NewStepMock(t)
 
-				auth1.EXPECT().Execute(ctx, sub).Return(errors.New("test error"))
+				auth1.EXPECT().Execute(ctx, sub).Return(assert.AnError)
 				auth2.EXPECT().Execute(ctx, sub).Return(nil)
 
 				return compositePrincipalCreator{auth1, auth2}

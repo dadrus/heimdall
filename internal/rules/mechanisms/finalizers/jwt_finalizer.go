@@ -32,6 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -86,14 +87,19 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (ty
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for jwt finalizer '%s'", name).CausedBy(err)
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("finalizer."+FinalizerJwt+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s finalizer '%s'", FinalizerJwt, name,
+		).CausedBy(err)
 	}
 
 	signer, err := newJWTSigner(
 		&conf.Signer,
-		app.Watcher(),
+		app.SecretResolver(),
 		app.KeyRegistry(),
 	)
 	if err != nil {
@@ -120,8 +126,6 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (ty
 
 	return fin, nil
 }
-
-func (f *jwtFinalizer) Accept(_ pipeline.Visitor) {}
 
 func (f *jwtFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
@@ -169,7 +173,10 @@ func (f *jwtFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error
 	return nil
 }
 
-func (f *jwtFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (f *jwtFinalizer) CreateStep(
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
@@ -195,9 +202,14 @@ func (f *jwtFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, erro
 	}
 
 	var conf Config
-	if err := decodeConfig(f.app.Validator(), def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for jwt finalizer '%s'", f.name).CausedBy(err)
+	if err := decodeConfig(f.app, def.Config, &conf,
+		template.WithName("finalizer."+FinalizerJwt+"."+f.name),
+		template.WithSecretResolver(resolver),
+	); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s finalizer '%s'", FinalizerJwt, f.name,
+		).CausedBy(err)
 	}
 
 	return &jwtFinalizer{
@@ -215,10 +227,11 @@ func (f *jwtFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, erro
 	}, nil
 }
 
-func (f *jwtFinalizer) Kind() types.Kind { return types.KindFinalizer }
-func (f *jwtFinalizer) Name() string     { return f.name }
-func (f *jwtFinalizer) ID() string       { return f.id }
-func (f *jwtFinalizer) Type() string     { return f.name }
+func (f *jwtFinalizer) Name() string            { return f.name }
+func (f *jwtFinalizer) ID() string              { return f.id }
+func (f *jwtFinalizer) Type() string            { return f.name }
+func (*jwtFinalizer) Accept(_ pipeline.Visitor) {}
+func (*jwtFinalizer) Kind() types.Kind          { return types.KindFinalizer }
 
 func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject) (string, error) {
 	logger := zerolog.Ctx(ctx.Context())

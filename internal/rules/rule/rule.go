@@ -16,7 +16,9 @@
 
 package rule
 
-import "github.com/dadrus/heimdall/internal/pipeline"
+import (
+	"github.com/dadrus/heimdall/internal/pipeline"
+)
 
 type Rule interface {
 	ID() string
