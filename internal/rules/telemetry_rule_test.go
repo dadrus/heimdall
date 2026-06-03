@@ -18,7 +18,6 @@ package rules
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -138,7 +137,7 @@ func TestTelemetryRuleExecute(t *testing.T) {
 	}{
 		"successful execution without metrics":      {},
 		"successful execution with metrics enabled": {withMetrics: true},
-		"executed with error and metrics enabled":   {withMetrics: true, err: errors.New("test error")},
+		"executed with error and metrics enabled":   {withMetrics: true, err: assert.AnError},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN

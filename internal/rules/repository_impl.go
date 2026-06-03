@@ -163,36 +163,8 @@ func (r *repository) UpdateRuleSet(_ context.Context, src rule.RuleSet, rules []
 	// find all rules for the given src id
 	applicable := slicex.Filter(r.knownRules, func(r rule.Rule) bool { return r.Source().Equals(src) })
 
-	// find new rules, as well as those, which have been changed.
-	toBeAdded := slicex.Filter(rules, func(newRule rule.Rule) bool {
-		ruleIsNew := !slices.ContainsFunc(applicable, func(existingRule rule.Rule) bool {
-			return existingRule.SameAs(newRule)
-		})
-
-		ruleChanged := slices.ContainsFunc(applicable, func(existingRule rule.Rule) bool {
-			return existingRule.SameAs(newRule) && !existingRule.Equals(newRule)
-		})
-
-		return ruleIsNew || ruleChanged
-	})
-
-	// find deleted rules, as well as those, which have been changed.
-	toBeDeleted := slicex.Filter(applicable, func(existingRule rule.Rule) bool {
-		ruleGone := !slices.ContainsFunc(rules, func(newRule rule.Rule) bool {
-			return newRule.SameAs(existingRule)
-		})
-
-		ruleChanged := slices.ContainsFunc(rules, func(newRule rule.Rule) bool {
-			return newRule.SameAs(existingRule) && !newRule.Equals(existingRule)
-		})
-
-		return ruleGone || ruleChanged
-	})
-
-	// prepare the new set of known rules, which does not contain the rules, which are gone
-	// with the update
 	knownRules := slices.DeleteFunc(slices.Clone(r.knownRules), func(loaded rule.Rule) bool {
-		return slices.Contains(toBeDeleted, loaded)
+		return loaded.Source().Equals(src)
 	})
 
 	// Check if the to be added rules define more generic routes for already existing ones.
@@ -204,7 +176,7 @@ func (r *repository) UpdateRuleSet(_ context.Context, src rule.RuleSet, rules []
 			// only rules from the same rule set can be placed in one node
 			return len(oldValues) == 0 || oldValues[0].Rule().Source().Equals(newValue.Rule().Source())
 		}))
-	if err := r.addRulesTo(tmp, toBeAdded); err != nil {
+	if err := r.addRulesTo(tmp, rules); err != nil {
 		return err
 	}
 
@@ -218,16 +190,16 @@ func (r *repository) UpdateRuleSet(_ context.Context, src rule.RuleSet, rules []
 	tmp = r.index.Clone()
 
 	// delete rules
-	if err := r.removeRulesFrom(tmp, toBeDeleted); err != nil {
+	if err := r.removeRulesFrom(tmp, applicable); err != nil {
 		return err
 	}
 
 	// add rules
-	if err := r.addRulesTo(tmp, toBeAdded); err != nil {
+	if err := r.addRulesTo(tmp, rules); err != nil {
 		return err
 	}
 
-	knownRules = append(knownRules, toBeAdded...)
+	knownRules = append(knownRules, rules...)
 	r.knownRules = knownRules
 
 	r.prepareMetrics()

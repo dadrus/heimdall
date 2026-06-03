@@ -24,6 +24,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -58,9 +59,14 @@ func newCookieFinalizer(app app.Context, name string, rawConfig map[string]any) 
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for cookie finalizer '%s'", name).CausedBy(err)
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("finalizer."+FinalizerCookie+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s finalizer '%s'", FinalizerCookie, name,
+		).CausedBy(err)
 	}
 
 	return &cookieFinalizer{
@@ -70,8 +76,6 @@ func newCookieFinalizer(app app.Context, name string, rawConfig map[string]any) 
 		cookies: conf.Cookies,
 	}, nil
 }
-
-func (f *cookieFinalizer) Accept(_ pipeline.Visitor) {}
 
 func (f *cookieFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
@@ -102,7 +106,10 @@ func (f *cookieFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 	return nil
 }
 
-func (f *cookieFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (f *cookieFinalizer) CreateStep(
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
@@ -119,7 +126,10 @@ func (f *cookieFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, e
 	}
 
 	var conf Config
-	if err := decodeConfig(f.app.Validator(), def.Config, &conf); err != nil {
+	if err := decodeConfig(f.app, def.Config, &conf,
+		template.WithName("finalizer."+FinalizerCookie+"."+f.name),
+		template.WithSecretResolver(resolver),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for cookie finalizer '%s'", f.name).CausedBy(err)
 	}
@@ -132,7 +142,8 @@ func (f *cookieFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, e
 	}, nil
 }
 
-func (f *cookieFinalizer) Kind() types.Kind { return types.KindFinalizer }
-func (f *cookieFinalizer) Name() string     { return f.name }
-func (f *cookieFinalizer) ID() string       { return f.id }
-func (f *cookieFinalizer) Type() string     { return f.name }
+func (f *cookieFinalizer) Name() string            { return f.name }
+func (f *cookieFinalizer) ID() string              { return f.id }
+func (f *cookieFinalizer) Type() string            { return f.name }
+func (*cookieFinalizer) Accept(_ pipeline.Visitor) {}
+func (*cookieFinalizer) Kind() types.Kind          { return types.KindFinalizer }

@@ -28,14 +28,13 @@ import (
 	"math/big"
 	"net"
 	"net/http"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	admissionv1 "k8s.io/api/admission/v1"
 	apiextv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -46,15 +45,15 @@ import (
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
 func TestControllerLifecycle(t *testing.T) {
 	t.Parallel()
-
-	testDir := t.TempDir()
 
 	serverKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
@@ -77,18 +76,6 @@ func TestControllerLifecycle(t *testing.T) {
 	).Build()
 	require.NoError(t, err)
 
-	pemBytes, err := pemx.BuildPEM(
-		pemx.WithECDSAPrivateKey(serverKey),
-		pemx.WithX509Certificate(serverCert),
-	)
-	require.NoError(t, err)
-
-	pemFile, err := os.Create(filepath.Join(testDir, "keystore.pem"))
-	require.NoError(t, err)
-
-	_, err = pemFile.Write(pemBytes)
-	require.NoError(t, err)
-
 	pool := x509.NewCertPool()
 	pool.AddCert(serverCert)
 
@@ -106,6 +93,7 @@ func TestControllerLifecycle(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		tls     *config.TLS
+		setup   func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock)
 		request func(t *testing.T, baseURL string) *http.Request
 		assert  func(t *testing.T, err error, resp *http.Response)
 	}{
@@ -131,7 +119,29 @@ func TestControllerLifecycle(t *testing.T) {
 			},
 		},
 		"/validate endpoint is exposed": {
-			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
+			tls: &config.TLS{Secret: config.Secret{Source: "webhooks", Selector: "server"}},
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock) {
+				t.Helper()
+
+				secret := secrettypes.NewAsymmetricKeySecret(
+					"server",
+					"server",
+					serverKey,
+					[]*x509.Certificate{serverCert},
+				)
+
+				sr.EXPECT().
+					Secret(secrets.Reference{Source: "webhooks", Selector: "server"}).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
+			},
 			request: func(t *testing.T, baseURL string) *http.Request {
 				t.Helper()
 
@@ -188,7 +198,29 @@ func TestControllerLifecycle(t *testing.T) {
 			},
 		},
 		"/convert endpoint is exposed": {
-			tls: &config.TLS{KeyStore: config.KeyStore{Path: pemFile.Name()}},
+			tls: &config.TLS{Secret: config.Secret{Source: "webhooks", Selector: "server"}},
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock) {
+				t.Helper()
+
+				secret := secrettypes.NewAsymmetricKeySecret(
+					"server",
+					"server",
+					serverKey,
+					[]*x509.Certificate{serverCert},
+				)
+
+				sr.EXPECT().
+					Secret(secrets.Reference{Source: "webhooks", Selector: "server"}).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
+			},
 			request: func(t *testing.T, baseURL string) *http.Request {
 				t.Helper()
 
@@ -246,12 +278,27 @@ func TestControllerLifecycle(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
+			sr := secretsmocks.NewResolverMock(t)
+			handle := secretsmocks.NewSecretHandleMock(t)
+			srf := secretsmocks.NewScopedResolverFactoryMock(t)
+
+			setup := x.IfThenElse(
+				tc.setup != nil,
+				tc.setup,
+				func(t *testing.T, _ *secretsmocks.ResolverMock, _ *secretsmocks.SecretHandleMock) {
+					t.Helper()
+				},
+			)
+
+			setup(t, sr, handle)
+
 			port, err := testsupport.GetFreePort()
 			require.NoError(t, err)
 
 			listeningAddress = fmt.Sprintf("127.0.0.1:%d", port)
+			controller, err := New(tc.tls, sr, srf, log.Logger, "", mocks.NewFactoryMock(t), true)
+			require.NoError(t, err)
 
-			controller := New(tc.tls, log.Logger, "", mocks.NewFactoryMock(t), true)
 			baseURL := fmt.Sprintf("%s://%s",
 				x.IfThenElse(tc.tls != nil, "https", "http"),
 				listeningAddress,

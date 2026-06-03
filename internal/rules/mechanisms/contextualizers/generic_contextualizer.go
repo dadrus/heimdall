@@ -39,6 +39,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -94,12 +95,15 @@ func newGenericContextualizer(app app.Context, name string, rawConfig map[string
 	}
 
 	var conf Config
-	if err := decodeConfig(app, rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("contextualizer."+ContextualizerGeneric+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for generic contextualizer '%s'", name).CausedBy(err)
 	}
 
-	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
+	if strings.HasPrefix(conf.Endpoint.URL.String(), "http://") {
 		logger.Warn().
 			Str("_type", ContextualizerGeneric).
 			Str("_name", name).
@@ -123,8 +127,6 @@ func newGenericContextualizer(app app.Context, name string, rawConfig map[string
 		v:          conf.Values,
 	}, nil
 }
-
-func (c *genericContextualizer) Accept(_ pipeline.Visitor) {}
 
 //nolint:cyclop
 func (c *genericContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
@@ -182,7 +184,10 @@ func (c *genericContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subje
 	return nil
 }
 
-func (c *genericContextualizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (c *genericContextualizer) CreateStep(
+	resolver secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return c, nil
 	}
@@ -204,7 +209,10 @@ func (c *genericContextualizer) CreateStep(def types.StepDefinition) (pipeline.S
 	}
 
 	var conf Config
-	if err := decodeConfig(c.app, def.Config, &conf); err != nil {
+	if err := decodeConfig(c.app, def.Config, &conf,
+		template.WithName("contextualizer."+ContextualizerGeneric+"."+c.name),
+		template.WithSecretResolver(resolver),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for generic contextualizer '%s'", c.name).CausedBy(err)
 	}
@@ -224,10 +232,11 @@ func (c *genericContextualizer) CreateStep(def types.StepDefinition) (pipeline.S
 	}, nil
 }
 
-func (c *genericContextualizer) Kind() types.Kind { return types.KindContextualizer }
-func (c *genericContextualizer) Name() string     { return c.name }
-func (c *genericContextualizer) ID() string       { return c.id }
-func (c *genericContextualizer) Type() string     { return c.name }
+func (c *genericContextualizer) Name() string            { return c.name }
+func (c *genericContextualizer) ID() string              { return c.id }
+func (c *genericContextualizer) Type() string            { return c.name }
+func (*genericContextualizer) Kind() types.Kind          { return types.KindContextualizer }
+func (*genericContextualizer) Accept(_ pipeline.Visitor) {}
 
 func (c *genericContextualizer) callEndpoint(
 	ctx pipeline.Context,
@@ -277,22 +286,11 @@ func (c *genericContextualizer) createRequest(
 ) (*http.Request, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
-	endpointRenderer := endpoint.RenderFunc(func(value string) (string, error) {
-		tpl, err := template.New(value)
-		if err != nil {
-			return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
-				WithErrorContext(c).
-				CausedBy(err)
-		}
-
-		return tpl.Render(map[string]any{
-			"Subject": sub,
-			"Values":  values,
-			"Outputs": ctx.Outputs(),
-		})
+	req, err := c.e.CreateRequest(ctx.Context(), strings.NewReader(payload), map[string]any{
+		"Subject": sub,
+		"Values":  values,
+		"Outputs": ctx.Outputs(),
 	})
-
-	req, err := c.e.CreateRequest(ctx.Context(), strings.NewReader(payload), endpointRenderer)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed creating request").
 			WithErrorContext(c).

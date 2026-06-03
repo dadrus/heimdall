@@ -31,12 +31,16 @@ import (
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -81,11 +85,11 @@ func TestClusterCache(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		enforceTLS bool
-		config     func(t *testing.T) []byte
+		config     func(t *testing.T, sr *secretsmocks.ResolverMock) []byte
 		assert     func(t *testing.T, err error, cch types.Cache)
 	}{
 		"empty config": {
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, _ *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
 				return []byte(``)
@@ -99,7 +103,7 @@ func TestClusterCache(t *testing.T) {
 			},
 		},
 		"empty nodes config provided": {
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, _ *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
 				return []byte(`nodes: [""]`)
@@ -113,7 +117,7 @@ func TestClusterCache(t *testing.T) {
 			},
 		},
 		"config contains unsupported properties": {
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, _ *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
 				return []byte(`foo: bar`)
@@ -127,7 +131,7 @@ func TestClusterCache(t *testing.T) {
 			},
 		},
 		"not existing address provided": {
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, _ *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
 				return []byte(`nodes: ["foo.local:12345"]`)
@@ -141,7 +145,7 @@ func TestClusterCache(t *testing.T) {
 			},
 		},
 		"successful cache creation without TLS": {
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, _ *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
 				db1 := miniredis.RunT(t)
@@ -171,24 +175,27 @@ tls:
 			},
 		},
 		"with failing TLS config": {
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, sr *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
+				sr.EXPECT().
+					Secret(secrets.Reference{Source: "redis", Selector: "tls"}).
+					Return(nil, assert.AnError)
+
 				return []byte(
-					"{nodes: [ 'foo:1234' ], client_cache: {disabled: true}, tls: { key_store: { path: /does/not/exist.pem } }}",
+					"{nodes: [ 'foo:1234' ], client_cache: {disabled: true}, tls: { secret: { source: redis, selector: tls } }}",
 				)
 			},
 			assert: func(t *testing.T, err error, _ types.Cache) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrInternal)
-				require.ErrorContains(t, err, "failed loading keystore")
+				require.ErrorContains(t, err, "failed resolving TLS secret")
 			},
 		},
 		"with TLS enforced, but disabled": {
 			enforceTLS: true,
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, _ *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
 				return []byte(
@@ -204,7 +211,7 @@ tls:
 			},
 		},
 		"successful cache creation with TLS": {
-			config: func(t *testing.T) []byte {
+			config: func(t *testing.T, _ *secretsmocks.ResolverMock) []byte {
 				t.Helper()
 
 				rootCertPool = x509.NewCertPool()
@@ -226,6 +233,7 @@ tls:
 				require.NoError(t, err)
 
 				t.Cleanup(db1.Close)
+				t.Cleanup(db2.Close)
 
 				return []byte("{nodes: [ " + db1.Addr() + ", " + db2.Addr() + " ], client_cache: {disabled: true}}")
 			},
@@ -247,7 +255,9 @@ tls:
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			conf, err := testsupport.DecodeTestConfig(tc.config(t))
+			sr := secretsmocks.NewResolverMock(t)
+
+			conf, err := testsupport.DecodeTestConfig(tc.config(t, sr))
 			require.NoError(t, err)
 
 			es := config.EnforcementSettings{EnforceEgressTLS: tc.enforceTLS}
@@ -259,9 +269,9 @@ tls:
 			require.NoError(t, err)
 
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Return(validator)
-			appCtx.EXPECT().Watcher().Maybe().Return(nil)
-			appCtx.EXPECT().KeyRegistry().Maybe().Return(nil)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
+			appCtx.EXPECT().SecretResolver().Maybe().Return(sr)
 
 			// WHEN
 			cch, err := NewClusterCache(appCtx, conf)

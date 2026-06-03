@@ -17,189 +17,203 @@
 package finalizers
 
 import (
+	"context"
 	"crypto/sha256"
 	"crypto/x509"
-	"sync"
+	"encoding/binary"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/google/uuid"
 	"github.com/knadh/koanf/maps"
-	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
 	"github.com/dadrus/heimdall/internal/keyregistry"
-	"github.com/dadrus/heimdall/internal/keystore"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/watcher"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type KeyStore struct {
-	Path     string `mapstructure:"path"     validate:"required"`
-	Password string `mapstructure:"password"`
-}
-
 type SignerConfig struct {
-	Name     string   `mapstructure:"name"`
-	KeyStore KeyStore `mapstructure:"key_store" validate:"required"`
-	KeyID    string   `mapstructure:"key_id"`
+	Name   string        `mapstructure:"name"`
+	Secret config.Secret `mapstructure:"secret" validate:"required"`
 }
 
 type jwtSigner struct {
-	path     string
-	password string
-	keyID    string
 	iss      string
 	ko       keyregistry.KeyObserver
-	mut      sync.RWMutex
-	signer   jose.Signer
-	hash     []byte
+	ref      secrets.Reference
+	informer *secrets.SecretInformer[jose.Signer]
+	hash     atomic.Value
 }
 
 func newJWTSigner(
 	conf *SignerConfig,
-	fw watcher.Watcher,
+	sm secrets.Resolver,
 	ko keyregistry.KeyObserver,
 ) (*jwtSigner, error) {
 	signer := &jwtSigner{
-		path:     conf.KeyStore.Path,
-		password: conf.KeyStore.Password,
-		keyID:    conf.KeyID,
-		iss:      x.IfThenElse(len(conf.Name) == 0, "heimdall", conf.Name),
-		ko:       ko,
+		iss: x.IfThenElse(len(conf.Name) == 0, "heimdall", conf.Name),
+		ko:  ko,
+		ref: secrets.Reference{Source: conf.Secret.Source, Selector: conf.Secret.Selector},
 	}
 
-	if err := signer.load(); err != nil {
-		return nil, err
-	}
+	var err error
 
-	if err := fw.Add(signer.path, signer); err != nil {
-		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed registering jwt signer for updates").
-			CausedBy(err)
+	signer.informer, err = secrets.NewSecretInformer(
+		sm,
+		signer.ref,
+		secrets.WithConverter(createJOSESigner),
+		secrets.WithUpdateCallback(signer.onSecretUpdated),
+	)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed creating secret informer for jwt signing material",
+		).CausedBy(err)
 	}
 
 	return signer, nil
 }
 
-func (s *jwtSigner) OnChanged(logger zerolog.Logger) {
-	err := s.load()
-	if err != nil {
-		logger.Warn().Err(err).
-			Str("_file", s.path).
-			Msg("Signer key store reload failed")
-	} else {
-		logger.Info().
-			Str("_file", s.path).
-			Msg("Signer key store reloaded")
-	}
-}
-
 func (s *jwtSigner) Hash() []byte {
-	s.mut.RLock()
-	defer s.mut.RUnlock()
+	if hash, ok := s.hash.Load().([]byte); ok {
+		return hash
+	}
 
-	return s.hash
+	return nil
 }
 
 func (s *jwtSigner) Sign(sub string, ttl time.Duration, customClaims map[string]any) (string, error) {
-	s.mut.RLock()
-	signer := s.signer
-	s.mut.RUnlock()
+	signer, ok := s.informer.Get()
+	if !ok {
+		return "", errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"jwt signing material is not available",
+		)
+	}
 
 	claims := make(map[string]any, len(customClaims)+6)
 	maps.Merge(customClaims, claims)
 
 	now := time.Now().UTC()
-	exp := now.Add(ttl)
-	claims["exp"] = exp.Unix()
+	claims["exp"] = now.Add(ttl).Unix()
 	claims["jti"] = uuid.New()
 	claims["iat"] = now.Unix()
 	claims["iss"] = s.iss
 	claims["nbf"] = now.Unix()
 	claims["sub"] = sub
 
-	builder := jwt.Signed(signer).Claims(claims)
-
-	rawJwt, err := builder.Serialize()
+	rawJwt, err := jwt.Signed(signer).Claims(claims).Serialize()
 	if err != nil {
-		return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to sign claims").CausedBy(err)
+		return "", errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"failed to sign claims",
+		).CausedBy(err)
 	}
 
 	return rawJwt, nil
 }
 
-func (s *jwtSigner) load() error {
-	ks, err := keystore.NewKeyStoreFromPEMFile(s.path, s.password)
+func (s *jwtSigner) updateHash(secret secrets.AsymmetricKeySecret) {
+	const int64BytesCount = 8
+
+	var ttlBytes [int64BytesCount]byte
+
+	now := time.Now().UTC().Unix()
+
+	//nolint:gosec
+	// no integer overflow during conversion possible
+	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(now))
+
+	hash := sha256.New()
+	hash.Write(stringx.ToBytes(s.iss))
+	hash.Write(ttlBytes[:])
+	hash.Write(stringx.ToBytes(secret.Selector()))
+	hash.Write(stringx.ToBytes(string(secret.Kind())))
+	hash.Write(stringx.ToBytes(secret.KeyID()))
+
+	s.hash.Store(hash.Sum(nil))
+}
+
+func (s *jwtSigner) onSecretUpdated(_ context.Context, secret secrets.Secret, _ jose.Signer) error {
+	aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
+
+	s.updateHash(aks)
+	s.ko.Notify(s.ref)
+
+	return nil
+}
+
+func createJOSESigner(secret secrets.Secret) (jose.Signer, error) {
+	aks, ok := secret.(secrets.AsymmetricKeySecret)
+	if !ok {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"secret is not suitable for signing",
+		)
+	}
+
+	if err := validateJWTSigningCertificate(aks); err != nil {
+		return nil, err
+	}
+
+	jwk, err := joseadapter.ToJWK(aks)
 	if err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrInternal, "failed loading keystore").
-			CausedBy(err)
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed creating jwk from secret",
+		).CausedBy(err)
 	}
-
-	var kse *keystore.Entry
-
-	if len(s.keyID) == 0 {
-		kse, err = ks.Entries()[0], nil
-	} else {
-		kse, err = ks.GetKey(s.keyID)
-	}
-
-	if err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"failed retrieving key from key store").CausedBy(err)
-	}
-
-	if len(kse.CertChain) != 0 {
-		opts := []pkix.ValidationOption{
-			pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
-			pkix.WithRootCACertificates([]*x509.Certificate{kse.CertChain[len(kse.CertChain)-1]}),
-			pkix.WithCurrentTime(time.Now()),
-		}
-
-		if len(kse.CertChain) > 2 { //nolint: mnd
-			opts = append(opts, pkix.WithIntermediateCACertificates(kse.CertChain[1:len(kse.CertChain)-1]))
-		}
-
-		if err = pkix.ValidateCertificate(kse.CertChain[0], opts...); err != nil {
-			return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-				"configured certificate cannot be used for JWT signing purposes").CausedBy(err)
-		}
-	}
-
-	jwk := kse.JWK()
-	key := kse.PrivateKey
 
 	signer, err := jose.NewSigner(
-		jose.SigningKey{Algorithm: jose.SignatureAlgorithm(jwk.Algorithm), Key: key},
+		jose.SigningKey{
+			Algorithm: jose.SignatureAlgorithm(jwk.Algorithm),
+			Key:       aks.PrivateKey(),
+		},
 		new(jose.SignerOptions).
 			WithType("JWT").
 			WithHeader("kid", jwk.KeyID).
-			WithHeader("alg", jwk.Algorithm))
+			WithHeader("alg", jwk.Algorithm),
+	)
 	if err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create JWT signer").CausedBy(err)
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"failed to create JOSE signer",
+		).CausedBy(err)
 	}
 
-	hash := sha256.New()
-	hash.Write(stringx.ToBytes(jwk.KeyID))
-	hash.Write(stringx.ToBytes(jwk.Algorithm))
-	hash.Write(stringx.ToBytes(s.iss))
+	return signer, nil
+}
 
-	md := hash.Sum(nil)
-
-	for _, kse := range ks.Entries() {
-		s.ko.Notify(keyregistry.KeyInfo{
-			Entry:      *kse,
-			Exportable: true,
-		})
+func validateJWTSigningCertificate(secret secrets.AsymmetricKeySecret) error {
+	chain := secret.CertChain()
+	if len(chain) == 0 {
+		return nil
 	}
 
-	s.mut.Lock()
-	s.signer = signer
-	s.hash = md
-	s.mut.Unlock()
+	opts := []pkix.ValidationOption{
+		pkix.WithKeyUsage(x509.KeyUsageDigitalSignature), //nolint:gosec
+		pkix.WithRootCACertificates([]*x509.Certificate{chain[len(chain)-1]}),
+		pkix.WithCurrentTime(time.Now()),
+	}
+
+	if len(chain) > 2 { //nolint:mnd
+		opts = append(opts, pkix.WithIntermediateCACertificates(chain[1:len(chain)-1]))
+	}
+
+	if err := pkix.ValidateCertificate(chain[0], opts...); err != nil {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"configured certificate cannot be used for JWT signing purposes",
+		).CausedBy(err)
+	}
 
 	return nil
 }

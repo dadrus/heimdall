@@ -18,7 +18,6 @@ package logger
 
 import (
 	"context"
-	"errors"
 	"net"
 	"net/http"
 	"strings"
@@ -152,7 +151,7 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 						},
 					),
 					mock.Anything,
-				).Return(nil, errors.New("test error"))
+				).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, logEvent1, logEvent2, logEvent3 map[string]any) {
 				t.Helper()
@@ -189,7 +188,7 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, logEvent1["_parent_id"], logEvent3["_parent_id"])
 				assert.Equal(t, logEvent1["_span_id"], logEvent3["_span_id"])
 				assert.Equal(t, false, logEvent3["_access_granted"]) //nolint:testifylint
-				assert.Equal(t, "test error", logEvent3["error"])
+				assert.Equal(t, assert.AnError.Error(), logEvent3["error"])
 				assert.Equal(t, "for=127.0.0.1", logEvent3["_forwarded"])
 				assert.Equal(t, "127.0.0.1", logEvent3["_x_forwarded_for"])
 				assert.InDelta(t, float64(codes.Unknown), logEvent3["_grpc_status_code"], 0.001)
@@ -210,7 +209,7 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 						func(ctx context.Context) bool {
 							zerolog.Ctx(ctx).Info().Msg("test called")
 							accesscontext.SetSubject(ctx, "bar")
-							accesscontext.SetError(ctx, errors.New("test error"))
+							accesscontext.SetError(ctx, assert.AnError)
 
 							return true
 						},
@@ -256,7 +255,7 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 				assert.Equal(t, logEvent1["_parent_id"], logEvent3["_parent_id"])
 				assert.Equal(t, false, logEvent3["_access_granted"]) //nolint:testifylint
 				assert.Equal(t, "bar", logEvent3["_subject"])
-				assert.Equal(t, "test error", logEvent3["error"])
+				assert.Equal(t, assert.AnError.Error(), logEvent3["error"])
 				assert.InDelta(t, float64(codes.OK), logEvent3["_grpc_status_code"], 0.001)
 				assert.Equal(t, "TX finished", logEvent3["message"])
 			},

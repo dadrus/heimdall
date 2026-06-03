@@ -23,6 +23,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -55,8 +56,6 @@ func newDefaultErrorHandler(app app.Context, name string, _ map[string]any) (typ
 	}, nil
 }
 
-func (eh *defaultErrorHandler) Accept(_ pipeline.Visitor) {}
-
 func (eh *defaultErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -70,7 +69,10 @@ func (eh *defaultErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject)
 	return nil
 }
 
-func (eh *defaultErrorHandler) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (eh *defaultErrorHandler) CreateStep(
+	_ secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return eh, nil
 	}
@@ -86,7 +88,8 @@ func (eh *defaultErrorHandler) CreateStep(def types.StepDefinition) (pipeline.St
 		"default error handler cannot be reconfigured")
 }
 
-func (eh *defaultErrorHandler) Kind() types.Kind { return types.KindErrorHandler }
-func (eh *defaultErrorHandler) Name() string     { return eh.name }
-func (eh *defaultErrorHandler) ID() string       { return eh.id }
-func (eh *defaultErrorHandler) Type() string     { return eh.name }
+func (eh *defaultErrorHandler) Name() string           { return eh.name }
+func (eh *defaultErrorHandler) ID() string             { return eh.id }
+func (eh *defaultErrorHandler) Type() string           { return eh.name }
+func (*defaultErrorHandler) Accept(_ pipeline.Visitor) {}
+func (*defaultErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }

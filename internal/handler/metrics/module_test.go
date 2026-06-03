@@ -111,7 +111,8 @@ func TestNewLifecycleManager(t *testing.T) {
 			appCtx.EXPECT().Logger().Return(log.Logger)
 
 			// WHEN
-			lm := newLifecycleManager(appCtx)
+			lm, err := newLifecycleManager(appCtx)
+			require.NoError(t, err)
 
 			// THEN
 			tc.assert(t, lm)

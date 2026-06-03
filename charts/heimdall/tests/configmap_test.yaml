@@ -68,12 +68,25 @@ tests:
 
   - it: should allow configuration of any heimdall setting
     set:
+      secret_management:
+        tls_keys:
+          type: pem
+          config:
+            path: /path/to/keystore.pem
+            password: VeryInsecure!
+            watch: true
+        jwt_keys:
+          type: pem
+          config:
+            path: /path/to/signing.pem
+            password: VeryInsecure!
+            watch: true
       serve:
         host: 127.0.0.1
         tls:
-          key_store:
-            path: /path/to/keystore.pem
-            password: VerySecure!
+          secret:
+            source: tls_keys
+            selector: key1
         timeout:
           read: 1s
           write: 2s
@@ -93,9 +106,9 @@ tests:
       management:
         host: 127.0.0.1
         tls:
-          key_store:
-            path: /path/to/keystore.pem
-            password: VerySecure!
+          secret:
+            source: tls_keys
+            selector: key2
         timeout:
           read: 1s
           write: 2s
@@ -141,8 +154,9 @@ tests:
             type: jwt
             config:
               signer:
-                key_store:
-                  path: /etc/heimdall/signer.pem
+                secret:
+                  source: jwt_keys
+                  selector: key1
           - id: noop
             type: noop
       default_rule:
@@ -162,13 +176,27 @@ tests:
         kubernetes:
           auth_class: foo
           tls:
-            key_store:
-              path: /path/to/file.pem
+            secret:
+              source: tls_keys
+              selector: key3
     asserts:
       - equal:
           path: data["heimdall.yaml"]
           value:
             |-
+            secret_management:
+              jwt_keys:
+                config:
+                  password: VeryInsecure!
+                  path: /path/to/signing.pem
+                  watch: true
+                type: pem
+              tls_keys:
+                config:
+                  password: VeryInsecure!
+                  path: /path/to/keystore.pem
+                  watch: true
+                type: pem
             serve:
               buffer_limit:
                 read: 4KB
@@ -187,9 +215,9 @@ tests:
                 read: 1s
                 write: 2s
               tls:
-                key_store:
-                  password: VerySecure!
-                  path: /path/to/keystore.pem
+                secret:
+                  selector: key1
+                  source: tls_keys
               trusted_proxies:
               - 192.168.1.0/24
             management:
@@ -203,9 +231,9 @@ tests:
                 read: 1s
                 write: 2s
               tls:
-                key_store:
-                  password: VerySecure!
-                  path: /path/to/keystore.pem
+                secret:
+                  selector: key2
+                  source: tls_keys
             log:
               format: gelf
               level: debug
@@ -243,8 +271,9 @@ tests:
               finalizers:
               - config:
                   signer:
-                    key_store:
-                      path: /etc/heimdall/signer.pem
+                    secret:
+                      selector: key1
+                      source: jwt_keys
                 id: create_jwt
                 type: jwt
               - id: noop
@@ -266,5 +295,6 @@ tests:
               kubernetes:
                 auth_class: foo
                 tls:
-                  key_store:
-                    path: /path/to/file.pem
+                  secret:
+                    selector: key3
+                    source: tls_keys

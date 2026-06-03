@@ -1,68 +1,136 @@
-// Copyright 2024 Dimitrij Drus <dadrus@gmx.de>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 package tlsx
 
 import (
+	"context"
 	"crypto/tls"
+	"errors"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-func ToTLSConfig(tlsCfg *config.TLS, opts ...Option) (*tls.Config, error) {
-	var (
-		ks  *keyStore
-		err error
-	)
+var errNoCertificatePresent = errors.New("no certificate present")
 
-	args := newOptions()
-	for _, opt := range opts {
-		opt(args)
+type certificateRequest interface {
+	SupportsCertificate(c *tls.Certificate) error
+	Context() context.Context
+}
+
+func getCertificate(
+	w *secrets.SecretInformer[*tls.Certificate],
+	cr certificateRequest,
+) (*tls.Certificate, error) {
+	cert, ok := w.Get()
+	if !ok {
+		return nil, errNoCertificatePresent
 	}
 
-	if args.serverAuthRequired || args.clientAuthRequired {
-		if ks, err = newTLSKeyStore(
-			tlsCfg.KeyStore.Path,
-			tlsCfg.KeyID,
-			tlsCfg.KeyStore.Password,
-			args.secretsWatcher,
-			args.keyObserver,
-		); err != nil {
-			return nil, err
-		}
+	if err := cr.SupportsCertificate(cert); err != nil {
+		return nil, err
 	}
 
+	return cert, nil
+}
+
+func toTLSCertificate(secret secrets.Secret) (*tls.Certificate, error) {
+	aks, ok := secret.(secrets.AsymmetricKeySecret)
+	if !ok {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"secret is not suitable for TLS",
+		)
+	}
+
+	chain := aks.CertChain()
+	if len(chain) == 0 {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"secret is not suitable for TLS",
+		)
+	}
+
+	cert := &tls.Certificate{
+		PrivateKey: aks.PrivateKey(),
+		Leaf:       chain[0],
+	}
+
+	for _, cer := range chain {
+		cert.Certificate = append(cert.Certificate, cer.Raw)
+	}
+
+	return cert, nil
+}
+
+func newBaseTLSConfig(tlsCfg *config.TLS) *tls.Config {
 	// nolint:gosec
 	// configuration ensures, TLS versions below 1.2 are not possible
 	cfg := &tls.Config{
 		MinVersion: tlsCfg.MinVersion.OrDefault(),
 		NextProtos: []string{"h2", "http/1.1"},
-		GetCertificate: x.IfThenElse(args.serverAuthRequired,
-			func(info *tls.ClientHelloInfo) (*tls.Certificate, error) { return ks.certificate(info) },
-			nil,
-		),
-		GetClientCertificate: x.IfThenElse(args.clientAuthRequired,
-			func(info *tls.CertificateRequestInfo) (*tls.Certificate, error) { return ks.certificate(info) },
-			nil,
-		),
 	}
 
 	if cfg.MinVersion != tls.VersionTLS13 {
 		cfg.CipherSuites = tlsCfg.CipherSuites.OrDefault()
+	}
+
+	return cfg
+}
+
+func newCertificateInformer(
+	tlsCfg *config.TLS,
+	sr secrets.Resolver,
+) (*secrets.SecretInformer[*tls.Certificate], error) {
+	informer, err := secrets.NewSecretInformer(
+		sr,
+		secrets.Reference{Source: tlsCfg.Secret.Source, Selector: tlsCfg.Secret.Selector},
+		secrets.WithConverter(toTLSCertificate),
+	)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed resolving TLS secret",
+		).CausedBy(err)
+	}
+
+	return informer, nil
+}
+
+func ToClientTLSConfig(
+	sr secrets.Resolver,
+	tlsCfg *config.TLS,
+) (*tls.Config, error) {
+	cfg := newBaseTLSConfig(tlsCfg)
+
+	if len(tlsCfg.Secret.Source) == 0 {
+		return cfg, nil
+	}
+
+	certResolver, err := newCertificateInformer(tlsCfg, sr)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.GetClientCertificate = func(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
+		return getCertificate(certResolver, info)
+	}
+
+	return cfg, nil
+}
+
+func ToServerTLSConfig(
+	sr secrets.Resolver,
+	tlsCfg *config.TLS,
+) (*tls.Config, error) {
+	certResolver, err := newCertificateInformer(tlsCfg, sr)
+	if err != nil {
+		return nil, err
+	}
+
+	cfg := newBaseTLSConfig(tlsCfg)
+	cfg.GetCertificate = func(info *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		return getCertificate(certResolver, info)
 	}
 
 	return cfg, nil

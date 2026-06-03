@@ -17,7 +17,6 @@
 package validation
 
 import (
-	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -33,6 +32,7 @@ import (
 	cfgv1beta1 "github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -205,8 +205,8 @@ func TestRulesetValidatorHandle(t *testing.T) {
 			configureMocks: func(t *testing.T, fm *mocks.FactoryMock) {
 				t.Helper()
 
-				fm.EXPECT().CreateRule(mock.Anything, mock.Anything).
-					Times(2).Return(nil, errors.New("test error"))
+				fm.EXPECT().CreateRule(mock.Anything, mock.Anything, mock.Anything).
+					Times(2).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, resp *response) {
 				t.Helper()
@@ -219,10 +219,10 @@ func TestRulesetValidatorHandle(t *testing.T) {
 				assert.Equal(t, metav1.StatusReasonForbidden, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 2)
-				assert.Contains(t, resp.Result.Details.Causes[0].Message, "test error")
+				assert.Contains(t, resp.Result.Details.Causes[0].Message, assert.AnError.Error())
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
 				assert.Equal(t, "Object.Spec.Rules[0]", resp.Result.Details.Causes[0].Field)
-				assert.Contains(t, resp.Result.Details.Causes[1].Message, "test error")
+				assert.Contains(t, resp.Result.Details.Causes[1].Message, assert.AnError.Error())
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[1].Type)
 				assert.Equal(t, "Object.Spec.Rules[1]", resp.Result.Details.Causes[1].Field)
 			},
@@ -283,7 +283,7 @@ func TestRulesetValidatorHandle(t *testing.T) {
 			configureMocks: func(t *testing.T, fm *mocks.FactoryMock) {
 				t.Helper()
 
-				fm.EXPECT().CreateRule(mock.Anything, mock.Anything).
+				fm.EXPECT().CreateRule(mock.Anything, mock.Anything, mock.Anything).
 					Once().Return(nil, nil)
 			},
 			assert: func(t *testing.T, resp *response) {
@@ -300,7 +300,17 @@ func TestRulesetValidatorHandle(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			fm := mocks.NewFactoryMock(t)
-			rsv := &rulesetValidator{f: fm}
+			srm := secretsmocks.NewScopedResolverMock(t)
+			srm.EXPECT().Release().Maybe()
+
+			srfm := secretsmocks.NewScopedResolverFactoryMock(t)
+			srfm.EXPECT().Create(mock.Anything, mock.Anything).Maybe().
+				Return(srm)
+
+			rsv := &rulesetValidator{
+				f:  fm,
+				rf: srfm,
+			}
 
 			configureMocks := x.IfThenElse(
 				tc.configureMocks != nil,

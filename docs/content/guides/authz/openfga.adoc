@@ -82,9 +82,15 @@ NOTE: We're using the `--insecure` flag here to simplify our setup, which disabl
 +
 [source, yaml]
 ----
+secret_management: # <1>
+  jwt_key_source:
+    type: pem
+    config:
+      path: /etc/heimdall/signer.pem
+
 mechanisms:
   authenticators:
-    - id: jwt_auth # <1>
+    - id: jwt_auth # <2>
       type: jwt
       config:
         jwks_endpoint: http://idp:8080/.well-known/jwks
@@ -92,11 +98,11 @@ mechanisms:
           issuers:
             - demo_issuer
   authorizers:
-    - id: openfga_check # <2>
+    - id: openfga_check # <3>
       type: remote
       config:
-        endpoint: http://openfga:8080/stores/{{ .Values.store_id }}/check # <3>
-        payload: | # <4>
+        endpoint: http://openfga:8080/stores/{{ .Values.store_id }}/check # <4>
+        payload: | # <5>
           {
             "authorization_model_id": "{{ .Values.model_id }}",
             "tuple_key": {
@@ -125,29 +131,31 @@ mechanisms:
       type: jwt
       config:
         signer:
-          key_store:
-            path: /etc/heimdall/signer.pem
+          secret:
+            source: jwt_key_source
 
 providers:
   file_system: # <10>
     src: /etc/heimdall/rules
     watch: true
 ----
-<1> This and the following lines define and configure the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_jwt" >}}[jwt]` authenticator named `jwt_auth`. With the given configuration it will check whether a request contains an `Authorization` header with a bearer token in JWT format and validate it using key material fetched from the JWKS endpoint.
-<2> Here we define and configure a `link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[remote]` authorizer named `openfga_check`, which we're going to use for the actual authorization purposes in our rules.
-<3> Here we define the endpoint to be used for the authorization checks. Most probably, you'll want to hard code your OpenFGA model id. Since, we're going to create the model, when we start our setup, we'll reference it in our rule via `store_id`.
+<1> Here we configure a link:{{< relref "/docs/operations/secret_management.adoc#" >}}[secret source] which loads the referenced pem file and makes the corresponding key material available. In this example, the key is used to sign the JWT heimdall is issuing.
+<2> This and the following lines define and configure the `link:{{< relref "/docs/mechanisms/authenticators.adoc#_jwt" >}}[jwt]` authenticator named `jwt_auth`. With the given configuration it will check whether a request contains an `Authorization` header with a bearer token in JWT format and validate it using key material fetched from the JWKS endpoint.
+<3> Here we define and configure a `link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[remote]` authorizer named `openfga_check`, which we're going to use for the actual authorization purposes in our rules.
+<4> Here we define the endpoint to be used for the authorization checks. Most probably, you'll want to hard code your OpenFGA model id. Since, we're going to create the model, when we start our setup, we'll reference it in our rule via `store_id`.
 +
 NOTE: We use a very simple `link:{{< relref "/docs/configuration/types.adoc#_endpoint" >}}[endpoint]` configuration here by just specifying the actual url. If required, you can specify API keys, and many more. Take a look at the linked documentation of this property.
 +
-<4> This is the definition of our payload to be sent to the check endpoint. As we don't know the model id as well, we'll configure it in our rule. The user will be taken from the `Subject` create by heimdall, and the relation and object will be specified in our rule.
-<5> In case of a successful response, the response from the check endpoint will look like `{"allowed": true}`. Otherwise, it will be `{"allowed": false}`. With the expression here, we perform the required verification.
+<5> This is the definition of our payload to be sent to the check endpoint. As we don't know the model id as well, we'll configure it in our rule. The user will be taken from the `Subject` create by heimdall, and the relation and object will be specified in our rule.
++
+In case of a successful response, the response from the check endpoint will look like `{"allowed": true}`. Otherwise, it will be `{"allowed": false}`. With the expression here, we perform the required verification.
 <6> Here we define and configure a `link:{{< relref "/docs/mechanisms/contextualizers.adoc#_generic" >}}[generic]` contextualizer named `openfga_list`.
 <7> As with the authorization mechanism, defined above, here we configure the endpoint to list the allowed objects.
 <8> The payload configuration used while communicating to the configured endpoint.
-<9> The following two lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. With the given configuration, it will create a jwt out of the subject object with standard claims and set the `sub` claim to the value of subject's ID.
+<9> The following two lines define the `link:{{< relref "/docs/mechanisms/finalizers.adoc#_jwt" >}}[jwt]` finalizer. With the given configuration, it will create a jwt out of the subject object with standard claims, set the `sub` claim to the value of subject's ID, and sign it with the first key available in the referenced secret source.
 <10> The last few lines of the configure the `link:{{< relref "/docs/rules/providers.adoc#_filesystem" >}}[file_system]` provider, which allows loading of regular rules from the file system.
 
-. Create a file, named `signer.pem` with the following content. This is our key store with a private key, you've seen in the configuration above.
+. Create a file, named `signer.pem` with the following content. This is the PEM file with a private key, you've seen in the configuration of the secret source above.
 +
 [source, yaml]
 ----

@@ -36,6 +36,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -86,12 +87,17 @@ func newGenericAuthenticator(app app.Context, name string, rawConfig map[string]
 	}
 
 	var conf Config
-	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for %s authenticator '%s'", AuthenticatorGeneric, name).CausedBy(err)
+	if err := decodeConfig(app, rawConfig, &conf,
+		template.WithName("authenticator."+AuthenticatorGeneric+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s authenticator '%s'", AuthenticatorGeneric, name,
+		).CausedBy(err)
 	}
 
-	if strings.HasPrefix(conf.Endpoint.URL, "http://") {
+	if strings.HasPrefix(conf.Endpoint.URL.String(), "http://") {
 		logger.Warn().
 			Str("_type", AuthenticatorGeneric).
 			Str("_name", name).
@@ -155,7 +161,10 @@ func (a *genericAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subjec
 	return nil
 }
 
-func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (a *genericAuthenticator) CreateStep(
+	_ secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	// this authenticator allows ttl to be redefined on the rule level
 	if def.IsEmpty() {
 		return a, nil
@@ -182,7 +191,9 @@ func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (pipeline.St
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
+	if err := decodeConfig(a.app, def.Config, &conf,
+		template.WithName("authenticator."+AuthenticatorGeneric+"."+a.name),
+	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s authenticator '%s'", AuthenticatorGeneric, a.name).CausedBy(err)
 	}
@@ -205,12 +216,12 @@ func (a *genericAuthenticator) CreateStep(def types.StepDefinition) (pipeline.St
 	}, nil
 }
 
-func (a *genericAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
 func (a *genericAuthenticator) Name() string          { return a.name }
 func (a *genericAuthenticator) ID() string            { return a.id }
 func (a *genericAuthenticator) Type() string          { return a.name }
-func (a *genericAuthenticator) IsInsecure() bool      { return false }
 func (a *genericAuthenticator) PrincipalName() string { return a.principalName }
+func (*genericAuthenticator) IsInsecure() bool        { return false }
+func (*genericAuthenticator) Kind() types.Kind        { return types.KindAuthenticator }
 
 func (a *genericAuthenticator) getPrincipalInformation(ctx pipeline.Context, authData string) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.Context())
@@ -298,25 +309,18 @@ func (a *genericAuthenticator) createRequest(ctx pipeline.Context, authData stri
 	if a.payload != nil {
 		value, err := a.payload.Render(templateData)
 		if err != nil {
-			return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
-				"failed to render payload for the authenticator endpoint").
-				WithErrorContext(a).CausedBy(err)
+			return nil, errorchain.NewWithMessage(
+				pipeline.ErrInternal,
+				"failed to render payload for the authenticator endpoint",
+			).
+				WithErrorContext(a).
+				CausedBy(err)
 		}
 
 		body = strings.NewReader(value)
 	}
 
-	req, err := a.e.CreateRequest(ctx.Context(), body,
-		endpoint.RenderFunc(func(value string) (string, error) {
-			tpl, err := template.New(value)
-			if err != nil {
-				return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
-					WithErrorContext(a).
-					CausedBy(err)
-			}
-
-			return tpl.Render(templateData)
-		}))
+	req, err := a.e.CreateRequest(ctx.Context(), body, templateData)
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed creating request").

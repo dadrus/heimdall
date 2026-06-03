@@ -26,14 +26,15 @@ import (
 	_ "github.com/dadrus/heimdall/internal/cache" // without this import, available cache configs are not registered.
 	"github.com/dadrus/heimdall/internal/cache/registry"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/repository"
 	"github.com/dadrus/heimdall/internal/rules/provider/cloudblob"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
 	"github.com/dadrus/heimdall/internal/rules/provider/httpendpoint"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/watcher"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -48,6 +49,7 @@ func NewValidateConfigCommand() *cobra.Command {
 	}
 }
 
+//nolint:funlen // Validation flow is intentionally kept linear in the CLI command handler.
 func validateConfig(cmd *cobra.Command, _ []string) error {
 	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
 	configPath, _ := cmd.Flags().GetString(flags.Config)
@@ -69,6 +71,8 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
 	conf, err := config.NewConfiguration(
 		config.EnvVarPrefix(envPrefix),
 		config.ConfigurationPath(configPath),
@@ -78,10 +82,22 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
+	sm, err := secrets.NewManager(
+		conf,
+		logger,
+		df,
+		noopmetric.Meter{},
+	)
+	if err != nil {
+		return err
+	}
+
+	resolver := sm.Resolver()
+
 	appCtx := &appContext{
-		w:  &watcher.NoopWatcher{},
-		kr: &noopRegistry{},
-		v:  validator,
+		kr: noopRegistry{},
+		sr: resolver,
+		d:  df,
 		l:  logger,
 		c:  conf,
 	}
@@ -93,6 +109,7 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 
 	rFactory, err := rules.NewRuleFactory(
 		repo,
+		resolver,
 		conf,
 		config.DecisionMode,
 		logger,
@@ -109,7 +126,12 @@ func validateConfig(cmd *cobra.Command, _ []string) error {
 		return err
 	}
 
-	rProcessor := rules.NewRuleSetProcessor(&noopRepository{}, rFactory, config.DecisionMode)
+	rProcessor := rules.NewRuleSetProcessor(
+		config.DecisionMode,
+		noopRepository{},
+		rFactory,
+		sm.ScopedResolverFactory(),
+	)
 
 	_, err = filesystem.NewProvider(appCtx, rProcessor)
 	if err != nil {

@@ -17,9 +17,10 @@
 package rule
 
 type RuleSet struct {
-	ID       string
-	Name     string
-	Provider string
+	ID        string
+	Name      string
+	Namespace string
+	Provider  string
 }
 
 func (r RuleSet) Equals(other RuleSet) bool {

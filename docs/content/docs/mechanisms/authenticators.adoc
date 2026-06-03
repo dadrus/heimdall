@@ -60,13 +60,16 @@ To enable the usage of this authenticator, you have to set the `type` property t
 
 Configuration using the `config` property is mandatory. Following properties are available:
 
-* *`user_id`*: _string_ (mandatory, overridable)
+* *`credentials`*: _link:{{< relref "/docs/operations/secret_management.adoc#_secret_references" >}}[Secret Reference]_ (mandatory, not overridable)
 +
-The identifier of the principal to be verified.
-
-* *`password`*: _string_ (mandatory, overridable)
+Reference to the credentials object to be used for principal user id and password verification. The credentials object must include a `user_id` and a `password` entries with password being a valid argon2id hashed password in the PHC format
 +
-The password of the principal to be verified.
+[source, yaml]
+----
+# contents of a credentials object
+client_id: Aladdin
+client_secret: $argon2id$v=19$m=65536,t=3,p=4$VmRjaCtoa2...KK9SzDkg
+----
 
 * *`error_signaling`*: _BasicAuthErrorSignaling_ (optional, overridable)
 +
@@ -89,8 +92,9 @@ The realm to include in the `WWW-Authenticate` header. Defaults to `"Please auth
 id: simple_auth
 type: basic_auth
 config:
-  user_id: bar
-  password: baz
+  credentials:
+    source: some_secret_source
+    selector: creds
   error_signaling:
     enabled: true
     realm: example
@@ -200,8 +204,9 @@ config:
     auth:
       type: basic_auth
       config:
-        user: Heimdall
-        password: ${INTROSPECTION_PASSWORD}
+        credentials:
+          source: credentials_source
+          selector: auth_system_creds
   authentication_data_source:
     - header: Authorization
       scheme: Bearer
@@ -236,7 +241,7 @@ id: firebase_token
 type: generic
 config:
   identity_info_endpoint:
-    url: https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${YOUR_API_KEY}
+    url: https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={{ secret "some_source" "google_api_key" }}
     headers:
       Content-Type: application/json
   authentication_data_source:
@@ -343,7 +348,9 @@ config:
           config:
             in: header
             name: Authorization
-            value: Bearer 23410913-abewfq.123483
+            secret:
+              source: some_source
+              selector: keycloak_api_key
 ----
 
 This example does also show how to make use of templating if the format of the access token is JWT.
@@ -417,9 +424,9 @@ How long to cache the key from the JWKS response, which was used for signature v
 +
 Enables or disables the verification of the JWK certificate used for JWT signature verification purposes. Effective only if the JWK contains a certificate. The verification happens according to https://www.rfc-editor.org/rfc/rfc5280#section-6.1[RFC 5280, section 6.1] and also includes the check, that the certificate is allowed to be used for signature verification purposes. Revocation check is not supported. Defaults to `true`.
 
-* *`trust_store`*: _string_ (optional, not overridable)
+* *`trust_anchors`*: _link:{{< relref "/docs/operations/secret_management.adoc#_secret_references" >}}[Secret Reference]_ (optional, not overridable)
 +
-The path to a PEM file containing the trust anchors, to be used for the JWK certificate validation. Defaults to system trust store.
+The reference to the trust anchors, to be used for the JWK certificate validation. Defaults to system trust store.
 
 * *`error_signaling`*: _link:{{< relref "/docs/configuration/types.adoc#_bearer_token_usage_error_signaling" >}}[Bearer Token Usage Error Signaling]_ (optional, overridable)
 +

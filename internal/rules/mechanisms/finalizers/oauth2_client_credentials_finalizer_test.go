@@ -17,7 +17,6 @@ package finalizers
 
 import (
 	"encoding/base64"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -33,12 +32,16 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
-	mocks2 "github.com/dadrus/heimdall/internal/cache/mocks"
+	cachemocks "github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/pipeline/mocks"
+	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
+	"github.com/dadrus/heimdall/internal/secrets"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
+	secrettypes "github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -50,6 +53,7 @@ func TestNewOAuth2ClientCredentialsFinalizer(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		enforceTLS bool
 		config     []byte
+		setup      func(t *testing.T, resolver *secretsmocks.ResolverMock)
 		assert     func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer)
 	}{
 		"without configuration": {
@@ -60,42 +64,40 @@ func TestNewOAuth2ClientCredentialsFinalizer(t *testing.T) {
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, "validation error")
 				require.ErrorContains(t, err, "token_url")
-				require.ErrorContains(t, err, "client_id")
-				require.ErrorContains(t, err, "client_secret")
-			},
-		},
-		"with empty configuration": {
-			config: []byte(``),
-			assert: func(t *testing.T, err error, _ *oauth2ClientCredentialsFinalizer) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, "validation error")
-				require.ErrorContains(t, err, "token_url")
-				require.ErrorContains(t, err, "client_id")
-				require.ErrorContains(t, err, "client_secret")
+				require.ErrorContains(t, err, "credentials")
 			},
 		},
 		"with unsupported attributes": {
 			config: []byte(`
-client_id: foo
-client_secret: foobar
+credentials:
+  source: foo
+  selector: bar
 token_url: https://foo.bar
 foo: bar
 `),
+			setup: func(t *testing.T, resolver *secretsmocks.ResolverMock) {
+				t.Helper()
+
+				ch := secretsmocks.NewCredentialsHandleMock(t)
+
+				resolver.EXPECT().Credentials(mock.Anything).Return(ch, nil)
+
+				ch.EXPECT().OnUpdate(mock.Anything)
+			},
 			assert: func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.NotNil(t, finalizer)
+				require.NotNil(t, finalizer.informer)
 			},
 		},
 		"with bad auth method attributes": {
 			config: []byte(`
 token_url: https://foo.bar
-client_id: foo
-client_secret: bar
+credentials:
+  source: foo
+  selector: bar
 auth_method: bar
 `),
 			assert: func(t *testing.T, err error, _ *oauth2ClientCredentialsFinalizer) {
@@ -110,34 +112,45 @@ auth_method: bar
 			enforceTLS: true,
 			config: []byte(`
 token_url: https://foo.bar
-client_id: foo
-client_secret: bar
+credentials:
+  source: foo
+  selector: bar
 `),
+			setup: func(t *testing.T, resolver *secretsmocks.ResolverMock) {
+				t.Helper()
+
+				ch := secretsmocks.NewCredentialsHandleMock(t)
+
+				resolver.EXPECT().Credentials(mock.Anything).Return(ch, nil)
+
+				ch.EXPECT().OnUpdate(mock.Anything)
+			},
 			assert: func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.NotNil(t, finalizer)
+				require.NotNil(t, finalizer.informer)
 
 				assert.Equal(t, "with minimal valid config with enforced and used TLS", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, finalizer.ID(), finalizer.Type())
 				assert.Equal(t, "https://foo.bar", finalizer.cfg.TokenURL)
-				assert.Equal(t, "foo", finalizer.cfg.ClientID)
-				assert.Equal(t, "bar", finalizer.cfg.ClientSecret)
 				assert.Equal(t, clientcredentials.AuthMethodBasicAuth, finalizer.cfg.AuthMethod)
 				assert.Nil(t, finalizer.cfg.TTL)
 				assert.Empty(t, finalizer.cfg.Scopes)
 				assert.Equal(t, "Authorization", finalizer.headerName)
+				assert.Empty(t, finalizer.headerScheme)
 			},
 		},
 		"with minimal valid config with enforced but not used TLS": {
 			enforceTLS: true,
 			config: []byte(`
 token_url: http://foo.bar
-client_id: foo
-client_secret: bar
+credentials:
+  source: foo
+  selector: bar
 `),
 			assert: func(t *testing.T, err error, _ *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
@@ -150,8 +163,9 @@ client_secret: bar
 		"with full valid config": {
 			config: []byte(`
 token_url: https://foo.bar
-client_id: foo
-client_secret: bar
+credentials:
+  source: foo
+  selector: bar
 auth_method: request_body
 cache_ttl: 11s
 scopes:
@@ -161,19 +175,27 @@ header:
   name: "X-My-Header"
   scheme: "Bar"
 `),
+			setup: func(t *testing.T, resolver *secretsmocks.ResolverMock) {
+				t.Helper()
+
+				ch := secretsmocks.NewCredentialsHandleMock(t)
+
+				resolver.EXPECT().Credentials(mock.Anything).Return(ch, nil)
+
+				ch.EXPECT().OnUpdate(mock.Anything)
+			},
 			assert: func(t *testing.T, err error, finalizer *oauth2ClientCredentialsFinalizer) {
 				t.Helper()
 
 				require.NoError(t, err)
 				require.NotNil(t, finalizer)
+				require.NotNil(t, finalizer.informer)
 
 				assert.Equal(t, "with full valid config", finalizer.ID())
 				assert.Equal(t, finalizer.Name(), finalizer.ID())
 				assert.Equal(t, types.KindFinalizer, finalizer.Kind())
 				assert.Equal(t, finalizer.ID(), finalizer.Type())
 				assert.Equal(t, "https://foo.bar", finalizer.cfg.TokenURL)
-				assert.Equal(t, "foo", finalizer.cfg.ClientID)
-				assert.Equal(t, "bar", finalizer.cfg.ClientSecret)
 				assert.Equal(t, "X-My-Header", finalizer.headerName)
 				assert.Equal(t, "Bar", finalizer.headerScheme)
 				assert.Equal(t, clientcredentials.AuthMethodRequestBody, finalizer.cfg.AuthMethod)
@@ -196,9 +218,19 @@ header:
 			)
 			require.NoError(t, err)
 
+			setupResolver := x.IfThenElse(
+				tc.setup != nil,
+				tc.setup,
+				func(t *testing.T, _ *secretsmocks.ResolverMock) { t.Helper() },
+			)
+			resolver := secretsmocks.NewResolverMock(t)
+			setupResolver(t, resolver)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().Maybe().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Maybe().Return(resolver)
 
 			// WHEN
 			mech, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, conf)
@@ -225,8 +257,9 @@ func TestOAuth2ClientCredentialsFinalizerCreateStep(t *testing.T) {
 		"no new configuration and no step ID": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
-client_id: foo
-client_secret: bar
+credentials:
+  source: foo
+  selector: bar
 cache_ttl: 11s
 scopes:
   - foo
@@ -244,8 +277,9 @@ header:
 		"no new configuration but with step ID": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
-client_id: foo
-client_secret: bar
+credentials:
+  source: foo
+  selector: bar
 cache_ttl: 11s
 scopes:
   - foo
@@ -258,6 +292,7 @@ header:
 				t.Helper()
 
 				require.NoError(t, err)
+
 				assert.NotEqual(t, prototype, configured)
 				assert.Equal(t, "foo", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
@@ -266,6 +301,7 @@ header:
 				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, prototype.cfg, configured.cfg)
 				assert.Equal(t, prototype.app, configured.app)
+				assert.Equal(t, prototype.informer, configured.informer)
 				assert.Equal(t, prototype.headerName, configured.headerName)
 				assert.Equal(t, prototype.headerScheme, configured.headerScheme)
 			},
@@ -273,8 +309,9 @@ header:
 		"scopes reconfigured and step ID set": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
-client_id: foo
-client_secret: bar
+credentials:
+  source: foo
+  selector: bar
 cache_ttl: 11s
 `),
 			stepDef: types.StepDefinition{
@@ -294,10 +331,6 @@ cache_ttl: 11s
 				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
 				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
-				assert.Equal(t, "foo", prototype.cfg.ClientID)
-				assert.Equal(t, prototype.cfg.ClientID, configured.cfg.ClientID)
-				assert.Equal(t, "bar", prototype.cfg.ClientSecret)
-				assert.Equal(t, prototype.cfg.ClientSecret, configured.cfg.ClientSecret)
 				assert.Equal(t, 11*time.Second, *prototype.cfg.TTL)
 				assert.Equal(t, prototype.cfg.TTL, configured.cfg.TTL)
 				assert.Equal(t, "Authorization", prototype.headerName)
@@ -307,13 +340,15 @@ cache_ttl: 11s
 				assert.Contains(t, configured.cfg.Scopes, "foo")
 				assert.Contains(t, configured.cfg.Scopes, "baz")
 				assert.Equal(t, prototype.cfg.AuthMethod, configured.cfg.AuthMethod)
+				assert.Equal(t, prototype.informer, configured.informer)
 			},
 		},
 		"ttl reconfigured": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
-client_id: foo
-client_secret: bar
+credentials:
+  source: foo
+  selector: bar
 cache_ttl: 11s
 `),
 			stepDef: types.StepDefinition{
@@ -331,10 +366,6 @@ cache_ttl: 11s
 				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
 				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
-				assert.Equal(t, "foo", prototype.cfg.ClientID)
-				assert.Equal(t, prototype.cfg.ClientID, configured.cfg.ClientID)
-				assert.Equal(t, "bar", prototype.cfg.ClientSecret)
-				assert.Equal(t, prototype.cfg.ClientSecret, configured.cfg.ClientSecret)
 				assert.Equal(t, 11*time.Second, *prototype.cfg.TTL)
 				assert.Equal(t, 12*time.Second, *configured.cfg.TTL)
 				assert.Equal(t, "Authorization", prototype.headerName)
@@ -342,13 +373,15 @@ cache_ttl: 11s
 				assert.Empty(t, prototype.cfg.Scopes)
 				assert.Equal(t, prototype.cfg.Scopes, configured.cfg.Scopes)
 				assert.Equal(t, prototype.cfg.AuthMethod, configured.cfg.AuthMethod)
+				assert.Equal(t, prototype.informer, configured.informer)
 			},
 		},
 		"unsupported attributes while reconfiguring": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
-client_id: foo
-client_secret: bar
+credentials:
+  source: foo
+  selector: bar
 cache_ttl: 11s
 `),
 			stepDef: types.StepDefinition{
@@ -364,8 +397,9 @@ cache_ttl: 11s
 		"malformed step configuration": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
-client_id: foo
-client_secret: bar
+credentials:
+  source: foo
+  selector: bar
 cache_ttl: 11s
 `),
 			stepDef: types.StepDefinition{
@@ -382,8 +416,9 @@ cache_ttl: 11s
 		"header name reconfigured": {
 			prototypeConfig: []byte(`
 token_url: https://foo.bar
-client_id: foo
-client_secret: bar
+credentials:
+  source: foo
+  selector: bar
 cache_ttl: 11s
 `),
 			stepDef: types.StepDefinition{
@@ -401,10 +436,6 @@ cache_ttl: 11s
 				assert.Equal(t, "https://foo.bar", prototype.cfg.TokenURL)
 				assert.Equal(t, prototype.Type(), configured.Type())
 				assert.Equal(t, prototype.cfg.TokenURL, configured.cfg.TokenURL)
-				assert.Equal(t, "foo", prototype.cfg.ClientID)
-				assert.Equal(t, prototype.cfg.ClientID, configured.cfg.ClientID)
-				assert.Equal(t, "bar", prototype.cfg.ClientSecret)
-				assert.Equal(t, prototype.cfg.ClientSecret, configured.cfg.ClientSecret)
 				assert.Equal(t, 11*time.Second, *prototype.cfg.TTL)
 				assert.Equal(t, prototype.cfg.TTL, configured.cfg.TTL)
 				assert.Equal(t, "Authorization", prototype.headerName)
@@ -412,6 +443,37 @@ cache_ttl: 11s
 				assert.Empty(t, prototype.cfg.Scopes)
 				assert.Equal(t, prototype.cfg.Scopes, configured.cfg.Scopes)
 				assert.Equal(t, prototype.cfg.AuthMethod, configured.cfg.AuthMethod)
+				assert.Equal(t, prototype.informer, configured.informer)
+			},
+		},
+		"header name and scheme reconfigured": {
+			prototypeConfig: []byte(`
+token_url: https://foo.bar
+credentials:
+  source: foo
+  selector: bar
+cache_ttl: 11s
+header:
+  name: "X-Original-Header"
+  scheme: "Original"
+`),
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"header": map[string]any{"name": "X-Foo-Bar", "scheme": "Foo"},
+				},
+			},
+			assert: func(t *testing.T, err error, prototype, configured *oauth2ClientCredentialsFinalizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEqual(t, prototype, configured)
+				assert.Equal(t, "X-Original-Header", prototype.headerName)
+				assert.Equal(t, "Original", prototype.headerScheme)
+				assert.Equal(t, "X-Foo-Bar", configured.headerName)
+				assert.Equal(t, "Foo", configured.headerScheme)
+				assert.Equal(t, prototype.cfg, configured.cfg)
+				assert.Equal(t, prototype.informer, configured.informer)
 			},
 		},
 	} {
@@ -424,9 +486,17 @@ cache_ttl: 11s
 			)
 			require.NoError(t, err)
 
+			ch := secretsmocks.NewCredentialsHandleMock(t)
+			ch.EXPECT().OnUpdate(mock.Anything)
+
+			resolver := secretsmocks.NewResolverMock(t)
+			resolver.EXPECT().Credentials(mock.Anything).Return(ch, nil)
+
 			appCtx := app.NewContextMock(t)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().Maybe().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Maybe().Return(resolver)
 
 			mech, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, pc)
 			require.NoError(t, err)
@@ -435,7 +505,7 @@ cache_ttl: 11s
 			require.True(t, ok)
 
 			// WHEN
-			step, err := mech.CreateStep(tc.stepDef)
+			step, err := mech.CreateStep(resolver, tc.stepDef)
 
 			// THEN
 			fin, ok := step.(*oauth2ClientCredentialsFinalizer)
@@ -505,19 +575,101 @@ func TestOAuth2ClientCredentialsFinalizerExecute(t *testing.T) {
 	defer srv.Close()
 
 	for uc, tc := range map[string]struct {
-		finalizer      *oauth2ClientCredentialsFinalizer
-		configureMocks func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock)
+		config         []byte
+		configureMocks func(t *testing.T, ctx *pipelinemocks.ContextMock, cch *cachemocks.CacheMock, rm *secretsmocks.ResolverMock)
 		assertRequest  RequestAsserter
 		buildResponse  ResponseBuilder
 		assert         func(t *testing.T, err error, tokenEndpointCalled bool)
 	}{
-		"reusing response from cache": {
-			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:         "test",
-				headerName: "Authorization",
-			},
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
+		"credentials are not available": {
+			config: []byte(`
+credentials:
+  source: foo
+  selector: bar
+token_url: ` + srv.URL + `
+`),
+			configureMocks: func(t *testing.T, _ *pipelinemocks.ContextMock, _ *cachemocks.CacheMock, rm *secretsmocks.ResolverMock) {
 				t.Helper()
+
+				ch := secretsmocks.NewCredentialsHandleMock(t)
+
+				rm.EXPECT().
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
+					Return(ch, nil)
+
+				ch.EXPECT().OnUpdate(mock.Anything)
+			},
+			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "oauth2 client credentials are not available")
+				assert.False(t, tokenEndpointCalled)
+			},
+		},
+		"credentials decoding fails": {
+			config: []byte(`
+credentials:
+  source: foo
+  selector: bar
+token_url: ` + srv.URL + `
+`),
+			configureMocks: func(t *testing.T, _ *pipelinemocks.ContextMock, _ *cachemocks.CacheMock, rm *secretsmocks.ResolverMock) {
+				t.Helper()
+
+				chm := secretsmocks.NewCredentialsHandleMock(t)
+
+				rm.EXPECT().
+					Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
+					Return(chm, nil)
+
+				chm.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), secrettypes.NewCredentials("bar", map[string]any{
+							"client-id":     "foo",
+							"client_secret": "bar",
+						}))
+						require.Error(t, err)
+
+						return true
+					}))
+			},
+			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "oauth2 client credentials are not available")
+				assert.False(t, tokenEndpointCalled)
+			},
+		},
+		"reusing response from cache": {
+			config: []byte(`
+credentials:
+  source: foo
+  selector: bar
+token_url: ` + srv.URL + `
+`),
+			configureMocks: func(t *testing.T, ctx *pipelinemocks.ContextMock, cch *cachemocks.CacheMock, rm *secretsmocks.ResolverMock) {
+				t.Helper()
+
+				credentials := secrettypes.NewCredentials("bar", map[string]any{
+					"client_id":     "foo",
+					"client_secret": "bar",
+				})
+
+				chm := secretsmocks.NewCredentialsHandleMock(t)
+
+				rm.EXPECT().Credentials(mock.Anything).Return(chm, nil)
+
+				chm.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), credentials)
+						require.NoError(t, err)
+
+						return true
+					}))
 
 				rawData, err := json.Marshal(clientcredentials.TokenInfo{AccessToken: "foobar", TokenType: "Bearer"})
 				require.NoError(t, err)
@@ -533,18 +685,34 @@ func TestOAuth2ClientCredentialsFinalizerExecute(t *testing.T) {
 			},
 		},
 		"error while unmarshalling successful response": {
-			finalizer: &oauth2ClientCredentialsFinalizer{
-				id: "test",
-				cfg: clientcredentials.Config{
-					TokenURL:     srv.URL,
-					ClientID:     "bar",
-					ClientSecret: "foo",
-				},
-			},
-			configureMocks: func(t *testing.T, _ *mocks.ContextMock, cch *mocks2.CacheMock) {
+			config: []byte(`
+credentials:
+  source: foo
+  selector: bar
+token_url: ` + srv.URL + `
+`),
+			configureMocks: func(t *testing.T, _ *pipelinemocks.ContextMock, cch *cachemocks.CacheMock, rm *secretsmocks.ResolverMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				credentials := secrettypes.NewCredentials("bar", map[string]any{
+					"client_id":     "foo",
+					"client_secret": "bar",
+				})
+
+				chm := secretsmocks.NewCredentialsHandleMock(t)
+
+				rm.EXPECT().Credentials(secrets.Reference{Source: "foo", Selector: "bar"}).
+					Return(chm, nil)
+
+				chm.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), credentials)
+						require.NoError(t, err)
+
+						return true
+					}))
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assertRequest: func(t *testing.T, _ *http.Request) { t.Helper() },
 			buildResponse: func(t *testing.T) (any, int) {
@@ -561,26 +729,38 @@ func TestOAuth2ClientCredentialsFinalizerExecute(t *testing.T) {
 			},
 		},
 		"full configuration, no cache hit and token has expires_in claim": {
-			finalizer: &oauth2ClientCredentialsFinalizer{
-				id:           "test",
-				headerName:   "X-My-Header",
-				headerScheme: "Bar",
-				cfg: clientcredentials.Config{
-					TokenURL:     srv.URL,
-					ClientID:     "bar",
-					ClientSecret: "foo",
-					TTL: func() *time.Duration {
-						ttl := 3 * time.Minute
-
-						return &ttl
-					}(),
-					Scopes: []string{"baz", "zab"},
-				},
-			},
-			configureMocks: func(t *testing.T, ctx *mocks.ContextMock, cch *mocks2.CacheMock) {
+			config: []byte(`
+credentials:
+  source: foo
+  selector: bar
+token_url: ` + srv.URL + `
+header:
+  name: "X-My-Header"
+  scheme: "Bar"
+scopes: ["baz", "zab"]
+cache_ttl: 3m
+`),
+			configureMocks: func(t *testing.T, ctx *pipelinemocks.ContextMock, cch *cachemocks.CacheMock, rm *secretsmocks.ResolverMock) {
 				t.Helper()
 
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				credentials := secrettypes.NewCredentials("bar", map[string]any{
+					"client_id":     "bar",
+					"client_secret": "baz",
+				})
+
+				chm := secretsmocks.NewCredentialsHandleMock(t)
+
+				rm.EXPECT().Credentials(mock.Anything).Return(chm, nil)
+
+				chm.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+						err := cb(t.Context(), credentials)
+						require.NoError(t, err)
+
+						return true
+					}))
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return(nil)
 				ctx.EXPECT().AddHeaderForUpstream("X-My-Header", "Bar foobar").Return()
 			},
@@ -591,11 +771,13 @@ func TestOAuth2ClientCredentialsFinalizerExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
+				require.Len(t, clientIDAndSecret, 2)
 				assert.Equal(t, "bar", clientIDAndSecret[0])
-				assert.Equal(t, "foo", clientIDAndSecret[1])
+				assert.Equal(t, "baz", clientIDAndSecret[1])
 
 				assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
 				assert.Equal(t, "client_credentials", req.FormValue("grant_type"))
+
 				scopes := strings.Split(req.FormValue("scope"), " ")
 				assert.Len(t, scopes, 2)
 				assert.Contains(t, scopes, "baz")
@@ -619,23 +801,53 @@ func TestOAuth2ClientCredentialsFinalizerExecute(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			conf, err := testsupport.DecodeTestConfig(tc.config)
+			require.NoError(t, err)
+
+			validator, err := validation.NewValidator(
+				validation.WithTagValidator(config.EnforcementSettings{}),
+			)
+			require.NoError(t, err)
+
+			resolver := secretsmocks.NewResolverMock(t)
+			cch := cachemocks.NewCacheMock(t)
+			ctx := pipelinemocks.NewContextMock(t)
+			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().DecoderFactory().Maybe().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
+			appCtx.EXPECT().Logger().Return(log.Logger)
+			appCtx.EXPECT().SecretResolver().Return(resolver)
+
+			tc.configureMocks(t, ctx, cch, resolver)
+
+			mech, err := newOAuth2ClientCredentialsFinalizer(appCtx, uc, conf)
+			require.NoError(t, err)
+
+			step, err := mech.CreateStep(resolver, types.StepDefinition{ID: "test"})
+			require.NoError(t, err)
+
 			endpointCalled = false
-			configureMocks := x.IfThenElse(tc.configureMocks != nil,
-				tc.configureMocks,
-				func(t *testing.T, _ *mocks.ContextMock, _ *mocks2.CacheMock) { t.Helper() },
+
+			assertRequest = x.IfThenElse(
+				tc.assertRequest != nil,
+				tc.assertRequest,
+				func(t *testing.T, _ *http.Request) { t.Helper() },
+			)
+			buildResponse = x.IfThenElse(
+				tc.buildResponse != nil,
+				tc.buildResponse,
+				func(t *testing.T) (any, int) {
+					t.Helper()
+
+					return &Token{AccessToken: "foobar", TokenType: "Bearer"}, http.StatusOK
+				},
 			)
 
-			cch := mocks2.NewCacheMock(t)
-			ctx := mocks.NewContextMock(t)
-
-			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
-			configureMocks(t, ctx, cch)
-
-			assertRequest = tc.assertRequest
-			buildResponse = tc.buildResponse
-
 			// WHEN
-			err := tc.finalizer.Execute(ctx, nil)
+			err = step.Execute(ctx, nil)
 
 			// THEN
 			tc.assert(t, err, endpointCalled)

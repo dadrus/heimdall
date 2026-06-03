@@ -47,6 +47,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/webhooks"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
@@ -84,7 +85,13 @@ type Provider struct {
 	rsInUse    map[types.UID]bool
 }
 
-func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, factory rule.Factory) (*Provider, error) {
+func NewProvider(
+	app app.Context,
+	k8sCF ConfigFactory,
+	rsp rule.SetProcessor,
+	rf rule.Factory,
+	srf secrets.ScopedResolverFactory,
+) (*Provider, error) {
 	rawConf := app.Config().Providers.Kubernetes
 	logger := app.Logger()
 
@@ -126,8 +133,21 @@ func NewProvider(app app.Context, k8sCF ConfigFactory, rsp rule.SetProcessor, fa
 
 	logger = logger.With().Str("_provider_type", ProviderType).Logger()
 	authClass := x.IfThenElse(len(providerConf.AuthClass) != 0, providerConf.AuthClass, DefaultClass)
-	adc := webhooks.New(providerConf.TLS, logger, authClass, factory, app.Config().Log.AccessLogEnabled)
 	instanceID, _ := os.Hostname()
+
+	adc, err := webhooks.New(
+		providerConf.TLS,
+		app.SecretResolver(),
+		srf,
+		logger,
+		authClass,
+		rf,
+		app.Config().Log.AccessLogEnabled,
+	)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration,
+			"failed to create webhook controller").CausedBy(err)
+	}
 
 	logger.Info().Msg("Rule provider configured.")
 
@@ -294,10 +314,10 @@ func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 	logger := zerolog.Ctx(ctx).With().Str("_src", conf.ID).Logger()
 	ctx = logger.WithContext(ctx)
 
-	logger.Info().Msg("Rule set update received")
+	logger.Info().Msg("RuleSet update received")
 
 	if err := p.p.OnUpdated(ctx, *conf); err != nil {
-		logger.Warn().Err(err).Msg("Failed to apply rule set updates")
+		logger.Warn().Err(err).Msg("Failed to apply RuleSet updates")
 
 		statusIncrement := x.IfThenElse(known && inUse, -1, 0)
 
@@ -315,7 +335,7 @@ func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 			p.id+" instance failed updating RuleSet, reason: "+err.Error(),
 		)
 	} else {
-		logger.Info().Msg("Rule set updates applied")
+		logger.Info().Msg("RuleSet updates applied")
 
 		statusIncrement := x.IfThenElse(known && inUse, 0, 1)
 

@@ -47,18 +47,8 @@ func (v TLSMinVersion) OrDefault() uint16 {
 	return uint16(v)
 }
 
-type KeyStore struct {
-	Path     string `koanf:"path"     mapstructure:"path"`
-	Password string `koanf:"password" mapstructure:"password"`
-}
-
-type TrustStore struct {
-	Path string `koanf:"path" mapstructure:"path"`
-}
-
 type TLS struct {
-	KeyStore     KeyStore        `koanf:"key_store"     mapstructure:"key_store"`
-	KeyID        string          `koanf:"key_id"        mapstructure:"key_id"`
+	Secret       Secret          `koanf:"secret"        mapstructure:"secret"        validate:"omitempty"`
 	CipherSuites TLSCipherSuites `koanf:"cipher_suites" mapstructure:"cipher_suites"`
 	MinVersion   TLSMinVersion   `koanf:"min_version"   mapstructure:"min_version"`
 }

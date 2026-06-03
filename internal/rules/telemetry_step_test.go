@@ -18,7 +18,6 @@ package rules
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -77,7 +76,7 @@ func TestTelemetryStepExecute(t *testing.T) {
 
 	for uc, tc := range map[string]error{
 		"executed without error": nil,
-		"executed with error":    errors.New("test error"),
+		"executed with error":    assert.AnError,
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN

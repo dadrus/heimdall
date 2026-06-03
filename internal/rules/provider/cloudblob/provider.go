@@ -59,10 +59,9 @@ func NewProvider(app app.Context, rsp rule.SetProcessor) (*Provider, error) { //
 		return &Provider{}, nil
 	}
 
-	dec := encoding.NewDecoder(
+	dec := app.DecoderFactory().Decoder(
 		encoding.WithTagName("mapstructure"),
 		encoding.WithErrorOnUnused(true),
-		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
 		encoding.WithDecodeHooks(
 			mapstructure.StringToTimeDurationHookFunc(),
 			urlDecodeHookFunc(),

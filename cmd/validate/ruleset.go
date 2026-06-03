@@ -20,7 +20,6 @@ import (
 	"context"
 	"errors"
 
-	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
@@ -28,14 +27,12 @@ import (
 
 	"github.com/dadrus/heimdall/cmd/flags"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/keyregistry"
-	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/repository"
 	"github.com/dadrus/heimdall/internal/rules/provider/filesystem"
-	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/watcher"
 )
 
 const validationForProxyMode = "proxy-mode"
@@ -60,6 +57,7 @@ func NewValidateRulesCommand() *cobra.Command {
 	return cmd
 }
 
+//nolint:funlen
 func validateRuleSet(cmd *cobra.Command, args []string) error {
 	envPrefix, _ := cmd.Flags().GetString(flags.EnvironmentConfigPrefix)
 	logger := zerolog.Nop()
@@ -86,6 +84,8 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	df := encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct))
+
 	conf, err := config.NewConfiguration(
 		config.EnvVarPrefix(envPrefix),
 		config.ConfigurationPath(configPath),
@@ -95,12 +95,24 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	sm, err := secrets.NewManager(
+		conf,
+		logger,
+		df,
+		noopmetric.Meter{},
+	)
+	if err != nil {
+		return err
+	}
+
+	resolver := sm.Resolver()
+
 	conf.Providers.FileSystem = map[string]any{"src": args[0]}
 
 	appCtx := &appContext{
-		w:  &watcher.NoopWatcher{},
-		kr: &noopRegistry{},
-		v:  validator,
+		kr: noopRegistry{},
+		sr: resolver,
+		d:  df,
 		l:  logger,
 		c:  conf,
 	}
@@ -112,6 +124,7 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 	rFactory, err := rules.NewRuleFactory(
 		repo,
+		resolver,
 		conf,
 		opMode,
 		logger,
@@ -123,7 +136,14 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	provider, err := filesystem.NewProvider(appCtx, rules.NewRuleSetProcessor(&noopRepository{}, rFactory, opMode))
+	processor := rules.NewRuleSetProcessor(
+		opMode,
+		noopRepository{},
+		rFactory,
+		sm.ScopedResolverFactory(),
+	)
+
+	provider, err := filesystem.NewProvider(appCtx, processor)
 	if err != nil {
 		return err
 	}
@@ -136,22 +156,3 @@ func validateRuleSet(cmd *cobra.Command, args []string) error {
 
 	return nil
 }
-
-type noopRepository struct{}
-
-func (*noopRepository) FindRule(_ pipeline.Context) (rule.Rule, error) {
-	return nil, errFunctionNotSupported
-}
-func (*noopRepository) AddRuleSet(_ context.Context, _ rule.RuleSet, _ []rule.Rule) error { return nil }
-func (*noopRepository) UpdateRuleSet(_ context.Context, _ rule.RuleSet, _ []rule.Rule) error {
-	return errFunctionNotSupported
-}
-
-func (*noopRepository) DeleteRuleSet(_ context.Context, _ rule.RuleSet) error {
-	return errFunctionNotSupported
-}
-
-type noopRegistry struct{}
-
-func (*noopRegistry) Notify(_ keyregistry.KeyInfo) {}
-func (*noopRegistry) Keys() []jose.JSONWebKey      { return nil }

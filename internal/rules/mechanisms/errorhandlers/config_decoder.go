@@ -17,17 +17,21 @@
 package errorhandlers
 
 import (
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
-	"github.com/dadrus/heimdall/internal/validation"
 )
 
-func decodeConfig(validator validation.Validator, input map[string]any, output any) error {
-	dec := encoding.NewDecoder(
+func decodeConfig(
+	app app.Context,
+	input map[string]any,
+	output any,
+	opts ...template.Option,
+) error {
+	dec := app.DecoderFactory().Decoder(
 		encoding.WithTagName("mapstructure"),
-		encoding.WithValidator(encoding.ValidatorFunc(validator.ValidateStruct)),
 		encoding.WithDecodeHooks(
-			template.DecodeTemplateHookFunc(),
+			template.DecodeTemplateHookFunc(opts...),
 			DecodeHeaderEntryHookFunc(),
 		),
 	)

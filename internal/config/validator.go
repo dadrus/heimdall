@@ -17,11 +17,16 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"io"
+	"strconv"
 	"strings"
 
 	"github.com/knadh/koanf/maps"
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 	"gopkg.in/yaml.v3"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
@@ -49,6 +54,10 @@ func ValidateConfigSchema(src io.Reader) error {
 
 	err = compiledSchema.Validate(conf)
 	if err != nil {
+		if ve, ok := errors.AsType[*jsonschema.ValidationError](err); ok {
+			return errorchain.NewWithMessage(pipeline.ErrConfiguration, formatValidationError(ve))
+		}
+
 		return errorchain.New(pipeline.ErrConfiguration).CausedBy(err)
 	}
 
@@ -67,4 +76,70 @@ func compileSchema(url, schemaContent string) (*jsonschema.Schema, error) {
 	}
 
 	return compiler.Compile(url)
+}
+
+func formatValidationError(err *jsonschema.ValidationError) string {
+	p := message.NewPrinter(language.English)
+
+	var lines []string
+	collectValidationLeaves(err, p, &lines)
+
+	if len(lines) == 0 {
+		return "configuration is invalid"
+	}
+
+	return "failed to validate configuration against schema:\n" + strings.Join(lines, "\n")
+}
+
+func collectValidationLeaves(
+	err *jsonschema.ValidationError,
+	printer *message.Printer,
+	lines *[]string,
+) {
+	if err == nil {
+		return
+	}
+
+	if len(err.Causes) > 0 {
+		for _, cause := range err.Causes {
+			collectValidationLeaves(cause, printer, lines)
+		}
+
+		return
+	}
+
+	if err.ErrorKind == nil {
+		return
+	}
+
+	path := formatInstanceLocation(err.InstanceLocation)
+	msg := err.ErrorKind.LocalizedString(printer)
+
+	*lines = append(*lines, fmt.Sprintf("- %s: %s", path, msg))
+}
+
+func formatInstanceLocation(loc []string) string {
+	if len(loc) == 0 {
+		return "$"
+	}
+
+	var builder strings.Builder
+
+	for _, part := range loc {
+		if _, err := strconv.Atoi(part); err == nil {
+			builder.WriteString("[")
+			builder.WriteString(part)
+			builder.WriteString("]")
+
+			continue
+		}
+
+		if builder.Len() > 0 {
+			builder.WriteString(".")
+		}
+
+		builder.WriteString(part)
+	}
+
+	return builder.String()
 }

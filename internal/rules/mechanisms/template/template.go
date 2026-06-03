@@ -20,14 +20,13 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"errors"
-	"fmt"
-	"net/url"
-	"reflect"
+	"maps"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
@@ -44,21 +43,27 @@ type templateImpl struct { //nolint:recvcheck
 	// recvcheck disabled by intention, as otherwise validations, which require Stringer implementation,
 	// but receive a value (not a pointer) do not work
 
-	t    *template.Template
-	orig string
-	hash []byte
+	t         *template.Template
+	orig      string
+	hash      []byte
+	informers map[secrets.Reference]*secrets.SecretInformer[string]
 }
 
-func New(val string) (Template, error) {
+func New(val string, opts ...Option) (Template, error) {
+	cfg := applyOptions(opts...)
+
 	funcMap := sprig.TxtFuncMap()
 	delete(funcMap, "env")
 	delete(funcMap, "expandenv")
 
-	tmpl, err := template.New("Heimdall").
+	informers := make(map[secrets.Reference]*secrets.SecretInformer[string])
+
+	tmpl, err := template.New(cfg.name).
 		Funcs(funcMap).
 		Funcs(template.FuncMap{
 			"urlenc":  urlEncode,
 			"atIndex": atIndex,
+			"secret":  secret(informers),
 		}).
 		Parse(val)
 	if err != nil {
@@ -66,13 +71,40 @@ func New(val string) (Template, error) {
 			CausedBy(err)
 	}
 
+	createdInformers, err := createSecretInformers(
+		cfg.resolver,
+		tmpl,
+		cfg.secretsForbidden,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	maps.Copy(informers, createdInformers)
+
 	hash := sha256.New()
 	hash.Write(stringx.ToBytes(val))
 
-	return &templateImpl{t: tmpl, orig: val, hash: hash.Sum(nil)}, nil
+	var result [sha256.Size]byte
+
+	return templateImpl{
+		t:         tmpl,
+		orig:      val,
+		hash:      hash.Sum(result[:0]),
+		informers: informers,
+	}, nil
 }
 
-func (t *templateImpl) Render(values map[string]any) (string, error) {
+func Must(value string, opts ...Option) Template {
+	tpl, err := New(value, opts...)
+	if err != nil {
+		panic(err)
+	}
+
+	return tpl
+}
+
+func (t templateImpl) Render(values map[string]any) (string, error) {
 	var buf bytes.Buffer
 
 	err := t.t.Execute(&buf, values)
@@ -83,50 +115,6 @@ func (t *templateImpl) Render(values map[string]any) (string, error) {
 	return buf.String(), nil
 }
 
-func (t *templateImpl) Hash() []byte { return t.hash }
+func (t templateImpl) Hash() []byte { return t.hash }
 
 func (t templateImpl) String() string { return t.orig }
-
-func urlEncode(value any) string {
-	switch t := value.(type) {
-	case string:
-		return url.QueryEscape(t)
-	case fmt.Stringer:
-		return url.QueryEscape(t.String())
-	default:
-		return ""
-	}
-}
-
-func atIndex(pos int, list any) (any, error) {
-	tp := reflect.TypeOf(list).Kind()
-	switch tp {
-	case reflect.Slice, reflect.Array:
-		l2 := reflect.ValueOf(list)
-
-		length := l2.Len()
-		if length == 0 {
-			return nil, nil // nolint: nilnil
-		}
-
-		if pos >= 0 && pos >= length {
-			// nolint: err113
-			return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
-		}
-
-		if pos < 0 && (-pos-1) >= length {
-			// nolint: err113
-			return nil, fmt.Errorf("cannot at(%d), position is outside of the list boundaries", pos)
-		}
-
-		if pos >= 0 {
-			return l2.Index(pos).Interface(), nil
-		}
-
-		return l2.Index(length + pos).Interface(), nil
-
-	default:
-		// nolint: err113
-		return nil, fmt.Errorf("cannot find at on type %s", tp)
-	}
-}

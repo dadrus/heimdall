@@ -48,11 +48,53 @@ packages:
       Visitor: {}
       Backend: {}
       Executor: {}
+      Pipeline: {}
   github.com/dadrus/heimdall/internal/keyregistry:
     interfaces:
       KeyObserver: {}
       JWKSProvider: {}
       Registry: {}
+  github.com/dadrus/heimdall/internal/secrets/source:
+    interfaces:
+      Observer:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
+      Source: {}
+      DependenciesResolver: {}
+      Repository: {}
+  github.com/dadrus/heimdall/internal/secrets/provider:
+    interfaces:
+      Provider: {}
+      DependenciesResolver: {}
+  github.com/dadrus/heimdall/internal/secrets:
+    interfaces:
+      handleBinding:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
+      handleOwner:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
+      bindingProvider:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
+      Resolver: {}
+      SecretHandle: {}
+      SecretSetHandle: {}
+      CredentialsHandle: {}
+      CertificateBundleHandle: {}
+      ScopedResolver: {}
+      ScopedResolverFactory: {}
+  github.com/dadrus/heimdall/internal/secrets/metrics:
+    interfaces:
+      SecretUsage: {}
   github.com/dadrus/heimdall/internal/rules:
     interfaces:
       executionCondition: {}
@@ -99,17 +141,17 @@ packages:
       SetProcessor:
         config:
           structname: RuleSetProcessorMock
-  github.com/dadrus/heimdall/internal/watcher:
+  github.com/dadrus/heimdall/internal/x/tlsx:
     interfaces:
-      ChangeListener:
+      certificateRequest:
         config:
           dir: "{{ .InterfaceDir }}"
           filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
           pkgname: "{{ .SrcPackageName }}"
-      Watcher: {}
-  github.com/dadrus/heimdall/internal/x/tlsx:
+          structname: "{{ .InterfaceName }}Mock"
+  github.com/dadrus/heimdall/internal/x/fswatch:
     interfaces:
-      compatibilityChecker:
+      EventHandler:
         config:
           dir: "{{ .InterfaceDir }}"
           filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"

@@ -34,6 +34,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
@@ -41,7 +42,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
-	"github.com/dadrus/heimdall/internal/truststore"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
@@ -61,6 +62,16 @@ func init() {
 	)
 }
 
+func toCertPool(bundle secrets.CertificateBundle) (*x509.CertPool, error) {
+	pool := x509.NewCertPool()
+
+	for _, cert := range bundle.Certificates() {
+		pool.AddCert(cert)
+	}
+
+	return pool, nil
+}
+
 type jwtAuthenticator struct {
 	name            string
 	id              string
@@ -71,7 +82,7 @@ type jwtAuthenticator struct {
 	ttl             *time.Duration
 	sf              PrincipalFactory
 	ads             extractors.AuthDataExtractStrategy
-	trustStore      truststore.TrustStore
+	informer        *secrets.CertificateBundleInformer[*x509.CertPool]
 	validateJWKCert bool
 	ed              oauth2.BearerTokenUsageErrorDecorator
 }
@@ -93,22 +104,41 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 		AuthDataSource   extractors.CompositeExtractStrategy   `mapstructure:"jwt_source"`
 		CacheTTL         *time.Duration                        `mapstructure:"cache_ttl"`
 		ValidateJWK      *bool                                 `mapstructure:"validate_jwk"`
-		TrustStore       truststore.TrustStore                 `mapstructure:"trust_store"`
+		TrustAnchors     *config.Secret                        `mapstructure:"trust_anchors"     validate:"omitempty"`
 	}
 
-	var conf Config
-	if err := decodeConfig(app, rawConfig, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for %s authenticator '%s'", AuthenticatorJWT, name).CausedBy(err)
+	var (
+		conf     Config
+		informer *secrets.CertificateBundleInformer[*x509.CertPool]
+		err      error
+	)
+
+	if err = decodeConfig(app, rawConfig, &conf,
+		template.WithName("authenticator."+AuthenticatorJWT+"."+name),
+		template.WithSecretResolver(app.SecretResolver()),
+	); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s authenticator '%s'", AuthenticatorJWT, name,
+		).CausedBy(err)
+	}
+
+	if conf.ValidateJWK != nil && !*conf.ValidateJWK && conf.TrustAnchors != nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"'trust_anchors' cannot be used if 'validate_jwk' is disabled",
+		)
 	}
 
 	if conf.JWKSEndpoint != nil {
 		if len(conf.Assertions.TrustedIssuers) == 0 {
-			return nil, errorchain.
-				NewWithMessage(pipeline.ErrConfiguration, "'issuers' is a required field if JWKS endpoint is used")
+			return nil, errorchain.NewWithMessage(
+				pipeline.ErrConfiguration,
+				"'issuers' is a required field if JWKS endpoint is used",
+			)
 		}
 
-		if strings.HasPrefix(conf.JWKSEndpoint.URL, "http://") {
+		if strings.HasPrefix(conf.JWKSEndpoint.URL.String(), "http://") {
 			logger.Warn().
 				Str("_type", AuthenticatorJWT).
 				Str("_name", name).
@@ -116,7 +146,27 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 		}
 	}
 
-	if conf.MetadataEndpoint != nil && strings.HasPrefix(conf.MetadataEndpoint.URL, "http://") {
+	validateJWKCert := x.IfThenElseExec(conf.ValidateJWK != nil,
+		func() bool { return *conf.ValidateJWK },
+		func() bool { return true })
+
+	if validateJWKCert && conf.TrustAnchors != nil {
+		informer, err = secrets.NewCertificateBundleInformer[*x509.CertPool](
+			app.SecretResolver(),
+			secrets.Reference{Source: conf.TrustAnchors.Source, Selector: conf.TrustAnchors.Selector},
+			secrets.WithRefreshStrategy[secrets.CertificateBundle, *x509.CertPool](secrets.RefreshInitialOnly()),
+			secrets.WithConverter(toCertPool),
+		)
+		if err != nil {
+			return nil, errorchain.NewWithMessagef(
+				pipeline.ErrConfiguration,
+				"failed creating trust anchors informer for %s authenticator '%s'", AuthenticatorJWT, name,
+			).CausedBy(err)
+		}
+	}
+
+	if conf.MetadataEndpoint != nil &&
+		strings.HasPrefix(conf.MetadataEndpoint.URL.String(), "http://") {
 		logger.Warn().
 			Str("_type", AuthenticatorJWT).
 			Str("_name", name).
@@ -135,10 +185,6 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 		conf.PrincipalInfo.IDFrom = "sub"
 	}
 
-	validateJWKCert := x.IfThenElseExec(conf.ValidateJWK != nil,
-		func() bool { return *conf.ValidateJWK },
-		func() bool { return true })
-
 	ads := x.IfThenElseExec(conf.AuthDataSource == nil,
 		func() extractors.CompositeExtractStrategy {
 			return extractors.CompositeExtractStrategy{
@@ -154,14 +200,7 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 		func() oauth2.ServerMetadataResolver { return conf.MetadataEndpoint },
 		func() oauth2.ServerMetadataResolver {
 			ep := conf.JWKSEndpoint
-
-			if ep.Headers == nil {
-				ep.Headers = make(map[string]string)
-			}
-
-			if _, ok := ep.Headers["Accept"]; !ok {
-				ep.Headers["Accept"] = "application/json"
-			}
+			ep.SetHeader("Accept", "application/json")
 
 			if len(ep.Method) == 0 {
 				ep.Method = http.MethodGet
@@ -186,7 +225,7 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 		sf:              &conf.PrincipalInfo,
 		ads:             ads,
 		validateJWKCert: validateJWKCert,
-		trustStore:      conf.TrustStore,
+		informer:        informer,
 		ed:              conf.ErrorDecorator,
 	}, nil
 }
@@ -206,16 +245,14 @@ func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 
 	jwtAd, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "no JWT present").
+		return errorchain.NewWithMessage(pipeline.ErrAuthentication, "no JWT present").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
 	token, err := jwt.ParseSigned(jwtAd, supportedAlgorithms())
 	if err != nil {
-		return errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
+		return errorchain.NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
 			WithErrorContext(a).
 			CausedBy(errorchain.NewWithMessage(pipeline.ErrMalformedRequest, "invalid JWT format").
 				CausedBy(err))
@@ -239,7 +276,10 @@ func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 	return nil
 }
 
-func (a *jwtAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (a *jwtAuthenticator) CreateStep(
+	_ secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	// this authenticator allows assertions and ttl to be redefined on the rule level
 	if def.IsEmpty() {
 		return a, nil
@@ -259,16 +299,20 @@ func (a *jwtAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, 
 		SubjectInfo      *PrincipalInfo                        `mapstructure:"principal"         validate:"not_allowed"`
 		AuthDataSource   extractors.CompositeExtractStrategy   `mapstructure:"jwt_source"        validate:"not_allowed"`
 		ValidateJWK      *bool                                 `mapstructure:"validate_jwk"      validate:"not_allowed"`
-		TrustStore       truststore.TrustStore                 `mapstructure:"trust_store"       validate:"not_allowed"`
+		TrustAnchors     *config.Secret                        `mapstructure:"trust_anchors"     validate:"not_allowed"`
 		Assertions       oauth2.Expectation                    `mapstructure:"assertions"        validate:"-"`
 		ErrorDecorator   oauth2.BearerTokenUsageErrorDecorator `mapstructure:"error_signaling"`
 		CacheTTL         *time.Duration                        `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config
-	if err := decodeConfig(a.app, def.Config, &conf); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for %s authenticator '%s'", AuthenticatorJWT, a.name).CausedBy(err)
+	if err := decodeConfig(a.app, def.Config, &conf,
+		template.WithName("authenticator."+AuthenticatorJWT+"."+a.name),
+	); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s authenticator '%s'", AuthenticatorJWT, a.name,
+		).CausedBy(err)
 	}
 
 	return &jwtAuthenticator{
@@ -282,7 +326,7 @@ func (a *jwtAuthenticator) CreateStep(def types.StepDefinition) (pipeline.Step, 
 		sf:              a.sf,
 		ads:             a.ads,
 		validateJWKCert: a.validateJWKCert,
-		trustStore:      a.trustStore,
+		informer:        a.informer,
 		ed:              conf.ErrorDecorator.Merge(a.ed),
 	}, nil
 }
@@ -291,12 +335,12 @@ func (a *jwtAuthenticator) DecorateErrorResponse(err error, er *pipeline.ErrorRe
 	a.ed.Decorate(err, a.a.ScopesMatcher.Scopes(), er)
 }
 
-func (a *jwtAuthenticator) Kind() types.Kind      { return types.KindAuthenticator }
 func (a *jwtAuthenticator) Name() string          { return a.name }
 func (a *jwtAuthenticator) ID() string            { return a.id }
 func (a *jwtAuthenticator) Type() string          { return a.name }
-func (a *jwtAuthenticator) IsInsecure() bool      { return false }
 func (a *jwtAuthenticator) PrincipalName() string { return a.principalName }
+func (*jwtAuthenticator) IsInsecure() bool        { return false }
+func (*jwtAuthenticator) Kind() types.Kind        { return types.KindAuthenticator }
 
 func (a *jwtAuthenticator) isCacheEnabled() bool {
 	// cache is enabled if ttl is not configured (in that case the ttl value from either
@@ -530,20 +574,7 @@ func (a *jwtAuthenticator) fetchJWKS(
 func (a *jwtAuthenticator) createRequest(
 	ctx context.Context, ep *endpoint.Endpoint, claims map[string]any,
 ) (*http.Request, error) {
-	req, err := ep.CreateRequest(ctx, nil, endpoint.RenderFunc(func(value string) (string, error) {
-		// ignoring closing braces here as it would anyway result in a broken template leading to an error
-		if !strings.Contains(value, "{{") {
-			return value, nil
-		}
-
-		tpl, err := template.New(value)
-		if err != nil {
-			return "", errorchain.NewWithMessage(pipeline.ErrInternal, "failed to create template").
-				CausedBy(err)
-		}
-
-		return tpl.Render(map[string]any{"TokenIssuer": claims["iss"]})
-	}))
+	req, err := ep.CreateRequest(ctx, nil, map[string]any{"TokenIssuer": claims["iss"]})
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed creating request").
@@ -639,11 +670,25 @@ func (a *jwtAuthenticator) validateJWK(jwk *jose.JSONWebKey) error {
 		return nil
 	}
 
+	if a.informer == nil {
+		return pkix.ValidateCertificate(jwk.Certificates[0],
+			pkix.WithIntermediateCACertificates(jwk.Certificates[1:]),
+			pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
+			pkix.WithSystemTrustStore(),
+		)
+	}
+
+	certPool, ok := a.informer.Get()
+	if !ok {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"trust anchors are not available",
+		)
+	}
+
 	return pkix.ValidateCertificate(jwk.Certificates[0],
 		pkix.WithIntermediateCACertificates(jwk.Certificates[1:]),
 		pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
-		x.IfThenElseExec(len(a.trustStore) == 0,
-			pkix.WithSystemTrustStore,
-			func() pkix.ValidationOption { return pkix.WithRootCACertificates(a.trustStore) }),
+		pkix.WithCertPool(certPool),
 	)
 }

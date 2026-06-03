@@ -17,7 +17,6 @@
 package rules
 
 import (
-	"errors"
 	"net/url"
 	"testing"
 
@@ -37,6 +36,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
 	mocks1 "github.com/dadrus/heimdall/internal/rules/mechanisms/mocks"
+	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -46,7 +46,7 @@ func TestNewRuleFactory(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		config                   *config.Configuration
 		enforceSecureDefaultRule bool
-		configureMocks           func(t *testing.T, repo *mocks1.RepositoryMock)
+		configureMocks           func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock)
 		assert                   func(t *testing.T, err error, f *ruleFactory)
 	}{
 		"new factory without default rule": {
@@ -101,11 +101,15 @@ func TestNewRuleFactory(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
+				step := mocks.NewStepMock(t)
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "baz", Principal: "default"}).Return(nil, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "baz", Principal: "default"}).
+					Return(step, nil)
 
 				repo.EXPECT().Contextualizer("bar").Return(mechanism, nil)
 			},
@@ -126,11 +130,15 @@ func TestNewRuleFactory(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
+				step := mocks.NewStepMock(t)
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "baz", Principal: "default"}).Return(nil, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "baz", Principal: "default"}).
+					Return(step, nil)
 
 				repo.EXPECT().Finalizer("bar").Return(mechanism, nil)
 			},
@@ -148,11 +156,13 @@ func TestNewRuleFactory(t *testing.T) {
 					Execute: []config.MechanismConfig{{"authenticator": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(nil, assert.AnError)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -160,7 +170,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"new factory with malformed default rule, where authorizer loading happens after finalizers": {
@@ -172,11 +182,15 @@ func TestNewRuleFactory(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
+				step := mocks.NewStepMock(t)
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(step, nil)
 
 				repo.EXPECT().Finalizer("bar").Return(mechanism, nil)
 			},
@@ -194,11 +208,13 @@ func TestNewRuleFactory(t *testing.T) {
 					Execute: []config.MechanismConfig{{"authorizer": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(nil, assert.AnError)
 
 				repo.EXPECT().Authorizer("foo").Return(mechanism, nil)
 			},
@@ -206,7 +222,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"new factory with malformed default rule, where contextualizer loading happens after finalizers": {
@@ -218,11 +234,15 @@ func TestNewRuleFactory(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
+				step := mocks.NewStepMock(t)
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(step, nil)
 
 				repo.EXPECT().Finalizer("bar").Return(mechanism, nil)
 			},
@@ -240,11 +260,13 @@ func TestNewRuleFactory(t *testing.T) {
 					Execute: []config.MechanismConfig{{"contextualizer": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(nil, assert.AnError)
 
 				repo.EXPECT().Contextualizer("foo").Return(mechanism, nil)
 			},
@@ -252,7 +274,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"new factory with default rule, where finalizer loading results in an error": {
@@ -261,11 +283,13 @@ func TestNewRuleFactory(t *testing.T) {
 					Execute: []config.MechanismConfig{{"finalizer": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(nil, assert.AnError)
 
 				repo.EXPECT().Finalizer("foo").Return(mechanism, nil)
 			},
@@ -273,7 +297,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"new factory with default rule, where error_handler loading results in an error": {
@@ -282,11 +306,13 @@ func TestNewRuleFactory(t *testing.T) {
 					ErrorHandler: []config.MechanismConfig{{"error_handler": "foo"}},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{}).
+					Return(nil, assert.AnError)
 
 				repo.EXPECT().ErrorHandler("foo").Return(mechanism, nil)
 			},
@@ -294,7 +320,7 @@ func TestNewRuleFactory(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"new factory with empty default rule": {
@@ -320,7 +346,7 @@ func TestNewRuleFactory(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				insecure := mocks.NewInsecureMock(t)
@@ -338,7 +364,9 @@ func TestNewRuleFactory(t *testing.T) {
 				}))
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(as, nil)
 
 				repo.EXPECT().Authenticator("bar").Return(mechanism, nil)
 			},
@@ -359,7 +387,7 @@ func TestNewRuleFactory(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -373,7 +401,9 @@ func TestNewRuleFactory(t *testing.T) {
 				}))
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "foo"}).Return(as, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "foo"}).
+					Return(as, nil)
 
 				repo.EXPECT().Authenticator("bar").Return(mechanism, nil)
 			},
@@ -393,7 +423,7 @@ func TestNewRuleFactory(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -407,7 +437,9 @@ func TestNewRuleFactory(t *testing.T) {
 				}))
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "foo", Principal: "default"}).Return(as, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "foo", Principal: "default"}).
+					Return(as, nil)
 
 				repo.EXPECT().Authenticator("bar").Return(mechanism, nil)
 			},
@@ -425,10 +457,12 @@ func TestNewRuleFactory(t *testing.T) {
 				assert.Equal(t, "default", defRule.source.Name)
 				assert.Equal(t, "config", defRule.source.Provider)
 				assert.Equal(t, v1beta1.EncodedSlashesOff, defRule.slashesHandling)
-				assert.Len(t, defRule.sc, 1)
-				assert.Empty(t, defRule.sh)
-				assert.Empty(t, defRule.fi)
-				assert.Empty(t, defRule.eh)
+
+				rp := requireRulePipeline(t, defRule)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.Empty(t, rp.execute.subjectHandlers)
+				assert.Empty(t, rp.execute.finalizers)
+				assert.Empty(t, rp.err.errorHandlers)
 			},
 		},
 		"new factory with rule specific telemetry enabled": {
@@ -441,7 +475,7 @@ func TestNewRuleFactory(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -458,7 +492,9 @@ func TestNewRuleFactory(t *testing.T) {
 				}))
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "bar", Principal: "default"}).Return(as, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "bar", Principal: "default"}).
+					Return(as, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -485,7 +521,7 @@ func TestNewRuleFactory(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -499,7 +535,9 @@ func TestNewRuleFactory(t *testing.T) {
 				}))
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "bar", Principal: "default"}).Return(as, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "bar", Principal: "default"}).
+					Return(as, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -531,7 +569,7 @@ func TestNewRuleFactory(t *testing.T) {
 					},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -545,22 +583,34 @@ func TestNewRuleFactory(t *testing.T) {
 				}))
 
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(as, nil)
+				authn.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "1", Principal: "default"}).
+					Return(as, nil)
 
 				cont := mocks1.NewMechanismMock(t)
-				cont.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "2", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				cont.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "2", Principal: "default"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				authz := mocks1.NewMechanismMock(t)
-				authz.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "3", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authz.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "3", Principal: "default"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				fin := mocks1.NewMechanismMock(t)
-				fin.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "4", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				fin.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "4", Principal: "default"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				eh1 := mocks1.NewMechanismMock(t)
-				eh1.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1"}).Return(mocks.NewStepMock(t), nil)
+				eh1.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "1"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				eh2 := mocks1.NewMechanismMock(t)
-				eh2.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "2"}).Return(mocks.NewStepMock(t), nil)
+				eh2.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "2"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				repo.EXPECT().Authenticator("bar").Return(authn, nil)
 				repo.EXPECT().Finalizer("baz").Return(fin, nil)
@@ -583,28 +633,32 @@ func TestNewRuleFactory(t *testing.T) {
 				assert.Equal(t, "default", defRule.source.Name)
 				assert.Equal(t, "config", defRule.source.Provider)
 				assert.Equal(t, v1beta1.EncodedSlashesOff, defRule.slashesHandling)
-				assert.Len(t, defRule.sc, 1)
-				assert.Len(t, defRule.sh, 2)
-				assert.Len(t, defRule.fi, 1)
-				assert.Len(t, defRule.eh, 2)
+
+				rp := requireRulePipeline(t, defRule)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.Len(t, rp.execute.subjectHandlers, 2)
+				assert.Len(t, rp.execute.finalizers, 1)
+				assert.Len(t, rp.err.errorHandlers, 2)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
+			t.Parallel()
+
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *mocks1.RepositoryMock) { t.Helper() })
+				func(t *testing.T, _ *mocks1.RepositoryMock, _ *secretsmocks.ResolverMock) { t.Helper() })
 
 			repo := mocks1.NewRepositoryMock(t)
-			configureMocks(t, repo)
+			resolver := secretsmocks.NewResolverMock(t)
+			configureMocks(t, repo, resolver)
 
 			tp := otel.GetTracerProvider()
 			mp := otel.GetMeterProvider()
 
-			// WHEN
 			factory, err := NewRuleFactory(
 				repo,
+				resolver,
 				tc.config,
 				config.DecisionMode,
 				log.Logger,
@@ -613,13 +667,15 @@ func TestNewRuleFactory(t *testing.T) {
 				config.SecureDefaultRule(tc.enforceSecureDefaultRule),
 			)
 
-			// THEN
-			impl, ok := factory.(*ruleFactory)
+			var impl *ruleFactory
+
 			if err == nil {
+				var ok bool
+
+				impl, ok = factory.(*ruleFactory)
 				require.True(t, ok)
 			}
 
-			// THEN
 			tc.assert(t, err, impl)
 		})
 	}
@@ -633,7 +689,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		config         v1beta1.Rule
 		tracer         trace.Tracer
 		defaultRule    *ruleImpl
-		configureMocks func(t *testing.T, repo *mocks1.RepositoryMock)
+		configureMocks func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock)
 		assert         func(t *testing.T, err error, rul *ruleImpl)
 	}{
 		"in proxy mode without forward_to definition": {
@@ -661,7 +717,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{AuthenticatorRef: "foo"},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -675,7 +731,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				}))
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(as, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -702,7 +760,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{AuthenticatorRef: "foo", ID: "1"},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -716,7 +774,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				}))
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(as, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "1", Principal: "default"}).
+					Return(as, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -734,11 +794,13 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []v1beta1.Step{{AuthenticatorRef: "foo"}},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(nil, assert.AnError)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -746,7 +808,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorContains(t, err, "test error")
+				assert.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"error while creating on_error pipeline": {
@@ -755,11 +817,13 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher:      v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				ErrorHandler: []v1beta1.Step{{ErrorHandlerRef: "foo", ID: "bar"}},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "bar"}).Return(nil, errors.New("test error"))
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "bar"}).
+					Return(nil, assert.AnError)
 
 				repo.EXPECT().ErrorHandler("foo").Return(mechanism, nil)
 			},
@@ -767,7 +831,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.ErrorContains(t, err, "test error")
+				assert.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"without default rule and without any execute configuration": {
@@ -810,11 +874,15 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{ErrorHandlerRef: ""},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
+				step := mocks.NewStepMock(t)
+
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(step, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -834,7 +902,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{AuthenticatorRef: "foo"},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -848,7 +916,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				}))
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(as, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -865,10 +935,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Len(t, rul.Routes(), 1)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
-				assert.Len(t, rul.sc, 1)
-				assert.Empty(t, rul.sh)
-				assert.Empty(t, rul.fi)
-				assert.Empty(t, rul.eh)
+
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.Empty(t, rp.execute.subjectHandlers)
+				assert.Empty(t, rp.execute.finalizers)
+				assert.Empty(t, rp.err.errorHandlers)
 			},
 		},
 		"normalizes trie host matchers to lowercase": {
@@ -882,7 +954,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{AuthenticatorRef: "foo"},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -896,7 +968,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				}))
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
 					Return(as, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
@@ -919,7 +992,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 				Execute: []v1beta1.Step{{AuthenticatorRef: "foo"}},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -933,7 +1006,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				}))
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(as, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -950,11 +1025,13 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Len(t, rul.Routes(), 1)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
-				assert.Len(t, rul.sc, 1)
-				assert.Empty(t, rul.sh)
-				assert.Empty(t, rul.fi)
-				assert.Empty(t, rul.eh)
 				assert.NotNil(t, rul.backend)
+
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.Empty(t, rp.execute.subjectHandlers)
+				assert.Empty(t, rp.execute.finalizers)
+				assert.Empty(t, rp.err.errorHandlers)
 			},
 		},
 		"with default rule and regular rule with id and a single route only": {
@@ -963,22 +1040,28 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}},
 			},
 			defaultRule: &ruleImpl{
-				sc: stage{func() step {
-					as := &mocks.StepMock{}
-					as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
-						pn := mocks.NewPrincipalNamerMock(t)
-						pn.EXPECT().PrincipalName().Return("default")
+				p: rulePipelineImpl{
+					execute: newExecutePipeline(
+						stage{func() step {
+							as := &mocks.StepMock{}
+							as.EXPECT().Accept(mock.MatchedBy(func(visitor pipeline.Visitor) bool {
+								pn := mocks.NewPrincipalNamerMock(t)
+								pn.EXPECT().PrincipalName().Return("default")
 
-						visitor.VisitPrincipalNamer(pn)
+								visitor.VisitPrincipalNamer(pn)
 
-						return true
-					}))
+								return true
+							}))
 
-					return as
-				}()},
-				sh: stage{mocks.NewStepMock(t)},
-				fi: stage{mocks.NewStepMock(t)},
-				eh: stage{mocks.NewStepMock(t)},
+							return as
+						}()},
+						stage{mocks.NewStepMock(t)},
+						stage{mocks.NewStepMock(t)},
+					),
+					err: newErrorPipeline(
+						stage{mocks.NewStepMock(t)},
+					),
+				},
 			},
 			assert: func(t *testing.T, err error, rul *ruleImpl) {
 				t.Helper()
@@ -992,10 +1075,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Len(t, rul.Routes(), 1)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
-				assert.Len(t, rul.sc, 1)
-				assert.Len(t, rul.sh, 1)
-				assert.Len(t, rul.fi, 1)
-				assert.Len(t, rul.eh, 1)
+
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.Len(t, rp.execute.subjectHandlers, 1)
+				assert.Len(t, rp.execute.finalizers, 1)
+				assert.Len(t, rp.err.errorHandlers, 1)
 			},
 		},
 		"with default rule and with all attributes defined by the regular rule itself in decision mode": {
@@ -1028,12 +1113,18 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 			},
 			defaultRule: &ruleImpl{
-				sc: stage{mocks.NewStepMock(t)},
-				sh: stage{mocks.NewStepMock(t)},
-				fi: stage{mocks.NewStepMock(t)},
-				eh: stage{mocks.NewStepMock(t)},
+				p: rulePipelineImpl{
+					execute: newExecutePipeline(
+						stage{mocks.NewStepMock(t)},
+						stage{mocks.NewStepMock(t)},
+						stage{mocks.NewStepMock(t)},
+					),
+					err: newErrorPipeline(
+						stage{mocks.NewStepMock(t)},
+					),
+				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -1047,19 +1138,29 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				}))
 
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(as, nil)
+				authn.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "1", Principal: "default"}).
+					Return(as, nil)
 
 				cont := mocks1.NewMechanismMock(t)
-				cont.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "2", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				cont.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "2", Principal: "default"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				authz := mocks1.NewMechanismMock(t)
-				authz.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "3", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authz.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "3", Principal: "default"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				fin := mocks1.NewMechanismMock(t)
-				fin.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "4", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				fin.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "4", Principal: "default"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				eh := mocks1.NewMechanismMock(t)
-				eh.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "5"}).Return(mocks.NewStepMock(t), nil)
+				eh.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "5"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
 				mhf.EXPECT().Contextualizer("bar").Return(cont, nil)
@@ -1083,17 +1184,16 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, rul, rul.Routes()[1].Rule())
 				assert.Equal(t, "/bar/:resource", rul.Routes()[1].Path())
 
-				// nil checks above mean the responses from the mockHandlerFactory are used
-				// and not the values from the default rule
-				require.Len(t, rul.sc, 1)
-				assert.NotNil(t, rul.sc[0])
-				require.Len(t, rul.sh, 2)
-				assert.NotNil(t, rul.sh[0])
-				assert.NotNil(t, rul.sh[1])
-				require.Len(t, rul.fi, 1)
-				assert.NotNil(t, rul.fi[0])
-				require.Len(t, rul.eh, 1)
-				assert.NotNil(t, rul.eh[0])
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.NotNil(t, rp.execute.authenticators[0])
+				assert.Len(t, rp.execute.subjectHandlers, 2)
+				assert.NotNil(t, rp.execute.subjectHandlers[0])
+				assert.NotNil(t, rp.execute.subjectHandlers[1])
+				assert.Len(t, rp.execute.finalizers, 1)
+				assert.NotNil(t, rp.execute.finalizers[0])
+				assert.Len(t, rp.err.errorHandlers, 1)
+				assert.NotNil(t, rp.err.errorHandlers[0])
 			},
 		},
 		"with default rule and with all attributes defined by the rule itself in proxy mode": {
@@ -1136,12 +1236,18 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				},
 			},
 			defaultRule: &ruleImpl{
-				sc: stage{mocks.NewStepMock(t)},
-				sh: stage{mocks.NewStepMock(t)},
-				fi: stage{mocks.NewStepMock(t)},
-				eh: stage{mocks.NewStepMock(t)},
+				p: rulePipelineImpl{
+					execute: newExecutePipeline(
+						stage{mocks.NewStepMock(t)},
+						stage{mocks.NewStepMock(t)},
+						stage{mocks.NewStepMock(t)},
+					),
+					err: newErrorPipeline(
+						stage{mocks.NewStepMock(t)},
+					),
+				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -1155,19 +1261,29 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				}))
 
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(as, nil)
+				authn.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "1", Principal: "default"}).
+					Return(as, nil)
 
 				cont := mocks1.NewMechanismMock(t)
-				cont.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "2", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				cont.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "2", Principal: "default"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				authz := mocks1.NewMechanismMock(t)
-				authz.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "3", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authz.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "3", Principal: "default"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				fin := mocks1.NewMechanismMock(t)
-				fin.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "false", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				fin.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "false", Principal: "default"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				eh := mocks1.NewMechanismMock(t)
-				eh.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "true"}).Return(mocks.NewStepMock(t), nil)
+				eh.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "true"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
 				mhf.EXPECT().Contextualizer("bar").Return(cont, nil)
@@ -1196,19 +1312,18 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					Path:     "/foo/bar",
 					RawQuery: url.Values{"bar": []string{"foo"}, "foo": []string{"bar"}}.Encode(),
 				}).String())
-
-				// nil checks above mean the responses from the mockHandlerFactory are used
-				// and not the values from the default rule
-				require.Len(t, rul.sc, 1)
-				assert.NotNil(t, rul.sc[0])
-				require.Len(t, rul.sh, 2)
-				assert.NotNil(t, rul.sh[0])
-				assert.NotNil(t, rul.sh[1])
-				require.Len(t, rul.fi, 1)
-				assert.NotNil(t, rul.fi[0])
-				require.Len(t, rul.eh, 1)
-				assert.NotNil(t, rul.eh[0])
 				assert.NotNil(t, rul.backend)
+
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.NotNil(t, rp.execute.authenticators[0])
+				assert.Len(t, rp.execute.subjectHandlers, 2)
+				assert.NotNil(t, rp.execute.subjectHandlers[0])
+				assert.NotNil(t, rp.execute.subjectHandlers[1])
+				assert.Len(t, rp.execute.finalizers, 1)
+				assert.NotNil(t, rp.execute.finalizers[0])
+				assert.Len(t, rp.err.errorHandlers, 1)
+				assert.NotNil(t, rp.err.errorHandlers[0])
 			},
 		},
 		"malformed conditional configuration in the execute pipeline": {
@@ -1220,14 +1335,22 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{FinalizerRef: "bar", Condition: new("")},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
+				authnStep := mocks.NewStepMock(t)
+
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authn.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(authnStep, nil)
+
+				finStep := mocks.NewStepMock(t)
 
 				fin := mocks1.NewMechanismMock(t)
-				fin.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				fin.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(finStep, nil)
 
 				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
 				mhf.EXPECT().Finalizer("bar").Return(fin, nil)
@@ -1249,14 +1372,22 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{FinalizerRef: "bar", ID: "1"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
+				authnStep := mocks.NewStepMock(t)
+
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authn.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "1", Principal: "default"}).
+					Return(authnStep, nil)
+
+				finStep := mocks.NewStepMock(t)
 
 				fin := mocks1.NewMechanismMock(t)
-				fin.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1", Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				fin.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "1", Principal: "default"}).
+					Return(finStep, nil)
 
 				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
 				mhf.EXPECT().Finalizer("bar").Return(fin, nil)
@@ -1281,7 +1412,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{FinalizerRef: "bar", Condition: new("true")},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -1295,16 +1426,24 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				}))
 
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
+				authn.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(as, nil)
 
 				authz := mocks1.NewMechanismMock(t)
-				authz.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
+				authz.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(as, nil)
 
 				cont := mocks1.NewMechanismMock(t)
-				cont.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				cont.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				fin := mocks1.NewMechanismMock(t)
-				fin.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				fin.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
 				mhf.EXPECT().Authorizer(mock.Anything).Return(authz, nil).Times(2)
@@ -1324,30 +1463,31 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
 
-				require.Len(t, rul.sc, 1)
-				assert.NotNil(t, rul.sc[0])
+				rp := requireRulePipeline(t, rul)
 
-				require.Len(t, rul.sh, 3)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.NotNil(t, rp.execute.authenticators[0])
 
-				assert.NotNil(t, rul.sh[0])
-				cs, ok := rul.sh[0].(*conditionalStep)
+				assert.Len(t, rp.execute.subjectHandlers, 3)
+				assert.NotNil(t, rp.execute.subjectHandlers[0])
+				cs, ok := rp.execute.subjectHandlers[0].(*conditionalStep)
 				require.True(t, ok)
 				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
-				assert.NotNil(t, rul.sh[1])
-				cs, ok = rul.sh[1].(*conditionalStep)
+				assert.NotNil(t, rp.execute.subjectHandlers[1])
+				cs, ok = rp.execute.subjectHandlers[1].(*conditionalStep)
 				require.True(t, ok)
 				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
-				assert.NotNil(t, rul.sh[2])
-				assert.IsType(t, &mocks.StepMock{}, rul.sh[2])
+				assert.NotNil(t, rp.execute.subjectHandlers[2])
+				assert.IsType(t, &mocks.StepMock{}, rp.execute.subjectHandlers[2])
 
-				require.Len(t, rul.fi, 1)
-				cs, ok = rul.fi[0].(*conditionalStep)
+				require.Len(t, rp.execute.finalizers, 1)
+				cs, ok = rp.execute.finalizers[0].(*conditionalStep)
 				require.True(t, ok)
 				assert.IsType(t, &celExecutionCondition{}, cs.c)
 
-				require.Empty(t, rul.eh)
+				require.Empty(t, rp.err.errorHandlers)
 			},
 		},
 		"conditional execution of error handler": {
@@ -1364,7 +1504,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{ErrorHandlerRef: "bar", Condition: new("false")},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -1378,19 +1518,29 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				}))
 
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
+				authn.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(as, nil)
 
 				authz := mocks1.NewMechanismMock(t)
-				authz.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authz.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				fin := mocks1.NewMechanismMock(t)
-				fin.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				fin.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(mocks.NewStepMock(t), nil)
 
 				eh1 := mocks1.NewMechanismMock(t)
-				eh1.EXPECT().CreateStep(mechanisms.StepDefinition{}).Return(mocks.NewStepMock(t), nil)
+				eh1.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{}).
+					Return(mocks.NewStepMock(t), nil)
 
 				eh2 := mocks1.NewMechanismMock(t)
-				eh2.EXPECT().CreateStep(mechanisms.StepDefinition{}).Return(mocks.NewStepMock(t), nil)
+				eh2.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{}).
+					Return(mocks.NewStepMock(t), nil)
 
 				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
 				mhf.EXPECT().Authorizer("bar").Return(authz, nil)
@@ -1411,20 +1561,21 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
 
-				require.Len(t, rul.sc, 1)
-				assert.NotNil(t, rul.sc[0])
+				rp := requireRulePipeline(t, rul)
 
-				require.Len(t, rul.sh, 1)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.NotNil(t, rp.execute.authenticators[0])
 
-				require.NotNil(t, rul.sh[0])
-				assert.IsType(t, &mocks.StepMock{}, rul.sh[0])
+				require.Len(t, rp.execute.subjectHandlers, 1)
+				require.NotNil(t, rp.execute.subjectHandlers[0])
+				assert.IsType(t, &mocks.StepMock{}, rp.execute.subjectHandlers[0])
 
-				require.Len(t, rul.fi, 1)
-				assert.IsType(t, &mocks.StepMock{}, rul.fi[0])
+				require.Len(t, rp.execute.finalizers, 1)
+				assert.IsType(t, &mocks.StepMock{}, rp.execute.finalizers[0])
 
-				require.Len(t, rul.eh, 2)
-				assert.IsType(t, &conditionalStep{}, rul.eh[0])
-				assert.IsType(t, &conditionalStep{}, rul.eh[0])
+				require.Len(t, rp.err.errorHandlers, 2)
+				assert.IsType(t, &conditionalStep{}, rp.err.errorHandlers[0])
+				assert.IsType(t, &conditionalStep{}, rp.err.errorHandlers[1])
 			},
 		},
 		"duplicate ids in the error pipeline": {
@@ -1439,17 +1590,28 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{ErrorHandlerRef: "bar", ID: "1"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
+				authnStep := mocks.NewStepMock(t)
+
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(mocks.NewStepMock(t), nil)
+				authn.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(authnStep, nil)
+
+				eh1Step := mocks.NewStepMock(t)
+				eh2Step := mocks.NewStepMock(t)
 
 				eh1 := mocks1.NewMechanismMock(t)
-				eh1.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1"}).Return(mocks.NewStepMock(t), nil)
+				eh1.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "1"}).
+					Return(eh1Step, nil)
 
 				eh2 := mocks1.NewMechanismMock(t)
-				eh2.EXPECT().CreateStep(mechanisms.StepDefinition{ID: "1"}).Return(mocks.NewStepMock(t), nil)
+				eh2.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{ID: "1"}).
+					Return(eh2Step, nil)
 
 				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
 				mhf.EXPECT().ErrorHandler("foo").Return(eh1, nil)
@@ -1471,17 +1633,17 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{AuthenticatorRef: "foo"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock, _ *secretsmocks.ResolverMock) {
 				t.Helper()
 
-				mhf.EXPECT().Authenticator("foo").Return(nil, errors.New("test error"))
+				mhf.EXPECT().Authenticator("foo").Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, ErrStepCreation)
-				require.ErrorContains(t, err, "test error")
+				require.ErrorContains(t, err, assert.AnError.Error())
 			},
 		},
 		"fallback of authenticators for the default principal": {
@@ -1493,7 +1655,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{AuthenticatorRef: "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -1507,7 +1669,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				}))
 
 				authn := mocks1.NewMechanismMock(t)
-				authn.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
+				authn.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(as, nil).
+					Twice()
 
 				mhf.EXPECT().Authenticator("foo").Return(authn, nil)
 				mhf.EXPECT().Authenticator("bar").Return(authn, nil)
@@ -1525,9 +1690,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
 
-				require.Len(t, rul.sc, 1)
-				assert.NotNil(t, rul.sc[0])
-				require.Len(t, rul.sc[0], 2)
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				assert.Len(t, rp.execute.authenticators[0], 2)
 			},
 		},
 		"single authenticator for the default principal and fallback authenticators for custom named principal": {
@@ -1540,7 +1705,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{AuthenticatorRef: "baz", Principal: new("custom")},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn1 := mocks.NewPrincipalNamerMock(t)
@@ -1564,13 +1729,19 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				}))
 
 				authn1 := mocks1.NewMechanismMock(t)
-				authn1.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as1, nil)
+				authn1.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(as1, nil)
 
 				authn2 := mocks1.NewMechanismMock(t)
-				authn2.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "custom"}).Return(as2, nil)
+				authn2.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "custom"}).
+					Return(as2, nil)
 
 				authn3 := mocks1.NewMechanismMock(t)
-				authn3.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "custom"}).Return(as2, nil)
+				authn3.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "custom"}).
+					Return(as2, nil)
 
 				mhf.EXPECT().Authenticator("foo").Return(authn1, nil)
 				mhf.EXPECT().Authenticator("bar").Return(authn2, nil)
@@ -1589,11 +1760,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
 
-				require.Len(t, rul.sc, 2)
-				assert.NotNil(t, rul.sc[0])
-				require.Len(t, rul.sc[0], 1)
-				assert.NotNil(t, rul.sc[1])
-				require.Len(t, rul.sc[1], 2)
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 2)
+				assert.Len(t, rp.execute.authenticators[0], 1)
+				assert.Len(t, rp.execute.authenticators[1], 2)
 			},
 		},
 		"no authenticator for the default principal configured": {
@@ -1605,7 +1775,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{AuthenticatorRef: "baz", Principal: new("b")},
 				},
 			},
-			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, mhf *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn1 := mocks.NewPrincipalNamerMock(t)
@@ -1629,10 +1799,14 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				}))
 
 				authn1 := mocks1.NewMechanismMock(t)
-				authn1.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "a"}).Return(as1, nil)
+				authn1.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "a"}).
+					Return(as1, nil)
 
 				authn2 := mocks1.NewMechanismMock(t)
-				authn2.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "b"}).Return(as2, nil)
+				authn2.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "b"}).
+					Return(as2, nil)
 
 				mhf.EXPECT().Authenticator("bar").Return(authn1, nil)
 				mhf.EXPECT().Authenticator("baz").Return(authn2, nil)
@@ -1654,7 +1828,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 					{AuthenticatorRef: "foo"},
 				},
 			},
-			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock) {
+			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
 				t.Helper()
 
 				pn := mocks.NewPrincipalNamerMock(t)
@@ -1671,7 +1845,9 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				as.EXPECT().Kind().Return(pipeline.KindAuthenticator)
 
 				mechanism := mocks1.NewMechanismMock(t)
-				mechanism.EXPECT().CreateStep(mechanisms.StepDefinition{Principal: "default"}).Return(as, nil)
+				mechanism.EXPECT().
+					CreateStep(resolver, mechanisms.StepDefinition{Principal: "default"}).
+					Return(as, nil)
 
 				repo.EXPECT().Authenticator("foo").Return(mechanism, nil)
 			},
@@ -1688,8 +1864,10 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				assert.Len(t, rul.Routes(), 1)
 				assert.Equal(t, rul, rul.Routes()[0].Rule())
 				assert.Equal(t, "/foo/bar", rul.Routes()[0].Path())
-				require.Len(t, rul.sc, 1)
-				cpc, ok := rul.sc[0].(compositePrincipalCreator)
+
+				rp := requireRulePipeline(t, rul)
+				assert.Len(t, rp.execute.authenticators, 1)
+				cpc, ok := rp.execute.authenticators[0].(compositePrincipalCreator)
 				require.True(t, ok)
 				require.Len(t, cpc, 1)
 				ts, ok := cpc[0].(*telemetryStep)
@@ -1699,16 +1877,19 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
+			t.Parallel()
+
 			configureMocks := x.IfThenElse(tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *mocks1.RepositoryMock) { t.Helper() })
+				func(t *testing.T, _ *mocks1.RepositoryMock, _ *secretsmocks.ResolverMock) { t.Helper() })
 
 			repo := mocks1.NewRepositoryMock(t)
-			configureMocks(t, repo)
+			resolver := secretsmocks.NewResolverMock(t)
+			configureMocks(t, repo, resolver)
 
 			factory := &ruleFactory{
 				r:              repo,
+				sr:             resolver,
 				templateRule:   tc.defaultRule,
 				defaultRule:    x.IfThenElse(tc.defaultRule != nil, tc.defaultRule, nil),
 				mode:           tc.opMode,
@@ -1718,22 +1899,39 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				m:              noopmetric.Meter{},
 			}
 
-			// WHEN
-			rul, err := factory.CreateRule(v1beta1.RuleSet{MetaData: v1beta1.MetaData{ID: "test"}}, tc.config)
+			rul, err := factory.CreateRule(
+				resolver,
+				v1beta1.RuleSet{
+					MetaData: v1beta1.MetaData{
+						ID:        "test",
+						Namespace: "team-a",
+					},
+				},
+				tc.config,
+			)
 
-			// THEN
 			var impl *ruleImpl
 
 			if err == nil {
 				require.IsType(t, &telemetryRule{}, rul)
-				tr := rul.(*telemetryRule)
+
+				tr := rul.(*telemetryRule) //nolint:forcetypeassert
 
 				require.IsType(t, &ruleImpl{}, tr.r)
-				impl = tr.r.(*ruleImpl)
+
+				impl = tr.r.(*ruleImpl) //nolint:forcetypeassert
 			}
 
-			// THEN
 			tc.assert(t, err, impl)
 		})
 	}
+}
+
+func requireRulePipeline(t *testing.T, rul *ruleImpl) rulePipelineImpl {
+	t.Helper()
+
+	require.NotNil(t, rul)
+	require.IsType(t, rulePipelineImpl{}, rul.p)
+
+	return rul.p.(rulePipelineImpl) //nolint:forcetypeassert
 }

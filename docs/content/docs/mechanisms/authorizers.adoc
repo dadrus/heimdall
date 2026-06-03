@@ -191,8 +191,9 @@ config:
     auth:
       type: basic_auth
       config:
-        user: ${OPA_USER}
-        password: ${OPA_PASSWORD}
+        credentials:
+          source: some_source
+          selector: opa_credentials
   payload: |
     { "input": { "user": {{ quote .Subject.ID }} }, "some_data": {{ quote .Values.whatever }}, "more_data": {{ quote .Outputs.whatever }} }
   values:

@@ -35,9 +35,10 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/keymaterial/joseadapter"
 	"github.com/dadrus/heimdall/internal/keyregistry/mocks"
-	"github.com/dadrus/heimdall/internal/keystore"
-	"github.com/dadrus/heimdall/internal/x/pkix/pemx"
+	"github.com/dadrus/heimdall/internal/secrets"
+	"github.com/dadrus/heimdall/internal/secrets/types"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -49,10 +50,11 @@ type ServiceTestSuite struct {
 	ee1     *testsupport.EndEntity
 	ee2     *testsupport.EndEntity
 
-	srv  *http.Server
-	ks   keystore.KeyStore
-	addr string
-	khr  *mocks.RegistryMock
+	srv     *http.Server
+	secret1 secrets.AsymmetricKeySecret
+	secret2 secrets.AsymmetricKeySecret
+	addr    string
+	khr     *mocks.RegistryMock
 }
 
 func (suite *ServiceTestSuite) SetupSuite() {
@@ -96,17 +98,9 @@ func (suite *ServiceTestSuite) SetupSuite() {
 	suite.Require().NoError(err)
 	suite.ee2 = &testsupport.EndEntity{PrivKey: ee2PrivKey}
 
-	pemBytes, err := pemx.BuildPEM(
-		pemx.WithECDSAPrivateKey(ee1PrivKey, pemx.WithHeader("X-Key-ID", "foo")),
-		pemx.WithX509Certificate(ee1cert),
-		pemx.WithECDSAPrivateKey(ee2PrivKey, pemx.WithHeader("X-Key-ID", "bar")),
-		pemx.WithX509Certificate(intCA1Cert),
-		pemx.WithX509Certificate(suite.rootCA1.Certificate),
-	)
-	suite.Require().NoError(err)
-
-	suite.ks, err = keystore.NewKeyStoreFromPEMBytes(pemBytes, "")
-	suite.Require().NoError(err)
+	suite.secret1 = types.NewAsymmetricKeySecret("bar", "foo", ee1PrivKey,
+		[]*x509.Certificate{ee1cert, intCA1Cert, suite.rootCA1.Certificate})
+	suite.secret2 = types.NewAsymmetricKeySecret("bar", "bar", ee2PrivKey, nil)
 }
 
 func (suite *ServiceTestSuite) SetupTest() {
@@ -122,13 +116,14 @@ func (suite *ServiceTestSuite) SetupTest() {
 		Metrics: config.MetricsConfig{Enabled: true},
 	}
 
-	listener, err := listener.New(
-		suite.T().Context(),
+	factory, err := listener.NewFactory(
 		conf.Management.Address(),
 		conf.Management.TLS,
 		nil,
-		nil,
 	)
+	suite.Require().NoError(err)
+
+	listener, err := factory.Create(suite.T().Context())
 	suite.Require().NoError(err)
 	suite.addr = "http://" + listener.Addr().String()
 
@@ -152,9 +147,12 @@ func TestServiceTestSuite(t *testing.T) {
 
 func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 	// GIVEN
-	keys := make([]jose.JSONWebKey, len(suite.ks.Entries()))
-	for idx, entry := range suite.ks.Entries() {
-		keys[idx] = entry.JWK()
+	var err error
+
+	keys := make([]jose.JSONWebKey, 2)
+	for idx, entry := range []secrets.AsymmetricKeySecret{suite.secret1, suite.secret2} {
+		keys[idx], err = joseadapter.ToJWK(entry)
+		suite.Require().NoError(err)
 	}
 
 	suite.khr.EXPECT().Keys().Return(keys)
@@ -182,10 +180,9 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 
 	jwk := jwks.Key("bar")
 	suite.Require().Len(jwk, 1)
-	entry, err := suite.ks.GetKey("bar")
-	suite.Require().NoError(err)
 
-	expected := entry.JWK()
+	expected, err := joseadapter.ToJWK(suite.secret2)
+	suite.Require().NoError(err)
 	suite.Equal(expected.KeyID, jwk[0].KeyID)
 	suite.Equal(expected.Key, jwk[0].Key)
 	suite.Equal(expected.Algorithm, jwk[0].Algorithm)
@@ -197,10 +194,9 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 
 	jwk = jwks.Key("foo")
 	suite.Require().Len(jwk, 1)
-	entry, err = suite.ks.GetKey("foo")
-	suite.Require().NoError(err)
 
-	expected = entry.JWK()
+	expected, err = joseadapter.ToJWK(suite.secret1)
+	suite.Require().NoError(err)
 	suite.Equal(expected.KeyID, jwk[0].KeyID)
 	suite.Equal(expected.Key, jwk[0].Key)
 	suite.Equal(expected.Algorithm, jwk[0].Algorithm)
@@ -216,9 +212,12 @@ func (suite *ServiceTestSuite) TestJWKSRequestWithoutEtagUsage() {
 
 func (suite *ServiceTestSuite) TestJWKSRequestWithEtagUsage() {
 	// GIVEN
-	keys := make([]jose.JSONWebKey, len(suite.ks.Entries()))
-	for idx, entry := range suite.ks.Entries() {
-		keys[idx] = entry.JWK()
+	var err error
+
+	keys := make([]jose.JSONWebKey, 2)
+	for idx, entry := range []secrets.AsymmetricKeySecret{suite.secret1, suite.secret2} {
+		keys[idx], err = joseadapter.ToJWK(entry)
+		suite.Require().NoError(err)
 	}
 
 	suite.khr.EXPECT().Keys().Return(keys)

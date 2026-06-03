@@ -5,7 +5,7 @@
 package mocks
 
 import (
-	"github.com/dadrus/heimdall/internal/keyregistry"
+	"github.com/dadrus/heimdall/internal/secrets"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -37,8 +37,8 @@ func (_m *KeyObserverMock) EXPECT() *KeyObserverMock_Expecter {
 }
 
 // Notify provides a mock function for the type KeyObserverMock
-func (_mock *KeyObserverMock) Notify(ki keyregistry.KeyInfo) {
-	_mock.Called(ki)
+func (_mock *KeyObserverMock) Notify(ref secrets.Reference) {
+	_mock.Called(ref)
 	return
 }
 
@@ -48,16 +48,16 @@ type KeyObserverMock_Notify_Call struct {
 }
 
 // Notify is a helper method to define mock.On call
-//   - ki keyregistry.KeyInfo
-func (_e *KeyObserverMock_Expecter) Notify(ki interface{}) *KeyObserverMock_Notify_Call {
-	return &KeyObserverMock_Notify_Call{Call: _e.mock.On("Notify", ki)}
+//   - ref secrets.Reference
+func (_e *KeyObserverMock_Expecter) Notify(ref interface{}) *KeyObserverMock_Notify_Call {
+	return &KeyObserverMock_Notify_Call{Call: _e.mock.On("Notify", ref)}
 }
 
-func (_c *KeyObserverMock_Notify_Call) Run(run func(ki keyregistry.KeyInfo)) *KeyObserverMock_Notify_Call {
+func (_c *KeyObserverMock_Notify_Call) Run(run func(ref secrets.Reference)) *KeyObserverMock_Notify_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 keyregistry.KeyInfo
+		var arg0 secrets.Reference
 		if args[0] != nil {
-			arg0 = args[0].(keyregistry.KeyInfo)
+			arg0 = args[0].(secrets.Reference)
 		}
 		run(
 			arg0,
@@ -71,7 +71,7 @@ func (_c *KeyObserverMock_Notify_Call) Return() *KeyObserverMock_Notify_Call {
 	return _c
 }
 
-func (_c *KeyObserverMock_Notify_Call) RunAndReturn(run func(ki keyregistry.KeyInfo)) *KeyObserverMock_Notify_Call {
+func (_c *KeyObserverMock_Notify_Call) RunAndReturn(run func(ref secrets.Reference)) *KeyObserverMock_Notify_Call {
 	_c.Run(run)
 	return _c
 }

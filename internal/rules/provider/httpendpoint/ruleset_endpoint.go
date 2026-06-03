@@ -37,7 +37,7 @@ type ruleSetEndpoint struct {
 	endpoint.Endpoint `mapstructure:",squash"`
 }
 
-func (e *ruleSetEndpoint) ID() string { return e.URL }
+func (e *ruleSetEndpoint) ID() string { return e.URL.String() }
 
 func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (v1beta1.RuleSet, error) {
 	req, err := e.CreateRequest(ctx, nil, nil)
@@ -72,9 +72,8 @@ func (e *ruleSetEndpoint) FetchRuleSet(ctx context.Context, app app.Context) (v1
 
 	md := sha256.New()
 
-	dec := encoding.NewDecoder(
+	dec := app.DecoderFactory().Decoder(
 		encoding.WithSourceContentType(resp.Header.Get("Content-Type")),
-		encoding.WithValidator(encoding.ValidatorFunc(app.Validator().ValidateStruct)),
 		encoding.WithErrorOnUnused(true),
 	)
 

@@ -75,6 +75,14 @@ func WithRootCACertificates(certs []*x509.Certificate) ValidationOption {
 	}
 }
 
+func WithCertPool(certsPool *x509.CertPool) ValidationOption {
+	return func(opts *options) error {
+		opts.verifyOpts.Roots = certsPool
+
+		return nil
+	}
+}
+
 func WithSystemTrustStore() ValidationOption {
 	return func(opts *options) error {
 		rootPool, err := x509.SystemCertPool()

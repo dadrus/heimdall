@@ -23,7 +23,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/fxlcm"
+	"github.com/dadrus/heimdall/internal/handler/listener"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/secrets"
 )
 
 // available here for test purposes
@@ -43,20 +45,26 @@ func (noopController) Stop(context.Context) error  { return nil }
 
 func New(
 	tlsConf *config.TLS,
+	sr secrets.Resolver,
+	srf secrets.ScopedResolverFactory,
 	logger zerolog.Logger,
 	authClass string,
 	ruleFactory rule.Factory,
 	accessLogEnabled bool,
-) AdmissionController {
+) (AdmissionController, error) {
 	if tlsConf == nil {
-		return noopController{}
+		return noopController{}, nil
+	}
+
+	lf, err := listener.NewFactory(listeningAddress, tlsConf, sr)
+	if err != nil {
+		return nil, err
 	}
 
 	return &fxlcm.LifecycleManager{
-		ServiceName:    "Kubernetes Admission Controller",
-		ServiceAddress: listeningAddress,
-		Server:         newService(listeningAddress, ruleFactory, authClass, logger, accessLogEnabled),
-		Logger:         logger,
-		TLSConf:        tlsConf,
-	}
+		ServiceName:     "Kubernetes Admission Controller",
+		Server:          newService(listeningAddress, ruleFactory, srf, authClass, logger, accessLogEnabled),
+		ListenerFactory: lf,
+		Logger:          logger,
+	}, nil
 }

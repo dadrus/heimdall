@@ -18,7 +18,6 @@ package proxy
 
 import (
 	"bytes"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -55,7 +54,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			setup: func(t *testing.T, ctx requestcontext.Context, _ *url.URL) pipeline.Backend {
 				t.Helper()
 
-				err := errors.New("test error")
+				err := assert.AnError
 				ctx.SetError(err)
 
 				return nil

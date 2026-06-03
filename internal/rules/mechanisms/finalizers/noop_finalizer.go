@@ -23,6 +23,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -55,8 +56,6 @@ type noopFinalizer struct {
 	id   string
 }
 
-func (f *noopFinalizer) Accept(_ pipeline.Visitor) {}
-
 func (f *noopFinalizer) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -68,7 +67,10 @@ func (f *noopFinalizer) Execute(ctx pipeline.Context, _ pipeline.Subject) error 
 	return nil
 }
 
-func (f *noopFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (f *noopFinalizer) CreateStep(
+	_ secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return f, nil
 	}
@@ -85,7 +87,8 @@ func (f *noopFinalizer) CreateStep(def types.StepDefinition) (pipeline.Step, err
 	return &fin, nil
 }
 
-func (f *noopFinalizer) Kind() types.Kind { return types.KindFinalizer }
-func (f *noopFinalizer) Name() string     { return f.name }
-func (f *noopFinalizer) ID() string       { return f.id }
-func (f *noopFinalizer) Type() string     { return f.name }
+func (f *noopFinalizer) Name() string            { return f.name }
+func (f *noopFinalizer) ID() string              { return f.id }
+func (f *noopFinalizer) Type() string            { return f.name }
+func (*noopFinalizer) Accept(_ pipeline.Visitor) {}
+func (*noopFinalizer) Kind() types.Kind          { return types.KindFinalizer }

@@ -21,8 +21,9 @@ import (
 
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/webhook"
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/secrets"
 )
 
-func NewHandler(factory rule.Factory, authClass string) http.Handler {
-	return webhook.New(&rulesetValidator{f: factory, ac: authClass}, &review{})
+func NewHandler(factory rule.Factory, resolverFactory secrets.ScopedResolverFactory, authClass string) http.Handler {
+	return webhook.New(&rulesetValidator{f: factory, rf: resolverFactory, ac: authClass}, &review{})
 }

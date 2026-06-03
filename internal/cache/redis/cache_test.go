@@ -27,6 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache/types"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/validation"
 )
 
@@ -39,7 +40,8 @@ func TestCacheUsage(t *testing.T) {
 	require.NoError(t, err)
 
 	appCtx := app.NewContextMock(t)
-	appCtx.EXPECT().Validator().Return(validator)
+	appCtx.EXPECT().DecoderFactory().
+		Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 	db := miniredis.RunT(t)
 	cch, err := NewStandaloneCache(

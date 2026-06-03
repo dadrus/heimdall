@@ -24,6 +24,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/handler/management"
 	"github.com/dadrus/heimdall/internal/handler/metrics"
 	"github.com/dadrus/heimdall/internal/handler/profiling"
@@ -31,42 +32,41 @@ import (
 	"github.com/dadrus/heimdall/internal/otel"
 	"github.com/dadrus/heimdall/internal/rules"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms"
-	"github.com/dadrus/heimdall/internal/validation"
-	"github.com/dadrus/heimdall/internal/watcher"
+	"github.com/dadrus/heimdall/internal/secrets"
 )
 
 type appContext struct {
-	w  watcher.Watcher
 	kr keyregistry.Registry
-	v  validation.Validator
+	sr secrets.Resolver
+	d  encoding.DecoderFactory
 	l  zerolog.Logger
 	m  metric.Meter
 	c  *config.Configuration
 }
 
-func (c *appContext) Watcher() watcher.Watcher          { return c.w }
-func (c *appContext) KeyRegistry() keyregistry.Registry { return c.kr }
-func (c *appContext) Validator() validation.Validator   { return c.v }
-func (c *appContext) Logger() zerolog.Logger            { return c.l }
-func (c *appContext) Meter() metric.Meter               { return c.m }
-func (c *appContext) Config() *config.Configuration     { return c.c }
+func (c *appContext) KeyRegistry() keyregistry.Registry       { return c.kr }
+func (c *appContext) SecretResolver() secrets.Resolver        { return c.sr }
+func (c *appContext) DecoderFactory() encoding.DecoderFactory { return c.d }
+func (c *appContext) Logger() zerolog.Logger                  { return c.l }
+func (c *appContext) Meter() metric.Meter                     { return c.m }
+func (c *appContext) Config() *config.Configuration           { return c.c }
 
 var Module = fx.Options( //nolint:gochecknoglobals
 	otel.Module,
-	watcher.Module,
 	keyregistry.Module,
+	secrets.Module,
 	fx.Provide(func(
-		watcher watcher.Watcher,
 		kr keyregistry.Registry,
-		validator validation.Validator,
+		sr secrets.Resolver,
+		decoderFactory encoding.DecoderFactory,
 		logger zerolog.Logger,
 		meter metric.Meter,
 		conf *config.Configuration,
 	) app.Context {
 		return &appContext{
-			w:  watcher,
 			kr: kr,
-			v:  validator,
+			sr: sr,
+			d:  decoderFactory,
 			l:  logger,
 			m:  meter,
 			c:  conf,

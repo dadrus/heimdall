@@ -18,7 +18,6 @@ package httpendpoint
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -36,6 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache/memory"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/api/v1beta1"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
@@ -192,7 +192,8 @@ endpoints:
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(log.Logger)
 			appCtx.EXPECT().Config().Return(conf)
-			appCtx.EXPECT().Validator().Maybe().Return(validator)
+			appCtx.EXPECT().DecoderFactory().Maybe().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 			// WHEN
 			prov, err := NewProvider(appCtx, mocks.NewRuleSetProcessorMock(t), cch)
@@ -704,7 +705,7 @@ rules:
 			setupProcessor: func(t *testing.T, processor *mocks.RuleSetProcessorMock) {
 				t.Helper()
 
-				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(errors.New("test error")).Once()
+				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(assert.AnError).Once()
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -764,7 +765,7 @@ rules:
 				t.Helper()
 
 				processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(errors.New("test error"))
+				processor.EXPECT().OnUpdated(mock.Anything, mock.Anything).Return(assert.AnError)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -812,7 +813,7 @@ rules:
 				t.Helper()
 
 				call := processor.EXPECT().OnCreated(mock.Anything, mock.Anything).Return(nil).Once()
-				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(errors.New("test error")).NotBefore(call)
+				processor.EXPECT().OnDeleted(mock.Anything, mock.Anything).Return(assert.AnError).NotBefore(call)
 			},
 			assert: func(t *testing.T, logs fmt.Stringer, _ *mocks.RuleSetProcessorMock) {
 				t.Helper()
@@ -855,7 +856,8 @@ rules:
 			appCtx := app.NewContextMock(t)
 			appCtx.EXPECT().Logger().Return(zerolog.New(logs))
 			appCtx.EXPECT().Config().Return(conf)
-			appCtx.EXPECT().Validator().Return(validator)
+			appCtx.EXPECT().DecoderFactory().
+				Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
 
 			prov, err := NewProvider(appCtx, processor, cch)
 			require.NoError(t, err)

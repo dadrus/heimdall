@@ -18,7 +18,6 @@ package httpx
 
 import (
 	"bufio"
-	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -49,7 +48,7 @@ func TestTraceRoundTripperRoundTrip(t *testing.T) {
 		},
 		"debug log level with error": {
 			logLevel: zerolog.DebugLevel,
-			err:      errors.New("test error"),
+			err:      assert.AnError,
 			assert: func(t *testing.T, logs string) {
 				t.Helper()
 
@@ -85,7 +84,7 @@ func TestTraceRoundTripperRoundTrip(t *testing.T) {
 		},
 		"trace log level with error": {
 			logLevel: zerolog.TraceLevel,
-			err:      errors.New("test error"),
+			err:      assert.AnError,
 			assert: func(t *testing.T, logs string) {
 				t.Helper()
 

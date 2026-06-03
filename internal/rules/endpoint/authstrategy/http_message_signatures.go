@@ -18,35 +18,38 @@ package authstrategy
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/binary"
-	"fmt"
+	"errors"
 	"net/http"
-	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/dadrus/httpsig"
 	"github.com/rs/zerolog"
 
-	"github.com/dadrus/heimdall/internal/keyregistry"
-	"github.com/dadrus/heimdall/internal/keystore"
+	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-type KeyStore struct {
-	Path     string `mapstructure:"path"     validate:"required"`
-	Password string `mapstructure:"password"`
-}
+var (
+	errUnsupportedAlgorithm = errors.New("unsupported algorithm")
+	errUnsupportedKeySize   = errors.New("unsupported key size")
+)
 
 type SignerConfig struct {
-	Name     string   `mapstructure:"name"`
-	KeyStore KeyStore `mapstructure:"key_store" validate:"required"`
-	KeyID    string   `mapstructure:"key_id"`
+	Name   string        `mapstructure:"name"`
+	Secret config.Secret `mapstructure:"secret" validate:"required"`
 }
 
 type HTTPMessageSignatures struct {
@@ -55,43 +58,108 @@ type HTTPMessageSignatures struct {
 	TTL        *time.Duration `mapstructure:"ttl"`
 	Label      string         `mapstructure:"label"`
 
-	co     keyregistry.KeyObserver
-	mut    sync.RWMutex
-	signer httpsig.Signer
+	informer *secrets.SecretInformer[httpsig.Signer]
+	hash     atomic.Value
 }
 
-func (s *HTTPMessageSignatures) OnChanged(logger zerolog.Logger) {
-	err := s.init()
-	if err != nil {
-		logger.Warn().Err(err).
-			Str("_file", s.Signer.KeyStore.Path).
-			Msg("Signer key store reload failed")
-	} else {
-		logger.Info().
-			Str("_file", s.Signer.KeyStore.Path).
-			Msg("Signer key store reloaded")
-	}
-}
-
-func (s *HTTPMessageSignatures) Apply(ctx context.Context, req *http.Request) error {
-	logger := zerolog.Ctx(ctx)
+func (s *HTTPMessageSignatures) Apply(req *http.Request) error {
+	logger := zerolog.Ctx(req.Context())
 	logger.Debug().Msg("Applying http_message_signatures strategy to authenticate request")
 
-	s.mut.RLock()
-	defer s.mut.RUnlock()
+	signer, ok := s.informer.Get()
+	if !ok {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"http_message_signatures signer is not available",
+		)
+	}
 
-	header, err := s.signer.Sign(httpsig.MessageFromRequest(req))
+	header, err := signer.Sign(httpsig.MessageFromRequest(req))
 	if err != nil {
 		return err
 	}
 
-	// set the updated headers
 	req.Header = header
 
 	return nil
 }
 
 func (s *HTTPMessageSignatures) Hash() []byte {
+	if hash, ok := s.hash.Load().([]byte); ok {
+		return hash
+	}
+
+	return nil
+}
+
+func (s *HTTPMessageSignatures) init(appCtx app.Context) error {
+	ref := secrets.Reference{Source: s.Signer.Secret.Source, Selector: s.Signer.Secret.Selector}
+
+	informer, err := secrets.NewSecretInformer(
+		appCtx.SecretResolver(),
+		secrets.Reference{Source: s.Signer.Secret.Source, Selector: s.Signer.Secret.Selector},
+		secrets.WithConverter(s.createSigner),
+		secrets.WithUpdateCallback(func(_ context.Context, secret secrets.Secret, _ httpsig.Signer) error {
+			aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
+
+			appCtx.KeyRegistry().Notify(ref)
+			s.updateHash(aks)
+
+			return nil
+		}),
+	)
+	if err != nil {
+		return errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed resolving secret for http_message_signatures strategy",
+		).CausedBy(err)
+	}
+
+	s.informer = informer
+
+	return nil
+}
+
+func (s *HTTPMessageSignatures) createSigner(secret secrets.Secret) (httpsig.Signer, error) {
+	aks, ok := secret.(secrets.AsymmetricKeySecret)
+	if !ok {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"resolved secret is not suitable for signing",
+		)
+	}
+
+	if err := validateSigningCertificate(aks); err != nil {
+		return nil, err
+	}
+
+	key, err := toHTTPSigKey(aks)
+	if err != nil {
+		return nil, err
+	}
+
+	signer, err := httpsig.NewSigner(
+		key,
+		httpsig.WithComponents(s.Components...),
+		httpsig.WithTag(x.IfThenElse(len(s.Signer.Name) != 0, s.Signer.Name, "heimdall")),
+		httpsig.WithLabel(s.Label),
+		httpsig.WithTTL(x.IfThenElseExec(
+			s.TTL != nil,
+			func() time.Duration { return *s.TTL },
+			func() time.Duration { return time.Minute },
+		)),
+	)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed creating signer",
+		).CausedBy(err)
+	}
+
+	return signer, nil
+}
+
+func (s *HTTPMessageSignatures) updateHash(secret secrets.AsymmetricKeySecret) {
 	const int64BytesCount = 8
 
 	hash := sha256.New()
@@ -112,119 +180,82 @@ func (s *HTTPMessageSignatures) Hash() []byte {
 	}
 
 	hash.Write(stringx.ToBytes(s.Signer.Name))
-	hash.Write(stringx.ToBytes(s.Signer.KeyID))
+	hash.Write(stringx.ToBytes(secret.KeyID()))
+	hash.Write(stringx.ToBytes(secret.Selector()))
+	hash.Write(stringx.ToBytes(string(secret.Kind())))
 
-	return hash.Sum(nil)
+	s.hash.Store(hash.Sum(nil))
 }
 
-func (s *HTTPMessageSignatures) init() error {
-	ks, err := keystore.NewKeyStoreFromPEMFile(s.Signer.KeyStore.Path, s.Signer.KeyStore.Password)
-	if err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"failed loading keystore for http_message_signatures strategy").CausedBy(err)
+func validateSigningCertificate(secret secrets.AsymmetricKeySecret) error {
+	chain := secret.CertChain()
+	if len(chain) == 0 {
+		return nil
 	}
 
-	var kse *keystore.Entry
-
-	if len(s.Signer.KeyID) == 0 {
-		kse, err = ks.Entries()[0], nil
-	} else {
-		kse, err = ks.GetKey(s.Signer.KeyID)
+	opts := []pkix.ValidationOption{
+		pkix.WithKeyUsage(x509.KeyUsageDigitalSignature), //nolint:gosec
+		pkix.WithRootCACertificates([]*x509.Certificate{chain[len(chain)-1]}),
+		pkix.WithCurrentTime(time.Now()),
 	}
 
-	if err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"failed retrieving key from key store for http_message_signatures strategy").CausedBy(err)
+	if len(chain) > 2 { //nolint:mnd
+		opts = append(opts, pkix.WithIntermediateCACertificates(chain[1:len(chain)-1]))
 	}
 
-	if len(kse.CertChain) != 0 {
-		opts := []pkix.ValidationOption{
-			pkix.WithKeyUsage(x509.KeyUsageDigitalSignature),
-			pkix.WithRootCACertificates([]*x509.Certificate{kse.CertChain[len(kse.CertChain)-1]}),
-			pkix.WithCurrentTime(time.Now()),
-		}
+	return pkix.ValidateCertificate(chain[0], opts...)
+}
 
-		if len(kse.CertChain) > 2 { //nolint: mnd
-			opts = append(opts, pkix.WithIntermediateCACertificates(kse.CertChain[1:len(kse.CertChain)-1]))
-		}
-
-		if err = pkix.ValidateCertificate(kse.CertChain[0], opts...); err != nil {
-			return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-				"certificate for http_message_signatures strategy cannot be used for signing purposes").
-				CausedBy(err)
-		}
-	}
-
-	signer, err := httpsig.NewSigner(
-		toHTTPSigKey(kse),
-		httpsig.WithComponents(s.Components...),
-		httpsig.WithTag(x.IfThenElse(len(s.Signer.Name) != 0, s.Signer.Name, "heimdall")),
-		httpsig.WithLabel(s.Label),
-		httpsig.WithTTL(x.IfThenElseExec(s.TTL != nil,
-			func() time.Duration { return *s.TTL },
-			func() time.Duration { return 1 * time.Minute },
-		)),
+func toHTTPSigKey(secret secrets.AsymmetricKeySecret) (httpsig.Key, error) {
+	var (
+		httpSigAlg httpsig.SignatureAlgorithm
+		err        error
 	)
-	if err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
-			"failed to configure http_message_signatures strategy").CausedBy(err)
-	}
 
-	for _, kse := range ks.Entries() {
-		s.co.Notify(keyregistry.KeyInfo{
-			Entry:      *kse,
-			Exportable: true,
-		})
-	}
-
-	s.mut.Lock()
-	s.signer = signer
-	s.mut.Unlock()
-
-	return nil
-}
-
-func toHTTPSigKey(entry *keystore.Entry) httpsig.Key {
-	var httpSigAlg httpsig.SignatureAlgorithm
-
-	switch entry.Alg {
-	case keystore.AlgRSA:
-		httpSigAlg = getRSAAlgorithm(entry.KeySize)
-	case keystore.AlgECDSA:
-		httpSigAlg = getECDSAAlgorithm(entry.KeySize)
+	switch key := secret.PrivateKey().(type) {
+	case *rsa.PrivateKey:
+		httpSigAlg, err = getRSAAlgorithm(key.Size() * 8) //nolint:mnd
+	case *ecdsa.PrivateKey:
+		httpSigAlg, err = getECDSAAlgorithm(key.Params().BitSize)
+	case ed25519.PrivateKey:
+		httpSigAlg = httpsig.Ed25519
 	default:
-		panic("unsupported key algorithm: " + entry.Alg)
+		err = errorchain.NewWithMessagef(errUnsupportedAlgorithm, "key type: %T", key)
+	}
+
+	if err != nil {
+		return httpsig.Key{}, err
 	}
 
 	return httpsig.Key{
 		Algorithm: httpSigAlg,
-		KeyID:     entry.KeyID,
-		Key:       entry.PrivateKey,
+		KeyID:     secret.KeyID(),
+		Key:       secret.PrivateKey(),
+	}, nil
+}
+
+func getECDSAAlgorithm(keySize int) (httpsig.SignatureAlgorithm, error) {
+	switch keySize {
+	case 256: //nolint:mnd
+		return httpsig.EcdsaP256Sha256, nil
+	case 384: //nolint:mnd
+		return httpsig.EcdsaP384Sha384, nil
+	case 521: //nolint:mnd
+		return httpsig.EcdsaP521Sha512, nil
+	default:
+		return "", errorchain.NewWithMessagef(errUnsupportedKeySize, "ECDSA %d", keySize)
 	}
 }
 
-func getECDSAAlgorithm(keySize int) httpsig.SignatureAlgorithm {
+func getRSAAlgorithm(keySize int) (httpsig.SignatureAlgorithm, error) {
 	switch keySize {
-	case 256: //nolint: mnd
-		return httpsig.EcdsaP256Sha256
-	case 384: //nolint: mnd
-		return httpsig.EcdsaP384Sha384
-	case 512: //nolint: mnd
-		return httpsig.EcdsaP521Sha512
+	case 2048: //nolint:mnd
+		return httpsig.RsaPssSha256, nil
+	case 3072: //nolint:mnd
+		return httpsig.RsaPssSha384, nil
+	case 4096: //nolint:mnd
+		return httpsig.RsaPssSha512, nil
 	default:
-		panic(fmt.Sprintf("unsupported ECDSA key size: %d", keySize))
-	}
-}
-
-func getRSAAlgorithm(keySize int) httpsig.SignatureAlgorithm {
-	switch keySize {
-	case 2048: //nolint: mnd
-		return httpsig.RsaPssSha256
-	case 3072: //nolint: mnd
-		return httpsig.RsaPssSha384
-	case 4096: //nolint: mnd
-		return httpsig.RsaPssSha512
-	default:
-		panic(fmt.Sprintf("unsupported RSA key size: %d", keySize))
+		return "", errorchain.NewWithMessagef(errUnsupportedKeySize, "RSA %d", keySize)
 	}
 }

@@ -23,6 +23,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -58,7 +59,7 @@ func newWWWAuthenticateErrorHandler(app app.Context, name string, rawConfig map[
 	}
 
 	var conf Config
-	if err := decodeConfig(app.Validator(), rawConfig, &conf); err != nil {
+	if err := decodeConfig(app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerWWWAuthenticate, name).CausedBy(err)
 	}
@@ -71,11 +72,11 @@ func newWWWAuthenticateErrorHandler(app app.Context, name string, rawConfig map[
 	}, nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) Accept(_ pipeline.Visitor) {}
-func (eh *wwwAuthenticateErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }
-func (eh *wwwAuthenticateErrorHandler) Name() string              { return eh.name }
-func (eh *wwwAuthenticateErrorHandler) ID() string                { return eh.id }
-func (eh *wwwAuthenticateErrorHandler) Type() string              { return eh.name }
+func (eh *wwwAuthenticateErrorHandler) Name() string           { return eh.name }
+func (eh *wwwAuthenticateErrorHandler) ID() string             { return eh.id }
+func (eh *wwwAuthenticateErrorHandler) Type() string           { return eh.name }
+func (*wwwAuthenticateErrorHandler) Kind() types.Kind          { return types.KindErrorHandler }
+func (*wwwAuthenticateErrorHandler) Accept(_ pipeline.Visitor) {}
 
 func (eh *wwwAuthenticateErrorHandler) Execute(ctx pipeline.Context, _ pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
@@ -91,7 +92,10 @@ func (eh *wwwAuthenticateErrorHandler) Execute(ctx pipeline.Context, _ pipeline.
 	return nil
 }
 
-func (eh *wwwAuthenticateErrorHandler) CreateStep(def types.StepDefinition) (pipeline.Step, error) {
+func (eh *wwwAuthenticateErrorHandler) CreateStep(
+	_ secrets.Resolver,
+	def types.StepDefinition,
+) (pipeline.Step, error) {
 	if len(def.ID) == 0 && len(def.Config) == 0 {
 		return eh, nil
 	}
@@ -109,7 +113,7 @@ func (eh *wwwAuthenticateErrorHandler) CreateStep(def types.StepDefinition) (pip
 
 	var conf Config
 
-	err := decodeConfig(eh.app.Validator(), def.Config, &conf)
+	err := decodeConfig(eh.app, def.Config, &conf)
 	if err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for %s error handler '%s'", ErrorHandlerWWWAuthenticate, eh.name).

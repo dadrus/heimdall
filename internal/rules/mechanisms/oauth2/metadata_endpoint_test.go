@@ -17,6 +17,7 @@
 package oauth2
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -26,10 +27,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
-	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
+	endpointtestsupport "github.com/dadrus/heimdall/internal/rules/endpoint/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -59,6 +61,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 	defer srv.Close()
 
 	for uc, tc := range map[string]struct {
+		buildEndpoint      func(t *testing.T, baseURL string) endpoint.Endpoint
 		buildURL           func(t *testing.T, baseURL string) string
 		args               map[string]any
 		resolvedEPSettings map[string]ResolvedEndpointSettings
@@ -67,10 +70,15 @@ func TestMetadataEndpointGet(t *testing.T) {
 		assert             func(t *testing.T, endpointCalled bool, err error, sm ServerMetadata)
 	}{
 		"invalid template in path": {
-			buildURL: func(t *testing.T, _ string) string {
+			buildEndpoint: func(t *testing.T, _ string) endpoint.Endpoint {
 				t.Helper()
 
-				return srv.URL + "/{{ Foo }}"
+				return endpoint.Endpoint{
+					URL: metadataRenderFailingTemplate{
+						value: srv.URL + "/{{ Foo }}",
+						err:   errors.New("create template: Heimdall:1: function \"Foo\" not defined"),
+					},
+				}
 			},
 			assert: func(t *testing.T, endpointCalled bool, err error, _ ServerMetadata) {
 				t.Helper()
@@ -82,10 +90,15 @@ func TestMetadataEndpointGet(t *testing.T) {
 			},
 		},
 		"failed rendering template in path": {
-			buildURL: func(t *testing.T, _ string) string {
+			buildEndpoint: func(t *testing.T, _ string) endpoint.Endpoint {
 				t.Helper()
 
-				return srv.URL + "/{{ .Foo }"
+				return endpoint.Endpoint{
+					URL: metadataRenderFailingTemplate{
+						value: srv.URL + "/{{ .Foo }",
+						err:   assert.AnError,
+					},
+				}
 			},
 			assert: func(t *testing.T, endpointCalled bool, err error, _ ServerMetadata) {
 				t.Helper()
@@ -255,22 +268,18 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 				assert.Equal(t, srv.URL+"/bar", sm.Issuer)
 
-				exp := endpoint.Endpoint{
-					URL:     "https://foo.bar/jwks",
-					Method:  http.MethodGet,
-					Headers: map[string]string{"Accept": "application/json"},
-				}
-				assert.Equal(t, exp, *sm.JWKSEndpoint)
+				exp := endpointtestsupport.EndpointValue(t, "https://foo.bar/jwks",
+					endpoint.WithMethod(http.MethodGet),
+					endpoint.WithHeader("Accept", "application/json"),
+				)
+				assertEndpointEqual(t, exp, *sm.JWKSEndpoint)
 
-				exp = endpoint.Endpoint{
-					URL:    "https://foo.bar/introspection",
-					Method: http.MethodPost,
-					Headers: map[string]string{
-						"Content-Type": "application/x-www-form-urlencoded",
-						"Accept":       "application/json",
-					},
-				}
-				assert.Equal(t, exp, *sm.IntrospectionEndpoint)
+				exp = endpointtestsupport.EndpointValue(t, "https://foo.bar/introspection",
+					endpoint.WithMethod(http.MethodPost),
+					endpoint.WithHeader("Content-Type", "application/x-www-form-urlencoded"),
+					endpoint.WithHeader("Accept", "application/json"),
+				)
+				assertEndpointEqual(t, exp, *sm.IntrospectionEndpoint)
 			},
 		},
 		"valid server response with invalid issuer for metadata URL": {
@@ -311,18 +320,25 @@ func TestMetadataEndpointGet(t *testing.T) {
 		"configured settings for resolved endpoints are applied": {
 			resolvedEPSettings: map[string]ResolvedEndpointSettings{
 				"jwks_uri": {
-					Retry:        &endpoint.Retry{GiveUpAfter: 1 * time.Minute, MaxDelay: 5 * time.Second},
-					HTTPCache:    &endpoint.HTTPCache{Enabled: true, DefaultTTL: 15 * time.Second},
-					AuthStrategy: &authstrategy.APIKey{In: "header", Name: "X-API-Key", Value: "foo"},
+					Retry:     &endpoint.Retry{GiveUpAfter: 1 * time.Minute, MaxDelay: 5 * time.Second},
+					HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 15 * time.Second},
+					AuthStrategy: &authstrategy.APIKey{
+						In:   "header",
+						Name: "X-API-Key",
+						Secret: config.Secret{
+							Source:   "foo",
+							Selector: "bar",
+						},
+					},
 				},
 				"introspection_endpoint": {
 					Retry:     &endpoint.Retry{GiveUpAfter: 2 * time.Minute, MaxDelay: 10 * time.Second},
 					HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 20 * time.Second},
 					AuthStrategy: &authstrategy.OAuth2ClientCredentials{
-						Config: clientcredentials.Config{
-							TokenURL:     "https://foo.bar/token",
-							ClientID:     "foo",
-							ClientSecret: "bar",
+						TokenURL: "https://foo.bar/token",
+						Credentials: config.Secret{
+							Source:   "foo",
+							Selector: "bar",
 						},
 					},
 				},
@@ -360,34 +376,37 @@ func TestMetadataEndpointGet(t *testing.T) {
 
 				assert.Equal(t, srv.URL+"/issuer1", sm.Issuer)
 
-				exp := endpoint.Endpoint{
-					URL:          "https://foo.bar/jwks",
-					Method:       http.MethodGet,
-					Headers:      map[string]string{"Accept": "application/json"},
-					Retry:        &endpoint.Retry{GiveUpAfter: 1 * time.Minute, MaxDelay: 5 * time.Second},
-					HTTPCache:    &endpoint.HTTPCache{Enabled: true, DefaultTTL: 15 * time.Second},
-					AuthStrategy: &authstrategy.APIKey{In: "header", Name: "X-API-Key", Value: "foo"},
-				}
-				assert.Equal(t, exp, *sm.JWKSEndpoint)
-
-				exp = endpoint.Endpoint{
-					URL:    "https://foo.bar/introspection",
-					Method: http.MethodPost,
-					Headers: map[string]string{
-						"Content-Type": "application/x-www-form-urlencoded",
-						"Accept":       "application/json",
-					},
-					Retry:     &endpoint.Retry{GiveUpAfter: 2 * time.Minute, MaxDelay: 10 * time.Second},
-					HTTPCache: &endpoint.HTTPCache{Enabled: true, DefaultTTL: 20 * time.Second},
-					AuthStrategy: &authstrategy.OAuth2ClientCredentials{
-						Config: clientcredentials.Config{
-							TokenURL:     "https://foo.bar/token",
-							ClientID:     "foo",
-							ClientSecret: "bar",
+				exp := endpointtestsupport.EndpointValue(t, "https://foo.bar/jwks",
+					endpoint.WithMethod(http.MethodGet),
+					endpoint.WithHeader("Accept", "application/json"),
+					endpoint.WithRetry(&endpoint.Retry{GiveUpAfter: 1 * time.Minute, MaxDelay: 5 * time.Second}),
+					endpoint.WithHTTPCache(&endpoint.HTTPCache{Enabled: true, DefaultTTL: 15 * time.Second}),
+					endpoint.WithAuthStrategy(&authstrategy.APIKey{
+						In:   "header",
+						Name: "X-API-Key",
+						Secret: config.Secret{
+							Source:   "foo",
+							Selector: "bar",
 						},
-					},
-				}
-				assert.Equal(t, exp, *sm.IntrospectionEndpoint)
+					}),
+				)
+				assertEndpointEqual(t, exp, *sm.JWKSEndpoint)
+
+				exp = endpointtestsupport.EndpointValue(t, "https://foo.bar/introspection",
+					endpoint.WithMethod(http.MethodPost),
+					endpoint.WithHeader("Content-Type", "application/x-www-form-urlencoded"),
+					endpoint.WithHeader("Accept", "application/json"),
+					endpoint.WithRetry(&endpoint.Retry{GiveUpAfter: 2 * time.Minute, MaxDelay: 10 * time.Second}),
+					endpoint.WithHTTPCache(&endpoint.HTTPCache{Enabled: true, DefaultTTL: 20 * time.Second}),
+					endpoint.WithAuthStrategy(&authstrategy.OAuth2ClientCredentials{
+						TokenURL: "https://foo.bar/token",
+						Credentials: config.Secret{
+							Source:   "foo",
+							Selector: "bar",
+						},
+					}),
+				)
+				assertEndpointEqual(t, exp, *sm.IntrospectionEndpoint)
 			},
 		},
 	} {
@@ -403,8 +422,14 @@ func TestMetadataEndpointGet(t *testing.T) {
 				tc.createResponse != nil, tc.createResponse, func(t *testing.T, _ http.ResponseWriter) { t.Helper() })
 			buildResponse = func(rw http.ResponseWriter) { createResponse(t, rw) }
 
+			resolvedEndpoint := x.IfThenElseExec(
+				tc.buildEndpoint == nil,
+				func() endpoint.Endpoint { return endpointtestsupport.EndpointValue(t, tc.buildURL(t, srv.URL)) },
+				func() endpoint.Endpoint { return tc.buildEndpoint(t, srv.URL) },
+			)
+
 			ep := &MetadataEndpoint{
-				Endpoint: endpoint.Endpoint{URL: tc.buildURL(t, srv.URL)},
+				Endpoint: resolvedEndpoint,
 				ResolvedEndpoints: x.IfThenElseExec(
 					tc.resolvedEPSettings == nil,
 					func() map[string]ResolvedEndpointSettings { return make(map[string]ResolvedEndpointSettings) },
@@ -420,3 +445,52 @@ func TestMetadataEndpointGet(t *testing.T) {
 		})
 	}
 }
+
+func assertEndpointEqual(t *testing.T, expected, actual endpoint.Endpoint) {
+	t.Helper()
+
+	assert.Equal(t, expected.URL.String(), actual.URL.String())
+	assert.Equal(t, expected.Method, actual.Method)
+	assert.Equal(t, expected.Retry, actual.Retry)
+	assert.Equal(t, expected.HTTPCache, actual.HTTPCache)
+
+	require.Len(t, actual.Headers, len(expected.Headers))
+
+	for name, expectedValue := range expected.Headers {
+		actualValue, ok := actual.Headers[name]
+		require.True(t, ok)
+		assert.Equal(t, expectedValue.String(), actualValue.String())
+	}
+
+	switch expectedAuth := expected.AuthStrategy.(type) {
+	case nil:
+		assert.Nil(t, actual.AuthStrategy)
+	case *authstrategy.APIKey:
+		actualAuth, ok := actual.AuthStrategy.(*authstrategy.APIKey)
+		require.True(t, ok)
+		assert.Equal(t, expectedAuth, actualAuth)
+	case *authstrategy.OAuth2ClientCredentials:
+		actualAuth, ok := actual.AuthStrategy.(*authstrategy.OAuth2ClientCredentials)
+		require.True(t, ok)
+		assert.Equal(t, expectedAuth, actualAuth)
+	default:
+		assert.Equal(t, expectedAuth, actual.AuthStrategy)
+	}
+}
+
+type metadataRenderFailingTemplate struct {
+	value string
+	err   error
+}
+
+func (t metadataRenderFailingTemplate) Render(map[string]any) (string, error) {
+	if t.err != nil {
+		return "", t.err
+	}
+
+	return "", assert.AnError
+}
+
+func (t metadataRenderFailingTemplate) Hash() []byte { return []byte(t.value) }
+
+func (t metadataRenderFailingTemplate) String() string { return t.value }
