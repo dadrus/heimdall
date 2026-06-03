@@ -314,10 +314,10 @@ func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 	logger := zerolog.Ctx(ctx).With().Str("_src", conf.ID).Logger()
 	ctx = logger.WithContext(ctx)
 
-	logger.Info().Msg("Rule set update received")
+	logger.Info().Msg("RuleSet update received")
 
 	if err := p.p.OnUpdated(ctx, *conf); err != nil {
-		logger.Warn().Err(err).Msg("Failed to apply rule set updates")
+		logger.Warn().Err(err).Msg("Failed to apply RuleSet updates")
 
 		statusIncrement := x.IfThenElse(known && inUse, -1, 0)
 
@@ -335,7 +335,7 @@ func (p *Provider) updateRuleSet(ctx context.Context, oldObj, newObj any) {
 			p.id+" instance failed updating RuleSet, reason: "+err.Error(),
 		)
 	} else {
-		logger.Info().Msg("Rule set updates applied")
+		logger.Info().Msg("RuleSet updates applied")
 
 		statusIncrement := x.IfThenElse(known && inUse, 0, 1)
 

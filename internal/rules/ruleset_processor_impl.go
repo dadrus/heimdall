@@ -91,7 +91,7 @@ func (p *ruleSetProcessor) OnCreated(ctx context.Context, ruleSet v1beta1.RuleSe
 	logger.Info().
 		Str("_ruleset_id", source.ID).
 		Str("_ruleset_name", source.Name).
-		Msg("New rule set received")
+		Msg("Processing RuleSet creation")
 
 	if !p.isVersionSupported(ruleSet.Version) {
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
@@ -151,7 +151,7 @@ func (p *ruleSetProcessor) OnUpdated(ctx context.Context, ruleSet v1beta1.RuleSe
 	logger.Info().
 		Str("_ruleset_id", source.ID).
 		Str("_ruleset_name", source.Name).
-		Msg("RuleSet update received")
+		Msg("Processing RuleSet update")
 
 	if !p.isVersionSupported(ruleSet.Version) {
 		return errorchain.NewWithMessage(ErrUnsupportedRuleSetVersion, ruleSet.Version)
@@ -222,7 +222,7 @@ func (p *ruleSetProcessor) OnDeleted(ctx context.Context, ruleSet v1beta1.RuleSe
 	logger.Info().
 		Str("_ruleset_id", source.ID).
 		Str("_ruleset_name", source.Name).
-		Msg("Deletion of a rule set received")
+		Msg("Processing RuleSet deletion")
 
 	if err := p.r.DeleteRuleSet(ctx, source); err != nil {
 		return err
