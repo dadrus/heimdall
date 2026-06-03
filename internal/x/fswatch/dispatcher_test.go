@@ -23,185 +23,430 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
-func TestEventDispatcherStartAndStop(t *testing.T) {
+func TestEventDispatcherDispatchesQueuedEvents(t *testing.T) {
 	t.Parallel()
 
-	handler := NewEventHandlerMock(t)
-	dispatcher := newEventDispatcher(handler, zerolog.Nop())
+	testCases := map[string]struct {
+		events []Event
+	}{
+		"single event": {
+			events: []Event{
+				{Path: "/tmp/one.pem", Op: OpChanged},
+			},
+		},
+		"multiple events": {
+			events: []Event{
+				{Path: "/tmp/one.pem", Op: OpChanged},
+				{Path: "/tmp/two.pem", Op: OpAdded},
+				{Path: "/tmp/three.pem", Op: OpDeleted},
+			},
+		},
+	}
 
-	require.NoError(t, dispatcher.Start())
-	require.NotNil(t, dispatcher.executor)
-	require.NotNil(t, dispatcher.stopCh)
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 
-	require.NoError(t, dispatcher.Stop())
-	require.Nil(t, dispatcher.executor)
+			var (
+				mu       sync.Mutex
+				received []Event
+			)
 
-	require.NoError(t, dispatcher.Stop())
+			dispatcher := newEventDispatcher(
+				EventHandlerFunc(func(evt Event) error {
+					mu.Lock()
+					defer mu.Unlock()
+
+					received = append(received, evt)
+
+					return nil
+				}),
+				zerolog.Nop(),
+				0,
+				0,
+			)
+
+			dispatcher.start()
+			t.Cleanup(dispatcher.stop)
+
+			for _, evt := range tc.events {
+				dispatcher.enqueue(evt)
+			}
+
+			require.Eventually(t, func() bool {
+				mu.Lock()
+				defer mu.Unlock()
+
+				return len(received) == len(tc.events)
+			}, time.Second, 10*time.Millisecond)
+
+			mu.Lock()
+			defer mu.Unlock()
+
+			require.Equal(t, tc.events, received)
+		})
+	}
 }
 
-func TestEventDispatcherDispatchesEventsInOrder(t *testing.T) {
+func TestEventDispatcherDoesNotDispatchBeforeStart(t *testing.T) {
 	t.Parallel()
 
-	handler := NewEventHandlerMock(t)
+	handled := make(chan Event, 1)
 
-	var (
-		mu      sync.Mutex
-		events  []Event
-		handled = make(chan struct{}, 3)
-	)
-
-	handler.EXPECT().
-		HandleEvent(mock.Anything).
-		RunAndReturn(func(evt Event) error {
-			mu.Lock()
-
-			events = append(events, evt)
-			mu.Unlock()
-
-			handled <- struct{}{}
+	dispatcher := newEventDispatcher(
+		EventHandlerFunc(func(evt Event) error {
+			handled <- evt
 
 			return nil
+		}),
+		zerolog.Nop(),
+		0,
+		0,
+	)
+
+	dispatcher.enqueue(Event{Path: "/tmp/one.pem", Op: OpChanged})
+
+	require.Never(t, func() bool {
+		return len(handled) > 0
+	}, 100*time.Millisecond, 10*time.Millisecond)
+}
+
+func TestEventDispatcherDoesNotDispatchAfterStop(t *testing.T) {
+	t.Parallel()
+
+	handled := make(chan Event, 1)
+
+	dispatcher := newEventDispatcher(
+		EventHandlerFunc(func(evt Event) error {
+			handled <- evt
+
+			return nil
+		}),
+		zerolog.Nop(),
+		0,
+		0,
+	)
+
+	dispatcher.start()
+	dispatcher.stop()
+
+	dispatcher.enqueue(Event{Path: "/tmp/one.pem", Op: OpChanged})
+
+	require.Never(t, func() bool {
+		return len(handled) > 0
+	}, 100*time.Millisecond, 10*time.Millisecond)
+}
+
+func TestEventDispatcherCoalescesEvents(t *testing.T) {
+	t.Parallel()
+
+	testCases := map[string]struct {
+		events []Event
+		want   Event
+	}{
+		"duplicate changed events": {
+			events: []Event{
+				{Path: "/tmp/one.pem", Op: OpChanged},
+				{Path: "/tmp/one.pem", Op: OpChanged},
+			},
+			want: Event{Path: "/tmp/one.pem", Op: OpChanged},
+		},
+		"added and changed events": {
+			events: []Event{
+				{Path: "/tmp/one.pem", Op: OpAdded},
+				{Path: "/tmp/one.pem", Op: OpChanged},
+			},
+			want: Event{Path: "/tmp/one.pem", Op: OpAdded},
+		},
+		"deleted and added events": {
+			events: []Event{
+				{Path: "/tmp/one.pem", Op: OpDeleted},
+				{Path: "/tmp/one.pem", Op: OpAdded},
+			},
+			want: Event{Path: "/tmp/one.pem", Op: OpChanged},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			handled := make(chan Event, len(tc.events))
+
+			dispatcher := newEventDispatcher(
+				EventHandlerFunc(func(evt Event) error {
+					handled <- evt
+
+					return nil
+				}),
+				zerolog.Nop(),
+				20*time.Millisecond,
+				time.Second,
+			)
+
+			dispatcher.start()
+			t.Cleanup(dispatcher.stop)
+
+			for _, evt := range tc.events {
+				dispatcher.enqueue(evt)
+			}
+
+			require.Eventually(t, func() bool {
+				return len(handled) == 1
+			}, time.Second, 10*time.Millisecond)
+
+			require.Equal(t, tc.want, <-handled)
+
+			require.Never(t, func() bool {
+				return len(handled) > 0
+			}, 100*time.Millisecond, 10*time.Millisecond)
 		})
+	}
+}
 
-	dispatcher := newEventDispatcher(handler, zerolog.Nop())
+func TestEventDispatcherRemoveDropsPendingCoalescedEvents(t *testing.T) {
+	t.Parallel()
 
-	require.NoError(t, dispatcher.Start())
-
-	defer func() {
-		require.NoError(t, dispatcher.Stop())
-	}()
-
-	expected := []Event{
-		{Path: "/tmp/one.yaml", Op: OpAdded},
-		{Path: "/tmp/two.yaml", Op: OpChanged},
-		{Path: "/tmp/three.yaml", Op: OpDeleted},
+	testCases := map[string]struct {
+		removePath string
+		event      Event
+	}{
+		"same path": {
+			removePath: "/tmp/one.pem",
+			event:      Event{Path: "/tmp/one.pem", Op: OpChanged},
+		},
+		"direct child": {
+			removePath: "/tmp",
+			event:      Event{Path: "/tmp/one.pem", Op: OpChanged},
+		},
 	}
 
-	for _, evt := range expected {
-		dispatcher.Enqueue(evt)
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			handled := make(chan Event, 1)
+
+			dispatcher := newEventDispatcher(
+				EventHandlerFunc(func(evt Event) error {
+					handled <- evt
+
+					return nil
+				}),
+				zerolog.Nop(),
+				100*time.Millisecond,
+				time.Second,
+			)
+
+			dispatcher.start()
+			t.Cleanup(dispatcher.stop)
+
+			dispatcher.enqueue(tc.event)
+			dispatcher.remove(tc.removePath)
+
+			require.Never(t, func() bool {
+				return len(handled) > 0
+			}, 200*time.Millisecond, 10*time.Millisecond)
+		})
 	}
+}
 
-	requireHandled(t, handled, len(expected))
+func TestEventDispatcherRemoveKeepsUnrelatedEvents(t *testing.T) {
+	t.Parallel()
 
-	mu.Lock()
+	handled := make(chan Event, 1)
 
-	actual := append([]Event(nil), events...)
-	mu.Unlock()
+	dispatcher := newEventDispatcher(
+		EventHandlerFunc(func(evt Event) error {
+			handled <- evt
 
-	assert.Equal(t, expected, actual)
+			return nil
+		}),
+		zerolog.Nop(),
+		100*time.Millisecond,
+		time.Second,
+	)
+
+	dispatcher.start()
+	t.Cleanup(dispatcher.stop)
+
+	want := Event{Path: "/tmp/other.pem", Op: OpChanged}
+
+	dispatcher.enqueue(Event{Path: "/tmp/one.pem", Op: OpChanged})
+	dispatcher.enqueue(want)
+	dispatcher.remove("/tmp/one.pem")
+
+	require.Eventually(t, func() bool {
+		return len(handled) == 1
+	}, time.Second, 10*time.Millisecond)
+
+	require.Equal(t, want, <-handled)
 }
 
 func TestEventDispatcherContinuesAfterHandlerError(t *testing.T) {
 	t.Parallel()
 
-	handler := NewEventHandlerMock(t)
+	expectedErr := errors.New("handler failed")
 
 	var (
-		mu      sync.Mutex
-		events  []Event
-		handled = make(chan struct{}, 2)
+		mu       sync.Mutex
+		received []Event
 	)
 
-	expectedErr := errors.New("failed handling event")
-
-	handler.EXPECT().
-		HandleEvent(mock.Anything).
-		RunAndReturn(func(evt Event) error {
+	dispatcher := newEventDispatcher(
+		EventHandlerFunc(func(evt Event) error {
 			mu.Lock()
+			defer mu.Unlock()
 
-			events = append(events, evt)
-			mu.Unlock()
+			received = append(received, evt)
 
-			handled <- struct{}{}
-
-			if evt.Path == "/tmp/one.yaml" {
+			if len(received) == 1 {
 				return expectedErr
 			}
 
 			return nil
-		})
+		}),
+		zerolog.Nop(),
+		0,
+		0,
+	)
 
-	dispatcher := newEventDispatcher(handler, zerolog.Nop())
+	dispatcher.start()
+	t.Cleanup(dispatcher.stop)
 
-	require.NoError(t, dispatcher.Start())
-
-	defer func() {
-		require.NoError(t, dispatcher.Stop())
-	}()
-
-	expected := []Event{
-		{Path: "/tmp/one.yaml", Op: OpChanged},
-		{Path: "/tmp/two.yaml", Op: OpChanged},
+	events := []Event{
+		{Path: "/tmp/one.pem", Op: OpChanged},
+		{Path: "/tmp/two.pem", Op: OpChanged},
 	}
 
-	for _, evt := range expected {
-		dispatcher.Enqueue(evt)
+	for _, evt := range events {
+		dispatcher.enqueue(evt)
 	}
 
-	requireHandled(t, handled, len(expected))
+	require.Eventually(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+
+		return len(received) == len(events)
+	}, time.Second, 10*time.Millisecond)
 
 	mu.Lock()
+	defer mu.Unlock()
 
-	actual := append([]Event(nil), events...)
+	require.Equal(t, events, received)
+}
 
-	mu.Unlock()
+func TestEventDispatcherHandlesEventsSerially(t *testing.T) {
+	t.Parallel()
 
-	assert.Equal(t, expected, actual)
+	var (
+		mu      sync.Mutex
+		running bool
+		calls   int
+	)
+
+	dispatcher := newEventDispatcher(
+		EventHandlerFunc(func(evt Event) error {
+			mu.Lock()
+			require.False(t, running)
+			running = true
+			calls++
+			mu.Unlock()
+
+			time.Sleep(10 * time.Millisecond)
+
+			mu.Lock()
+			running = false
+			mu.Unlock()
+
+			return nil
+		}),
+		zerolog.Nop(),
+		0,
+		0,
+	)
+
+	dispatcher.start()
+	t.Cleanup(dispatcher.stop)
+
+	for _, evt := range []Event{
+		{Path: "/tmp/one.pem", Op: OpChanged},
+		{Path: "/tmp/two.pem", Op: OpChanged},
+		{Path: "/tmp/three.pem", Op: OpChanged},
+	} {
+		dispatcher.enqueue(evt)
+	}
+
+	require.Eventually(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+
+		return calls == 3
+	}, time.Second, 10*time.Millisecond)
 }
 
 func TestEventDispatcherStopWaitsForRunningHandler(t *testing.T) {
 	t.Parallel()
 
-	started := make(chan struct{})
-	release := make(chan struct{})
+	handlerEntered := make(chan struct{})
+	releaseHandler := make(chan struct{})
+	handlerDone := make(chan struct{})
 
-	dispatcher := newEventDispatcher(EventHandlerFunc(func(Event) error {
-		close(started)
-		<-release
+	dispatcher := newEventDispatcher(
+		EventHandlerFunc(func(evt Event) error {
+			close(handlerEntered)
+			<-releaseHandler
+			close(handlerDone)
 
-		return nil
-	}), zerolog.Nop())
+			return nil
+		}),
+		zerolog.Nop(),
+		0,
+		0,
+	)
 
-	require.NoError(t, dispatcher.Start())
+	dispatcher.start()
 
-	dispatcher.Enqueue(Event{Path: "/tmp/one.yaml", Op: OpChanged})
+	dispatcher.enqueue(Event{Path: "/tmp/one.pem", Op: OpChanged})
 
 	require.Eventually(t, func() bool {
 		select {
-		case <-started:
+		case <-handlerEntered:
 			return true
 		default:
 			return false
 		}
 	}, time.Second, 10*time.Millisecond)
 
-	stopped := make(chan error, 1)
+	stopDone := make(chan struct{})
 
 	go func() {
-		stopped <- dispatcher.Stop()
+		dispatcher.stop()
+		close(stopDone)
 	}()
 
 	require.Never(t, func() bool {
 		select {
-		case <-stopped:
+		case <-stopDone:
 			return true
 		default:
 			return false
 		}
-	}, 50*time.Millisecond, 10*time.Millisecond)
+	}, 100*time.Millisecond, 10*time.Millisecond)
 
-	close(release)
+	close(releaseHandler)
 
 	require.Eventually(t, func() bool {
 		select {
-		case err := <-stopped:
-			require.NoError(t, err)
+		case <-handlerDone:
+		default:
+		}
 
+		select {
+		case <-stopDone:
 			return true
 		default:
 			return false
@@ -209,73 +454,223 @@ func TestEventDispatcherStopWaitsForRunningHandler(t *testing.T) {
 	}, time.Second, 10*time.Millisecond)
 }
 
-func TestEventDispatcherEnqueueAfterStopIsIgnored(t *testing.T) {
+func TestEventDispatcherRemoveFiltersQueuedEvents(t *testing.T) {
 	t.Parallel()
 
-	unexpected := make(chan Event, 1)
+	blockHandler := make(chan struct{})
+	handlerEntered := make(chan struct{})
+	handled := make(chan Event, 4)
 
-	dispatcher := newEventDispatcher(EventHandlerFunc(func(Event) error {
-		unexpected <- Event{}
+	dispatcher := newEventDispatcher(
+		EventHandlerFunc(func(evt Event) error {
+			handled <- evt
 
-		return nil
-	}), zerolog.Nop())
+			if evt.Path == "/tmp/blocking.pem" {
+				close(handlerEntered)
+				<-blockHandler
+			}
 
-	require.NoError(t, dispatcher.Start())
-	require.NoError(t, dispatcher.Stop())
+			return nil
+		}),
+		zerolog.Nop(),
+		0,
+		0,
+	)
 
-	dispatcher.Enqueue(Event{Path: "/tmp/one.yaml", Op: OpChanged})
+	dispatcher.start()
+	t.Cleanup(dispatcher.stop)
 
-	require.Never(t, func() bool {
+	dispatcher.enqueue(Event{Path: "/tmp/blocking.pem", Op: OpChanged})
+
+	require.Eventually(t, func() bool {
 		select {
-		case <-unexpected:
+		case <-handlerEntered:
 			return true
 		default:
 			return false
 		}
-	}, 50*time.Millisecond, 10*time.Millisecond)
+	}, time.Second, 10*time.Millisecond)
+
+	removed := Event{Path: "/tmp/remove.pem", Op: OpChanged}
+	kept := Event{Path: "/tmp/keep.pem", Op: OpChanged}
+
+	dispatcher.enqueue(removed)
+	dispatcher.enqueue(kept)
+
+	require.Eventually(t, func() bool {
+		dispatcher.queueMu.Lock()
+		defer dispatcher.queueMu.Unlock()
+
+		return len(dispatcher.queue) == 2
+	}, time.Second, 10*time.Millisecond)
+
+	dispatcher.remove(removed.Path)
+
+	dispatcher.queueMu.Lock()
+	require.Equal(t, []Event{kept}, dispatcher.queue)
+	dispatcher.queueMu.Unlock()
+
+	close(blockHandler)
+
+	require.Eventually(t, func() bool {
+		return len(handled) == 2
+	}, time.Second, 10*time.Millisecond)
+
+	require.Equal(t, Event{Path: "/tmp/blocking.pem", Op: OpChanged}, <-handled)
+	require.Equal(t, kept, <-handled)
+
+	require.Never(t, func() bool {
+		return len(handled) > 0
+	}, 100*time.Millisecond, 10*time.Millisecond)
 }
 
-func TestEventDispatcherRunStopsWithoutDrainingQueue(t *testing.T) {
+func TestEventDispatcherRemoveFiltersQueuedChildEvents(t *testing.T) {
 	t.Parallel()
 
-	handler := NewEventHandlerMock(t)
+	blockHandler := make(chan struct{})
+	handlerEntered := make(chan struct{})
+	handled := make(chan Event, 4)
 
-	dispatcher := newEventDispatcher(handler, zerolog.Nop())
-	dispatcher.stopCh = make(chan struct{})
-	dispatcher.queue = []Event{
-		{Path: "/tmp/one.yaml", Op: OpChanged},
-	}
+	dispatcher := newEventDispatcher(
+		EventHandlerFunc(func(evt Event) error {
+			handled <- evt
 
-	close(dispatcher.stopCh)
-
-	dispatcher.Run()
-}
-
-func TestEventDispatcherUnscheduleCancelsSchedule(t *testing.T) {
-	t.Parallel()
-
-	handler := NewEventHandlerMock(t)
-	dispatcher := newEventDispatcher(handler, zerolog.Nop())
-
-	require.True(t, dispatcher.Schedule())
-	require.False(t, dispatcher.Schedule())
-
-	dispatcher.Unschedule(errors.New("failed scheduling task"))
-
-	require.True(t, dispatcher.Schedule())
-}
-
-func requireHandled(t *testing.T, handled <-chan struct{}, count int) {
-	t.Helper()
-
-	for range count {
-		require.Eventually(t, func() bool {
-			select {
-			case <-handled:
-				return true
-			default:
-				return false
+			if evt.Path == "/tmp/blocking.pem" {
+				close(handlerEntered)
+				<-blockHandler
 			}
-		}, time.Second, 10*time.Millisecond)
-	}
+
+			return nil
+		}),
+		zerolog.Nop(),
+		0,
+		0,
+	)
+
+	dispatcher.start()
+	t.Cleanup(dispatcher.stop)
+
+	dispatcher.enqueue(Event{Path: "/tmp/blocking.pem", Op: OpChanged})
+
+	require.Eventually(t, func() bool {
+		select {
+		case <-handlerEntered:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
+
+	child := Event{Path: "/tmp/secrets/tls.pem", Op: OpChanged}
+	nested := Event{Path: "/tmp/secrets/nested/tls.pem", Op: OpChanged}
+	kept := Event{Path: "/tmp/other/tls.pem", Op: OpChanged}
+
+	dispatcher.enqueue(child)
+	dispatcher.enqueue(nested)
+	dispatcher.enqueue(kept)
+
+	require.Eventually(t, func() bool {
+		dispatcher.queueMu.Lock()
+		defer dispatcher.queueMu.Unlock()
+
+		return len(dispatcher.queue) == 3
+	}, time.Second, 10*time.Millisecond)
+
+	dispatcher.remove("/tmp/secrets")
+
+	dispatcher.queueMu.Lock()
+	require.Equal(t, []Event{nested, kept}, dispatcher.queue)
+	dispatcher.queueMu.Unlock()
+
+	close(blockHandler)
+
+	require.Eventually(t, func() bool {
+		return len(handled) == 3
+	}, time.Second, 10*time.Millisecond)
+
+	require.Equal(t, Event{Path: "/tmp/blocking.pem", Op: OpChanged}, <-handled)
+	require.Equal(t, nested, <-handled)
+	require.Equal(t, kept, <-handled)
+}
+
+func TestEventDispatcherRunReturnsWhenDrainObservesStop(t *testing.T) {
+	t.Parallel()
+
+	handlerEntered := make(chan struct{})
+	releaseHandler := make(chan struct{})
+	stopStarted := make(chan struct{})
+	stopDone := make(chan struct{})
+	handled := make(chan Event, 2)
+
+	dispatcher := newEventDispatcher(
+		EventHandlerFunc(func(evt Event) error {
+			handled <- evt
+
+			if evt.Path == "/tmp/blocking.pem" {
+				close(handlerEntered)
+				<-releaseHandler
+			}
+
+			return nil
+		}),
+		zerolog.Nop(),
+		0,
+		0,
+	)
+
+	dispatcher.start()
+
+	dispatcher.enqueue(Event{Path: "/tmp/blocking.pem", Op: OpChanged})
+
+	require.Eventually(t, func() bool {
+		select {
+		case <-handlerEntered:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
+
+	dispatcher.enqueue(Event{Path: "/tmp/queued.pem", Op: OpChanged})
+
+	go func() {
+		close(stopStarted)
+		dispatcher.stop()
+		close(stopDone)
+	}()
+
+	require.Eventually(t, func() bool {
+		select {
+		case <-stopStarted:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
+
+	require.Never(t, func() bool {
+		select {
+		case <-stopDone:
+			return true
+		default:
+			return false
+		}
+	}, 100*time.Millisecond, 10*time.Millisecond)
+
+	close(releaseHandler)
+
+	require.Eventually(t, func() bool {
+		select {
+		case <-stopDone:
+			return true
+		default:
+			return false
+		}
+	}, time.Second, 10*time.Millisecond)
+
+	require.Equal(t, Event{Path: "/tmp/blocking.pem", Op: OpChanged}, <-handled)
+
+	require.Never(t, func() bool {
+		return len(handled) > 0
+	}, 100*time.Millisecond, 10*time.Millisecond)
 }

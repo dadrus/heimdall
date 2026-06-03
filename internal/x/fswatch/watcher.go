@@ -65,7 +65,7 @@ func New(handler EventHandler, opts ...Option) (*Watcher, error) {
 
 	return &Watcher{
 		logger:     cfg.logger,
-		dispatcher: newEventDispatcher(handler, cfg.logger),
+		dispatcher: newEventDispatcher(handler, cfg.logger, cfg.eventDebounce, cfg.maxEventDebounce),
 		targets:    make(map[string]*target),
 	}, nil
 }
@@ -110,6 +110,8 @@ func (w *Watcher) Remove(path string) error {
 
 	w.targetsMu.Unlock()
 
+	w.dispatcher.remove(path)
+
 	if !ok || !w.started {
 		return nil
 	}
@@ -143,7 +145,7 @@ func (w *Watcher) Start(ctx context.Context) error {
 			_ = fsWatcher.Close()
 		}
 
-		_ = w.dispatcher.Stop()
+		w.dispatcher.stop()
 	}()
 
 	fsWatcher, err = fsnotify.NewWatcher()
@@ -163,9 +165,7 @@ func (w *Watcher) Start(ctx context.Context) error {
 		}
 	}
 
-	if err = w.dispatcher.Start(); err != nil {
-		return err
-	}
+	w.dispatcher.start()
 
 	w.cancel = cancel
 	w.watcher = fsWatcher
@@ -202,7 +202,7 @@ func (w *Watcher) Stop(ctx context.Context) error {
 	go func() {
 		w.wg.Wait()
 
-		_ = dispatcher.Stop()
+		dispatcher.stop()
 
 		close(done)
 	}()
@@ -261,8 +261,8 @@ func (w *Watcher) handleEvent(fsWatcher *fsnotify.Watcher, evt fsnotify.Event) {
 		w.logger.Debug().
 			Str("_file", normalized.Path).
 			Str("_operation", normalized.Op.String()).
-			Msg("Dispatching normalized file event")
+			Msg("Queueing normalized file event")
 
-		w.dispatcher.Enqueue(normalized)
+		w.dispatcher.enqueue(normalized)
 	}
 }

@@ -18,100 +18,165 @@ package fswatch
 
 import (
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog"
-
-	"github.com/dadrus/heimdall/internal/x/task"
 )
 
 type eventDispatcher struct {
-	task.StateMachine
-
 	handler EventHandler
 	logger  zerolog.Logger
 
 	lifecycleMu sync.RWMutex
-	executor    *task.Executor
-	stopCh      chan struct{}
+	started     bool
+
+	stopCh   chan struct{}
+	signalCh chan struct{}
+
+	coalescer *eventCoalescer
 
 	queueMu sync.Mutex
 	queue   []Event
+
+	wg sync.WaitGroup
 }
 
-func newEventDispatcher(handler EventHandler, logger zerolog.Logger) *eventDispatcher {
-	return &eventDispatcher{
-		handler: handler,
-		logger:  logger,
+func newEventDispatcher(
+	handler EventHandler,
+	logger zerolog.Logger,
+	debounce time.Duration,
+	maxDebounce time.Duration,
+) *eventDispatcher {
+	dsp := &eventDispatcher{
+		handler:  handler,
+		logger:   logger,
+		stopCh:   make(chan struct{}),
+		signalCh: make(chan struct{}, 1),
 	}
+
+	dsp.coalescer = newEventCoalescer(debounce, maxDebounce, dsp.enqueueReady, logger)
+
+	return dsp
 }
 
-func (d *eventDispatcher) Start() error {
+func (d *eventDispatcher) start() {
 	d.lifecycleMu.Lock()
 	defer d.lifecycleMu.Unlock()
 
-	executor, err := task.NewExecutor(1)
-	if err != nil {
-		return err
-	}
-
-	d.executor = executor
-	d.stopCh = make(chan struct{})
-
-	return nil
-}
-
-func (d *eventDispatcher) Stop() error {
-	d.lifecycleMu.Lock()
-	defer d.lifecycleMu.Unlock()
-
-	if d.executor == nil {
-		return nil
-	}
-
-	close(d.stopCh)
-	d.StateMachine.Stop()
-
-	d.executor.Stop()
-	d.executor = nil
-	d.stopCh = nil
-
-	return nil
-}
-
-func (d *eventDispatcher) Enqueue(evt Event) {
-	d.lifecycleMu.RLock()
-	defer d.lifecycleMu.RUnlock()
-
-	if d.executor == nil {
+	if d.started {
 		return
 	}
+
+	d.started = true
+	d.wg.Go(d.run)
+}
+
+func (d *eventDispatcher) stop() {
+	d.lifecycleMu.Lock()
+
+	if !d.started {
+		d.lifecycleMu.Unlock()
+
+		return
+	}
+
+	stopCh := d.stopCh
+	d.started = false
+
+	d.lifecycleMu.Unlock()
+
+	d.coalescer.stop()
+
+	close(stopCh)
+	d.wg.Wait()
+
+	d.queueMu.Lock()
+	d.queue = nil
+	d.queueMu.Unlock()
+}
+
+func (d *eventDispatcher) enqueue(evt Event) {
+	d.lifecycleMu.RLock()
+	started := d.started
+	coalescer := d.coalescer
+	d.lifecycleMu.RUnlock()
+
+	if !started {
+		return
+	}
+
+	coalescer.enqueue(evt)
+}
+
+func (d *eventDispatcher) remove(path string) {
+	d.lifecycleMu.RLock()
+	started := d.started
+	coalescer := d.coalescer
+	d.lifecycleMu.RUnlock()
+
+	if started {
+		coalescer.remove(path)
+	}
+
+	d.queueMu.Lock()
+	defer d.queueMu.Unlock()
+
+	kept := d.queue[:0]
+	for _, evt := range d.queue {
+		if evt.Path == path || isDirectChild(path, evt.Path) {
+			continue
+		}
+
+		kept = append(kept, evt)
+	}
+
+	d.queue = kept
+}
+
+func (d *eventDispatcher) enqueueReady(evt Event) {
+	d.lifecycleMu.RLock()
+
+	if !d.started {
+		d.lifecycleMu.RUnlock()
+
+		return
+	}
+
+	signalCh := d.signalCh
+	d.lifecycleMu.RUnlock()
 
 	d.queueMu.Lock()
 	d.queue = append(d.queue, evt)
 	d.queueMu.Unlock()
 
-	d.executor.Schedule(d)
+	select {
+	case signalCh <- struct{}{}:
+	default:
+	}
 }
 
-func (d *eventDispatcher) Unschedule(reason error) {
-	d.CancelSchedule()
+func (d *eventDispatcher) run() {
+	stopCh := d.stopCh
+	signalCh := d.signalCh
 
-	d.logger.Error().
-		Err(reason).
-		Msg("Failed scheduling file event dispatch")
-}
-
-func (d *eventDispatcher) Run() {
 	for {
 		select {
-		case <-d.stopCh:
+		case <-stopCh:
 			return
-		default:
+		case <-signalCh:
+			if !d.drain(stopCh) {
+				return
+			}
 		}
+	}
+}
 
-		evt, ok := d.next()
-		if !ok {
-			return
+func (d *eventDispatcher) drain(stopCh <-chan struct{}) bool {
+	for evt, ok := d.next(); ok; evt, ok = d.next() {
+		select {
+		case <-stopCh:
+			return false
+		default:
 		}
 
 		if err := d.handler.HandleEvent(evt); err != nil {
@@ -122,6 +187,8 @@ func (d *eventDispatcher) Run() {
 				Msg("Failed handling file event")
 		}
 	}
+
+	return true
 }
 
 func (d *eventDispatcher) next() (Event, bool) {

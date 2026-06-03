@@ -479,10 +479,10 @@ func TestWatcherHandleEventDispatchesMatchingEvent(t *testing.T) {
 	}), WithLogger(zerolog.Nop()))
 	require.NoError(t, err)
 	require.NoError(t, watcher.Add(path))
-	require.NoError(t, watcher.dispatcher.Start())
+	watcher.dispatcher.start()
 
 	t.Cleanup(func() {
-		require.NoError(t, watcher.dispatcher.Stop())
+		watcher.dispatcher.stop()
 	})
 
 	watcher.handleEvent(nil, fsnotify.Event{
@@ -519,10 +519,10 @@ func TestWatcherHandleEventIgnoresUnrelatedEvent(t *testing.T) {
 	}), WithLogger(zerolog.Nop()))
 	require.NoError(t, err)
 	require.NoError(t, watcher.Add(path))
-	require.NoError(t, watcher.dispatcher.Start())
+	watcher.dispatcher.start()
 
 	t.Cleanup(func() {
-		require.NoError(t, watcher.dispatcher.Stop())
+		watcher.dispatcher.stop()
 	})
 
 	watcher.handleEvent(nil, fsnotify.Event{
@@ -697,10 +697,10 @@ func TestWatcherRunHandlesWatcherEvent(t *testing.T) {
 	}), WithLogger(zerolog.Nop()))
 	require.NoError(t, err)
 	require.NoError(t, watcher.Add(path))
-	require.NoError(t, watcher.dispatcher.Start())
+	watcher.dispatcher.start()
 
 	t.Cleanup(func() {
-		require.NoError(t, watcher.dispatcher.Stop())
+		watcher.dispatcher.stop()
 	})
 
 	ctx, cancel := context.WithCancel(t.Context())
@@ -740,4 +740,87 @@ func TestWatcherRunHandlesWatcherEvent(t *testing.T) {
 			return false
 		}
 	}, time.Second, 10*time.Millisecond)
+}
+
+func TestWatcherHandleEventCoalescesDuplicateEvents(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		options []Option
+		assert  func(t *testing.T, events <-chan Event, expected Event)
+	}{
+		"debounce enabled": {
+			options: []Option{
+				WithLogger(zerolog.Nop()),
+				WithEventDebounce(20 * time.Millisecond),
+				WithMaxEventDebounce(time.Second),
+			},
+			assert: func(t *testing.T, events <-chan Event, expected Event) {
+				t.Helper()
+
+				require.Eventually(t, func() bool {
+					select {
+					case evt := <-events:
+						return evt == expected
+					default:
+						return false
+					}
+				}, time.Second, 10*time.Millisecond)
+
+				require.Never(t, func() bool {
+					select {
+					case <-events:
+						return true
+					default:
+						return false
+					}
+				}, 50*time.Millisecond, 10*time.Millisecond)
+			},
+		},
+		"debounce disabled": {
+			options: []Option{
+				WithLogger(zerolog.Nop()),
+				WithEventDebounce(0),
+			},
+			assert: func(t *testing.T, events <-chan Event, expected Event) {
+				t.Helper()
+
+				for range 2 {
+					require.Eventually(t, func() bool {
+						select {
+						case evt := <-events:
+							return evt == expected
+						default:
+							return false
+						}
+					}, time.Second, 10*time.Millisecond)
+				}
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			events := make(chan Event, 4)
+			dir := t.TempDir()
+			path := filepath.Join(dir, "tls-combined.pem")
+			require.NoError(t, os.WriteFile(path, []byte("content"), 0o600))
+
+			watcher, err := New(EventHandlerFunc(func(evt Event) error {
+				events <- evt
+
+				return nil
+			}), tc.options...)
+			require.NoError(t, err)
+			require.NoError(t, watcher.Add(path))
+			watcher.dispatcher.start()
+			t.Cleanup(func() { watcher.dispatcher.stop() })
+
+			raw := fsnotify.Event{Name: path, Op: fsnotify.Chmod}
+			watcher.handleEvent(nil, raw)
+			watcher.handleEvent(nil, raw)
+
+			tc.assert(t, events, Event{Path: filepath.Clean(path), Op: OpChanged})
+		})
+	}
 }

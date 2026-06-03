@@ -213,7 +213,7 @@ func TestTargetHandle(t *testing.T) {
 				return tgt,
 					nil,
 					fsnotify.Event{Name: file, Op: fsnotify.Rename},
-					Event{Path: filepath.Clean(file), Op: OpDeleted}
+					Event{Path: filepath.Clean(file), Op: OpChanged}
 			},
 			ok: true,
 		},

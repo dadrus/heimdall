@@ -41,8 +41,6 @@ type target struct {
 }
 
 func newTarget(path string) (*target, error) {
-	path = filepath.Clean(path)
-
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
@@ -168,7 +166,7 @@ func (t *target) fileEventLocked(op fsnotify.Op, exists bool) (Event, bool) {
 	}
 
 	if op.Has(fsnotify.Remove) || op.Has(fsnotify.Rename) {
-		return Event{Path: t.path, Op: OpDeleted}, true
+		return Event{Path: t.path, Op: OpChanged}, true
 	}
 
 	if op.Has(fsnotify.Create) || op.Has(fsnotify.Write) || op.Has(fsnotify.Chmod) {

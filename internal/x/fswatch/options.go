@@ -16,10 +16,21 @@
 
 package fswatch
 
-import "github.com/rs/zerolog"
+import (
+	"time"
+
+	"github.com/rs/zerolog"
+)
+
+const (
+	defaultEventDebounce    = 50 * time.Millisecond
+	defaultMaxEventDebounce = time.Second
+)
 
 type config struct {
-	logger zerolog.Logger
+	logger           zerolog.Logger
+	eventDebounce    time.Duration
+	maxEventDebounce time.Duration
 }
 
 // Option configures a Watcher.
@@ -32,9 +43,37 @@ func WithLogger(logger zerolog.Logger) Option {
 	}
 }
 
+// WithEventDebounce configures how long normalized events for the same path are
+// coalesced before they are dispatched. Use 0 to dispatch every normalized
+// event immediately.
+func WithEventDebounce(duration time.Duration) Option {
+	return func(cfg *config) {
+		if duration < 0 {
+			duration = 0
+		}
+
+		cfg.eventDebounce = duration
+	}
+}
+
+// WithMaxEventDebounce configures the maximum time a coalesced event may be
+// delayed while more events for the same path keep arriving. Use 0 to disable
+// the maximum delay.
+func WithMaxEventDebounce(duration time.Duration) Option {
+	return func(cfg *config) {
+		if duration < 0 {
+			duration = 0
+		}
+
+		cfg.maxEventDebounce = duration
+	}
+}
+
 func applyOptions(opts []Option) config {
 	cfg := config{
-		logger: zerolog.Nop(),
+		logger:           zerolog.Nop(),
+		eventDebounce:    defaultEventDebounce,
+		maxEventDebounce: defaultMaxEventDebounce,
 	}
 
 	for _, opt := range opts {
