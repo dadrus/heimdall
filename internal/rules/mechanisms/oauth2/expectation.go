@@ -39,7 +39,7 @@ type Expectation struct {
 	Audiences         []string                  `mapstructure:"audience"`
 	AllowedAlgorithms []jose.SignatureAlgorithm `mapstructure:"allowed_algorithms"`
 	ValidityLeeway    time.Duration             `mapstructure:"validity_leeway"`
-	ProofOfPossession ProofOfPossession         `mapstructure:"proof_of_possession"`
+	ProofOfPossession PopStrategy               `mapstructure:"proof_of_possession"`
 }
 
 func (e Expectation) Merge(other Expectation) Expectation {
@@ -48,7 +48,10 @@ func (e Expectation) Merge(other Expectation) Expectation {
 	e.Audiences = x.IfThenElse(len(e.Audiences) != 0, e.Audiences, other.Audiences)
 	e.AllowedAlgorithms = x.IfThenElse(len(e.AllowedAlgorithms) != 0, e.AllowedAlgorithms, other.AllowedAlgorithms)
 	e.ValidityLeeway = x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, other.ValidityLeeway)
-	e.ProofOfPossession.Merge(other.ProofOfPossession)
+	e.ProofOfPossession = x.IfThenElseExec(e.ProofOfPossession != nil,
+		func() PopStrategy { return e.ProofOfPossession.Merge(other.ProofOfPossession) },
+		func() PopStrategy { return other.ProofOfPossession },
+	)
 
 	return e
 }
@@ -117,7 +120,12 @@ func (e Expectation) AssertIssuanceTime(issuedAt time.Time) error {
 func (e Expectation) AssertScopes(scopes []string) error { return e.ScopesMatcher.Match(scopes) }
 
 func (e Expectation) AssertProofOfPossession(ctx pipeline.Context, cnf *Confirmation, rawToken string) error {
-	if err := e.ProofOfPossession.Assert(ctx, cnf, rawToken, e.ValidityLeeway, e.AllowedAlgorithms); err != nil {
+	strategy := x.IfThenElseExec(e.ProofOfPossession != nil,
+		func() PopStrategy { return e.ProofOfPossession },
+		func() PopStrategy { return opportunisticPoPStrategy{} },
+	)
+
+	if err := strategy.Assert(ctx, cnf, rawToken, e.ValidityLeeway, e.AllowedAlgorithms); err != nil {
 		return errorchain.New(ErrAssertion).CausedBy(err)
 	}
 

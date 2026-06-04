@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-viper/mapstructure/v2"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -127,5 +128,67 @@ func matcherFactory(name string) (ScopeMatcherFactory, error) {
 		}, nil
 	default:
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration, "unsupported strategy \"%s\"", name)
+	}
+}
+
+func DecodePoPStrategyHookFunc(ctx app.Context) mapstructure.DecodeHookFunc {
+	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
+		if from.Kind() != reflect.Map {
+			return data, nil
+		}
+
+		if !reflect.TypeFor[*PopStrategy]().Elem().AssignableTo(to) {
+			return data, nil
+		}
+
+		raw := data.(map[string]any) //nolint: forcetypeassert
+		typ, _ := raw["type"].(string)
+
+		conf, err := asStringMap(raw["config"])
+		if err != nil {
+			return nil, err
+		}
+
+		switch PoPType(typ) {
+		case DPoP:
+			return newDemonstratingPoPStrategy(ctx, conf)
+		case MTLS:
+			return &mtlsPoPStrategy{}, nil
+		default:
+			return nil, errorchain.NewWithMessagef(
+				pipeline.ErrConfiguration,
+				"unsupported proof_of_possession type \"%s\"", typ)
+		}
+	}
+}
+
+func asStringMap(data any) (map[string]any, error) {
+	if data == nil {
+		return map[string]any{}, nil
+	}
+
+	switch typed := data.(type) {
+	case map[string]any:
+		return typed, nil
+	case map[any]any:
+		result := make(map[string]any, len(typed))
+		for key, value := range typed {
+			strKey, ok := key.(string)
+			if !ok {
+				return nil, errorchain.NewWithMessage(
+					pipeline.ErrConfiguration,
+					"configuration contains non-string key",
+				)
+			}
+
+			result[strKey] = value
+		}
+
+		return result, nil
+	default:
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"unexpected configuration type",
+		)
 	}
 }

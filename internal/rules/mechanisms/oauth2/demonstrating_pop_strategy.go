@@ -11,10 +11,14 @@ import (
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/go-jose/go-jose/v4/jwt"
+	"github.com/go-viper/mapstructure/v2"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/nonce"
+	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/stringx"
@@ -25,38 +29,113 @@ var (
 	ErrDPoPNonce = errors.New("DPoP nonce error")
 )
 
-type PoPType string
-
-const (
-	Undefined PoPType = ""
-	DPoP      PoPType = "dpop"
-)
-
 type binder [32]byte
 
 func (b binder) Binding() [32]byte { return b }
 
-type ProofOfPossession struct {
-	Type   PoPType    `mapstructure:"type"`
-	Config DPoPConfig `mapstructure:"config"`
+type nonceKey nonce.Key
+
+func (k nonceKey) NonceKey() nonce.Key { return nonce.Key(k) }
+
+func toNonceKeyResolver(secret secrets.Secret) (nonce.KeyResolver, error) {
+	ss, ok := secret.(secrets.StringSecret)
+	if !ok {
+		return nil, secrets.ErrSecretKindMismatch
+	}
+
+	nk := nonce.Key{
+		KID:   secret.Selector(),
+		Value: stringx.ToBytes(ss.Value()),
+	}
+
+	return nonce.KeyResolverFunc(func(kid string) (nonce.Key, error) {
+		if kid != nk.KID {
+			return nonce.Key{}, errorchain.NewWithMessage(
+				ErrDPoPNonce,
+				"key id referenced in nonce does not match master key",
+			)
+		}
+
+		return nk, nil
+	}), nil
 }
 
-type DPoPConfig struct {
+type demonstratingPoPStrategy struct {
 	MaxAge        time.Duration `mapstructure:"max_age"`
 	RequireNonce  *bool         `mapstructure:"nonce_required"`
 	ReplayAllowed *bool         `mapstructure:"replay_allowed"`
+
+	informer *secrets.SecretInformer[nonce.KeyResolver]
 }
 
-func (p *ProofOfPossession) Merge(other ProofOfPossession) {
-	p.Type = x.IfThenElse(len(p.Type) != 0, p.Type, other.Type)
-	p.Config.MaxAge = x.IfThenElse(p.Config.MaxAge != 0, p.Config.MaxAge, other.Config.MaxAge)
-	p.Config.RequireNonce = x.IfThenElse(p.Config.RequireNonce != nil,
-		p.Config.RequireNonce, other.Config.RequireNonce)
-	p.Config.ReplayAllowed = x.IfThenElse(p.Config.ReplayAllowed != nil,
-		p.Config.ReplayAllowed, other.Config.ReplayAllowed)
+func newDemonstratingPoPStrategy(ctx app.Context, conf map[string]any) (PopStrategy, error) {
+	var strategy demonstratingPoPStrategy
+
+	dec := ctx.DecoderFactory().Decoder(
+		encoding.WithTagName("mapstructure"),
+		encoding.WithDecodeHooks(
+			mapstructure.StringToTimeDurationHookFunc(),
+		),
+		encoding.WithErrorOnUnused(true),
+	)
+
+	if err := dec.DecodeMap(&strategy, conf); err != nil {
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding DPoP config",
+		)
+	}
+
+	nonceRequired := strategy.RequireNonce != nil && *strategy.RequireNonce
+	if !nonceRequired {
+		return &strategy, nil
+	}
+
+	secret := ctx.Config().MasterKey
+	if len(secret.Source) == 0 {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"master_key is required if DPoP nonce validation is enabled",
+		)
+	}
+
+	informer, err := secrets.NewSecretInformer(
+		ctx.SecretResolver(),
+		secrets.Reference{Source: secret.Source, Selector: secret.Selector},
+		secrets.WithConverter(toNonceKeyResolver),
+	)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"failed resolving master key secret",
+		).CausedBy(err)
+	}
+
+	strategy.informer = informer
+
+	return &strategy, nil
 }
 
-func (p *ProofOfPossession) Assert(
+func (s *demonstratingPoPStrategy) Merge(other PopStrategy) PopStrategy {
+	if other == nil {
+		return s
+	}
+
+	typed, ok := other.(*demonstratingPoPStrategy)
+	if !ok {
+		return s
+	}
+
+	s.MaxAge = x.IfThenElse(s.MaxAge != 0, s.MaxAge, typed.MaxAge)
+	s.RequireNonce = x.IfThenElse(s.RequireNonce != nil,
+		s.RequireNonce, typed.RequireNonce)
+	s.ReplayAllowed = x.IfThenElse(s.ReplayAllowed != nil,
+		s.ReplayAllowed, typed.ReplayAllowed)
+
+	return s
+}
+
+func (s *demonstratingPoPStrategy) Assert(
 	ctx pipeline.Context,
 	cnf *Confirmation,
 	rawToken string,
@@ -64,30 +143,9 @@ func (p *ProofOfPossession) Assert(
 	allowedAlgorithms []jose.SignatureAlgorithm,
 ) error {
 	if cnf == nil {
-		if p.Type != Undefined {
-			return errorchain.NewWithMessage(ErrDPoPProof, "proof of possession is required")
-		}
-
-		return nil
+		return errorchain.NewWithMessage(ErrDPoPProof, "proof of possession is required")
 	}
 
-	// enforcing DPoP if configured
-	// otherwise, only asserting if a JWK thumbprint is present in the cnf claim
-	// x5t#S256 is defined for MTLS, which is not yet supported
-	if p.Type == DPoP || len(cnf.JWKThumbprint) != 0 {
-		return p.assertDPoP(ctx, cnf, rawToken, leeway, allowedAlgorithms)
-	}
-
-	return nil
-}
-
-func (p *ProofOfPossession) assertDPoP(
-	ctx pipeline.Context,
-	cnf *Confirmation,
-	rawToken string,
-	leeway time.Duration,
-	allowedAlgorithms []jose.SignatureAlgorithm,
-) error {
 	if len(cnf.JWKThumbprint) == 0 {
 		return errorchain.NewWithMessage(ErrDPoPProof, "no JWT thumbprint present")
 	}
@@ -139,16 +197,26 @@ func (p *ProofOfPossession) assertDPoP(
 	}
 
 	replayAllowed := false
-	if p.Config.ReplayAllowed != nil {
-		replayAllowed = *p.Config.ReplayAllowed
+	if s.ReplayAllowed != nil {
+		replayAllowed = *s.ReplayAllowed
 	}
 
 	nonceRequired := false
-	if p.Config.RequireNonce != nil {
-		nonceRequired = *p.Config.RequireNonce
+	if s.RequireNonce != nil {
+		nonceRequired = *s.RequireNonce
 	}
 
-	return claims.Validate(ctx, p.Config.MaxAge, leeway, replayAllowed, nonceRequired, rawToken)
+	keyResolver, ok := s.informer.Get()
+	if !ok {
+		keyResolver = nonce.KeyResolverFunc(func(kid string) (nonce.Key, error) {
+			return nonce.Key{}, errorchain.NewWithMessage(
+				pipeline.ErrInternal,
+				"master key is not available",
+			)
+		})
+	}
+
+	return claims.Validate(ctx, keyResolver, s.MaxAge, leeway, replayAllowed, nonceRequired, rawToken)
 }
 
 type DPoPProofClaims struct {
@@ -160,8 +228,10 @@ type DPoPProofClaims struct {
 	Nonce           string    `json:"nonce,omitempty"`
 }
 
+//nolint:cyclop
 func (c DPoPProofClaims) Validate(
 	ctx pipeline.Context,
+	keyResolver nonce.KeyResolver,
 	maxAge, leeway time.Duration,
 	replayAllowed, nonceRequired bool,
 	rawToken string,
@@ -222,7 +292,7 @@ func (c DPoPProofClaims) Validate(
 				CausedBy(errorchain.NewWithMessage(ErrDPoPNonce, "nonce is missing"))
 		}
 
-		if err := nonce.ValidateNonce(c.Nonce, nil,
+		if err := nonce.ValidateNonce(c.Nonce, keyResolver,
 			nonce.WithMaxAge(maxAge),
 			nonce.WithBinding(expectedHash),
 		); err != nil {
@@ -239,5 +309,9 @@ func (c DPoPProofClaims) Validate(
 		}
 	}
 
+	return nil
+}
+
+func (s *demonstratingPoPStrategy) init(ctx app.Context) error {
 	return nil
 }

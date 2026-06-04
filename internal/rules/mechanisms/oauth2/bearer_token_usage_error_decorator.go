@@ -61,7 +61,7 @@ func (d BearerTokenUsageErrorDecorator) Merge(other BearerTokenUsageErrorDecorat
 	return d
 }
 
-//nolint:cyclop
+//nolint:cyclop, funlen
 func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []string, er *pipeline.ErrorResponse) {
 	if d.Enabled == nil || !*d.Enabled {
 		return
@@ -89,6 +89,10 @@ func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []str
 			Binding() [32]byte
 		}
 
+		type nonceKeyProvider interface {
+			NonceKey() nonce2.Key
+		}
+
 		var nb nonceBinder
 		if !errors.As(err, &nb) {
 			er.Code = http.StatusInternalServerError
@@ -96,7 +100,14 @@ func (d BearerTokenUsageErrorDecorator) Decorate(err error, requiredScopes []str
 			return
 		}
 
-		nonce, nonceErr := nonce2.NewNonce(nonce2.Key{},
+		var nk nonceKeyProvider
+		if !errors.As(err, &nk) {
+			er.Code = http.StatusInternalServerError
+
+			return
+		}
+
+		nonce, nonceErr := nonce2.NewNonce(nk.NonceKey(),
 			nonce2.WithBinding(nb.Binding()),
 		)
 		if nonceErr != nil {

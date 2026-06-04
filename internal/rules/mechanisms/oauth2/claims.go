@@ -23,7 +23,7 @@ import (
 
 type Confirmation struct {
 	JWKThumbprint               string `json:"jkt,omitempty"`
-	CertificateThumbprintSHA256 string `json:"x5t#S256,omitempty"`
+	CertificateThumbprintSHA256 string `json:"x5t#S256,omitempty"` //nolint:tagliatelle
 }
 
 // Claims represents public claim values (as specified in RFC 7519).
