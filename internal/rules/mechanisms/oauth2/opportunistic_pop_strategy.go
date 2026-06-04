@@ -8,9 +8,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
-type opportunisticPoPStrategy struct {
-	dpop demonstratingPoPStrategy
-}
+type opportunisticPoPStrategy struct{}
 
 func (s opportunisticPoPStrategy) Assert(
 	ctx pipeline.Context,
