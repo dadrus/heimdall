@@ -50,7 +50,7 @@ type jwksProvider struct {
 
 func newProvider(args provider.Args) (provider.Provider, error) {
 	type config struct {
-		Path  string `mapstructure:"path" validate:"required"`
+		Path  string `mapstructure:"path"  validate:"required"`
 		Watch bool   `mapstructure:"watch"`
 	}
 
@@ -183,15 +183,6 @@ func (p *jwksProvider) reload(evt fswatch.Event) error {
 	}
 
 	p.mu.Lock()
-
-	if !p.store.sameKind(next) {
-		p.mu.Unlock()
-
-		return errorchain.NewWithMessage(
-			provider.ErrConfiguration,
-			"Reloading jwks file failed because store kind changed",
-		)
-	}
 
 	p.store = next
 
