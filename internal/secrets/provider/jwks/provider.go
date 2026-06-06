@@ -145,15 +145,13 @@ func (p *jwksProvider) Start(ctx context.Context) error {
 	}
 
 	if err = p.watcher.Add(p.path); err != nil {
-		return errorchain.NewWithMessagef(
-			provider.ErrInternal,
+		return errorchain.NewWithMessagef(provider.ErrInternal,
 			"failed to register jwks provider watch for %s", p.path,
 		).CausedBy(err)
 	}
 
 	if err = p.watcher.Start(context.WithoutCancel(ctx)); err != nil {
-		return errorchain.NewWithMessagef(
-			provider.ErrInternal,
+		return errorchain.NewWithMessagef(provider.ErrInternal,
 			"failed to start jwks provider watch for %s", p.path,
 		).CausedBy(err)
 	}
