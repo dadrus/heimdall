@@ -4,18 +4,17 @@ import (
 	"context"
 	"os"
 
-	"github.com/dadrus/heimdall/internal/secrets/provider"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/go-jose/go-jose/v4"
 	"github.com/goccy/go-json"
+
+	"github.com/dadrus/heimdall/internal/secrets/provider"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type store interface {
 	getSecret(ctx context.Context, selector provider.Selector) (provider.Secret, error)
 	getSecretSet(ctx context.Context, selector provider.Selector) ([]provider.Secret, error)
 	getCertificateBundle(ctx context.Context, selector provider.Selector) (provider.CertificateBundle, error)
-
-	sameKind(other store) bool
 }
 
 func loadStore(path string) (store, error) {
