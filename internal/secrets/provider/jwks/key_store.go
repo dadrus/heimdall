@@ -105,14 +105,16 @@ func toSymmetricKeySecret(jwk jose.JSONWebKey, value []byte) (provider.Secret, e
 
 func toAsymmetricKeySecret(jwk jose.JSONWebKey, signer crypto.Signer) (provider.Secret, error) {
 	chain := pkix.FindChain(signer.Public(), jwk.Certificates)
+	if len(jwk.Certificates) != len(chain) {
+		return nil, errorchain.NewWithMessagef(provider.ErrConfiguration,
+			"malformed certificate chain for kid '%s'", jwk.KeyID)
+	}
+
 	if len(chain) != 0 {
 		if err := pkix.ValidateChain(chain); err != nil {
 			return nil, errorchain.NewWithMessagef(provider.ErrConfiguration,
 				"invalid certificate chain for kid '%s'", jwk.KeyID).CausedBy(err)
 		}
-	} else if len(jwk.Certificates) != 0 {
-		return nil, errorchain.NewWithMessagef(provider.ErrConfiguration,
-			"malformed certificate chain for kid '%s'", jwk.KeyID)
 	}
 
 	return provider.NewAsymmetricKeySecret(jwk.KeyID, jwk.KeyID, signer, chain), nil
