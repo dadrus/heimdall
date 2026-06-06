@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/secrets/provider"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
@@ -97,7 +96,7 @@ func TestValidateChain(t *testing.T) {
 	t.Parallel()
 
 	rootCA, intermediateCA, leafCert, _ := createLeafWithIntermediateCA(t)
-	badRootCA, err := testsupport.NewRootCA("PEM Bad Root CA", 24*time.Hour)
+	badRootCA, err := testsupport.NewRootCA("Bad Root CA", 24*time.Hour)
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
@@ -135,8 +134,7 @@ func TestValidateChain(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, provider.ErrConfiguration)
-				require.ErrorContains(t, err, "invalid certificate chain")
+				require.ErrorIs(t, err, ErrCertificateValidation)
 			},
 		},
 		"returns configuration error for malformed issuer": {
@@ -149,8 +147,7 @@ func TestValidateChain(t *testing.T) {
 				t.Helper()
 
 				require.Error(t, err)
-				require.ErrorIs(t, err, provider.ErrConfiguration)
-				require.ErrorContains(t, err, "invalid certificate chain")
+				require.ErrorIs(t, err, ErrCertificateValidation)
 			},
 		},
 	} {
@@ -167,7 +164,7 @@ func createLeafWithIntermediateCA(
 ) (*testsupport.CA, *testsupport.CA, *x509.Certificate, *ecdsa.PrivateKey) {
 	t.Helper()
 
-	rootCA, err := testsupport.NewRootCA("PEM Test Root CA", 24*time.Hour)
+	rootCA, err := testsupport.NewRootCA("Test Root CA", 24*time.Hour)
 	require.NoError(t, err)
 
 	intermediateKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
@@ -175,7 +172,7 @@ func createLeafWithIntermediateCA(
 
 	intermediateCert, err := rootCA.IssueCertificate(
 		testsupport.WithSubject(x509pkix.Name{
-			CommonName:   "PEM Test Intermediate CA",
+			CommonName:   "Test Intermediate CA",
 			Organization: []string{"Heimdall"},
 			Country:      []string{"EU"},
 		}),
@@ -193,7 +190,7 @@ func createLeafWithIntermediateCA(
 
 	leafCert, err := intermediateCA.IssueCertificate(
 		testsupport.WithSubject(x509pkix.Name{
-			CommonName:   "PEM Test EE",
+			CommonName:   "Test EE",
 			Organization: []string{"Heimdall"},
 			Country:      []string{"EU"},
 		}),
