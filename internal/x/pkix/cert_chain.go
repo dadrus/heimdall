@@ -14,19 +14,15 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package pem
+package pkix
 
 import (
 	"bytes"
 	"crypto"
 	"crypto/x509"
-
-	"github.com/dadrus/heimdall/internal/secrets/provider"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/pkix"
 )
 
-func findChain(key crypto.PublicKey, certPool []*x509.Certificate) []*x509.Certificate {
+func FindChain(key crypto.PublicKey, certPool []*x509.Certificate) []*x509.Certificate {
 	publicKey, ok := key.(interface {
 		Equal(other crypto.PublicKey) bool
 	})
@@ -67,7 +63,7 @@ func isIssuerOf(child, issuer *x509.Certificate) bool {
 	return bytes.Equal(child.RawIssuer, issuer.RawSubject)
 }
 
-func validateChain(chain []*x509.Certificate) error {
+func ValidateChain(chain []*x509.Certificate) error {
 	// The validation of the chain happens without the usage of the system
 	// trust store. Given the way how buildChain works, the last certificate
 	// in the chain is considered to be the root of trust, the first is the
@@ -85,13 +81,12 @@ func validateChain(chain []*x509.Certificate) error {
 		intermediates = append(intermediates, chain[1:len(chain)-1]...)
 	}
 
-	err := pkix.ValidateCertificate(chain[0],
-		pkix.WithRootCACertificates([]*x509.Certificate{chain[len(chain)-1]}),
-		pkix.WithIntermediateCACertificates(intermediates),
+	err := ValidateCertificate(chain[0],
+		WithRootCACertificates([]*x509.Certificate{chain[len(chain)-1]}),
+		WithIntermediateCACertificates(intermediates),
 	)
 	if err != nil {
-		return errorchain.NewWithMessage(provider.ErrConfiguration,
-			"invalid certificate chain").CausedBy(err)
+		return err
 	}
 
 	return nil

@@ -286,7 +286,7 @@ func TestAPIKeyApply(t *testing.T) {
 			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock) {
 				t.Helper()
 
-				secret := types.NewSymmetricKeySecret("bar", "baz", []byte{})
+				secret := types.NewSymmetricKeySecret("bar", "baz", "foo", []byte{})
 
 				sr.EXPECT().
 					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
@@ -359,7 +359,7 @@ func TestToStringSecret(t *testing.T) {
 			},
 		},
 		"returns kind mismatch for non string secret": {
-			secret: types.NewSymmetricKeySecret("bar", "baz", []byte{}),
+			secret: types.NewSymmetricKeySecret("bar", "baz", "foo", []byte{}),
 			assert: func(t *testing.T, value string, err error) {
 				t.Helper()
 

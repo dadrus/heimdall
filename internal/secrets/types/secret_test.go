@@ -35,8 +35,8 @@ func TestNewStringSecret(t *testing.T) {
 	assert.Equal(t, "bar", secret.Value())
 }
 
-func TestNewBytesSecret(t *testing.T) {
-	secret := NewSymmetricKeySecret("foo/bar", "bar", []byte("secret"))
+func TestNewSymmetricSecret(t *testing.T) {
+	secret := NewSymmetricKeySecret("foo/bar", "bar", "foo", []byte("secret"))
 
 	assert.Equal(t, "foo/bar", secret.Selector())
 	assert.Equal(t, "bar", secret.KeyID())
@@ -44,7 +44,7 @@ func TestNewBytesSecret(t *testing.T) {
 	assert.Equal(t, []byte("secret"), secret.Key())
 }
 
-func TestNewSignerSecret(t *testing.T) {
+func TestNewAsymmetricKeySecret(t *testing.T) {
 	signer, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
@@ -58,7 +58,7 @@ func TestNewSignerSecret(t *testing.T) {
 	assert.Equal(t, []*x509.Certificate{cert}, secret.CertChain())
 }
 
-func TestNewTrustStoreSecret(t *testing.T) {
+func TestNewCertificateBundle(t *testing.T) {
 	cert := &x509.Certificate{}
 	secret := NewCertificateBundle("trust", []*x509.Certificate{cert})
 

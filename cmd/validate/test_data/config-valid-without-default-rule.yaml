@@ -18,6 +18,11 @@ secret_management:
     type: pem
     config:
       path: "${TEST_KEYSTORE_FILE}"
+  jwks_secrets:
+    type: jwks
+    config:
+      path: /path/to/jwks.json
+      watch: true
 
 serve:
   port: 4468
