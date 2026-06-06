@@ -30,6 +30,11 @@ secret_management:
     allow_in_rules: true
     config:
       path: /path/to/secrets.json
+  jwks_secrets:
+    type: jwks
+    config:
+      path: /path/to/jwks.json
+      watch: true
 
 serve:
   port: 4468

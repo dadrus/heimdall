@@ -141,10 +141,11 @@ func buildStore(entries []keyEntry, certs []*x509.Certificate) (keyStore, error)
 	result := make([]provider.Secret, len(entries))
 
 	for idx, entry := range entries {
-		chain := findChain(entry.privateKey.Public(), certs)
+		chain := pkix.FindChain(entry.privateKey.Public(), certs)
 		if len(chain) != 0 {
-			if err := validateChain(chain); err != nil {
-				return nil, err
+			if err := pkix.ValidateChain(chain); err != nil {
+				return nil, errorchain.NewWithMessagef(provider.ErrConfiguration,
+					"invalid certificate chain for %d entry", idx+1).CausedBy(err)
 			}
 		}
 

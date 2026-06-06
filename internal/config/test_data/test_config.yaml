@@ -29,6 +29,12 @@ secret_management:
     config:
       path: /path/to/secrets.json
       watch: true
+  jwks_secrets:
+    type: jwks
+    config:
+      path: /path/to/jwks.json
+      watch: true
+
 
 serve:
   host: 127.0.0.1

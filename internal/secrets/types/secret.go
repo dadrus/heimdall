@@ -45,6 +45,7 @@ type SymmetricKeySecret interface {
 	Secret
 	KeyID() string
 	Key() []byte
+	Algorithm() string
 }
 
 type AsymmetricKeySecret interface {
@@ -93,23 +94,26 @@ func (s *stringSecret) Value() string { return s.value }
 type symmetricKeySecret struct {
 	baseSecret
 
-	keyID string
-	value []byte
+	keyID     string
+	value     []byte
+	algorithm string
 }
 
-func NewSymmetricKeySecret(selector, kid string, value []byte) SymmetricKeySecret {
+func NewSymmetricKeySecret(selector, kid, algorithm string, value []byte) SymmetricKeySecret {
 	return &symmetricKeySecret{
 		baseSecret: baseSecret{
 			selector: selector,
 			kind:     SecretKindSymmetricKey,
 		},
-		keyID: kid,
-		value: value,
+		keyID:     kid,
+		value:     value,
+		algorithm: algorithm,
 	}
 }
 
-func (s *symmetricKeySecret) KeyID() string { return s.keyID }
-func (s *symmetricKeySecret) Key() []byte   { return s.value }
+func (s *symmetricKeySecret) KeyID() string     { return s.keyID }
+func (s *symmetricKeySecret) Key() []byte       { return s.value }
+func (s *symmetricKeySecret) Algorithm() string { return s.algorithm }
 
 type asymmetricKeySecret struct {
 	baseSecret
