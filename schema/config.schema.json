@@ -1378,6 +1378,49 @@
           "type": "string",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
           "default": "10s"
+        },
+        "proof_of_possession": {
+          "$ref": "#/definitions/proofOfPossessionConfiguration"
+        }
+      }
+    },
+    "proofOfPossessionConfiguration": {
+      "description": "Configures proof-of-possession verification for OAuth2 access tokens.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "description": "The proof-of-possession mechanism to enforce.",
+          "type": "string",
+          "enum": [
+            "dpop",
+            "mtls"
+          ]
+        },
+        "config": {
+          "description": "DPoP proof validation settings.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_age": {
+              "description": "Maximum accepted age of a DPoP proof.",
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+            },
+            "nonce_required": {
+              "description": "Whether a valid DPoP nonce is required.",
+              "type": "boolean",
+              "default": false
+            },
+            "replay_allowed": {
+              "description": "Whether DPoP proof replay detection should be disabled.",
+              "type": "boolean",
+              "default": false
+            }
+          }
         }
       }
     },
@@ -2983,6 +3026,10 @@
           }
         ]
       }
+    },
+    "master_key": {
+      "description": "Master key used to derive keys for different internal operations, like e.g., a key for DPoP Nonce generation and validation",
+      "$ref": "#/definitions/secretReference"
     }
   }
 }

@@ -37,3 +37,11 @@ func WithKeyValue(key, value string) Option {
 		}
 	}
 }
+
+func WithValue(value string) Option {
+	return func(builder *headerBuilder) {
+		if len(value) != 0 {
+			builder.parts = append(builder.parts, value)
+		}
+	}
+}

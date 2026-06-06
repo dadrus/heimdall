@@ -70,7 +70,7 @@ func TestDefaultErrorHandlerExecute(t *testing.T) {
 			},
 		},
 		"response decorator from error context is applied": {
-			cause: errorchain.New(pipeline.ErrAuthentication).WithErrorContext(testResponseDecorator{
+			cause: errorchain.New(pipeline.ErrAuthentication).WithAspects(testResponseDecorator{
 				code:    418,
 				headers: map[string][]string{"WWW-Authenticate": {"Basic realm=\"foo\""}},
 				body:    "custom body",

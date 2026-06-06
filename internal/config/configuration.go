@@ -34,6 +34,7 @@ type Configuration struct { //nolint:musttag
 	Profiling        ProfilingConfig     `koanf:"profiling"`
 	Cache            CacheConfig         `koanf:"cache"`
 	SecretManagement SecretManagement    `koanf:"secret_management,omitempty"`
+	MasterKey        Secret              `koanf:"master_key,omitempty"`
 	Catalogue        *MechanismCatalogue `koanf:"mechanisms,omitempty"`
 	Default          *DefaultRule        `koanf:"default_rule,omitempty"`
 	Providers        RuleProviders       `koanf:"providers,omitempty"`

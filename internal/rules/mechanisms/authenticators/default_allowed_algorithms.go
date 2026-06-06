@@ -18,12 +18,12 @@ package authenticators
 
 import "github.com/go-jose/go-jose/v4"
 
-func defaultAllowedAlgorithms() []string {
+func defaultAllowedAlgorithms() []jose.SignatureAlgorithm {
 	// RSA PKCS v1.5 is not allowed by intention
-	return []string{
+	return []jose.SignatureAlgorithm{
 		// ECDSA
-		string(jose.ES256), string(jose.ES384), string(jose.ES512),
+		jose.ES256, jose.ES384, jose.ES512,
 		// RSA-PSS
-		string(jose.PS384), string(jose.PS512),
+		jose.PS384, jose.PS512,
 	}
 }

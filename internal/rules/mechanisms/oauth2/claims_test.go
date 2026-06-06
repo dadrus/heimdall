@@ -180,7 +180,7 @@ func TestClaimsValidate(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// WHEN
-			err := tc.claims.Validate(tc.expectations)
+			err := tc.claims.Validate(nil, "", tc.expectations)
 
 			// THEN
 			tc.assert(t, err)

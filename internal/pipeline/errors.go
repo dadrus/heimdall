@@ -59,20 +59,6 @@ func (e *ErrorResponse) AddHeader(name, value string) {
 	e.Headers[name] = append(e.Headers[name], value)
 }
 
-func errorContext(err error) any {
-	type errorContextCarrier interface {
-		ErrorContext() any
-	}
-
-	var contextCarrier errorContextCarrier
-
-	if !errors.As(err, &contextCarrier) {
-		return nil
-	}
-
-	return contextCarrier.ErrorContext()
-}
-
 type ResponseError struct {
 	ErrorResponse
 
@@ -107,13 +93,8 @@ func (e *ResponseError) decorate() {
 		DecorateErrorResponse(cause error, er *ErrorResponse)
 	}
 
-	errContext := errorContext(e.Cause)
-	if errContext == nil {
-		return
-	}
-
-	decorator, ok := errContext.(errorResponseDecorator)
-	if !ok {
+	var decorator errorResponseDecorator
+	if !errors.As(e.Cause, &decorator) {
 		return
 	}
 

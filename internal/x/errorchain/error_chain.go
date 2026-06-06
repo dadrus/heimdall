@@ -28,9 +28,10 @@ import (
 )
 
 type element struct {
-	err  error
-	msg  string
-	next *element
+	err     error
+	msg     string
+	next    *element
+	aspects []any
 }
 
 type message struct { //nolint:musttag
@@ -40,9 +41,8 @@ type message struct { //nolint:musttag
 }
 
 type ErrorChain struct { // nolint: errname
-	head    *element
-	tail    *element
-	context any
+	head *element
+	tail *element
 }
 
 func New(err error) *ErrorChain {
@@ -82,8 +82,8 @@ func (ec *ErrorChain) CausedBy(err error) *ErrorChain {
 	return ec.causedBy(err, "")
 }
 
-func (ec *ErrorChain) WithErrorContext(context any) *ErrorChain {
-	ec.context = context
+func (ec *ErrorChain) WithAspects(values ...any) *ErrorChain {
+	ec.tail.aspects = append(ec.tail.aspects, values...)
 
 	return ec
 }
@@ -94,25 +94,12 @@ func (ec *ErrorChain) Unwrap() error {
 	}
 
 	return &ErrorChain{
-		head:    ec.head.next,
-		tail:    ec.tail,
-		context: ec.context,
+		head: ec.head.next,
+		tail: ec.tail,
 	}
-}
-
-func (ec *ErrorChain) Is(target error) bool {
-	if ec.head == nil {
-		return false
-	}
-
-	return errors.Is(ec.head.err, target)
 }
 
 func (ec *ErrorChain) As(target any) bool {
-	if ec.head == nil {
-		return false
-	}
-
 	if ec.asTarget(target) {
 		return true
 	}
@@ -120,8 +107,8 @@ func (ec *ErrorChain) As(target any) bool {
 	return errors.As(ec.head.err, target)
 }
 
-func (ec *ErrorChain) ErrorContext() any {
-	return ec.context
+func (ec *ErrorChain) Is(target error) bool {
+	return errors.Is(ec.head.err, target)
 }
 
 func (ec *ErrorChain) Errors() []error {
@@ -156,20 +143,36 @@ func (ec *ErrorChain) String() string {
 }
 
 func (ec *ErrorChain) asTarget(target any) bool {
-	if ec.context == nil {
+	if target == nil {
 		return false
 	}
 
 	val := reflect.ValueOf(target)
-	targetType := val.Type().Elem()
-
-	if targetType.Kind() != reflect.Interface || !reflect.TypeOf(ec.context).AssignableTo(targetType) {
+	if val.Kind() != reflect.Pointer || val.IsNil() {
 		return false
 	}
 
-	val.Elem().Set(reflect.ValueOf(ec.context))
+	targetType := val.Type().Elem()
+	if targetType.Kind() != reflect.Interface {
+		return false
+	}
 
-	return true
+	for _, aspect := range ec.head.aspects {
+		if aspect == nil {
+			continue
+		}
+
+		aspectValue := reflect.ValueOf(aspect)
+		if !aspectValue.Type().AssignableTo(targetType) {
+			continue
+		}
+
+		val.Elem().Set(aspectValue)
+
+		return true
+	}
+
+	return false
 }
 
 func (ec *ErrorChain) causedBy(err error, msg string) *ErrorChain {

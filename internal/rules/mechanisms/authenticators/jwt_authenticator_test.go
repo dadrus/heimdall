@@ -24,6 +24,7 @@ import (
 	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -165,7 +166,8 @@ assertions:
 				assert.Equal(t, "application/json", md.JWKSEndpoint.Headers["Accept"].String())
 
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 3)
+				assert.Len(t, auth.ads, 4)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"})
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
@@ -222,7 +224,8 @@ cache_ttl: 5s`),
 				assert.Equal(t, "application/json", md.JWKSEndpoint.Headers["Accept"].String())
 
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 3)
+				assert.Len(t, auth.ads, 4)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"})
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
@@ -323,7 +326,9 @@ validate_jwk: false`),
 				assert.Empty(t, auth.a.Audiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
-				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{string(jose.ES256)})
+				assert.Len(t, auth.a.AllowedAlgorithms, 1)
+
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []jose.SignatureAlgorithm{jose.ES256})
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
 				sess, ok := auth.sf.(*PrincipalInfo)
@@ -460,7 +465,8 @@ cache_ttl: 5s`),
 				require.False(t, ok)
 
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 3)
+				assert.Len(t, auth.ads, 4)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"})
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
@@ -539,7 +545,8 @@ cache_ttl: 5s`),
 				assert.Equal(t, "https://example.com/token", cc.TokenURL)
 
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 3)
+				assert.Len(t, auth.ads, 4)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"})
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
@@ -735,7 +742,7 @@ assertions:
 				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, configured.a.Audiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
-				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
+				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []jose.SignatureAlgorithm{jose.ES512})
 
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, prototype.validateJWKCert, configured.validateJWKCert)
@@ -780,7 +787,7 @@ metadata_endpoint:
 				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, configured.a.Audiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
-				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
+				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []jose.SignatureAlgorithm{jose.ES512})
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
@@ -824,7 +831,7 @@ cache_ttl: 5s`),
 				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, configured.a.Audiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
-				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
+				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []jose.SignatureAlgorithm{jose.ES512})
 
 				assert.Equal(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, 5*time.Second, *configured.ttl)
@@ -1659,7 +1666,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 						),
 					}, nil
 				}),
-				a:   oauth2.Expectation{AllowedAlgorithms: []string{"foo"}},
+				a:   oauth2.Expectation{AllowedAlgorithms: []jose.SignatureAlgorithm{"foo"}},
 				ttl: new(10 * time.Second),
 			},
 			configureMocks: func(
@@ -1715,7 +1722,9 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 						),
 					}, nil
 				}),
-				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}},
+				a: oauth2.Expectation{
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
+				},
 				ttl: new(10 * time.Second),
 			},
 			configureMocks: func(
@@ -1771,7 +1780,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 						),
 					}, nil
 				}),
-				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES384"}, TrustedIssuers: []string{"untrusted"}},
+				a: oauth2.Expectation{
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
+					TrustedIssuers:    []string{"untrusted"},
+				},
 				ttl: new(10 * time.Second),
 			},
 			configureMocks: func(
@@ -1828,7 +1840,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				a: oauth2.Expectation{
-					AllowedAlgorithms: []string{"ES384"},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
@@ -1888,7 +1900,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				a: oauth2.Expectation{
-					AllowedAlgorithms: []string{"ES384"},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
@@ -1955,7 +1967,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				a: oauth2.Expectation{
-					AllowedAlgorithms: []string{"ES384"},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
@@ -2035,7 +2047,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				a: oauth2.Expectation{
-					AllowedAlgorithms: []string{"ES384"},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
@@ -2111,7 +2123,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					DisableIssuerIdentifierVerification: true,
 				},
 				a: oauth2.Expectation{
-					AllowedAlgorithms: []string{"ES384"},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
@@ -2207,7 +2219,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				a: oauth2.Expectation{
-					AllowedAlgorithms: []string{"ES384"},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
@@ -2265,10 +2277,27 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		"successful without cache hit using key & cert with jwk validation using custom trust anchors": {
-			authenticator: newJwtAuthenticatorWithTrustAnchors(t, jwksSrv.URL, issuer, keyAndCertEntry.CertChain()[2]),
-			configureMocks: func(
-				t *testing.T,
+		"successful without cache hit using key & cert with jwk validation using custom trust store": {
+			authenticator: &jwtAuthenticator{
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
+					}, nil
+				}),
+				a: oauth2.Expectation{
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
+					TrustedIssuers:    []string{issuer},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+				},
+				sf:              &PrincipalInfo{IDFrom: "sub"},
+				ttl:             new(10 * time.Second),
+				validateJWKCert: true,
+				informer:        newTestCertificateBundleInformer(t, "anchors", keyAndCertEntry.CertChain()[2]),
+				principalName:   DefaultPrincipalName,
+			},
+			configureMocks: func(t *testing.T,
 				ctx *pipelinemocks.ContextMock,
 				cch *mocks.CacheMock,
 				ads *extractormocks.AuthDataExtractStrategyMock,
@@ -2339,7 +2368,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 					}, nil
 				}),
 				a: oauth2.Expectation{
-					AllowedAlgorithms: []string{"ES384"},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
 					TrustedIssuers:    []string{issuer},
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 				},
@@ -2590,7 +2619,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				},
 				a: oauth2.Expectation{
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
-					AllowedAlgorithms: []string{"ES384"},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
 					TrustedIssuers:    []string{"barfoo"},
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
@@ -2647,6 +2676,90 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.ErrorContains(t, err, "issuer foobar is not trusted")
 			},
 		},
+		"resolved jwks endpoint expects authentication": {
+			authenticator: &jwtAuthenticator{
+				r: &oauth2.MetadataEndpoint{
+					Endpoint: endpointtestsupport.EndpointValue(t, oidcSrv.URL),
+					ResolvedEndpoints: map[string]oauth2.ResolvedEndpointSettings{
+						"jwks_uri": {
+							AuthStrategy: headerAuthStrategy{
+								name:  "X-Api-Key",
+								value: "very-secret",
+							},
+						},
+					},
+					DisableIssuerIdentifierVerification: true,
+				},
+				a: oauth2.Expectation{
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
+				},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           new(0 * time.Second),
+				principalName: DefaultPrincipalName,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				// http cache
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
+					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
+				)).Return(nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkJWKSRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "very-secret", req.Header.Get("X-Api-Key"))
+				}
+				checkMetadataRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, "/", req.URL.Path)
+				}
+
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithOneEntryWithKeyOnlyAndOneWithCertificate
+				jwksResponseContentType = "application/json"
+
+				metadataResponseCode = http.StatusOK
+				metadataResponseContent, err = json.Marshal(map[string]string{
+					"jwks_uri": jwksSrv.URL,
+					"issuer":   issuer,
+				})
+				require.NoError(t, err)
+
+				metadataResponseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
+				t.Helper()
+
+				assert.True(t, metadataEndpointCalled)
+				assert.True(t, jwksEndpointCalled)
+
+				require.NoError(t, err)
+				require.NotNil(t, sub)
+
+				assert.Equal(t, principalID, sub.ID())
+				assert.Len(t, sub.Attributes(), 8)
+				assert.Len(t, sub.Attributes()["aud"], 1)
+				assert.Contains(t, sub.Attributes()["aud"], audience)
+				assert.Contains(t, sub.Attributes(), "exp")
+				assert.Contains(t, sub.Attributes(), "iat")
+				assert.Contains(t, sub.Attributes(), "nbf")
+				assert.Equal(t, issuer, sub.Attributes()["iss"])
+				assert.Contains(t, sub.Attributes()["scp"], "foo")
+				assert.Contains(t, sub.Attributes()["scp"], "bar")
+				assert.Equal(t, principalID, sub.Attributes()["sub"])
+			},
+		},
 		"custom principal created": {
 			authenticator: &jwtAuthenticator{
 				r: &oauth2.MetadataEndpoint{
@@ -2655,7 +2768,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				},
 				a: oauth2.Expectation{
 					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
-					AllowedAlgorithms: []string{"ES384"},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
 				},
 				sf:            &PrincipalInfo{IDFrom: "sub"},
 				ttl:           new(time.Duration(0)),
@@ -3060,7 +3173,7 @@ func newJwtAuthenticatorWithTrustAnchors(
 			}, nil
 		}),
 		a: oauth2.Expectation{
-			AllowedAlgorithms: []string{"ES384"},
+			AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
 			TrustedIssuers:    []string{issuer},
 			ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
 		},
@@ -3070,6 +3183,21 @@ func newJwtAuthenticatorWithTrustAnchors(
 		informer:        informer,
 		principalName:   DefaultPrincipalName,
 	}
+}
+
+type headerAuthStrategy struct {
+	name  string
+	value string
+}
+
+func (s headerAuthStrategy) Apply(req *http.Request) error {
+	req.Header.Set(s.name, s.value)
+
+	return nil
+}
+
+func (s headerAuthStrategy) Hash() []byte {
+	return []byte(s.name + ":" + s.value)
 }
 
 func newTestCertificateBundleInformer(

@@ -41,6 +41,7 @@ func decodeConfig(
 			endpoint.DecodeEndpointHookFunc(opts...),
 			mapstructure.StringToTimeDurationHookFunc(),
 			extractors.DecodeCompositeExtractStrategyHookFunc(),
+			oauth2.DecodePoPStrategyHookFunc(app),
 			oauth2.DecodeScopesMatcherHookFunc(),
 			template.DecodeTemplateHookFunc(opts...),
 			DecodeAttributeRefs(),

@@ -143,7 +143,8 @@ introspection_endpoint:
 				assert.Nil(t, auth.ttl)
 
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 3)
+				assert.Len(t, auth.ads, 4)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"})
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
@@ -225,7 +226,7 @@ cache_ttl: 5s
 				assert.Nil(t, md.IntrospectionEndpoint.Retry)
 
 				assert.Len(t, auth.a.AllowedAlgorithms, 1)
-				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []string{"ES256"})
+				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []jose.SignatureAlgorithm{jose.ES256})
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{"foo"}))
@@ -294,7 +295,8 @@ metadata_endpoint:
 				assert.Nil(t, auth.ttl)
 
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 3)
+				assert.Len(t, auth.ads, 4)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"})
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
@@ -372,7 +374,8 @@ metadata_endpoint:
 				assert.Nil(t, auth.ttl)
 
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 3)
+				assert.Len(t, auth.ads, 4)
+				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"})
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
 				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
@@ -556,7 +559,7 @@ principal:
 				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
 				assert.ElementsMatch(t, configured.a.Audiences, []string{"baz"})
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
-				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
+				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []jose.SignatureAlgorithm{jose.ES512})
 
 				assert.Nil(t, prototype.ttl)
 				assert.Equal(t, prototype.ttl, configured.ttl)
@@ -648,7 +651,7 @@ metadata_endpoint:
 				require.NoError(t, configured.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, configured.a.Audiences)
 				assert.ElementsMatch(t, configured.a.TrustedIssuers, []string{"barfoo"})
-				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []string{string(jose.ES512)})
+				assert.ElementsMatch(t, configured.a.AllowedAlgorithms, []jose.SignatureAlgorithm{jose.ES512})
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				require.NotNil(t, configured.ttl)

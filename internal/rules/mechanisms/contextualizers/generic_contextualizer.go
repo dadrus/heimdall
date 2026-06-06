@@ -258,13 +258,13 @@ func (c *genericContextualizer) callEndpoint(
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.NewWithMessage(pipeline.ErrCommunicationTimeout,
 				"request to the contextualizer endpoint timed out").
-				WithErrorContext(c).
+				WithAspects(c).
 				CausedBy(err)
 		}
 
 		return nil, errorchain.NewWithMessage(pipeline.ErrCommunication,
 			"request to the contextualizer endpoint failed").
-			WithErrorContext(c).
+			WithAspects(c).
 			CausedBy(err)
 	}
 
@@ -293,7 +293,7 @@ func (c *genericContextualizer) createRequest(
 	})
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed creating request").
-			WithErrorContext(c).
+			WithAspects(c).
 			CausedBy(err)
 	}
 
@@ -326,7 +326,7 @@ func (c *genericContextualizer) readResponse(ctx pipeline.Context, resp *http.Re
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode).
-			WithErrorContext(c)
+			WithAspects(c)
 	}
 
 	if resp.ContentLength == 0 {
@@ -338,7 +338,7 @@ func (c *genericContextualizer) readResponse(ctx pipeline.Context, resp *http.Re
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to read response").
-			WithErrorContext(c).
+			WithAspects(c).
 			CausedBy(err)
 	}
 
@@ -357,7 +357,7 @@ func (c *genericContextualizer) readResponse(ctx pipeline.Context, resp *http.Re
 	result, err := decoder.Decode(rawData)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to unmarshal response").
-			WithErrorContext(c).
+			WithAspects(c).
 			CausedBy(err)
 	}
 
@@ -409,7 +409,7 @@ func (c *genericContextualizer) renderTemplates(
 	if err != nil {
 		return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed to render values for the contextualization endpoint").
-			WithErrorContext(c).
+			WithAspects(c).
 			CausedBy(err)
 	}
 
@@ -422,7 +422,7 @@ func (c *genericContextualizer) renderTemplates(
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
 				"failed to render payload for the contextualization endpoint").
-				WithErrorContext(c).
+				WithAspects(c).
 				CausedBy(err)
 		}
 	}

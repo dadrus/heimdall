@@ -74,7 +74,7 @@ func (a *unauthorizedAuthenticator) Execute(ctx pipeline.Context, _ pipeline.Sub
 
 	return errorchain.
 		NewWithMessage(pipeline.ErrAuthentication, "denied by authenticator").
-		WithErrorContext(a)
+		WithAspects(a)
 }
 
 func (a *unauthorizedAuthenticator) CreateStep(
@@ -85,7 +85,7 @@ func (a *unauthorizedAuthenticator) CreateStep(
 	if len(def.Config) != 0 {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrConfiguration, "unauthorized authenticator cannot be reconfigured").
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	if def.IsEmpty() {
