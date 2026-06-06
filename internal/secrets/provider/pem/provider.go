@@ -61,8 +61,6 @@ type pemProvider struct {
 }
 
 func newProvider(args provider.Args) (provider.Provider, error) {
-	logger := args.Logger
-
 	type config struct {
 		Path     string `mapstructure:"path"     validate:"required"`
 		Password string `mapstructure:"password"`
@@ -79,7 +77,7 @@ func newProvider(args provider.Args) (provider.Provider, error) {
 	prv := &pemProvider{
 		path:     cfg.Path,
 		password: cfg.Password,
-		logger:   logger,
+		logger:   args.Logger,
 		observer: args.Observer,
 	}
 
@@ -89,7 +87,7 @@ func newProvider(args provider.Args) (provider.Provider, error) {
 
 	watcher, err := fswatch.New(
 		fswatch.EventHandlerFunc(prv.reload),
-		fswatch.WithLogger(logger),
+		fswatch.WithLogger(args.Logger),
 	)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
@@ -145,9 +143,7 @@ func (p *pemProvider) GetCertificateBundle(
 }
 
 func (p *pemProvider) Start(ctx context.Context) error {
-	p.logger.Info().
-		Str("_file", p.path).
-		Msg("Loading pem file")
+	p.logger.Info().Str("_file", p.path).Msg("Loading pem file")
 
 	store, err := loadStore(p.path, p.password)
 	if err != nil {
@@ -215,10 +211,7 @@ func (p *pemProvider) reload(evt fswatch.Event) error {
 
 	p.mu.Unlock()
 
-	p.logger.Info().
-		Str("_file", p.path).
-		Msg("pem file reloaded")
-
+	p.logger.Info().Str("_file", p.path).Msg("pem file reloaded")
 	p.observer.Notify(provider.ChangeEvent{})
 
 	return nil

@@ -14,7 +14,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package pem
+package pkix
 
 import (
 	"crypto"
@@ -88,7 +88,7 @@ func TestFindChain(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			tc.assert(t, findChain(tc.key, tc.pool))
+			tc.assert(t, FindChain(tc.key, tc.pool))
 		})
 	}
 }
@@ -157,7 +157,7 @@ func TestValidateChain(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			tc.assert(t, validateChain(tc.chain))
+			tc.assert(t, ValidateChain(tc.chain))
 		})
 	}
 }
