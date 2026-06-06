@@ -19,7 +19,6 @@ package jwks
 import (
 	"context"
 	"crypto"
-	"errors"
 	"strings"
 
 	"github.com/go-jose/go-jose/v4"
@@ -30,8 +29,6 @@ import (
 )
 
 const minOctetKeySize = 16
-
-var errNoKeyMaterialPresent = errors.New("no key material present in the jwks file")
 
 type keyStore []provider.Secret
 
@@ -70,8 +67,10 @@ func newKeyStore(jwks jose.JSONWebKeySet) (keyStore, error) {
 	}
 
 	if len(secrets) == 0 {
-		return nil, errorchain.New(provider.ErrConfiguration).
-			CausedBy(errNoKeyMaterialPresent)
+		return nil, errorchain.NewWithMessage(
+			provider.ErrConfiguration,
+			"no key material present in the jwks file",
+		)
 	}
 
 	return secrets, nil
@@ -150,10 +149,4 @@ func (s keyStore) getCertificateBundle(
 	_ provider.Selector,
 ) (provider.CertificateBundle, error) {
 	return nil, provider.ErrUnsupportedOperation
-}
-
-func (s keyStore) sameKind(other store) bool {
-	_, ok := other.(keyStore)
-
-	return ok
 }
