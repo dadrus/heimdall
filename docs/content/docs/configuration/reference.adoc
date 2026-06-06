@@ -45,6 +45,18 @@ secret_management:
         client_id: ${AUTH_SERVER_CLIENT_ID}
         client_secret: ${AUTH_SERVER_CLIENT_SECRET}
       authz_system_api_key: ${AUTHZ_SYSTEM_API_KEY}
+  secrets_from_file:
+    type: file
+    allow_in_rules: false
+    config:
+      path: /path/to/yaml/or/json/file
+      watch: true
+  jwks_secrets:
+    type: jwks
+    allow_in_rules: false
+    config:
+      path: /path/to/jwks.file
+      watch: false
 
 serve:
   host: 127.0.0.1
