@@ -339,6 +339,86 @@ We can now finalize the configuration and use the proper client id and secret fo
 
 . Update the `OAUTH2_PROXY_CLIENT_ID` and `OAUTH2_PROXY_CLIENT_SECRET` in the configuration of OAuth2-Proxy in your docker compose file with the "Client ID" and "Client Secret" values from Keycloak
 
+== Alternative: Put OAuth2-Proxy in Front of heimdall
+
+The setup above keeps OAuth2-Proxy behind heimdall and lets heimdall validate the OAuth2-Proxy session by calling the `/oauth2/userinfo` endpoint. This is convenient if heimdall should own the public entry point and the browser redirect rules, but it also means heimdall validates the OAuth2-Proxy session and not the access token issued by the IDP.
+
+If your deployment requires heimdall to check the token state at the IDP for protected requests, you can invert the order and let OAuth2-Proxy run in front of heimdall:
+
+[source, text]
+----
+User -> OAuth2-Proxy -> heimdall -> upstream
+----
+
+In that topology, OAuth2-Proxy performs the Authorization Code Grant flow, proxies authenticated requests to heimdall, and forwards the OAuth access token. heimdall can then use the link:{{< relref "/docs/mechanisms/authenticators.adoc#_oauth2_introspection" >}}[`oauth2_introspection`] authenticator to validate the token directly against the IDP.
+
+To use this model with the compose setup from this guide, make the following adjustments.
+
+. Expose OAuth2-Proxy instead of heimdall and configure heimdall as its upstream:
++
+[source, yaml]
+----
+services:
+  heimdall:
+    image: dadrus/heimdall:dev
+    command: serve proxy --c /etc/heimdall/config.yaml --insecure
+    volumes:
+      - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
+      - ./rules:/etc/heimdall/rules:ro
+      - ./signer.pem:/etc/heimdall/signer.pem:ro
+
+  oauth2-proxy:
+    ports:
+      - "9090:4180"
+    environment:
+      OAUTH2_PROXY_REDIRECT_URL: http://127.0.0.1:9090/oauth2/callback
+      OAUTH2_PROXY_UPSTREAMS: http://heimdall:4456/
+      OAUTH2_PROXY_PASS_ACCESS_TOKEN: true
+----
++
+Keep the remaining OAuth2-Proxy and Keycloak settings from the original `docker-compose.yaml`.
++
+OAuth2-Proxy forwards the access token to its upstream in the `X-Forwarded-Access-Token` header when `OAUTH2_PROXY_PASS_ACCESS_TOKEN` is enabled.
+
+. Replace the `generic` authenticator named `auth` with an `oauth2_introspection` authenticator that reads this header:
++
+[source, yaml]
+----
+secret_management:
+  jwt_key_store:
+    type: pem
+    config:
+      path: /etc/heimdall/signer.pem
+  keycloak_client:
+    type: inline
+    config:
+      introspection:
+        user_id: "${OAUTH2_PROXY_CLIENT_ID}"
+        password: "${OAUTH2_PROXY_CLIENT_SECRET}"
+
+mechanisms:
+  authenticators:
+  - id: auth
+    type: oauth2_introspection
+    config:
+      token_source:
+        - header: X-Forwarded-Access-Token
+      introspection_endpoint:
+        url: http://keycloak:8080/realms/test/protocol/openid-connect/token/introspect
+        auth:
+          type: basic_auth
+          config:
+            credentials:
+              source: keycloak_client
+              selector: introspection
+----
++
+The `keycloak_client` secret source above uses environment variable interpolation so the client secret does not have to be stored in the configuration file.
+
+. Remove the OAuth2-Proxy rule that exposed `/oauth2/start` and `/oauth2/callback` through heimdall. OAuth2-Proxy now owns those endpoints directly.
+
+With this topology, the browser session is still managed by OAuth2-Proxy, while heimdall authorizes based on the current introspection result for the forwarded access token. The trade-off is that heimdall no longer owns the initial login redirect flow, so authentication error handling and public endpoint exposure should be reviewed accordingly.
+
 == Use the Setup
 
 We now have almost everything set up. The final step is to create a few users, including at least one with the `admin` role assigned.
@@ -410,4 +490,3 @@ NOTE: To "logout" the user, just delete the cookies for `\http://127.0.0.1:9090`
 == Cleanup
 
 Just stop the environment with `CTRL-C` and delete the created files. If you started docker compose in the background, tear the environment down with `docker compose down`.
-
