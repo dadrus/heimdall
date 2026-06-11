@@ -339,6 +339,119 @@ We can now finalize the configuration and use the proper client id and secret fo
 
 . Update the `OAUTH2_PROXY_CLIENT_ID` and `OAUTH2_PROXY_CLIENT_SECRET` in the configuration of OAuth2-Proxy in your docker compose file with the "Client ID" and "Client Secret" values from Keycloak
 
+== Alternative: Put OAuth2-Proxy in Front of heimdall
+
+The setup above keeps OAuth2-Proxy behind heimdall and lets heimdall validate the OAuth2-Proxy session by calling the `/oauth2/userinfo` endpoint. This is convenient if heimdall should own the public entry point and the browser redirect rules, but it also means heimdall validates the OAuth2-Proxy session and not the access token issued by the IDP.
+
+If your deployment requires heimdall to check the token state at the IDP for protected requests, you can invert the order and let OAuth2-Proxy run in front of heimdall:
+
+[source, text]
+----
+User -> OAuth2-Proxy -> heimdall -> upstream
+----
+
+In that topology, OAuth2-Proxy performs the Authorization Code Grant flow, proxies authenticated requests to heimdall, and forwards the OAuth access token. heimdall can then use the link:{{< relref "/docs/mechanisms/authenticators.adoc#_oauth2_introspection" >}}[`oauth2_introspection`] authenticator to validate the token directly against the IDP.
+
+The examples below keep `oauth2_introspection` as the primary option because the purpose of this topology is to check token state at Keycloak for protected requests. A Keycloak access token is usually also a JWT and can be validated locally with heimdall's link:{{< relref "/docs/mechanisms/authenticators.adoc#_jwt" >}}[`jwt`] authenticator, but the local Keycloak development setup publishes generated X.509 certificate material in its JWKS. heimdall validates such JWK certificates by default, so a local JWT/JWKS setup needs the additional configuration shown below.
+
+To use this model with the compose setup from this guide, make the following adjustments.
+
+. Keep the Keycloak client URLs from the base setup, but note that port `9090` now belongs to OAuth2-Proxy, not heimdall:
++
+* *Valid Redirect URI*: `\http://127.0.0.1:9090/oauth2/callback`
+* *Home URL*: `\http://127.0.0.1:9090/`
+* *Valid post logout redirect URI*: `\http://127.0.0.1:9090/`
+
+. Expose OAuth2-Proxy instead of heimdall and configure heimdall as its upstream:
++
+[source, yaml]
+----
+services:
+  heimdall:
+    image: dadrus/heimdall:dev
+    command: serve proxy --c /etc/heimdall/config.yaml --insecure
+    volumes:
+      - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
+      - ./rules:/etc/heimdall/rules:ro
+      - ./signer.pem:/etc/heimdall/signer.pem:ro
+
+  oauth2-proxy:
+    ports:
+      - "9090:4180"
+    environment:
+      OAUTH2_PROXY_REDIRECT_URL: http://127.0.0.1:9090/oauth2/callback
+      OAUTH2_PROXY_UPSTREAMS: http://heimdall:4456/
+      OAUTH2_PROXY_PASS_ACCESS_TOKEN: true
+      OAUTH2_PROXY_SKIP_AUTH_ROUTES: "GET=^/$,GET=^/favicon\\.ico$"
+----
++
+Keep the remaining OAuth2-Proxy and Keycloak settings from the original `docker-compose.yaml`.
++
+OAuth2-Proxy forwards the access token to its upstream in the `X-Forwarded-Access-Token` header when `OAUTH2_PROXY_PASS_ACCESS_TOKEN` is enabled.
+The `OAUTH2_PROXY_SKIP_AUTH_ROUTES` entry keeps the public routes from this guide public; without it, OAuth2-Proxy would require a browser session before heimdall can apply its anonymous rule.
+
+. Replace the `generic` authenticator named `auth` with an `oauth2_introspection` authenticator that reads this header:
++
+[source, yaml]
+----
+secret_management:
+  jwt_key_store:
+    type: pem
+    config:
+      path: /etc/heimdall/signer.pem
+  keycloak_client:
+    type: inline
+    config:
+      introspection:
+        user_id: "${OAUTH2_PROXY_CLIENT_ID}"
+        password: "${OAUTH2_PROXY_CLIENT_SECRET}"
+
+mechanisms:
+  authenticators:
+  - id: auth
+    type: oauth2_introspection
+    config:
+      token_source:
+        - header: X-Forwarded-Access-Token
+      introspection_endpoint:
+        url: http://keycloak:8080/realms/test/protocol/openid-connect/token/introspect
+        auth:
+          type: basic_auth
+          config:
+            credentials:
+              source: keycloak_client
+              selector: introspection
+----
++
+The `keycloak_client` secret source above uses environment variable interpolation so the client secret does not have to be stored in the configuration file.
+
+. If you only want local JWT validation and do not need live token-state checks, use the `jwt` authenticator instead of `oauth2_introspection`.
++
+[source, yaml]
+----
+mechanisms:
+  authenticators:
+  - id: auth
+    type: jwt
+    config:
+      jwt_source:
+        - header: X-Forwarded-Access-Token
+      jwks_endpoint:
+        url: http://keycloak:8080/realms/test/protocol/openid-connect/certs
+      assertions:
+        issuers:
+          - http://127.0.0.1:8080/realms/test
+        allowed_algorithms:
+          - RS256
+      validate_jwk: false
+----
++
+The `allowed_algorithms` value is required because Keycloak uses `RS256` by default, while heimdall's default allowed algorithms intentionally do not include RSA PKCS#1 v1.5 algorithms. The `validate_jwk: false` setting is specific to this local tutorial setup: it keeps heimdall from rejecting Keycloak's generated JWKS certificate material during JWK certificate validation. In production, prefer `validate_jwk: true` and configure link:{{< relref "/docs/mechanisms/authenticators.adoc#_jwt" >}}[`trust_anchors`] with a CA bundle that can validate the certificate chain published with your JWKS.
+
+. Remove the OAuth2-Proxy rule that exposed `/oauth2/start` and `/oauth2/callback` through heimdall. OAuth2-Proxy now owns those endpoints directly.
+
+With this topology, the browser session is still managed by OAuth2-Proxy, while heimdall authorizes protected requests based on the current introspection result for the forwarded access token. The trade-off is that heimdall no longer owns the initial login redirect flow, so public endpoint exposure and authentication error handling must be configured at OAuth2-Proxy as shown above.
+
 == Use the Setup
 
 We now have almost everything set up. The final step is to create a few users, including at least one with the `admin` role assigned.
@@ -410,4 +523,3 @@ NOTE: To "logout" the user, just delete the cookies for `\http://127.0.0.1:9090`
 == Cleanup
 
 Just stop the environment with `CTRL-C` and delete the created files. If you started docker compose in the background, tear the environment down with `docker compose down`.
-
