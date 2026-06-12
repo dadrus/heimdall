@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/ccoveille/go-safecast/v2"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/authorityvalidation"
 	"github.com/justinas/alice"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
@@ -117,6 +118,7 @@ func newService(
 			logger.WithAccessStatusEnabled(true),
 			logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled),
 		),
+		authorityvalidation.New(),
 		dump.New(),
 		der.handler,
 		x.IfThenElseExec(cfg.CORS != nil,

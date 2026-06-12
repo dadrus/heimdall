@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/ccoveille/go-safecast/v2"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/authorityvalidation"
 	"github.com/justinas/alice"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -79,6 +80,7 @@ func newService(
 			logger.WithAccessStatusEnabled(true),
 			logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled),
 		),
+		authorityvalidation.New(),
 		dump.New(),
 		cachemiddleware.New(cch),
 	).Then(service.NewHandler(newContextFactory(acceptedCode), exec, eh))

@@ -1,4 +1,4 @@
-package hostvalidation
+package authorityvalidation
 
 import "testing"
 
