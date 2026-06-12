@@ -5,7 +5,6 @@ package httpx
 // For IPv6: "[" + 39 chars (max. uncompressed IPv6) + "]" + 1 + 5 = 47 – well below 261.
 const maxHostLen = 261
 
-
 // IsValidAuthority reports whether authority is a syntactically valid HTTP Host header value:
 //
 //   - Hostname[:Port]  –  RFC 1123 plus pragmatic underscore allowlist

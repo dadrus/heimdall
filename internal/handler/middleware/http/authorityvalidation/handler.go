@@ -21,4 +21,3 @@ func New() func(http.Handler) http.Handler {
 		})
 	}
 }
-
