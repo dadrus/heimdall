@@ -47,6 +47,10 @@ func isValidAuthority(authority string) bool {
 		return isValidIPv6Authority(authority)
 	}
 
+	if authority[0] == '.' || authority[0] == '-' || authority[0] == '_' {
+		return false
+	}
+
 	return isIPv4OrDNSNameAuthority(authority)
 }
 

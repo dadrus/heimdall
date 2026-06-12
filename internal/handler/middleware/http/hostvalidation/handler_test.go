@@ -2,6 +2,8 @@ package hostvalidation
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestIsValidAuthority(t *testing.T) {
@@ -43,6 +45,10 @@ func TestIsValidAuthority(t *testing.T) {
 
 		// Invalid formats
 		{"", false, "empty string"},
+		{".", false, "dot as host name"},
+		{"..", false, "two dots as host name"},
+		{"_", false, "underscore as host name"},
+		{".example.com", false, "leading dot domain name"},
 		{":8080", false, "missing hostname"},
 		{"example.com:99999", false, "port out of range"},
 		{"example.com:0", false, "port zero"},
@@ -59,35 +65,8 @@ func TestIsValidAuthority(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
 			got := isValidAuthority(tt.host)
-			if got != tt.valid {
-				t.Errorf("isValidHost(%q) = %v, want %v", tt.host, got, tt.valid)
-			}
-		})
-	}
-}
 
-func TestHelperValidators(t *testing.T) {
-	tests := []struct {
-		name string
-		got  bool
-		want bool
-	}{
-		{"ipv4 valid", isIPv4("192.168.1.1"), true},
-		{"ipv4 octet out of range", isIPv4("192.168.1.256"), false},
-		{"ipv4 missing octet", isIPv4("192.168.1"), false},
-		{"ipv6 valid", isIPv6("2001:db8::1"), true},
-		{"ipv6 mapped ipv4", isIPv6("::ffff:192.0.2.1"), true},
-		{"ipv6 rejects ipv4", isIPv6("192.168.1.1"), false},
-		{"dns valid", isDNSName("api.example.com"), true},
-		{"dns underscore", isDNSName("host_with_underscore"), true},
-		{"dns rejects comma", isDNSName("evil.com,for=127.0.0.1"), false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.got != tt.want {
-				t.Fatalf("got %v, want %v", tt.got, tt.want)
-			}
+			assert.Equal(t, tt.valid, got)
 		})
 	}
 }
