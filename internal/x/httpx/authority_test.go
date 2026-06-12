@@ -1,4 +1,4 @@
-package authorityvalidation
+package httpx
 
 import (
 	"testing"
@@ -64,7 +64,7 @@ func TestIsValidAuthority(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.desc, func(t *testing.T) {
-			got := isValidAuthority(tt.host)
+			got := IsValidAuthority(tt.host)
 
 			assert.Equal(t, tt.valid, got)
 		})
