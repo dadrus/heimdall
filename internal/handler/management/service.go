@@ -21,15 +21,15 @@ import (
 	"strings"
 
 	"github.com/ccoveille/go-safecast/v2"
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/authorityvalidation"
 	"github.com/justinas/alice"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/authorityvalidation"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
-	errorhandler2 "github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
@@ -46,7 +46,7 @@ func newService(
 	khr keyholder.Registry,
 ) *http.Server {
 	cfg := conf.Management
-	eh := errorhandler2.New()
+	eh := errorhandler.New()
 	opFilter := func(req *http.Request) bool { return req.URL.Path != EndpointHealth }
 
 	hc := alice.New(
