@@ -12,7 +12,7 @@ require (
 	github.com/elnormous/contenttype v1.0.4
 	github.com/envoyproxy/go-control-plane/envoy v1.37.0
 	github.com/evanphx/json-patch/v5 v5.9.11
-	github.com/felixge/httpsnoop v1.0.4
+	github.com/felixge/httpsnoop v1.1.0
 	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-co-op/gocron/v2 v2.21.2
 	github.com/go-http-utils/etag v0.0.0-20161124023236-513ea8f21eb1
