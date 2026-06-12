@@ -17,6 +17,14 @@ func New() func(http.Handler) http.Handler {
 				return
 			}
 
+			if host := r.Header.Get("X-Forwarded-Host"); len(host) != 0 {
+				if !httpx.IsValidAuthority(host) {
+					http.Error(w, "Bad Request", http.StatusBadRequest)
+
+					return
+				}
+			}
+
 			next.ServeHTTP(w, r)
 		})
 	}
