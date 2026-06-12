@@ -278,25 +278,6 @@ func isIPv4OrDNSNameAuthority(value string) bool {
 	return hostLen > 0 && hostLen <= 253
 }
 
-//nolint:cyclop
-func isDNSName(value string) bool {
-	if len(value) == 0 || len(value) > 253 {
-		return false
-	}
-
-	for i := range len(value) {
-		c := value[i]
-		if !((c >= 'a' && c <= 'z') ||
-			(c >= 'A' && c <= 'Z') ||
-			(c >= '0' && c <= '9') ||
-			c == '.' || c == '-' || c == '_') {
-			return false
-		}
-	}
-
-	return true
-}
-
 func isValidPortFrom(value string, start int) bool {
 	portLen := len(value) - start
 	if portLen == 0 || portLen > 5 {
