@@ -1,0 +1,102 @@
+---
+title: "OpenID Connect with OAuth2-Proxy and NGINX"
+date: 2026-06-13T00:00:00+02:00
+draft: false
+weight: 32
+menu:
+  guides:
+    parent: "Authentication Protocols & Services"
+description: This guide explains how to combine OpenID Connect, OAuth2-Proxy, NGINX, and heimdall decision mode.
+---
+
+:toc:
+
+This guide explains an OpenID Connect setup where https://nginx.org/[NGINX] is the public reverse proxy, https://oauth2-proxy.github.io/oauth2-proxy/[OAuth2-Proxy] handles the browser login and session cookie, and heimdall runs in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode].
+
+Use this pattern if NGINX should stay in front of the upstream service, OAuth2-Proxy should own the Authorization Code flow with the identity provider, and heimdall should make the final access-control decision for each request.
+
+== Request Flow
+
+. The browser sends a request to NGINX.
+. NGINX calls heimdall through the `auth_request` module.
+. heimdall validates the OAuth2-Proxy session cookie by calling OAuth2-Proxy's `/oauth2/userinfo` endpoint.
+. If heimdall accepts the request, NGINX forwards it to the upstream service.
+. If heimdall returns `401 Unauthorized`, NGINX redirects the browser to OAuth2-Proxy's `/oauth2/start` endpoint.
+
+NGINX owns the browser redirect because its `auth_request` module only treats `2xx`, `401`, and `403` as meaningful authorization responses. A redirect returned by heimdall would be treated as an error by NGINX. The link:{{< relref "/guides/proxies/nginx.adoc#_limitations" >}}[NGINX guide] describes that limitation in more detail.
+
+== Prerequisites
+
+This guide assumes you already have:
+
+* an OpenID Connect identity provider, such as https://www.keycloak.org/[Keycloak],
+* OAuth2-Proxy configured against that identity provider,
+* heimdall running in decision mode, and
+* NGINX configured with the https://nginx.org/en/docs/http/ngx_http_auth_request_module.html[`auth_request`] module.
+
+For the identity provider and OAuth2-Proxy setup, follow the same principles as the link:{{< relref "/guides/authn/oidc_first_party_auth.adoc" >}}[First-Party Authentication with OpenID Connect] guide. The main difference is that OAuth2-Proxy is now part of the public request path instead of sitting behind heimdall.
+
+== Configure NGINX
+
+The example below uses the `X-Forwarded-*` integration style from the link:{{< relref "/guides/proxies/nginx.adoc#_second_option" >}}[NGINX guide].
+
+[source, nginx]
+----
+# nginx.conf
+...
+
+location / {
+  auth_request             /_auth;  <1>
+  auth_request_set         $auth_cookie $upstream_http_set_cookie;
+  add_header               Set-Cookie $auth_cookie;
+  auth_request_set         $auth_header $upstream_http_authorization;
+  proxy_set_header         Authorization $auth_header;
+  proxy_set_header         Proxy "";
+  error_page               401 = @oauth2_proxy_start;  <2>
+  proxy_pass               http://upstream;
+}
+
+location @oauth2_proxy_start {
+  return 302 https://oauth2-proxy.example.com/oauth2/start?rd=$scheme://$http_host$request_uri;  <3>
+}
+
+location = /_auth {
+  internal;
+  proxy_pass               http://heimdall:4456;  <4>
+  proxy_pass_request_body  off;
+  proxy_set_header         Content-Length         "";
+  proxy_set_header         X-Forwarded-Method     $request_method;
+  proxy_set_header         X-Forwarded-Proto      $scheme;
+  proxy_set_header         X-Forwarded-Host       $http_host;
+  proxy_set_header         X-Forwarded-Uri        $request_uri;
+  proxy_set_header         X-Forwarded-For        $remote_addr;
+  proxy_set_header         Cookie                 $http_cookie;  <5>
+}
+----
+<1> NGINX asks heimdall whether the original request may be forwarded.
+<2> Missing or invalid browser sessions stay a `401` response from heimdall's point of view, while NGINX owns the browser redirect.
+<3> Replace the host with the public OAuth2-Proxy URL. The `rd` parameter sends the user back to the originally requested URL after login.
+<4> This example passes request information in `X-Forwarded-*` headers. Configure link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[`trusted_proxies`] on heimdall accordingly.
+<5> Forwarding the browser cookies lets heimdall validate an OAuth2-Proxy session cookie with the link:{{< relref "/docs/mechanisms/authenticators.adoc#_generic" >}}[generic authenticator].
+
+== Configure heimdall
+
+If OAuth2-Proxy uses a `SESSION` cookie and exposes `/oauth2/userinfo` to heimdall, configure a `generic` authenticator that extracts and forwards that cookie.
+
+[source, yaml]
+----
+id: auth
+type: generic
+config:
+  identity_info_endpoint: http://oauth2-proxy:4180/oauth2/userinfo
+  authentication_data_source:
+    - cookie: SESSION
+  forward_cookies:
+    - SESSION
+  principal:
+    id: "user"
+----
+
+Use that authenticator in the protected rules that should authenticate users through OAuth2-Proxy while still letting heimdall make the final authorization decision.
+
+For a complete rule set with public and protected routes, start with the rule structure in the link:{{< relref "/guides/authn/oidc_first_party_auth.adoc" >}}[First-Party Authentication with OpenID Connect] guide and adapt the protected rules to your NGINX routes.
