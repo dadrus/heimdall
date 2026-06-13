@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.17.17](https://github.com/dadrus/heimdall/compare/v0.17.16...v0.17.17) (2026-06-13)
+
+
+### Dependencies
+
+* update go-cloud monorepo to v0.46.0 ([#3299](https://github.com/dadrus/heimdall/issues/3299)) ([0e3e2f2](https://github.com/dadrus/heimdall/commit/0e3e2f21afaa8f8bc44d31c99495fb6606448706))
+* update golang to v1.26.4 ([#3298](https://github.com/dadrus/heimdall/issues/3298)) ([66b46a3](https://github.com/dadrus/heimdall/commit/66b46a3da4bfbf8236f6326d42664ad300a32999))
+* update google.golang.org/genproto/googleapis/rpc digest to 7ab31c2 ([#3307](https://github.com/dadrus/heimdall/issues/3307)) ([28b6843](https://github.com/dadrus/heimdall/commit/28b6843b3204538899d1670cb49c1b3d201d547c))
+* update kubernetes monorepo to v0.36.2 ([#3313](https://github.com/dadrus/heimdall/issues/3313)) ([89c65dd](https://github.com/dadrus/heimdall/commit/89c65ddc11d0940a6154690d1dab15e0c4319388))
+* update module github.com/felixge/httpsnoop to v1.1.0 ([#3312](https://github.com/dadrus/heimdall/issues/3312)) ([82390e3](https://github.com/dadrus/heimdall/commit/82390e386229f4f7e651f2c8bdc43922961f9cc8))
+
 ## [0.17.16](https://github.com/dadrus/heimdall/compare/v0.17.15...v0.17.16) (2026-06-02)
 
 
