@@ -72,7 +72,7 @@ func isValidIPv6Authority(value string) bool {
 
 	return end+2 < len(value) &&
 		value[end+1] == ':' &&
-		isValidPortFrom(value, end+2)
+		isValidPortFrom(value, end+2) //nolint:mnd
 }
 
 //nolint:gocognit, cyclop, funlen
