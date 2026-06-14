@@ -37,6 +37,8 @@ func TestIsValidAuthority(t *testing.T) {
 		{"localhost", true, "localhost"},
 		{"localhost:3000", true, "localhost with port"},
 		{"xn--nxasmq6b.com", true, "IDN/punycode"},
+		{"a", true, "single-character hostname"},
+		{"a:1", true, "single-character hostname with minimum valid port"},
 
 		// Valid IPv4
 		{"192.168.1.1", true, "IPv4"},
@@ -54,6 +56,11 @@ func TestIsValidAuthority(t *testing.T) {
 		{"[::1]:65535", true, "IPv6 with maximum valid port"},
 		{"[::ffff:192.0.2.1]", true, "IPv4-mapped IPv6"},
 		{"[2001:db8:85a3:0:0:8a2e:370:7334]", true, "IPv6 full 8-group address without double colon"},
+		{"[1:2:3:4:5:6:7::]", true, "IPv6 trailing double colon compressing one group"},
+		{"[::1:2:3:4:5:6:7]", true, "IPv6 leading double colon compressing one group"},
+		{"[1:2::]", true, "IPv6 normal colon before compression"},
+		{"[1:2:3:4:5:6:7:8]", true, "IPv6 full address ending with final group"},
+		{"[abcd::1]", true, "IPv6 lowercase hex group"},
 
 		// Injection attempts
 		{"evil.com,for=127.0.0.1", false, "comma injection (Forwarded)"},
@@ -62,6 +69,9 @@ func TestIsValidAuthority(t *testing.T) {
 		{"host\r\nX-Injected: val", false, "CRLF injection"},
 		{"host with space", false, "space in host"},
 		{"host=value", false, "equals sign"},
+		{"evil.com\tfor=127.0.0.1", false, "tab rejected"},
+		{"evil.com\nfor=127.0.0.1", false, "LF rejected"},
+		{"evil.com\rfor=127.0.0.1", false, "CR rejected"},
 
 		// Invalid formats
 		{"", false, "empty string"},
@@ -90,7 +100,17 @@ func TestIsValidAuthority(t *testing.T) {
 		{"[::1]junk", false, "IPv6 literal with invalid suffix after bracket"},
 		{"[::1]:", false, "IPv6 literal with empty port"},
 		{"[::1]:0", false, "IPv6 with zero port"},
+		{"[1::2:]", false, "IPv6 trailing single colon after valid group"},
+		{"[1:::2]", false, "IPv6 triple colon causes empty group after double colon"},
+		{"[1:::]", false, "IPv6 triple colon after first group at end"},
 		{"[192.168.1.1]", false, "brackets around IPv4 (not valid IPv6)"},
+		{"[::ffff:.192.0.2.1]", false, "IPv4-embedded IPv6 with leading dot"},
+		{"[::ffff:192..0.2]", false, "IPv4-embedded IPv6 with empty IPv4 octet"},
+		{"[::ffff:192.0.2.]", false, "IPv4-embedded IPv6 with trailing dot"},
+		{"[::ffff:256.0.2.1]", false, "IPv4-embedded IPv6 octet out of range"},
+		{"[::ffff:192.0.2.x]", false, "IPv4-embedded IPv6 with non-digit character"},
+		{"[gggg::1]", false, "IPv6 non-hex lowercase letters"},
+		{"[GGGG::1]", false, "IPv6 non-hex uppercase letters"},
 
 		// Length boundary
 		{string(make([]byte, maxHostLen+1)), false, "exceeds maxHostLen"},

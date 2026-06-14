@@ -21,15 +21,18 @@ package httpx
 // For IPv6: "[" + 39 chars (max. uncompressed IPv6) + "]" + 1 + 5 = 47 – well below 261.
 const maxHostLen = 261
 
-// IsValidAuthority reports whether authority is a syntactically valid HTTP Host header value:
+// IsValidAuthority reports whether authority is safe to use as an HTTP Host
+// value for proxying and Forwarded header construction.
 //
-//   - Hostname[:Port]  –  RFC 1123 plus pragmatic underscore allowlist
-//   - IPv4[:Port]      –  four decimal octets
-//   - [IPv6][:Port]    –  RFC 2732 bracket notation
+// This is intentionally a pragmatic ASCII allowlist, not a full DNS/IP
+// validator. It accepts hostname-like reg-names, IPv4-like values, and
+// bracketed IPv6 literals with an optional port. Its primary purpose is to
+// reject Forwarded header delimiters, quoting characters, whitespace, control
+// characters, and other bytes that could change the structure of a Forwarded
+// header.
 //
-// It returns false as soon as a character is found that is not legal in a
-// hostname or IP address – in particular ',' and ';', which would enable
-// Forwarded header injection.
+// In particular, ',' and ';' are rejected to prevent Forwarded header
+// element/parameter injection.
 func IsValidAuthority(authority string) bool {
 	// An empty authority is only permitted for HTTP/1.0 compatibility; we reject it
 	// because heimdall does not speak HTTP/1.0.
@@ -54,81 +57,22 @@ func IsValidAuthority(authority string) bool {
 //
 //nolint:gocognit, cyclop, gocyclo, funlen
 func isValidIPv6Authority(value string) bool {
-	length := len(value)
-	colons := 0
-	groupLen := 0
-	doubleColon := false
-
-	for i := 1; i < length; i++ {
-		ch := value[i]
-		if ch == ']' {
-			if colons < 2 { //nolint:mnd
-				return false
-			}
-
-			if !doubleColon && colons != 7 {
-				return false
-			}
-
-			if doubleColon && colons > 7 {
-				return false
-			}
-
-			return i+1 == length || i+2 < length && value[i+1] == ':' && isValidPortFrom(value, i+2) //nolint:mnd
-		}
-
-		if (ch >= '0' && ch <= '9') ||
-			(ch >= 'a' && ch <= 'f') ||
-			(ch >= 'A' && ch <= 'F') {
-			groupLen++
-			if groupLen > 4 { //nolint:mnd
-				return false
-			}
-
-			continue
-		}
-
-		if ch == ':' { //nolint:nestif
-			if i+1 < length && value[i+1] == ':' {
-				if doubleColon {
-					return false
-				}
-
-				if groupLen == 0 && i != 1 {
-					return false
-				}
-
-				groupLen = 0
-				doubleColon = true
-				colons += 2
-				i++
-
-				continue
-			}
-
-			if groupLen == 0 {
-				return false
-			}
-
-			groupLen = 0
-			colons++
-
-			continue
-		}
-
-		if ch == '.' {
-			end := indexByte(value, ']', i+1)
-			if end < 0 || !isIPv6(value[1:end]) {
-				return false
-			}
-
-			return end+1 == length || end+2 < length && value[end+1] == ':' && isValidPortFrom(value, end+2) //nolint:mnd
-		}
-
+	end := indexByte(value, ']', 1)
+	if end < 0 {
 		return false
 	}
 
-	return false
+	if !isIPv6(value[1:end]) {
+		return false
+	}
+
+	if end+1 == len(value) {
+		return true
+	}
+
+	return end+2 < len(value) &&
+		value[end+1] == ':' &&
+		isValidPortFrom(value, end+2)
 }
 
 //nolint:gocognit, cyclop, funlen
@@ -168,8 +112,6 @@ func isIPv6(value string) bool {
 				if groupLen > 0 {
 					groups++
 					groupLen = 0
-				} else if i != 0 {
-					return false
 				}
 
 				doubleColon = true
@@ -197,7 +139,11 @@ func isIPv6(value string) bool {
 
 			groups += 2
 
-			return colons >= 2 && (groups == 8 || doubleColon && groups < 8)
+			if doubleColon {
+				return colons >= 2 && groups < 8
+			}
+
+			return colons >= 2 && groups == 8
 		}
 
 		return false
@@ -207,7 +153,11 @@ func isIPv6(value string) bool {
 		groups++
 	}
 
-	return colons >= 2 && (groups == 8 || doubleColon && groups < 8)
+	if doubleColon {
+		return colons >= 2 && groups < 8
+	}
+
+	return colons >= 2 && groups == 8
 }
 
 func isIPv4(value string) bool {

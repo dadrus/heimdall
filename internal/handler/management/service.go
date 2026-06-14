@@ -27,13 +27,13 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/authorityvalidation"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/requestoverrides"
 	"github.com/dadrus/heimdall/internal/keyholder"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
@@ -64,7 +64,7 @@ func newService(
 			otelmetrics.WithOperationFilter(opFilter),
 		),
 		logger.New(log, logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled)),
-		authorityvalidation.New(),
+		requestoverrides.New(),
 		dump.New(),
 		x.IfThenElseExec(cfg.CORS != nil,
 			func() func(http.Handler) http.Handler {

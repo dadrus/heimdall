@@ -27,13 +27,13 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/authorityvalidation"
 	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/http/cache"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/requestoverrides"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/trustedproxy"
 	"github.com/dadrus/heimdall/internal/handler/service"
 	"github.com/dadrus/heimdall/internal/rules/rule"
@@ -80,7 +80,7 @@ func newService(
 			logger.WithAccessStatusEnabled(true),
 			logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled),
 		),
-		authorityvalidation.New(),
+		requestoverrides.New(),
 		dump.New(),
 		cachemiddleware.New(cch),
 	).Then(service.NewHandler(newContextFactory(acceptedCode), exec, eh))
