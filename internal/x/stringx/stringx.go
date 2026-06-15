@@ -28,14 +28,14 @@ func ToBytes(str string) []byte {
 //
 // Unlike strings.EqualFold, it does not perform Unicode case-folding resulting
 // in better performance. It is intended for pure ASCII strings.
-func EqualFoldASCII(s, t string) bool {
-	if len(s) != len(t) {
+func EqualFoldASCII(first, second string) bool {
+	if len(first) != len(second) {
 		return false
 	}
 
-	for i := range len(t) {
-		a := s[i]
-		b := t[i]
+	for i := range len(second) {
+		a := first[i]
+		b := second[i]
 
 		if a >= 'A' && a <= 'Z' {
 			a += 'a' - 'A'

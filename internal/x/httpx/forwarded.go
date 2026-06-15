@@ -53,6 +53,7 @@ func IPsFromXForwardedFor(dst []string, values []string) ([]string, error) {
 	return dst, nil
 }
 
+//nolint:cyclop
 func IPsFromForwarded(dst []string, values []string) ([]string, error) {
 	for _, value := range values {
 		paramStart := 0
