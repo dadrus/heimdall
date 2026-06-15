@@ -23,6 +23,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/dadrus/heimdall/internal/x/httpx"
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/rs/zerolog"
@@ -122,12 +123,8 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 
 func requestClientIPs(ips []string, md metadata.MD) []string {
 	// this header is used by envoyproxy to forward the ip addresses of the hops
-	for _, value := range md.Get("x-forwarded-for") {
-		for token := range strings.SplitSeq(value, ",") {
-			if ip := strings.TrimSpace(token); len(ip) != 0 {
-				ips = append(ips, ip)
-			}
-		}
+	if res, _ := httpx.IPsFromXForwardedFor(ips, md.Get("x-forwarded-for")); len(res) != 0 {
+		return res
 	}
 
 	return ips
