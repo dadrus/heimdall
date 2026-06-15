@@ -23,3 +23,32 @@ func ToString(b []byte) string { return unsafe.String(unsafe.SliceData(b), len(b
 func ToBytes(str string) []byte {
 	return unsafe.Slice(unsafe.StringData(str), len(str))
 }
+
+// EqualFoldASCII reports whether s and t are equal under ASCII case-folding.
+//
+// Unlike strings.EqualFold, it does not perform Unicode case-folding resulting
+// in better performance. It is intended for pure ASCII strings.
+func EqualFoldASCII(s, t string) bool {
+	if len(s) != len(t) {
+		return false
+	}
+
+	for i := range len(t) {
+		a := s[i]
+		b := t[i]
+
+		if a >= 'A' && a <= 'Z' {
+			a += 'a' - 'A'
+		}
+
+		if b >= 'A' && b <= 'Z' {
+			b += 'a' - 'A'
+		}
+
+		if a != b {
+			return false
+		}
+	}
+
+	return true
+}
