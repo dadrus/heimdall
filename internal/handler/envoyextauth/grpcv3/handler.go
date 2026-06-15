@@ -20,8 +20,12 @@ import (
 	"context"
 
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
+	envoy_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	"google.golang.org/genproto/googleapis/rpc/status"
+	"google.golang.org/grpc/codes"
 
 	"github.com/dadrus/heimdall/internal/rules/rule"
+	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
 type Handler struct {
@@ -30,6 +34,10 @@ type Handler struct {
 }
 
 func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
+	if !httpx.IsValidAuthority(req.GetAttributes().GetRequest().GetHttp().GetHost()) {
+		return badRequest(), nil
+	}
+
 	reqCtx := h.cf.Create(ctx, req)
 	defer h.cf.Destroy(reqCtx)
 
@@ -39,4 +47,17 @@ func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*env
 	}
 
 	return reqCtx.Finalize()
+}
+
+func badRequest() *envoy_auth.CheckResponse {
+	return &envoy_auth.CheckResponse{
+		Status: &status.Status{Code: int32(codes.OK)},
+		HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
+			DeniedResponse: &envoy_auth.DeniedHttpResponse{
+				Status: &envoy_type.HttpStatus{
+					Code: envoy_type.StatusCode_BadRequest,
+				},
+			},
+		},
+	}
 }

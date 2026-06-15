@@ -59,6 +59,9 @@ linters:
         - t testing.T
         - i int
         - j int
+        - c char
+        - a byte
+        - b byte
         - T any
         - m map[string]int
         - w http.ResponseWriter

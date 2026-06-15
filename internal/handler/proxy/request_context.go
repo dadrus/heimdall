@@ -205,7 +205,7 @@ func (r *requestContext) rewriteForwardedHeader(in, out *http.Request) {
 	}
 
 	current := strings.Join(in.Header.Values("Forwarded"), ", ")
-	entry := "for=" + clientIP + ";host=" + in.Host + ";proto=" + proto
+	entry := "for=" + clientIP + ";host=\"" + in.Host + "\";proto=" + proto
 	out.Header.Set("Forwarded", x.IfThenElseExec(len(current) == 0,
 		func() string { return entry },
 		func() string { return current + ", " + entry }))
