@@ -17,12 +17,8 @@
 package oauth2
 
 import (
-	"errors"
-
 	"github.com/dadrus/heimdall/internal/pipeline"
 )
-
-var ErrTokenNotActive = errors.New("token is not active")
 
 type IntrospectionResponse struct {
 	Claims
@@ -32,10 +28,17 @@ type IntrospectionResponse struct {
 	TokenType string `json:"token_type,omitempty"`
 }
 
-func (c IntrospectionResponse) Validate(ctx pipeline.Context, rawToken string, exp Expectation) error {
+func (c IntrospectionResponse) Validate(
+	ctx pipeline.Context,
+	scheme TokenScheme,
+	rawToken string,
+	exp Expectation,
+) error {
 	if !c.Active {
 		return ErrTokenNotActive
 	}
 
-	return c.Claims.Validate(ctx, rawToken, exp)
+	token := NewIntrospectionToken(scheme, rawToken, c.Claims)
+
+	return c.Claims.Validate(ctx, token, exp)
 }
