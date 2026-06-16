@@ -70,7 +70,7 @@ func (es BodyParameterExtractStrategy) GetAuthData(ctx pipeline.Context) (AuthDa
 	}
 
 	return AuthData{
-		Value: strings.TrimSpace(value),
+		Value:  strings.TrimSpace(value),
 		Source: SourceBody,
 	}, nil
 }

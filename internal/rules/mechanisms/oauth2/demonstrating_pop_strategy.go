@@ -156,6 +156,7 @@ func (s *demonstratingPoPStrategy) Merge(other PopStrategy) PopStrategy {
 	return s
 }
 
+//nolint:cyclop, funlen
 func (s *demonstratingPoPStrategy) Assert(
 	ctx pipeline.Context,
 	token *Token,
@@ -229,6 +230,7 @@ func (s *demonstratingPoPStrategy) Assert(
 	}
 
 	var mgr nonceManager
+
 	if nonceRequired {
 		var ok bool
 
@@ -253,7 +255,7 @@ type DPoPProofClaims struct {
 	Nonce           string    `json:"nonce,omitempty"`
 }
 
-//nolint:cyclop
+//nolint:cyclop, funlen
 func (c DPoPProofClaims) Validate(
 	ctx pipeline.Context,
 	nonceHandler nonceManager,

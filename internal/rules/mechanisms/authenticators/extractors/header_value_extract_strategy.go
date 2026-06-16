@@ -36,7 +36,7 @@ func (es HeaderValueExtractStrategy) GetAuthData(s pipeline.Context) (AuthData, 
 		}
 
 		return AuthData{
-			Value: strings.TrimSpace(strings.TrimPrefix(val, es.Scheme)),
+			Value:  strings.TrimSpace(strings.TrimPrefix(val, es.Scheme)),
 			Source: SourceHeader,
 			Scheme: es.Scheme,
 		}, nil

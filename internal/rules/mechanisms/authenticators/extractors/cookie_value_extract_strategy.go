@@ -30,7 +30,7 @@ type CookieValueExtractStrategy struct {
 func (es CookieValueExtractStrategy) GetAuthData(s pipeline.Context) (AuthData, error) {
 	if val := s.Request().Cookie(es.Name); len(val) != 0 {
 		return AuthData{
-			Value: strings.TrimSpace(val),
+			Value:  strings.TrimSpace(val),
 			Source: SourceCookie,
 		}, nil
 	}
