@@ -12,8 +12,7 @@ type mtlsPoPStrategy struct{}
 
 func (*mtlsPoPStrategy) Assert(
 	_ pipeline.Context,
-	_ *Confirmation,
-	_ string,
+	_ *Token,
 	_ time.Duration,
 	_ []jose.SignatureAlgorithm,
 ) error {

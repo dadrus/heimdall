@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"encoding/base64"
-	"errors"
 	"strings"
 	"time"
 
@@ -24,40 +23,60 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
-var (
-	ErrDPoPProof = errors.New("DPoP proof error")
-	ErrDPoPNonce = errors.New("DPoP nonce error")
-)
+type nonceManager struct {
+	current nonce.Key
+	keys    []nonce.Key
+}
 
-type binder [32]byte
-
-func (b binder) Binding() [32]byte { return b }
-
-type nonceKey nonce.Key
-
-func (k nonceKey) NonceKey() nonce.Key { return nonce.Key(k) }
-
-func toNonceKeyResolver(secret secrets.Secret) (nonce.KeyResolver, error) {
-	ss, ok := secret.(secrets.StringSecret)
-	if !ok {
-		return nil, secrets.ErrSecretKindMismatch
+func (m nonceManager) ResolveKey(kid string) (nonce.Key, error) {
+	for _, k := range m.keys {
+		if k.KID == kid {
+			return k, nil
+		}
 	}
 
-	nk := nonce.Key{
-		KID:   secret.Selector(),
-		Value: stringx.ToBytes(ss.Value()),
+	return nonce.Key{}, errorchain.NewWithMessage(
+		ErrDPoPNonce,
+		"key id referenced in nonce does not match any known master key",
+	)
+}
+
+func (m nonceManager) IssueNonce(binding [32]byte) (string, error) {
+	return nonce.NewNonce(m.current, nonce.WithBinding(binding))
+}
+
+func makeNonceManagerConverter(ref secrets.Reference) secrets.SecretSetConverter[nonceManager] {
+	currentKID := ref.Selector
+	if idx := strings.LastIndex(ref.Selector, "/"); idx >= 0 {
+		currentKID = ref.Selector[idx+1:]
 	}
 
-	return nonce.KeyResolverFunc(func(kid string) (nonce.Key, error) {
-		if kid != nk.KID {
-			return nonce.Key{}, errorchain.NewWithMessage(
+	return func(keySet []secrets.Secret) (nonceManager, error) {
+		var mgr nonceManager
+
+		for _, secret := range keySet {
+			sym, ok := secret.(secrets.SymmetricKeySecret)
+			if !ok {
+				continue
+			}
+
+			key := nonce.Key{KID: sym.KeyID(), Value: sym.Key()}
+			mgr.keys = append(mgr.keys, key)
+
+			if sym.KeyID() == currentKID {
+				mgr.current = key
+			}
+		}
+
+		if len(mgr.current.KID) == 0 {
+			return nonceManager{}, errorchain.NewWithMessage(
 				ErrDPoPNonce,
-				"key id referenced in nonce does not match master key",
+				"current master key not found in key set",
 			)
 		}
 
-		return nk, nil
-	}), nil
+		return mgr, nil
+	}
 }
 
 type demonstratingPoPStrategy struct {
@@ -65,7 +84,7 @@ type demonstratingPoPStrategy struct {
 	RequireNonce  *bool         `mapstructure:"nonce_required"`
 	ReplayAllowed *bool         `mapstructure:"replay_allowed"`
 
-	informer *secrets.SecretInformer[nonce.KeyResolver]
+	setInformer *secrets.SecretSetInformer[nonceManager]
 }
 
 func newDemonstratingPoPStrategy(ctx app.Context, conf map[string]any) (PopStrategy, error) {
@@ -99,10 +118,12 @@ func newDemonstratingPoPStrategy(ctx app.Context, conf map[string]any) (PopStrat
 		)
 	}
 
-	informer, err := secrets.NewSecretInformer(
+	ref := secrets.Reference{Source: secret.Source, Selector: secret.Selector}
+
+	setInformer, err := secrets.NewSecretSetInformer(
 		ctx.SecretResolver(),
-		secrets.Reference{Source: secret.Source, Selector: secret.Selector},
-		secrets.WithConverter(toNonceKeyResolver),
+		ref.Parent(),
+		secrets.WithConverter(makeNonceManagerConverter(ref)),
 	)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
@@ -111,7 +132,7 @@ func newDemonstratingPoPStrategy(ctx app.Context, conf map[string]any) (PopStrat
 		).CausedBy(err)
 	}
 
-	strategy.informer = informer
+	strategy.setInformer = setInformer
 
 	return &strategy, nil
 }
@@ -137,62 +158,63 @@ func (s *demonstratingPoPStrategy) Merge(other PopStrategy) PopStrategy {
 
 func (s *demonstratingPoPStrategy) Assert(
 	ctx pipeline.Context,
-	cnf *Confirmation,
-	rawToken string,
+	token *Token,
 	leeway time.Duration,
 	allowedAlgorithms []jose.SignatureAlgorithm,
 ) error {
+	cnf := token.Claims.Confirmation
+
 	if cnf == nil {
-		return errorchain.NewWithMessage(ErrDPoPProof, "proof of possession is required")
+		return NewInvalidDPoPProofError("proof of possession is required")
+	}
+
+	if token.Scheme != SchemeDPoP {
+		return NewInvalidDPoPProofError("malformed token scheme - DPoP expected")
 	}
 
 	if len(cnf.JWKThumbprint) == 0 {
-		return errorchain.NewWithMessage(ErrDPoPProof, "no JWT thumbprint present")
-	}
-
-	authValue := ctx.Request().Header("Authorization")
-	if !strings.HasPrefix(authValue, "DPoP ") {
-		return errorchain.NewWithMessage(ErrDPoPProof, "malformed token scheme - DPoP expected")
+		return NewInvalidDPoPProofError("no JWT thumbprint present")
 	}
 
 	proof := ctx.Request().Header("DPoP")
 	if len(proof) == 0 {
-		return errorchain.NewWithMessage(ErrDPoPProof, "proof is missing")
+		return NewInvalidDPoPProofError("proof is missing")
 	}
 
-	token, err := jwt.ParseSigned(proof, allowedAlgorithms)
+	proofJWT, err := jwt.ParseSigned(proof, allowedAlgorithms)
 	if err != nil {
-		return errorchain.NewWithMessage(ErrDPoPProof, "failed to parse proof").
-			CausedBy(pipeline.ErrMalformedRequest).
+		return errorchain.New(NewInvalidDPoPProofError("failed to parse proof")).
 			CausedBy(err)
 	}
 
-	header := token.Headers[0]
+	header := proofJWT.Headers[0]
 	if header.ExtraHeaders[jose.HeaderType] != "dpop+jwt" {
-		return errorchain.NewWithMessage(ErrDPoPProof, "invalid typ header")
+		return NewInvalidDPoPProofError("invalid typ header")
 	}
 
 	if header.JSONWebKey == nil {
-		return errorchain.NewWithMessage(ErrDPoPProof, "no JWK present")
+		return NewInvalidDPoPProofError("no JWK present")
 	}
 
 	if !header.JSONWebKey.Valid() {
-		return errorchain.NewWithMessage(ErrDPoPProof, "invalid public JWK")
+		return NewInvalidDPoPProofError("invalid public JWK")
 	}
 
 	jkt, err := header.JSONWebKey.Thumbprint(crypto.SHA256)
 	if err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrInternal, "failed to calculate JWK thumbprint").
-			CausedBy(err)
+		return errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"failed to calculate JWK thumbprint",
+		).CausedBy(err)
 	}
 
 	if base64.RawURLEncoding.EncodeToString(jkt) != cnf.JWKThumbprint {
-		return errorchain.NewWithMessage(ErrDPoPProof, "proof key does not match access token binding")
+		return NewInvalidDPoPProofError("proof key does not match access token binding")
 	}
 
-	var claims DPoPProofClaims
-	if err = token.Claims(header.JSONWebKey, &claims); err != nil {
-		return errorchain.NewWithMessage(ErrDPoPProof, "failed to verify signature").
+	var proofClaims DPoPProofClaims
+	if err = proofJWT.Claims(header.JSONWebKey, &proofClaims); err != nil {
+		return errorchain.New(NewInvalidDPoPProofError("failed to verify signature")).
 			CausedBy(err)
 	}
 
@@ -206,17 +228,20 @@ func (s *demonstratingPoPStrategy) Assert(
 		nonceRequired = *s.RequireNonce
 	}
 
-	keyResolver, ok := s.informer.Get()
-	if !ok {
-		keyResolver = nonce.KeyResolverFunc(func(kid string) (nonce.Key, error) {
-			return nonce.Key{}, errorchain.NewWithMessage(
+	var mgr nonceManager
+	if nonceRequired {
+		var ok bool
+
+		mgr, ok = s.setInformer.Get()
+		if !ok {
+			return errorchain.NewWithMessage(
 				pipeline.ErrInternal,
 				"master key is not available",
 			)
-		})
+		}
 	}
 
-	return claims.Validate(ctx, keyResolver, s.MaxAge, leeway, replayAllowed, nonceRequired, rawToken)
+	return proofClaims.Validate(ctx, mgr, s.MaxAge, leeway, replayAllowed, nonceRequired, token.Raw)
 }
 
 type DPoPProofClaims struct {
@@ -231,7 +256,7 @@ type DPoPProofClaims struct {
 //nolint:cyclop
 func (c DPoPProofClaims) Validate(
 	ctx pipeline.Context,
-	keyResolver nonce.KeyResolver,
+	nonceHandler nonceManager,
 	maxAge, leeway time.Duration,
 	replayAllowed, nonceRequired bool,
 	rawToken string,
@@ -247,7 +272,7 @@ func (c DPoPProofClaims) Validate(
 	var jtiKey string
 
 	if len(c.JTI) == 0 {
-		return errorchain.NewWithMessage(ErrDPoPProof, "jti is missing")
+		return NewInvalidDPoPProofError("jti is missing")
 	}
 
 	if !replayAllowed {
@@ -255,57 +280,62 @@ func (c DPoPProofClaims) Validate(
 		jtiKey = "dpop:jti:" + base64.RawURLEncoding.EncodeToString(jtiHash[:])
 
 		if _, err := cch.Get(ctx.Context(), jtiKey); err == nil {
-			return errorchain.NewWithMessage(ErrDPoPProof, "replay detected")
+			return NewInvalidDPoPProofError("replay detected")
 		}
 	}
 
 	if c.IssuedAt.IsZero() {
-		return errorchain.NewWithMessage(ErrDPoPProof, "iat is missing")
+		return NewInvalidDPoPProofError("iat is missing")
 	}
 
 	if now.Add(leeway).Before(c.IssuedAt) {
-		return errorchain.NewWithMessage(ErrDPoPProof, "iat is in the future")
+		return NewInvalidDPoPProofError("iat is in the future")
 	}
 
 	ttl := time.Until(c.IssuedAt.Add(maxAge).Add(leeway))
 	if ttl <= 0 {
-		return errorchain.NewWithMessage(ErrDPoPProof, "proof is too old")
+		return NewInvalidDPoPProofError("proof is too old")
 	}
 
 	if c.HTTPMethod != ctx.Request().Method {
-		return errorchain.NewWithMessage(ErrDPoPProof, "htm does not match request method")
+		return NewInvalidDPoPProofError("htm does not match request method")
 	}
 
 	if c.HTTPURI != httpURI.String() {
-		return errorchain.NewWithMessage(ErrDPoPProof, "htu does not match request URI")
+		return NewInvalidDPoPProofError("htu does not match request URI")
 	}
 
-	gotHash, _ := base64.RawURLEncoding.DecodeString(c.AccessTokenHash)
+	gotHash, err := base64.RawURLEncoding.DecodeString(c.AccessTokenHash)
+	if err != nil {
+		return NewInvalidDPoPProofError("ath is malformed")
+	}
+
 	if subtle.ConstantTimeCompare(expectedHash[:], gotHash) != 1 {
-		return errorchain.NewWithMessage(ErrDPoPProof, "ath does not match expected token hash value")
+		return NewInvalidDPoPProofError("ath does not match expected token hash value")
 	}
 
 	if nonceRequired {
 		if len(c.Nonce) == 0 {
-			return errorchain.New(ErrDPoPProof).
-				WithAspects(binder(expectedHash)).
-				CausedBy(errorchain.NewWithMessage(ErrDPoPNonce, "nonce is missing"))
+			return NewUseDPoPNonceError(nonceHandler, expectedHash, "nonce is missing")
 		}
 
-		if err := nonce.ValidateNonce(c.Nonce, keyResolver,
+		if err := nonce.ValidateNonce(
+			c.Nonce,
+			nonceHandler,
 			nonce.WithMaxAge(maxAge),
 			nonce.WithBinding(expectedHash),
 		); err != nil {
-			return errorchain.New(ErrDPoPNonce).
-				WithAspects(binder(expectedHash)).
+			return errorchain.New(NewUseDPoPNonceError(nonceHandler, expectedHash, "nonce is invalid")).
 				CausedBy(err)
 		}
 	}
 
 	if !replayAllowed {
 		if err := cch.Set(ctx.Context(), jtiKey, []byte{1}, ttl); err != nil {
-			return errorchain.NewWithMessage(pipeline.ErrInternal,
-				"failed to remember DPoP proof jti").CausedBy(err)
+			return errorchain.NewWithMessage(
+				pipeline.ErrInternal,
+				"failed to remember DPoP proof jti",
+			).CausedBy(err)
 		}
 	}
 

@@ -12,25 +12,21 @@ type opportunisticPoPStrategy struct{}
 
 func (s opportunisticPoPStrategy) Assert(
 	ctx pipeline.Context,
-	cnf *Confirmation,
-	rawToken string,
+	token *Token,
 	leeway time.Duration,
 	allowedAlgorithms []jose.SignatureAlgorithm,
 ) error {
+	cnf := token.Claims.Confirmation
 	if cnf == nil {
 		return nil
 	}
 
 	if len(cnf.JWKThumbprint) != 0 {
-		dpop := &demonstratingPoPStrategy{}
-
-		return dpop.Assert(ctx, cnf, rawToken, leeway, allowedAlgorithms)
+		return (&demonstratingPoPStrategy{}).Assert(ctx, token, leeway, allowedAlgorithms)
 	}
 
 	if len(cnf.CertificateThumbprintSHA256) != 0 {
-		mpop := &mtlsPoPStrategy{}
-
-		return mpop.Assert(ctx, cnf, rawToken, leeway, allowedAlgorithms)
+		return (&mtlsPoPStrategy{}).Assert(ctx, token, leeway, allowedAlgorithms)
 	}
 
 	return nil

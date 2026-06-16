@@ -19,8 +19,7 @@ const (
 type PopStrategy interface {
 	Assert(
 		ctx pipeline.Context,
-		cnf *Confirmation,
-		rawToken string,
+		token *Token,
 		leeway time.Duration,
 		allowedAlgorithms []jose.SignatureAlgorithm,
 	) error
