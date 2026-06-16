@@ -143,7 +143,7 @@ func (a *genericAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subjec
 			CausedBy(err)
 	}
 
-	payload, err := a.getPrincipalInformation(ctx, authData)
+	payload, err := a.getPrincipalInformation(ctx, authData.Value)
 	if err != nil {
 		return err
 	}

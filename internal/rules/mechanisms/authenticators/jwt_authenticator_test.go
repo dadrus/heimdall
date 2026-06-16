@@ -1275,7 +1275,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("", pipeline.ErrCommunicationTimeout)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{}, pipeline.ErrCommunicationTimeout)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
@@ -1304,7 +1304,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("foo.bar.baz.bam", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "foo.bar.baz.bam"}, nil)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
@@ -1314,8 +1314,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrAuthentication)
-				require.ErrorIs(t, err, pipeline.ErrMalformedRequest)
-				require.ErrorContains(t, err, "JWS format must have three parts")
+				require.ErrorContains(t, err, "invalid JWT format")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1333,7 +1332,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("foo.bar.baz", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "foo.bar.baz"}, nil)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
@@ -1343,7 +1342,6 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrAuthentication)
-				require.ErrorIs(t, err, pipeline.ErrMalformedRequest)
 				require.ErrorContains(t, err, "parse JWT")
 
 				var identifier HandlerIdentifier
@@ -1370,7 +1368,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyOnlyJWK}, nil)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
@@ -1406,7 +1404,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyOnlyJWK}, nil)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
@@ -1443,7 +1441,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyOnlyJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1487,7 +1485,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyOnlyJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1537,7 +1535,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyOnlyJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1581,7 +1579,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			instructServer: func(t *testing.T) {
@@ -1623,7 +1621,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
 					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
@@ -1693,7 +1691,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				rawKey, err := json.Marshal(&keys[0])
 				require.NoError(t, err)
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
@@ -1705,7 +1703,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				require.NotErrorIs(t, err, pipeline.ErrArgument)
-				require.ErrorContains(t, err, "algorithm is not allowed")
+				require.ErrorContains(t, err, "is not allowed")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -1751,7 +1749,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				rawKey, err := json.Marshal(keys[0])
 				require.NoError(t, err)
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyAndCertJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
@@ -1810,7 +1808,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				rawKey, err := json.Marshal(keys[0])
 				require.NoError(t, err)
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
@@ -1871,7 +1869,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				rawKey, err := json.Marshal(keys[0])
 				require.NoError(t, err)
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
@@ -1932,7 +1930,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				rawKey, err := json.Marshal(&keys[0])
 				require.NoError(t, err)
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
 			},
 			assert: func(t *testing.T, err error, sub pipeline.Subject) {
@@ -1999,7 +1997,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				rawKey, err := json.Marshal(keys[0])
 				require.NoError(t, err)
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyOnlyJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyOnlyJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, cacheKey, rawKey, *auth.ttl).Return(nil)
 			},
@@ -2079,7 +2077,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				rawKey, err := json.Marshal(keys[0])
 				require.NoError(t, err)
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyAndCertJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, cacheKey, rawKey, *auth.ttl).Return(nil)
 			},
@@ -2155,7 +2153,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				rawKey, err := json.Marshal(keys[0])
 				require.NoError(t, err)
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyAndCertJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, cacheKey, rawKey, *auth.ttl).Return(nil)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
@@ -2247,7 +2245,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				err := json.Unmarshal(jwksWithOneEntryWithKeyOnlyAndOneWithCertificate, &jwks)
 				require.NoError(t, err)
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyAndCertJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, assert.AnError)
 			},
 			instructServer: func(t *testing.T) {
@@ -2320,7 +2318,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				rawKey, err := json.Marshal(keys[0])
 				require.NoError(t, err)
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyAndCertJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, cacheKey, rawKey, *auth.ttl).Return(nil)
 			},
@@ -2392,7 +2390,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				)
 				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyAndCertJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, assert.AnError)
 			},
 			instructServer: func(t *testing.T) {
@@ -2428,7 +2426,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtWithoutKIDSignedWithKeyAndCertJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtWithoutKIDSignedWithKeyAndCertJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -2484,7 +2482,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtWithoutKIDSignedWithKeyAndCertJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtWithoutKIDSignedWithKeyAndCertJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -2533,7 +2531,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtWithoutKIDSignedWithKeyAndCertJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtWithoutKIDSignedWithKeyAndCertJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -2583,7 +2581,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtWithoutKIDSignedWithKeyAndCertJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtWithoutKIDSignedWithKeyAndCertJWK}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -2635,7 +2633,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyAndCertJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
 					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
@@ -2706,7 +2704,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyAndCertJWK}, nil)
 				// http cache
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
@@ -2783,7 +2781,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtSignedWithKeyAndCertJWK}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
 					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
@@ -3081,33 +3079,33 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 	}{
 		"not configured error signaling": {
 			authenticator: &jwtAuthenticator{
-				ed: oauth2.BearerTokenUsageErrorDecorator{},
+				ed: oauth2.TokenUsageErrorDecorator{},
 				a:  oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
 			},
 			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
 		},
 		"explicitly disabled error signaling": {
 			authenticator: &jwtAuthenticator{
-				ed: oauth2.BearerTokenUsageErrorDecorator{Enabled: new(false)},
+				ed: oauth2.TokenUsageErrorDecorator{Enabled: new(false)},
 				a:  oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
 			},
 			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
 		},
 		"insufficient scope without configured scopes": {
 			authenticator: &jwtAuthenticator{
-				ed: oauth2.BearerTokenUsageErrorDecorator{
+				ed: oauth2.TokenUsageErrorDecorator{
 					Enabled:              new(true),
 					IncludeRequiredScope: new(true),
 				},
 				a: oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
 			},
-			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.NewInsufficientScopeError(oauth2.SchemeBearer, "", nil)),
 			expectedCode:   http.StatusForbidden,
 			expectedHeader: `Bearer error="insufficient_scope"`,
 		},
 		"insufficient scope with exact scopes": {
 			authenticator: &jwtAuthenticator{
-				ed: oauth2.BearerTokenUsageErrorDecorator{
+				ed: oauth2.TokenUsageErrorDecorator{
 					Enabled:              new(true),
 					IncludeRequiredScope: new(true),
 				},
@@ -3115,13 +3113,14 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{"foo", "bar"},
 				},
 			},
-			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(
+				oauth2.NewInsufficientScopeError(oauth2.SchemeBearer, "scope matching error", []string{"foo", "bar"})),
 			expectedCode:   http.StatusForbidden,
 			expectedHeader: `Bearer error="insufficient_scope", scope="foo bar"`,
 		},
 		"invalid token does not expose scopes": {
 			authenticator: &jwtAuthenticator{
-				ed: oauth2.BearerTokenUsageErrorDecorator{
+				ed: oauth2.TokenUsageErrorDecorator{
 					Enabled:              new(true),
 					IncludeRequiredScope: new(true),
 				},
@@ -3129,7 +3128,7 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{"foo", "bar"},
 				},
 			},
-			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrAssertion),
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.NewInvalidTokenError(oauth2.SchemeBearer, "")),
 			expectedCode:   http.StatusUnauthorized,
 			expectedHeader: `Bearer error="invalid_token"`,
 		},
@@ -3149,7 +3148,7 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, []string{tc.expectedHeader}, response.Headers["WWW-Authenticate"])
+			assert.Equal(t, []string{tc.expectedHeader}, response.Headers["Www-Authenticate"])
 		})
 	}
 }

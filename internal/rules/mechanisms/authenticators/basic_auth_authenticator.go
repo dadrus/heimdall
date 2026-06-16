@@ -172,7 +172,7 @@ func (a *basicAuthAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 			CausedBy(err)
 	}
 
-	res, err := base64.StdEncoding.DecodeString(authData)
+	res, err := base64.StdEncoding.DecodeString(authData.Value)
 	if err != nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "failed to decode received credentials value").

@@ -901,7 +901,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("", pipeline.ErrCommunicationTimeout)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{}, pipeline.ErrCommunicationTimeout)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
@@ -937,7 +937,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
@@ -971,7 +971,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1008,7 +1008,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			instructServer: func(t *testing.T) {
@@ -1054,7 +1054,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1115,7 +1115,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1179,7 +1179,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1251,7 +1251,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1341,7 +1341,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1436,7 +1436,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1533,7 +1533,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1623,7 +1623,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1684,7 +1684,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtToken, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtToken}, nil)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
@@ -1724,7 +1724,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtToken, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtToken}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1799,7 +1799,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return(jwtToken, nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: jwtToken}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.MatchedBy(
 					func(ttl time.Duration) bool { return ttl.Round(time.Minute) == 30*time.Minute },
@@ -1905,7 +1905,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 			},
@@ -1991,7 +1991,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 
 				rawIntrospectResponse, err := json.Marshal(map[string]any{
 					"active":     true,
@@ -2057,7 +2057,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
 
 				rawIntrospectResponse, err := json.Marshal(map[string]any{
 					"active":     true,
@@ -2353,33 +2353,33 @@ func TestOauth2IntrospectionAuthenticatorDecorateErrorResponse(t *testing.T) {
 	}{
 		"not configured error signaling": {
 			authenticator: &oauth2IntrospectionAuthenticator{
-				ed: oauth2.BearerTokenUsageErrorDecorator{},
+				ed: oauth2.TokenUsageErrorDecorator{},
 				a:  oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
 			},
 			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
 		},
 		"explicitly disabled error signaling": {
 			authenticator: &oauth2IntrospectionAuthenticator{
-				ed: oauth2.BearerTokenUsageErrorDecorator{Enabled: new(false)},
+				ed: oauth2.TokenUsageErrorDecorator{Enabled: new(false)},
 				a:  oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
 			},
 			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
 		},
 		"insufficient scope without configured scopes": {
 			authenticator: &oauth2IntrospectionAuthenticator{
-				ed: oauth2.BearerTokenUsageErrorDecorator{
+				ed: oauth2.TokenUsageErrorDecorator{
 					Enabled:              new(true),
 					IncludeRequiredScope: new(true),
 				},
 				a: oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
 			},
-			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.NewInsufficientScopeError(oauth2.SchemeBearer, "", nil)),
 			expectedCode:   http.StatusForbidden,
 			expectedHeader: `Bearer error="insufficient_scope"`,
 		},
 		"insufficient scope with exact scopes": {
 			authenticator: &oauth2IntrospectionAuthenticator{
-				ed: oauth2.BearerTokenUsageErrorDecorator{
+				ed: oauth2.TokenUsageErrorDecorator{
 					Enabled:              new(true),
 					IncludeRequiredScope: new(true),
 				},
@@ -2387,13 +2387,14 @@ func TestOauth2IntrospectionAuthenticatorDecorateErrorResponse(t *testing.T) {
 					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{"foo", "bar"},
 				},
 			},
-			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(
+				oauth2.NewInsufficientScopeError(oauth2.SchemeBearer, "scope matching error", []string{"foo", "bar"})),
 			expectedCode:   http.StatusForbidden,
 			expectedHeader: `Bearer error="insufficient_scope", scope="foo bar"`,
 		},
 		"invalid token does not expose scopes": {
 			authenticator: &oauth2IntrospectionAuthenticator{
-				ed: oauth2.BearerTokenUsageErrorDecorator{
+				ed: oauth2.TokenUsageErrorDecorator{
 					Enabled:              new(true),
 					IncludeRequiredScope: new(true),
 				},
@@ -2401,7 +2402,7 @@ func TestOauth2IntrospectionAuthenticatorDecorateErrorResponse(t *testing.T) {
 					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{"foo", "bar"},
 				},
 			},
-			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrAssertion),
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.NewInvalidTokenError(oauth2.SchemeBearer, "")),
 			expectedCode:   http.StatusUnauthorized,
 			expectedHeader: `Bearer error="invalid_token"`,
 		},
@@ -2421,7 +2422,7 @@ func TestOauth2IntrospectionAuthenticatorDecorateErrorResponse(t *testing.T) {
 				return
 			}
 
-			assert.Equal(t, []string{tc.expectedHeader}, response.Headers["WWW-Authenticate"])
+			assert.Equal(t, []string{tc.expectedHeader}, response.Headers["Www-Authenticate"])
 		})
 	}
 }
