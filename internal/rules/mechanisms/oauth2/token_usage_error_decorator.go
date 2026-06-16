@@ -1,0 +1,91 @@
+package oauth2
+
+import (
+	"errors"
+	"net/http"
+
+	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/x/httpx"
+)
+
+const wwwAuthenticateHeader = "Www-Authenticate"
+
+type BearerTokenUsageErrorDecorator struct {
+	Enabled              *bool  `mapstructure:"enabled"`
+	IncludeErrorDetails  *bool  `mapstructure:"include_error_description"`
+	IncludeRequiredScope *bool  `mapstructure:"include_required_scope"`
+	ErrorURI             string `mapstructure:"error_uri"                 validate:"omitempty,uri"`
+	Realm                string `mapstructure:"realm"`
+}
+
+func (d BearerTokenUsageErrorDecorator) Merge(
+	other BearerTokenUsageErrorDecorator,
+) BearerTokenUsageErrorDecorator {
+	if d.Enabled == nil {
+		d.Enabled = other.Enabled
+	}
+
+	if d.IncludeErrorDetails == nil {
+		d.IncludeErrorDetails = other.IncludeErrorDetails
+	}
+
+	if d.IncludeRequiredScope == nil {
+		d.IncludeRequiredScope = other.IncludeRequiredScope
+	}
+
+	if len(d.ErrorURI) == 0 {
+		d.ErrorURI = other.ErrorURI
+	}
+
+	if len(d.Realm) == 0 {
+		d.Realm = other.Realm
+	}
+
+	return d
+}
+
+func (d BearerTokenUsageErrorDecorator) Decorate(
+	err error,
+	er *pipeline.ErrorResponse,
+) {
+	if d.Enabled == nil || !*d.Enabled {
+		return
+	}
+
+	var challenger Challenger
+	if !errors.As(err, &challenger) {
+		return
+	}
+
+	challenge, challengeErr := challenger.Challenge(d.challengePolicy())
+	if challengeErr != nil {
+		er.Code = http.StatusInternalServerError
+
+		return
+	}
+
+	er.Code = challenge.StatusCode
+
+	for name, values := range challenge.Headers {
+		for _, value := range values {
+			er.AddHeader(name, httpx.NewHeader(httpx.WithValue(value)))
+		}
+	}
+}
+
+func (d BearerTokenUsageErrorDecorator) challengePolicy() ChallengePolicy {
+	policy := ChallengePolicy{
+		Realm:    d.Realm,
+		ErrorURI: d.ErrorURI,
+	}
+
+	if d.IncludeErrorDetails != nil {
+		policy.IncludeErrorDetails = *d.IncludeErrorDetails
+	}
+
+	if d.IncludeRequiredScope != nil {
+		policy.IncludeRequiredScopes = *d.IncludeRequiredScope
+	}
+
+	return policy
+}
