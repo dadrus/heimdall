@@ -16,23 +16,21 @@
 
 package oauth2
 
-import (
-	"slices"
-
-	"github.com/dadrus/heimdall/internal/x/errorchain"
-)
+import "slices"
 
 type ExactScopeStrategyMatcher []string
 
-func (m ExactScopeStrategyMatcher) Scopes() []string {
-	return []string(m)
-}
-
 func (m ExactScopeStrategyMatcher) Match(scopes []string) error {
+	var missing []string
+
 	for _, required := range m {
 		if !slices.Contains(scopes, required) {
-			return errorchain.NewWithMessagef(ErrScopeMatch, "required scope %s is missing", required)
+			missing = append(missing, required)
 		}
+	}
+
+	if len(missing) != 0 {
+		return NewScopeMismatchError([]string(m), missing)
 	}
 
 	return nil
