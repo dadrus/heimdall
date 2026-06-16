@@ -28,11 +28,12 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
-	errorhandler2 "github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/requestvalidation"
 	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
@@ -45,7 +46,7 @@ func newService(
 	kp keyregistry.JWKSProvider,
 ) *http.Server {
 	cfg := conf.Management
-	eh := errorhandler2.New()
+	eh := errorhandler.New()
 	opFilter := func(req *http.Request) bool { return req.URL.Path != EndpointHealth }
 
 	hc := alice.New(
@@ -63,6 +64,7 @@ func newService(
 			otelmetrics.WithOperationFilter(opFilter),
 		),
 		logger.New(log, logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled)),
+		requestvalidation.New(),
 		dump.New(),
 		x.IfThenElseExec(cfg.CORS != nil,
 			func() func(http.Handler) http.Handler {

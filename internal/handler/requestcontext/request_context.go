@@ -170,31 +170,16 @@ func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
 }
 
 func requestClientIPs(ips []string, req *http.Request) []string {
-	for _, forwarded := range req.Header.Values("Forwarded") {
-		for entry := range strings.SplitSeq(forwarded, ",") {
-			for val := range strings.SplitSeq(strings.TrimSpace(entry), ";") {
-				if addr, found := strings.CutPrefix(strings.TrimSpace(val), "for="); found {
-					addr = strings.TrimSpace(addr)
-					if len(addr) != 0 {
-						ips = append(ips, addr)
-					}
-				}
-			}
-		}
+	res, _ := httpx.IPsFromForwarded(ips, req.Header.Values("Forwarded"))
+	if len(res) == 0 {
+		res, _ = httpx.IPsFromXForwardedFor(ips, req.Header.Values("X-Forwarded-For"))
 	}
 
-	if len(ips) == 0 {
-		for _, forwardedFor := range req.Header.Values("X-Forwarded-For") {
-			for val := range strings.SplitSeq(forwardedFor, ",") {
-				addr := strings.TrimSpace(val)
-				if len(addr) != 0 {
-					ips = append(ips, addr)
-				}
-			}
-		}
+	if len(res) == 0 {
+		res = ips
 	}
 
-	ips = append(ips, httpx.IPFromHostPort(req.RemoteAddr)) // nolint: makezero
+	res = append(res, httpx.IPFromHostPort(req.RemoteAddr)) // nolint: makezero
 
-	return ips
+	return res
 }

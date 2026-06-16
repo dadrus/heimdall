@@ -28,9 +28,6 @@ linters:
       ignore-enum-members: POT.+
     funlen:
       lines: 80
-    gomoddirectives:
-      replace-allow-list:
-        - github.com/aws/aws-sdk-go-v2/service/s3
     mnd:
       ignored-functions:
         - ^make
@@ -53,6 +50,9 @@ linters:
         - t testing.T
         - i int
         - j int
+        - c char
+        - a byte
+        - b byte
         - T any
         - m map[string]int
         - w http.ResponseWriter

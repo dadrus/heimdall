@@ -41,10 +41,12 @@ import (
 
 func TestHandleDecisionEndpointRequest(t *testing.T) {
 	for uc, tc := range map[string]struct {
+		host           string
 		configureMocks func(t *testing.T, exec *mocks3.ExecutorMock)
 		assertResponse func(t *testing.T, err error, response *envoy_auth.CheckResponse)
 	}{
 		"no rules configured": {
+			host: "heimdall.local",
 			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
@@ -64,6 +66,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule doesn't match method": {
+			host: "heimdall.local",
 			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
@@ -83,6 +86,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule execution fails with authentication error": {
+			host: "heimdall.local",
 			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
@@ -102,6 +106,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule execution fails with authorization error": {
+			host: "heimdall.local",
 			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
@@ -121,6 +126,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule execution fails with a redirect": {
+			host: "heimdall.local",
 			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
@@ -145,6 +151,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule execution succeeds": {
+			host: "heimdall.local",
 			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
@@ -169,6 +176,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"server panics and error does not contain traces": {
+			host: "heimdall.local",
 			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
@@ -179,6 +187,24 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				require.Error(t, err)
 				assert.Equal(t, "rpc error: code = Internal desc = internal error", err.Error())
+			},
+		},
+		"invalid host is rejected": {
+			host: "evil.com,for=127.0.0.1",
+			configureMocks: func(t *testing.T, _ *mocks3.ExecutorMock) {
+				t.Helper()
+			},
+			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
+
+				deniedResponse := response.GetDeniedResponse()
+				require.NotNil(t, deniedResponse)
+				assert.Equal(t, typev3.StatusCode_BadRequest, deniedResponse.GetStatus().GetCode())
+				assert.Empty(t, deniedResponse.GetBody())
+				assert.Empty(t, deniedResponse.GetHeaders())
 			},
 		},
 	} {
@@ -214,6 +240,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 							Body:   "foo",
 							Method: http.MethodPost,
 							Path:   "/test",
+							Host:   tc.host,
 						},
 					},
 				},
