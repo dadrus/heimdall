@@ -40,26 +40,26 @@ type Claims struct {
 	Confirmation *Confirmation `json:"cnf,omitempty"`
 }
 
-func (c Claims) Validate(ctx pipeline.Context, rawToken string, exp Expectation) error {
-	if err := exp.AssertIssuer(c.Issuer); err != nil {
+func (c Claims) Validate(ctx pipeline.Context, token *Token, exp Expectation) error {
+	if err := exp.AssertIssuer(token, c.Issuer); err != nil {
 		return err
 	}
 
-	if err := exp.AssertAudience(c.Audience); err != nil {
+	if err := exp.AssertAudience(token, c.Audience); err != nil {
 		return err
 	}
 
-	if err := exp.AssertValidity(c.NotBefore.Time(), c.Expiry.Time()); err != nil {
+	if err := exp.AssertValidity(token, c.NotBefore.Time(), c.Expiry.Time()); err != nil {
 		return err
 	}
 
-	if err := exp.AssertIssuanceTime(c.IssuedAt.Time()); err != nil {
+	if err := exp.AssertIssuanceTime(token, c.IssuedAt.Time()); err != nil {
 		return err
 	}
 
-	if err := exp.AssertProofOfPossession(ctx, c.Confirmation, rawToken); err != nil {
+	if err := exp.AssertProofOfPossession(ctx, token); err != nil {
 		return err
 	}
 
-	return exp.AssertScopes(x.IfThenElse(len(c.Scp) != 0, c.Scp, c.Scope))
+	return exp.AssertScopes(token, x.IfThenElse(len(c.Scp) != 0, c.Scp, c.Scope))
 }
