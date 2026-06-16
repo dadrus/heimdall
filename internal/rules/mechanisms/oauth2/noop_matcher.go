@@ -18,6 +18,4 @@ package oauth2
 
 type NoopMatcher struct{}
 
-func (NoopMatcher) Scopes() []string { return nil }
-
 func (NoopMatcher) Match(_ []string) error { return nil }
