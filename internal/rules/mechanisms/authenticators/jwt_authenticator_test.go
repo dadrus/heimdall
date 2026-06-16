@@ -326,8 +326,6 @@ validate_jwk: false`),
 				assert.Empty(t, auth.a.Audiences)
 				assert.Len(t, auth.a.TrustedIssuers, 1)
 				assert.Contains(t, auth.a.TrustedIssuers, "foobar")
-				assert.Len(t, auth.a.AllowedAlgorithms, 1)
-
 				assert.ElementsMatch(t, auth.a.AllowedAlgorithms, []jose.SignatureAlgorithm{jose.ES256})
 				assert.Equal(t, time.Duration(0), auth.a.ValidityLeeway)
 
@@ -1703,7 +1701,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				require.NotErrorIs(t, err, pipeline.ErrArgument)
-				require.ErrorContains(t, err, "is not allowed")
+				require.ErrorContains(t, err, "algorithm ES384 is not allowed")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -2275,7 +2273,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
-		"successful without cache hit using key & cert with jwk validation using custom trust store": {
+		"successful without cache hit using key & cert with jwk validation using custom trust anchors": {
 			authenticator: &jwtAuthenticator{
 				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
 					return oauth2.ServerMetadata{
@@ -2416,7 +2414,25 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 			},
 		},
 		"successful validation of token without kid": {
-			authenticator: newJwtAuthenticatorWithTrustAnchors(t, jwksSrv.URL, issuer, keyAndCertEntry.CertChain()[2]),
+			authenticator: &jwtAuthenticator{
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
+					}, nil
+				}),
+				a: oauth2.Expectation{
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
+					TrustedIssuers:    []string{issuer},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+				},
+				sf:              &PrincipalInfo{IDFrom: "sub"},
+				ttl:             new(10 * time.Second),
+				validateJWKCert: true,
+				informer:        newTestCertificateBundleInformer(t, "anchors", keyAndCertEntry.CertChain()[2]),
+				principalName:   DefaultPrincipalName,
+			},
 			configureMocks: func(
 				t *testing.T,
 				ctx *pipelinemocks.ContextMock,
@@ -3150,37 +3166,6 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 
 			assert.Equal(t, []string{tc.expectedHeader}, response.Headers["Www-Authenticate"])
 		})
-	}
-}
-
-func newJwtAuthenticatorWithTrustAnchors(
-	t *testing.T,
-	jwksURL string,
-	issuer string,
-	trustAnchors ...*x509.Certificate,
-) *jwtAuthenticator {
-	t.Helper()
-
-	informer := newTestCertificateBundleInformer(t, "anchors", trustAnchors...)
-
-	return &jwtAuthenticator{
-		r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
-			return oauth2.ServerMetadata{
-				JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksURL,
-					endpoint.WithHeader("Accept", "application/json"),
-				),
-			}, nil
-		}),
-		a: oauth2.Expectation{
-			AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
-			TrustedIssuers:    []string{issuer},
-			ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
-		},
-		sf:              &PrincipalInfo{IDFrom: "sub"},
-		ttl:             new(10 * time.Second),
-		validateJWKCert: true,
-		informer:        informer,
-		principalName:   DefaultPrincipalName,
 	}
 }
 

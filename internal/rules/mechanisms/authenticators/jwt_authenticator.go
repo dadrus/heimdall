@@ -245,8 +245,7 @@ func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 
 	token, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "no JWT present").
+		return errorchain.NewWithMessage(pipeline.ErrAuthentication, "no JWT present").
 			WithAspects(a).
 			CausedBy(err)
 	}
@@ -400,8 +399,7 @@ func (a *jwtAuthenticator) serverMetadata(
 func (a *jwtAuthenticator) verifyToken(ctx pipeline.Context, rawToken extractors.AuthData) (json.RawMessage, error) {
 	tok, err := oauth2.NewToken(rawToken.Value, rawToken.Scheme)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
+		return nil, errorchain.NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
 			WithAspects(a).
 			CausedBy(err)
 	}
