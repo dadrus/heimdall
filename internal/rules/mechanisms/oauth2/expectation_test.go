@@ -53,8 +53,10 @@ func TestExpectationAssertAlgorithm(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			token := &Token{Scheme: SchemeBearer}
+
 			// WHEN
-			err := tc.exp.AssertAlgorithm(tc.alg)
+			err := tc.exp.AssertAlgorithm(token, tc.alg)
 
 			// THEN
 			tc.assert(t, err)
@@ -99,8 +101,10 @@ func TestExpectationAssertIssuer(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			token := &Token{Scheme: SchemeBearer}
+
 			// WHEN
-			err := tc.exp.AssertIssuer(tc.issuer)
+			err := tc.exp.AssertIssuer(token, tc.issuer)
 
 			// THEN
 			tc.assert(t, err)
@@ -154,8 +158,10 @@ func TestExpectationAssertAudience(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			token := &Token{Scheme: SchemeBearer}
+
 			// WHEN
-			err := tc.exp.AssertAudience(tc.audience)
+			err := tc.exp.AssertAudience(token, tc.audience)
 
 			// THEN
 			tc.assert(t, err)
@@ -335,8 +341,10 @@ func TestExpectationAssertValidity(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			token := &Token{Scheme: SchemeBearer}
+
 			// WHEN
-			err := tc.exp.AssertValidity(tc.times[0], tc.times[1])
+			err := tc.exp.AssertValidity(token, tc.times[0], tc.times[1])
 
 			// THEN
 			tc.assert(t, err)
@@ -444,8 +452,10 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			token := &Token{Scheme: SchemeBearer}
+
 			// WHEN
-			err := tc.exp.AssertIssuanceTime(tc.time)
+			err := tc.exp.AssertIssuanceTime(token, tc.time)
 
 			// THEN
 			tc.assert(t, err)
@@ -481,8 +491,10 @@ func TestExpectationAssertScopes(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			token := &Token{Scheme: SchemeBearer}
+
 			// WHEN
-			err := tc.exp.AssertScopes(tc.scopes)
+			err := tc.exp.AssertScopes(token, tc.scopes)
 
 			// THEN
 			tc.assert(t, err)

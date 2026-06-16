@@ -25,13 +25,10 @@ import (
 
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/slicex"
 )
 
 const defaultLeeway = 10 * time.Second
-
-var ErrAssertion = errors.New("assertion error")
 
 type Expectation struct {
 	TrustedIssuers    []string                  `mapstructure:"issuers"`
@@ -56,78 +53,86 @@ func (e Expectation) Merge(other Expectation) Expectation {
 	return e
 }
 
-func (e Expectation) AssertAlgorithm(alg jose.SignatureAlgorithm) error {
+func (e Expectation) AssertAlgorithm(token *Token, alg jose.SignatureAlgorithm) error {
 	if !slices.Contains(e.AllowedAlgorithms, alg) {
-		return errorchain.NewWithMessagef(ErrAssertion, "algorithm %s is not allowed", alg)
+		return NewInvalidTokenError(token.Scheme, "algorithm "+string(alg)+" is not allowed")
 	}
 
 	return nil
 }
 
-func (e Expectation) AssertIssuer(issuer string) error {
+func (e Expectation) AssertIssuer(token *Token, issuer string) error {
 	if len(e.TrustedIssuers) == 0 {
 		return nil
 	}
 
 	if !slices.Contains(e.TrustedIssuers, issuer) {
-		return errorchain.NewWithMessagef(ErrAssertion, "issuer %s is not trusted", issuer)
+		return NewInvalidTokenError(token.Scheme, "issuer "+issuer+" is not trusted")
 	}
 
 	return nil
 }
 
-func (e Expectation) AssertAudience(audience []string) error {
+func (e Expectation) AssertAudience(token *Token, audience []string) error {
 	if len(e.Audiences) == 0 {
 		return nil
 	}
 
 	if !slicex.Intersects(e.Audiences, audience) {
-		return errorchain.NewWithMessage(ErrAssertion, "no expected audience present")
+		return NewInvalidTokenError(token.Scheme, "no expected audience present")
 	}
 
 	return nil
 }
 
-func (e Expectation) AssertValidity(notBefore, notAfter time.Time) error {
+func (e Expectation) AssertValidity(token *Token, notBefore, notAfter time.Time) error {
 	leeway := int64(x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, defaultLeeway).Seconds())
 	now := time.Now().Unix()
 	nbf := notBefore.Unix()
 	exp := notAfter.Unix()
 
 	if nbf > 0 && now+leeway < nbf {
-		return errorchain.NewWithMessage(ErrAssertion, "not yet valid")
+		return NewInvalidTokenError(token.Scheme, "not yet valid")
 	}
 
 	if exp > 0 && now-leeway >= exp {
-		return errorchain.NewWithMessage(ErrAssertion, "expired")
+		return NewInvalidTokenError(token.Scheme, "expired")
 	}
 
 	return nil
 }
 
-func (e Expectation) AssertIssuanceTime(issuedAt time.Time) error {
+func (e Expectation) AssertIssuanceTime(token *Token, issuedAt time.Time) error {
 	leeway := x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, defaultLeeway)
 
 	// IssuedAt is optional but cannot be in the future. This is not required by the RFC, but
 	// if by misconfiguration it has been set to future, we don't trust it.
 	if !issuedAt.Equal(time.Time{}) && time.Now().Add(leeway).Before(issuedAt) {
-		return errorchain.NewWithMessage(ErrAssertion, "issued in the future")
+		return NewInvalidTokenError(token.Scheme, "issued in the future")
 	}
 
 	return nil
 }
 
-func (e Expectation) AssertScopes(scopes []string) error { return e.ScopesMatcher.Match(scopes) }
+func (e Expectation) AssertScopes(token *Token, scopes []string) error {
+	if err := e.ScopesMatcher.Match(scopes); err != nil {
+		var mismatch *ScopeMismatchError
 
-func (e Expectation) AssertProofOfPossession(ctx pipeline.Context, cnf *Confirmation, rawToken string) error {
+		errors.As(err, &mismatch)
+
+		return NewInsufficientScopeError(token.Scheme, err.Error(), mismatch.RequiredScopes())
+	}
+
+	return nil
+}
+
+func (e Expectation) AssertProofOfPossession(ctx pipeline.Context, token *Token) error {
 	strategy := x.IfThenElseExec(e.ProofOfPossession != nil,
 		func() PopStrategy { return e.ProofOfPossession },
 		func() PopStrategy { return opportunisticPoPStrategy{} },
 	)
 
-	if err := strategy.Assert(ctx, cnf, rawToken, e.ValidityLeeway, e.AllowedAlgorithms); err != nil {
-		return errorchain.New(ErrAssertion).CausedBy(err)
-	}
+	leeway := x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, defaultLeeway)
 
-	return nil
+	return strategy.Assert(ctx, token, leeway, e.AllowedAlgorithms)
 }
