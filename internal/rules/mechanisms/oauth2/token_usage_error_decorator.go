@@ -10,7 +10,7 @@ import (
 
 const wwwAuthenticateHeader = "Www-Authenticate"
 
-type BearerTokenUsageErrorDecorator struct {
+type TokenUsageErrorDecorator struct {
 	Enabled              *bool  `mapstructure:"enabled"`
 	IncludeErrorDetails  *bool  `mapstructure:"include_error_description"`
 	IncludeRequiredScope *bool  `mapstructure:"include_required_scope"`
@@ -18,9 +18,9 @@ type BearerTokenUsageErrorDecorator struct {
 	Realm                string `mapstructure:"realm"`
 }
 
-func (d BearerTokenUsageErrorDecorator) Merge(
-	other BearerTokenUsageErrorDecorator,
-) BearerTokenUsageErrorDecorator {
+func (d TokenUsageErrorDecorator) Merge(
+	other TokenUsageErrorDecorator,
+) TokenUsageErrorDecorator {
 	if d.Enabled == nil {
 		d.Enabled = other.Enabled
 	}
@@ -44,8 +44,8 @@ func (d BearerTokenUsageErrorDecorator) Merge(
 	return d
 }
 
-func (d BearerTokenUsageErrorDecorator) Decorate(
-	err error,
+func (d TokenUsageErrorDecorator) Decorate(
+	cause error,
 	er *pipeline.ErrorResponse,
 ) {
 	if d.Enabled == nil || !*d.Enabled {
@@ -53,12 +53,12 @@ func (d BearerTokenUsageErrorDecorator) Decorate(
 	}
 
 	var challenger Challenger
-	if !errors.As(err, &challenger) {
+	if !errors.As(cause, &challenger) {
 		return
 	}
 
-	challenge, challengeErr := challenger.Challenge(d.challengePolicy())
-	if challengeErr != nil {
+	challenge, err := challenger.Challenge(d.challengePolicy())
+	if err != nil {
 		er.Code = http.StatusInternalServerError
 
 		return
@@ -73,7 +73,7 @@ func (d BearerTokenUsageErrorDecorator) Decorate(
 	}
 }
 
-func (d BearerTokenUsageErrorDecorator) challengePolicy() ChallengePolicy {
+func (d TokenUsageErrorDecorator) challengePolicy() ChallengePolicy {
 	policy := ChallengePolicy{
 		Realm:    d.Realm,
 		ErrorURI: d.ErrorURI,
