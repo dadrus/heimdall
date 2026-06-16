@@ -32,7 +32,7 @@ func TestExtractHeaderValue(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		strategy       HeaderValueExtractStrategy
 		configureMocks func(t *testing.T, ctx *mocks.ContextMock)
-		assert         func(t *testing.T, err error, authData string)
+		assert         func(t *testing.T, err error, authData AuthData)
 	}{
 		"header is present, scheme is irrelevant": {
 			strategy: HeaderValueExtractStrategy{Name: "X-Test-Header"},
@@ -44,11 +44,11 @@ func TestExtractHeaderValue(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData string) {
+			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "TestValue", authData)
+				assert.Equal(t, AuthData{Value: "TestValue", Source: SourceHeader}, authData)
 			},
 		},
 		"scheme is required, header is present, but without any scheme": {
@@ -61,7 +61,7 @@ func TestExtractHeaderValue(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, _ string) {
+			assert: func(t *testing.T, err error, _ AuthData) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -79,7 +79,7 @@ func TestExtractHeaderValue(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, _ string) {
+			assert: func(t *testing.T, err error, _ AuthData) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -97,11 +97,11 @@ func TestExtractHeaderValue(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData string) {
+			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "TestValue", authData)
+				assert.Equal(t, AuthData{Value: "TestValue", Scheme: "Foo", Source: SourceHeader}, authData)
 			},
 		},
 		"header is not present at all": {
@@ -114,7 +114,7 @@ func TestExtractHeaderValue(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, _ string) {
+			assert: func(t *testing.T, err error, _ AuthData) {
 				t.Helper()
 
 				require.Error(t, err)

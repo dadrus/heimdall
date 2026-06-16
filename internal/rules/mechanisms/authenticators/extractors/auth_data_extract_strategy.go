@@ -18,6 +18,21 @@ package extractors
 
 import "github.com/dadrus/heimdall/internal/pipeline"
 
+type AuthDataSource string
+
+const (
+	SourceHeader         AuthDataSource = "header"
+	SourceQueryParameter AuthDataSource = "query_parameter"
+	SourceBody           AuthDataSource = "body"
+	SourceCookie         AuthDataSource = "cookie"
+)
+
+type AuthData struct {
+	Value  string
+	Scheme string
+	Source AuthDataSource
+}
+
 type AuthDataExtractStrategy interface {
-	GetAuthData(ctx pipeline.Context) (string, error)
+	GetAuthData(ctx pipeline.Context) (AuthData, error)
 }

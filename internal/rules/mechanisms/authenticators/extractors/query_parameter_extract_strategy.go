@@ -27,10 +27,13 @@ type QueryParameterExtractStrategy struct {
 	Name string
 }
 
-func (es QueryParameterExtractStrategy) GetAuthData(s pipeline.Context) (string, error) {
+func (es QueryParameterExtractStrategy) GetAuthData(s pipeline.Context) (AuthData, error) {
 	if val := s.Request().URL.Query().Get(es.Name); len(val) != 0 {
-		return strings.TrimSpace(val), nil
+		return AuthData{
+			Value:  strings.TrimSpace(val),
+			Source: SourceQueryParameter,
+		}, nil
 	}
 
-	return "", errorchain.NewWithMessagef(pipeline.ErrArgument, "no '%s' query parameter present", es.Name)
+	return AuthData{}, errorchain.NewWithMessagef(pipeline.ErrArgument, "no '%s' query parameter present", es.Name)
 }
