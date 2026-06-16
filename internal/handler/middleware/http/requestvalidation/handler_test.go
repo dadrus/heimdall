@@ -184,6 +184,7 @@ func TestHandlerExecution(t *testing.T) {
 			nextCalled := false
 			handler := alice.New(New()).ThenFunc(func(rw http.ResponseWriter, _ *http.Request) {
 				nextCalled = true
+
 				rw.WriteHeader(http.StatusNoContent)
 			})
 

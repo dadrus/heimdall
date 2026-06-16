@@ -63,6 +63,7 @@ func IPsFromForwarded(dst []string, values []string) ([]string, error) {
 		for i := 0; i <= len(value); i++ {
 			if i == len(value) || (!quoted && (value[i] == ',' || value[i] == ';')) {
 				var err error
+
 				dst, err = appendIPFromForwardedParam(dst, value[paramStart:i])
 				if err != nil {
 					return nil, err
@@ -121,6 +122,7 @@ func appendIPFromForwardedParam(dst []string, param string) ([]string, error) {
 
 func parseForwardedForIP(value string) (string, error) {
 	quoted := false
+
 	if value[0] == '"' {
 		unquoted, err := unquoteHTTPQuotedString(value)
 		if err != nil {

@@ -183,6 +183,7 @@ func isIPv4(value string) bool {
 			if digits == 0 {
 				return false
 			}
+
 			dots++
 			num = 0
 			digits = 0
@@ -235,6 +236,7 @@ func isValidPortFrom(value string, start int) bool {
 	}
 
 	j := 0
+
 	for i := start; i < len(value); i++ {
 		c := value[i]
 		if c < '0' || c > '9' {
