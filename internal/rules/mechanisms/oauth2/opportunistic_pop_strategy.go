@@ -22,7 +22,7 @@ func (s opportunisticPoPStrategy) Assert(
 	}
 
 	if len(cnf.JWKThumbprint) != 0 {
-		return (&demonstratingPoPStrategy{}).Assert(ctx, token, leeway, allowedAlgorithms)
+		return (&DPoPStrategy{}).Assert(ctx, token, leeway, allowedAlgorithms)
 	}
 
 	if len(cnf.CertificateThumbprintSHA256) != 0 {

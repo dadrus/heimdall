@@ -561,7 +561,7 @@ func TestAssertProofOfPossession(t *testing.T) {
 				Claims: Claims{},
 			},
 			exp: Expectation{
-				ProofOfPossession: &demonstratingPoPStrategy{},
+				ProofOfPossession: &DPoPStrategy{},
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -721,7 +721,7 @@ func TestExpectationMerge(t *testing.T) {
 				TrustedIssuers:    []string{"zab"},
 				AllowedAlgorithms: []jose.SignatureAlgorithm{"BAR128"},
 				ValidityLeeway:    20 * time.Minute,
-				ProofOfPossession: &demonstratingPoPStrategy{},
+				ProofOfPossession: &DPoPStrategy{},
 			},
 			assert: func(t *testing.T, merged Expectation, source Expectation, target Expectation) {
 				t.Helper()

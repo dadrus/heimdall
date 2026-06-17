@@ -151,7 +151,7 @@ func DecodePoPStrategyHookFunc(ctx app.Context) mapstructure.DecodeHookFunc {
 
 		switch PoPType(typ) {
 		case DPoP:
-			return newDemonstratingPoPStrategy(ctx, conf)
+			return newDPoPStrategy(ctx, conf)
 		case MTLS:
 			return &mtlsPoPStrategy{}, nil
 		default:

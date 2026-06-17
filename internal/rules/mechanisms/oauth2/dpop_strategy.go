@@ -2,9 +2,8 @@ package oauth2
 
 import (
 	"crypto"
-	"crypto/sha256"
-	"crypto/subtle"
 	"encoding/base64"
+	"errors"
 	"strings"
 	"time"
 
@@ -13,15 +12,15 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 
 	"github.com/dadrus/heimdall/internal/app"
-	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/nonce"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
+
+var errKeyUnknown = errors.New("unknown key")
 
 type nonceManager struct {
 	current nonce.Key
@@ -36,7 +35,7 @@ func (m nonceManager) ResolveKey(kid string) (nonce.Key, error) {
 	}
 
 	return nonce.Key{}, errorchain.NewWithMessage(
-		ErrDPoPNonce,
+		errKeyUnknown,
 		"key id referenced in nonce does not match any known master key",
 	)
 }
@@ -45,50 +44,17 @@ func (m nonceManager) IssueNonce(binding [32]byte) (string, error) {
 	return nonce.NewNonce(m.current, nonce.WithBinding(binding))
 }
 
-func makeNonceManagerConverter(ref secrets.Reference) secrets.SecretSetConverter[nonceManager] {
-	currentKID := ref.Selector
-	if idx := strings.LastIndex(ref.Selector, "/"); idx >= 0 {
-		currentKID = ref.Selector[idx+1:]
-	}
-
-	return func(keySet []secrets.Secret) (nonceManager, error) {
-		var mgr nonceManager
-
-		for _, secret := range keySet {
-			sym, ok := secret.(secrets.SymmetricKeySecret)
-			if !ok {
-				continue
-			}
-
-			key := nonce.Key{KID: sym.KeyID(), Value: sym.Key()}
-			mgr.keys = append(mgr.keys, key)
-
-			if sym.KeyID() == currentKID {
-				mgr.current = key
-			}
-		}
-
-		if len(mgr.current.KID) == 0 {
-			return nonceManager{}, errorchain.NewWithMessage(
-				ErrDPoPNonce,
-				"current master key not found in key set",
-			)
-		}
-
-		return mgr, nil
-	}
-}
-
-type demonstratingPoPStrategy struct {
+type DPoPStrategy struct {
 	MaxAge        time.Duration `mapstructure:"max_age"`
 	RequireNonce  *bool         `mapstructure:"nonce_required"`
 	ReplayAllowed *bool         `mapstructure:"replay_allowed"`
 
 	setInformer *secrets.SecretSetInformer[nonceManager]
+	currentKID  string
 }
 
-func newDemonstratingPoPStrategy(ctx app.Context, conf map[string]any) (PoPStrategy, error) {
-	var strategy demonstratingPoPStrategy
+func newDPoPStrategy(ctx app.Context, conf map[string]any) (PoPStrategy, error) {
+	var strategy DPoPStrategy
 
 	dec := ctx.DecoderFactory().Decoder(
 		encoding.WithTagName("mapstructure"),
@@ -120,15 +86,20 @@ func newDemonstratingPoPStrategy(ctx app.Context, conf map[string]any) (PoPStrat
 
 	ref := secrets.Reference{Source: secret.Source, Selector: secret.Selector}
 
+	strategy.currentKID = ref.Selector
+	if idx := strings.LastIndex(ref.Selector, "/"); idx >= 0 {
+		strategy.currentKID = ref.Selector[idx+1:]
+	}
+
 	setInformer, err := secrets.NewSecretSetInformer(
 		ctx.SecretResolver(),
 		ref.Parent(),
-		secrets.WithConverter(makeNonceManagerConverter(ref)),
+		secrets.WithConverter(strategy.createNonceManager),
 	)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
-			"failed resolving master key secret",
+			"failed creating nonce manager secret set informer",
 		).CausedBy(err)
 	}
 
@@ -137,12 +108,12 @@ func newDemonstratingPoPStrategy(ctx app.Context, conf map[string]any) (PoPStrat
 	return &strategy, nil
 }
 
-func (s *demonstratingPoPStrategy) Merge(other PoPStrategy) PoPStrategy {
+func (s *DPoPStrategy) Merge(other PoPStrategy) PoPStrategy {
 	if other == nil {
 		return s
 	}
 
-	typed, ok := other.(*demonstratingPoPStrategy)
+	typed, ok := other.(*DPoPStrategy)
 	if !ok {
 		return s
 	}
@@ -157,7 +128,7 @@ func (s *demonstratingPoPStrategy) Merge(other PoPStrategy) PoPStrategy {
 }
 
 //nolint:cyclop, funlen
-func (s *demonstratingPoPStrategy) Assert(
+func (s *DPoPStrategy) Assert(
 	ctx pipeline.Context,
 	token *Token,
 	leeway time.Duration,
@@ -224,7 +195,7 @@ func (s *demonstratingPoPStrategy) Assert(
 		return NewInvalidDPoPProofError("proof key does not match access token binding")
 	}
 
-	var proofClaims DPoPProofClaims
+	var proofClaims DPoPClaims
 	if err = proofJWT.Claims(header.JSONWebKey, &proofClaims); err != nil {
 		return errorchain.New(NewInvalidDPoPProofError("failed to verify signature")).
 			CausedBy(err)
@@ -257,104 +228,29 @@ func (s *demonstratingPoPStrategy) Assert(
 	return proofClaims.Validate(ctx, mgr, s.MaxAge, leeway, replayAllowed, nonceRequired, token.Raw)
 }
 
-type DPoPProofClaims struct {
-	HTTPMethod      string    `json:"htm"`
-	HTTPURI         string    `json:"htu"`
-	AccessTokenHash string    `json:"ath"`
-	IssuedAt        time.Time `json:"iat"`
-	JTI             string    `json:"jti"`
-	Nonce           string    `json:"nonce,omitempty"`
-}
+func (s *DPoPStrategy) createNonceManager(keySet []secrets.Secret) (nonceManager, error) {
+	var mgr nonceManager
 
-//nolint:cyclop, funlen
-func (c DPoPProofClaims) Validate(
-	ctx pipeline.Context,
-	nonceHandler nonceManager,
-	maxAge, leeway time.Duration,
-	replayAllowed, nonceRequired bool,
-	rawToken string,
-) error {
-	httpURI := ctx.Request().URL.URL
-	httpURI.RawQuery = ""
-	httpURI.Fragment = ""
+	for _, secret := range keySet {
+		sym, ok := secret.(secrets.SymmetricKeySecret)
+		if !ok {
+			continue
+		}
 
-	expectedHash := sha256.Sum256(stringx.ToBytes(rawToken))
-	now := time.Now()
-	cch := cache.Ctx(ctx.Context())
+		key := nonce.Key{KID: sym.KeyID(), Value: sym.Key()}
+		mgr.keys = append(mgr.keys, key)
 
-	var jtiKey string
-
-	if len(c.JTI) == 0 {
-		return NewInvalidDPoPProofError("jti is missing")
-	}
-
-	if !replayAllowed {
-		jtiHash := sha256.Sum256(stringx.ToBytes(c.JTI))
-		jtiKey = "dpop:jti:" + base64.RawURLEncoding.EncodeToString(jtiHash[:])
-
-		if _, err := cch.Get(ctx.Context(), jtiKey); err == nil {
-			return NewInvalidDPoPProofError("replay detected")
+		if sym.KeyID() == s.currentKID {
+			mgr.current = key
 		}
 	}
 
-	if c.IssuedAt.IsZero() {
-		return NewInvalidDPoPProofError("iat is missing")
+	if len(mgr.current.KID) == 0 {
+		return nonceManager{}, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"current master key not found in key set",
+		)
 	}
 
-	if now.Add(leeway).Before(c.IssuedAt) {
-		return NewInvalidDPoPProofError("iat is in the future")
-	}
-
-	ttl := time.Until(c.IssuedAt.Add(maxAge).Add(leeway))
-	if ttl <= 0 {
-		return NewInvalidDPoPProofError("proof is too old")
-	}
-
-	if c.HTTPMethod != ctx.Request().Method {
-		return NewInvalidDPoPProofError("htm does not match request method")
-	}
-
-	if c.HTTPURI != httpURI.String() {
-		return NewInvalidDPoPProofError("htu does not match request URI")
-	}
-
-	gotHash, err := base64.RawURLEncoding.DecodeString(c.AccessTokenHash)
-	if err != nil {
-		return NewInvalidDPoPProofError("ath is malformed")
-	}
-
-	if subtle.ConstantTimeCompare(expectedHash[:], gotHash) != 1 {
-		return NewInvalidDPoPProofError("ath does not match expected token hash value")
-	}
-
-	if nonceRequired {
-		if len(c.Nonce) == 0 {
-			return NewUseDPoPNonceError(nonceHandler, expectedHash, "nonce is missing")
-		}
-
-		if err := nonce.ValidateNonce(
-			c.Nonce,
-			nonceHandler,
-			nonce.WithMaxAge(maxAge),
-			nonce.WithBinding(expectedHash),
-		); err != nil {
-			return errorchain.New(NewUseDPoPNonceError(nonceHandler, expectedHash, "nonce is invalid")).
-				CausedBy(err)
-		}
-	}
-
-	if !replayAllowed {
-		if err := cch.Set(ctx.Context(), jtiKey, []byte{1}, ttl); err != nil {
-			return errorchain.NewWithMessage(
-				pipeline.ErrInternal,
-				"failed to remember DPoP proof jti",
-			).CausedBy(err)
-		}
-	}
-
-	return nil
-}
-
-func (s *demonstratingPoPStrategy) init(ctx app.Context) error {
-	return nil
+	return mgr, nil
 }

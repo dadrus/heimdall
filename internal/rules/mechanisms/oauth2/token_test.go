@@ -238,7 +238,7 @@ func TestTokenValidate(t *testing.T) {
 			expectations: Expectation{
 				TrustedIssuers:    []string{"foo"},
 				ScopesMatcher:     NoopMatcher{},
-				ProofOfPossession: &demonstratingPoPStrategy{},
+				ProofOfPossession: &DPoPStrategy{},
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
