@@ -7,16 +7,16 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
-type TokenScheme string
+type TokenType string
 
 const (
-	SchemeBearer TokenScheme = "Bearer"
-	SchemeDPoP   TokenScheme = "DPoP"
+	TypeBearer TokenType = "Bearer"
+	TypeDPoP   TokenType = "DPoP"
 )
 
 type Token struct {
-	Raw    string
-	Scheme TokenScheme
+	Raw  string
+	Type TokenType
 
 	Header    jose.Header
 	RawClaims map[string]any
@@ -27,29 +27,28 @@ type Token struct {
 	jwt *jwt.JSONWebToken
 }
 
-func NewToken(raw, scheme string) (*Token, error) {
-	tokenScheme := TokenScheme(scheme)
-	if len(tokenScheme) == 0 {
-		tokenScheme = SchemeBearer
+func NewToken(tokenType TokenType, value string) (*Token, error) {
+	if len(tokenType) == 0 {
+		tokenType = TypeBearer
 	}
 
-	parsed, err := jwt.ParseSigned(raw, SupportedAlgorithms())
+	parsed, err := jwt.ParseSigned(value, SupportedAlgorithms())
 	if err != nil {
-		return nil, NewInvalidTokenError(tokenScheme, "invalid JWT format")
+		return nil, NewInvalidTokenError(tokenType, "invalid JWT format")
 	}
 
 	if len(parsed.Headers) == 0 {
-		return nil, NewInvalidTokenError(tokenScheme, "missing JWT header")
+		return nil, NewInvalidTokenError(tokenType, "missing JWT header")
 	}
 
 	var rawClaims map[string]any
 	if err := parsed.UnsafeClaimsWithoutVerification(&rawClaims); err != nil {
-		return nil, NewInvalidTokenError(tokenScheme, "failed to deserialize JWT payload")
+		return nil, NewInvalidTokenError(tokenType, "failed to deserialize JWT payload")
 	}
 
 	return &Token{
-		Raw:       raw,
-		Scheme:    tokenScheme,
+		Raw:       value,
+		Type:      tokenType,
 		Header:    parsed.Headers[0],
 		RawClaims: rawClaims,
 		jwt:       parsed,
@@ -58,32 +57,56 @@ func NewToken(raw, scheme string) (*Token, error) {
 
 // NewIntrospectionToken creates a Token from an introspection response.
 // The Claims are taken directly from the verified response; no JWT is parsed.
-func NewIntrospectionToken(scheme TokenScheme, raw string, claims Claims) *Token {
-	return &Token{Raw: raw, Scheme: scheme, Claims: claims}
+func NewIntrospectionToken(tokenType TokenType, raw string, claims Claims) *Token {
+	return &Token{Raw: raw, Type: tokenType, Claims: claims}
 }
 
 func (t *Token) Verify(
 	ctx pipeline.Context,
-	key *jose.JSONWebKey,
 	expectation Expectation,
+	key *jose.JSONWebKey,
 ) error {
 	if len(t.Header.Algorithm) != 0 && key.Algorithm != t.Header.Algorithm {
 		return NewInvalidTokenError(
-			t.Scheme,
+			t.Type,
 			"algorithm in the JWT header does not match the algorithm referenced in the key",
 		)
 	}
 
-	if err := expectation.AssertAlgorithm(t, jose.SignatureAlgorithm(key.Algorithm)); err != nil {
+	if err := expectation.AssertAlgorithm(t); err != nil {
 		return err
 	}
 
 	var claims Claims
 	if err := t.jwt.Claims(key, &claims); err != nil {
-		return NewInvalidTokenError(t.Scheme, "failed to verify JWT signature")
+		return NewInvalidTokenError(t.Type, "failed to verify JWT signature")
 	}
 
 	t.Claims = claims
 
-	return claims.Validate(ctx, t, expectation)
+	return t.Validate(ctx, expectation)
+}
+
+func (t *Token) Validate(ctx pipeline.Context, exp Expectation) error {
+	if err := exp.AssertIssuer(t); err != nil {
+		return err
+	}
+
+	if err := exp.AssertAudience(t); err != nil {
+		return err
+	}
+
+	if err := exp.AssertValidity(t); err != nil {
+		return err
+	}
+
+	if err := exp.AssertIssuanceTime(t); err != nil {
+		return err
+	}
+
+	if err := exp.AssertProofOfPossession(ctx, t); err != nil {
+		return err
+	}
+
+	return exp.AssertScopes(t)
 }

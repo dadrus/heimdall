@@ -36,7 +36,7 @@ type Expectation struct {
 	Audiences         []string                  `mapstructure:"audience"`
 	AllowedAlgorithms []jose.SignatureAlgorithm `mapstructure:"allowed_algorithms"`
 	ValidityLeeway    time.Duration             `mapstructure:"validity_leeway"`
-	ProofOfPossession PopStrategy               `mapstructure:"proof_of_possession"`
+	ProofOfPossession PoPStrategy               `mapstructure:"proof_of_possession"`
 }
 
 func (e Expectation) Merge(other Expectation) Expectation {
@@ -46,81 +46,84 @@ func (e Expectation) Merge(other Expectation) Expectation {
 	e.AllowedAlgorithms = x.IfThenElse(len(e.AllowedAlgorithms) != 0, e.AllowedAlgorithms, other.AllowedAlgorithms)
 	e.ValidityLeeway = x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, other.ValidityLeeway)
 	e.ProofOfPossession = x.IfThenElseExec(e.ProofOfPossession != nil,
-		func() PopStrategy { return e.ProofOfPossession.Merge(other.ProofOfPossession) },
-		func() PopStrategy { return other.ProofOfPossession },
+		func() PoPStrategy { return e.ProofOfPossession.Merge(other.ProofOfPossession) },
+		func() PoPStrategy { return other.ProofOfPossession },
 	)
 
 	return e
 }
 
-func (e Expectation) AssertAlgorithm(token *Token, alg jose.SignatureAlgorithm) error {
-	if !slices.Contains(e.AllowedAlgorithms, alg) {
-		return NewInvalidTokenError(token.Scheme, "algorithm "+string(alg)+" is not allowed")
+func (e Expectation) AssertAlgorithm(token *Token) error {
+	alg := token.Header.Algorithm
+	if !slices.Contains(e.AllowedAlgorithms, jose.SignatureAlgorithm(alg)) {
+		return NewInvalidTokenError(token.Type, "algorithm "+string(alg)+" is not allowed")
 	}
 
 	return nil
 }
 
-func (e Expectation) AssertIssuer(token *Token, issuer string) error {
+func (e Expectation) AssertIssuer(token *Token) error {
 	if len(e.TrustedIssuers) == 0 {
 		return nil
 	}
 
-	if !slices.Contains(e.TrustedIssuers, issuer) {
-		return NewInvalidTokenError(token.Scheme, "issuer "+issuer+" is not trusted")
+	if !slices.Contains(e.TrustedIssuers, token.Claims.Issuer) {
+		return NewInvalidTokenError(token.Type, "issuer "+token.Claims.Issuer+" is not trusted")
 	}
 
 	return nil
 }
 
-func (e Expectation) AssertAudience(token *Token, audience []string) error {
+func (e Expectation) AssertAudience(token *Token) error {
 	if len(e.Audiences) == 0 {
 		return nil
 	}
 
-	if !slicex.Intersects(e.Audiences, audience) {
-		return NewInvalidTokenError(token.Scheme, "no expected audience present")
+	if !slicex.Intersects(e.Audiences, token.Claims.Audience) {
+		return NewInvalidTokenError(token.Type, "no expected audience present")
 	}
 
 	return nil
 }
 
-func (e Expectation) AssertValidity(token *Token, notBefore, notAfter time.Time) error {
+func (e Expectation) AssertValidity(token *Token) error {
 	leeway := int64(x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, defaultLeeway).Seconds())
 	now := time.Now().Unix()
-	nbf := notBefore.Unix()
-	exp := notAfter.Unix()
+	nbf := token.Claims.NotBefore.Time().Unix()
+	exp := token.Claims.Expiry.Time().Unix()
 
 	if nbf > 0 && now+leeway < nbf {
-		return NewInvalidTokenError(token.Scheme, "not yet valid")
+		return NewInvalidTokenError(token.Type, "not yet valid")
 	}
 
 	if exp > 0 && now-leeway >= exp {
-		return NewInvalidTokenError(token.Scheme, "expired")
+		return NewInvalidTokenError(token.Type, "expired")
 	}
 
 	return nil
 }
 
-func (e Expectation) AssertIssuanceTime(token *Token, issuedAt time.Time) error {
+func (e Expectation) AssertIssuanceTime(token *Token) error {
 	leeway := x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, defaultLeeway)
+	iat := token.Claims.IssuedAt.Time()
 
 	// IssuedAt is optional but cannot be in the future. This is not required by the RFC, but
 	// if by misconfiguration it has been set to future, we don't trust it.
-	if !issuedAt.Equal(time.Time{}) && time.Now().Add(leeway).Before(issuedAt) {
-		return NewInvalidTokenError(token.Scheme, "issued in the future")
+	if !iat.Equal(time.Time{}) && time.Now().Add(leeway).Before(iat) {
+		return NewInvalidTokenError(token.Type, "issued in the future")
 	}
 
 	return nil
 }
 
-func (e Expectation) AssertScopes(token *Token, scopes []string) error {
+func (e Expectation) AssertScopes(token *Token) error {
+	scopes := x.IfThenElse(len(token.Claims.Scp) != 0, token.Claims.Scp, token.Claims.Scope)
 	if err := e.ScopesMatcher.Match(scopes); err != nil {
 		var mismatch *ScopeMismatchError
 
 		errors.As(err, &mismatch)
 
-		return NewInsufficientScopeError(token.Scheme, err.Error(), mismatch.RequiredScopes())
+		return NewInsufficientScopeError(token.Type, err.Error(), mismatch.RequiredScopes())
 	}
 
 	return nil
@@ -128,8 +131,8 @@ func (e Expectation) AssertScopes(token *Token, scopes []string) error {
 
 func (e Expectation) AssertProofOfPossession(ctx pipeline.Context, token *Token) error {
 	strategy := x.IfThenElseExec(e.ProofOfPossession != nil,
-		func() PopStrategy { return e.ProofOfPossession },
-		func() PopStrategy { return opportunisticPoPStrategy{} },
+		func() PoPStrategy { return e.ProofOfPossession },
+		func() PoPStrategy { return opportunisticPoPStrategy{} },
 	)
 
 	leeway := x.IfThenElse(e.ValidityLeeway != 0, e.ValidityLeeway, defaultLeeway)

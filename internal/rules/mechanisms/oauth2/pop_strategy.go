@@ -16,7 +16,7 @@ const (
 	MTLS      PoPType = "mtls"
 )
 
-type PopStrategy interface {
+type PoPStrategy interface {
 	Assert(
 		ctx pipeline.Context,
 		token *Token,
@@ -24,5 +24,5 @@ type PopStrategy interface {
 		allowedAlgorithms []jose.SignatureAlgorithm,
 	) error
 
-	Merge(other PopStrategy) PopStrategy
+	Merge(other PoPStrategy) PoPStrategy
 }

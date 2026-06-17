@@ -137,7 +137,7 @@ func DecodePoPStrategyHookFunc(ctx app.Context) mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		if !reflect.TypeFor[*PopStrategy]().Elem().AssignableTo(to) {
+		if !reflect.TypeFor[*PoPStrategy]().Elem().AssignableTo(to) {
 			return data, nil
 		}
 

@@ -23,20 +23,23 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestClaimsValidate(t *testing.T) {
+func TestTokenValidate(t *testing.T) {
 	t.Parallel()
 
 	dateInTheFuture := NumericDate(time.Now().Add(1 * time.Minute).Unix())
 	dateInThePast := NumericDate(time.Now().Add(-1 * time.Minute).Unix())
 
 	for uc, tc := range map[string]struct {
-		claims       Claims
+		token        Token
 		expectations Expectation
 		assert       func(t *testing.T, err error)
 	}{
 		"fails on issuer assertion": {
-			claims: Claims{
-				Issuer: "foo",
+			token: Token{
+				Type: TypeBearer,
+				Claims: Claims{
+					Issuer: "foo",
+				},
 			},
 			expectations: Expectation{
 				TrustedIssuers: []string{"bar"},
@@ -49,9 +52,12 @@ func TestClaimsValidate(t *testing.T) {
 			},
 		},
 		"fails on audience assertion": {
-			claims: Claims{
-				Issuer:   "foo",
-				Audience: Audience{"bar"},
+			token: Token{
+				Type: TypeBearer,
+				Claims: Claims{
+					Issuer:   "foo",
+					Audience: Audience{"bar"},
+				},
 			},
 			expectations: Expectation{
 				TrustedIssuers: []string{"foo"},
@@ -65,10 +71,13 @@ func TestClaimsValidate(t *testing.T) {
 			},
 		},
 		"fails on validity assertion": {
-			claims: Claims{
-				Issuer:    "foo",
-				Audience:  Audience{"bar"},
-				NotBefore: &dateInTheFuture,
+			token: Token{
+				Type: TypeBearer,
+				Claims: Claims{
+					Issuer:    "foo",
+					Audience:  Audience{"bar"},
+					NotBefore: &dateInTheFuture,
+				},
 			},
 			expectations: Expectation{
 				TrustedIssuers: []string{"foo"},
@@ -82,11 +91,14 @@ func TestClaimsValidate(t *testing.T) {
 			},
 		},
 		"fails on issuance time assertion": {
-			claims: Claims{
-				Issuer:    "foo",
-				Audience:  Audience{"bar"},
-				NotBefore: &dateInThePast,
-				IssuedAt:  &dateInTheFuture,
+			token: Token{
+				Type: TypeBearer,
+				Claims: Claims{
+					Issuer:    "foo",
+					Audience:  Audience{"bar"},
+					NotBefore: &dateInThePast,
+					IssuedAt:  &dateInTheFuture,
+				},
 			},
 			expectations: Expectation{
 				TrustedIssuers: []string{"foo"},
@@ -100,12 +112,15 @@ func TestClaimsValidate(t *testing.T) {
 			},
 		},
 		"fails on scp assertion": {
-			claims: Claims{
-				Issuer:    "foo",
-				Audience:  Audience{"bar"},
-				NotBefore: &dateInThePast,
-				IssuedAt:  &dateInThePast,
-				Scp:       Scopes{"foo", "bar"},
+			token: Token{
+				Type: TypeBearer,
+				Claims: Claims{
+					Issuer:    "foo",
+					Audience:  Audience{"bar"},
+					NotBefore: &dateInThePast,
+					IssuedAt:  &dateInThePast,
+					Scp:       Scopes{"foo", "bar"},
+				},
 			},
 			expectations: Expectation{
 				TrustedIssuers: []string{"foo"},
@@ -120,12 +135,15 @@ func TestClaimsValidate(t *testing.T) {
 			},
 		},
 		"fails on scope assertion": {
-			claims: Claims{
-				Issuer:    "foo",
-				Audience:  Audience{"bar"},
-				NotBefore: &dateInThePast,
-				IssuedAt:  &dateInThePast,
-				Scope:     Scopes{"foo", "bar"},
+			token: Token{
+				Type: TypeBearer,
+				Claims: Claims{
+					Issuer:    "foo",
+					Audience:  Audience{"bar"},
+					NotBefore: &dateInThePast,
+					IssuedAt:  &dateInThePast,
+					Scope:     Scopes{"foo", "bar"},
+				},
 			},
 			expectations: Expectation{
 				TrustedIssuers: []string{"foo"},
@@ -140,12 +158,15 @@ func TestClaimsValidate(t *testing.T) {
 			},
 		},
 		"succeeds using scope claim": {
-			claims: Claims{
-				Issuer:    "foo",
-				Audience:  Audience{"bar"},
-				NotBefore: &dateInThePast,
-				IssuedAt:  &dateInThePast,
-				Scope:     Scopes{"foo", "bar"},
+			token: Token{
+				Type: TypeBearer,
+				Claims: Claims{
+					Issuer:    "foo",
+					Audience:  Audience{"bar"},
+					NotBefore: &dateInThePast,
+					IssuedAt:  &dateInThePast,
+					Scope:     Scopes{"foo", "bar"},
+				},
 			},
 			expectations: Expectation{
 				TrustedIssuers: []string{"foo"},
@@ -159,12 +180,15 @@ func TestClaimsValidate(t *testing.T) {
 			},
 		},
 		"succeeds using scp claim": {
-			claims: Claims{
-				Issuer:    "foo",
-				Audience:  Audience{"bar"},
-				NotBefore: &dateInThePast,
-				IssuedAt:  &dateInThePast,
-				Scp:       Scopes{"foo", "bar"},
+			token: Token{
+				Type: TypeBearer,
+				Claims: Claims{
+					Issuer:    "foo",
+					Audience:  Audience{"bar"},
+					NotBefore: &dateInThePast,
+					IssuedAt:  &dateInThePast,
+					Scp:       Scopes{"foo", "bar"},
+				},
 			},
 			expectations: Expectation{
 				TrustedIssuers: []string{"foo"},
@@ -177,10 +201,56 @@ func TestClaimsValidate(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		"fails on proof of possession due to invalid token scheme": {
+			token: Token{
+				Type: TypeBearer,
+				Claims: Claims{
+					Issuer:    "foo",
+					Audience:  Audience{"bar"},
+					NotBefore: &dateInThePast,
+					IssuedAt:  &dateInThePast,
+					Confirmation: &Confirmation{
+						JWKThumbprint: "foo",
+					},
+				},
+			},
+			expectations: Expectation{
+				TrustedIssuers: []string{"foo"},
+				ScopesMatcher:  NoopMatcher{},
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "DPoP expected")
+			},
+		},
+		"fails on proof of possession due to missing cnf claim": {
+			token: Token{
+				Type: TypeDPoP,
+				Claims: Claims{
+					Issuer:    "foo",
+					Audience:  Audience{"bar"},
+					NotBefore: &dateInThePast,
+					IssuedAt:  &dateInThePast,
+				},
+			},
+			expectations: Expectation{
+				TrustedIssuers:    []string{"foo"},
+				ScopesMatcher:     NoopMatcher{},
+				ProofOfPossession: &demonstratingPoPStrategy{},
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "proof of possession is required")
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// WHEN
-			err := tc.claims.Validate(nil, &Token{Scheme: SchemeBearer}, tc.expectations)
+			err := tc.token.Validate(nil, tc.expectations)
 
 			// THEN
 			tc.assert(t, err)

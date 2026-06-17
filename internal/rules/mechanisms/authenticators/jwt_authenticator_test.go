@@ -3115,7 +3115,7 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 				},
 				a: oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
 			},
-			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.NewInsufficientScopeError(oauth2.SchemeBearer, "", nil)),
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.NewInsufficientScopeError(oauth2.TypeBearer, "", nil)),
 			expectedCode:   http.StatusForbidden,
 			expectedHeader: `Bearer error="insufficient_scope"`,
 		},
@@ -3130,7 +3130,7 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 				},
 			},
 			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(
-				oauth2.NewInsufficientScopeError(oauth2.SchemeBearer, "scope matching error", []string{"foo", "bar"})),
+				oauth2.NewInsufficientScopeError(oauth2.TypeBearer, "scope matching error", []string{"foo", "bar"})),
 			expectedCode:   http.StatusForbidden,
 			expectedHeader: `Bearer error="insufficient_scope", scope="foo bar"`,
 		},
@@ -3144,7 +3144,8 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{"foo", "bar"},
 				},
 			},
-			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.NewInvalidTokenError(oauth2.SchemeBearer, "")),
+			cause:          errorchain.New(pipeline.ErrAuthentication).
+				CausedBy(oauth2.NewInvalidTokenError(oauth2.TypeBearer, "")),
 			expectedCode:   http.StatusUnauthorized,
 			expectedHeader: `Bearer error="invalid_token"`,
 		},

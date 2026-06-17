@@ -1,6 +1,7 @@
 package oauth2
 
 import (
+	"errors"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
@@ -16,10 +17,10 @@ func (*mtlsPoPStrategy) Assert(
 	_ time.Duration,
 	_ []jose.SignatureAlgorithm,
 ) error {
-	return nil
+	return errors.New("mtls pop strategy not supported")
 }
 
-func (s *mtlsPoPStrategy) Merge(other PopStrategy) PopStrategy {
+func (s *mtlsPoPStrategy) Merge(other PoPStrategy) PoPStrategy {
 	if other == nil {
 		return s
 	}

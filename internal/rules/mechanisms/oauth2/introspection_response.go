@@ -23,14 +23,12 @@ import (
 type IntrospectionResponse struct {
 	Claims
 
-	Active    bool   `json:"active,omitempty"`
-	ClientID  string `json:"client_id,omitempty"`
-	TokenType string `json:"token_type,omitempty"`
+	Active bool `json:"active,omitempty"`
 }
 
 func (c IntrospectionResponse) Validate(
 	ctx pipeline.Context,
-	scheme TokenScheme,
+	tokenType TokenType,
 	rawToken string,
 	exp Expectation,
 ) error {
@@ -38,7 +36,7 @@ func (c IntrospectionResponse) Validate(
 		return ErrTokenNotActive
 	}
 
-	token := NewIntrospectionToken(scheme, rawToken, c.Claims)
+	token := NewIntrospectionToken(tokenType, rawToken, c.Claims)
 
-	return c.Claims.Validate(ctx, token, exp)
+	return token.Validate(ctx, exp)
 }

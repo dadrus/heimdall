@@ -32,7 +32,7 @@ func (s opportunisticPoPStrategy) Assert(
 	return nil
 }
 
-func (s opportunisticPoPStrategy) Merge(other PopStrategy) PopStrategy {
+func (s opportunisticPoPStrategy) Merge(other PoPStrategy) PoPStrategy {
 	if other == nil {
 		return s
 	}

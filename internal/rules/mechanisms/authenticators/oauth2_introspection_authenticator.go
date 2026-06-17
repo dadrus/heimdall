@@ -370,7 +370,7 @@ func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
 		assertions = assertions.Merge(a.a.Merge(oauth2.Expectation{TrustedIssuers: []string{metadata.Issuer}}))
 	}
 
-	if err = introspectResp.Validate(ctx, oauth2.TokenScheme(authData.Scheme), authData.Value, assertions); err != nil {
+	if err = introspectResp.Validate(ctx, oauth2.TokenType(authData.Scheme), authData.Value, assertions); err != nil {
 		return nil, errorchain.NewWithMessage(
 			pipeline.ErrAuthentication,
 			"access token does not satisfy assertion conditions",

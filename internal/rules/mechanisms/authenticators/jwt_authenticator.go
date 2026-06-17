@@ -397,7 +397,7 @@ func (a *jwtAuthenticator) serverMetadata(
 }
 
 func (a *jwtAuthenticator) verifyToken(ctx pipeline.Context, rawToken extractors.AuthData) (json.RawMessage, error) {
-	tok, err := oauth2.NewToken(rawToken.Value, rawToken.Scheme)
+	tok, err := oauth2.NewToken(oauth2.TokenType(rawToken.Scheme), rawToken.Value)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
 			WithAspects(a).
@@ -605,7 +605,7 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 	key *jose.JSONWebKey,
 	assertions *oauth2.Expectation,
 ) (json.RawMessage, error) {
-	if err := tok.Verify(ctx, key, *assertions); err != nil {
+	if err := tok.Verify(ctx, *assertions, key); err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "access token does not satisfy assertion conditions").
 			WithAspects(a).

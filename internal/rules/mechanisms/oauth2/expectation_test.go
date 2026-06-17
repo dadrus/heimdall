@@ -53,10 +53,13 @@ func TestExpectationAssertAlgorithm(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			token := &Token{Scheme: SchemeBearer}
+			token := &Token{
+				Type:   TypeBearer,
+				Header: jose.Header{Algorithm: string(tc.alg)},
+			}
 
 			// WHEN
-			err := tc.exp.AssertAlgorithm(token, tc.alg)
+			err := tc.exp.AssertAlgorithm(token)
 
 			// THEN
 			tc.assert(t, err)
@@ -101,10 +104,13 @@ func TestExpectationAssertIssuer(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			token := &Token{Scheme: SchemeBearer}
+			token := &Token{
+				Type:   TypeBearer,
+				Claims: Claims{Issuer: tc.issuer},
+			}
 
 			// WHEN
-			err := tc.exp.AssertIssuer(token, tc.issuer)
+			err := tc.exp.AssertIssuer(token)
 
 			// THEN
 			tc.assert(t, err)
@@ -156,12 +162,24 @@ func TestExpectationAssertAudience(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		"assertion succeeds if there are no expectation": {
+			exp:      Expectation{},
+			audience: []string{"foo"},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			token := &Token{Scheme: SchemeBearer}
+			token := &Token{
+				Type:   TypeBearer,
+				Claims: Claims{Audience: tc.audience},
+			}
 
 			// WHEN
-			err := tc.exp.AssertAudience(token, tc.audience)
+			err := tc.exp.AssertAudience(token)
 
 			// THEN
 			tc.assert(t, err)
@@ -341,10 +359,16 @@ func TestExpectationAssertValidity(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			token := &Token{Scheme: SchemeBearer}
+			token := &Token{
+				Type: TypeBearer,
+				Claims: Claims{
+					NotBefore: new(NumericDate(tc.times[0].Unix())),
+					Expiry:    new(NumericDate(tc.times[1].Unix())),
+				},
+			}
 
 			// WHEN
-			err := tc.exp.AssertValidity(token, tc.times[0], tc.times[1])
+			err := tc.exp.AssertValidity(token)
 
 			// THEN
 			tc.assert(t, err)
@@ -452,10 +476,13 @@ func TestExpectationAssertIssuanceTime(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			token := &Token{Scheme: SchemeBearer}
+			token := &Token{
+				Type:   TypeBearer,
+				Claims: Claims{IssuedAt: new(NumericDate(tc.time.Unix()))},
+			}
 
 			// WHEN
-			err := tc.exp.AssertIssuanceTime(token, tc.time)
+			err := tc.exp.AssertIssuanceTime(token)
 
 			// THEN
 			tc.assert(t, err)
@@ -491,10 +518,62 @@ func TestExpectationAssertScopes(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			token := &Token{Scheme: SchemeBearer}
+			token := &Token{
+				Type:   TypeBearer,
+				Claims: Claims{Scp: tc.scopes},
+			}
 
 			// WHEN
-			err := tc.exp.AssertScopes(token, tc.scopes)
+			err := tc.exp.AssertScopes(token)
+
+			// THEN
+			tc.assert(t, err)
+		})
+	}
+}
+
+func TestAssertProofOfPossession(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		exp    Expectation
+		token  *Token
+		assert func(t *testing.T, err error)
+	}{
+		"opportunistic PoP fails due to invalid token scheme if cnf claim is present": {
+			exp: Expectation{},
+			token: &Token{
+				Type: TypeBearer,
+				Claims: Claims{
+					Confirmation: &Confirmation{JWKThumbprint: "foo"},
+				},
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "DPoP expected")
+			},
+		},
+		"DPoP check fails due to missing cnf claim": {
+			token: &Token{
+				Type:   TypeDPoP,
+				Claims: Claims{},
+			},
+			exp: Expectation{
+				ProofOfPossession: &demonstratingPoPStrategy{},
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "proof of possession")
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// WHEN
+			err := tc.exp.AssertProofOfPossession(nil, tc.token)
 
 			// THEN
 			tc.assert(t, err)
@@ -634,6 +713,7 @@ func TestExpectationMerge(t *testing.T) {
 				TrustedIssuers:    []string{"bar"},
 				AllowedAlgorithms: []jose.SignatureAlgorithm{jose.RS512},
 				ValidityLeeway:    10 * time.Second,
+				ProofOfPossession: opportunisticPoPStrategy{},
 			},
 			target: Expectation{
 				ScopesMatcher:     HierarchicScopeStrategyMatcher{},
@@ -641,6 +721,7 @@ func TestExpectationMerge(t *testing.T) {
 				TrustedIssuers:    []string{"zab"},
 				AllowedAlgorithms: []jose.SignatureAlgorithm{"BAR128"},
 				ValidityLeeway:    20 * time.Minute,
+				ProofOfPossession: &demonstratingPoPStrategy{},
 			},
 			assert: func(t *testing.T, merged Expectation, source Expectation, target Expectation) {
 				t.Helper()
@@ -656,6 +737,8 @@ func TestExpectationMerge(t *testing.T) {
 				assert.Equal(t, target.AllowedAlgorithms, merged.AllowedAlgorithms)
 				assert.NotEqual(t, source.ValidityLeeway, merged.ValidityLeeway)
 				assert.Equal(t, target.ValidityLeeway, merged.ValidityLeeway)
+				assert.NotEqual(t, source.ProofOfPossession, merged.ProofOfPossession)
+				assert.Equal(t, target.ProofOfPossession, merged.ProofOfPossession)
 			},
 		},
 	} {
@@ -680,6 +763,7 @@ func TestExpectationMergeIdempotency(t *testing.T) {
 		TrustedIssuers:    []string{"bar"},
 		AllowedAlgorithms: []jose.SignatureAlgorithm{jose.RS512},
 		ValidityLeeway:    10 * time.Second,
+		ProofOfPossession: opportunisticPoPStrategy{},
 	})
 
 	assert.Nil(t, exp.ScopesMatcher)
@@ -687,4 +771,5 @@ func TestExpectationMergeIdempotency(t *testing.T) {
 	assert.Empty(t, exp.TrustedIssuers)
 	assert.Empty(t, exp.AllowedAlgorithms)
 	assert.Equal(t, 0*time.Second, exp.ValidityLeeway)
+	assert.Nil(t, exp.ProofOfPossession)
 }

@@ -87,7 +87,7 @@ type demonstratingPoPStrategy struct {
 	setInformer *secrets.SecretSetInformer[nonceManager]
 }
 
-func newDemonstratingPoPStrategy(ctx app.Context, conf map[string]any) (PopStrategy, error) {
+func newDemonstratingPoPStrategy(ctx app.Context, conf map[string]any) (PoPStrategy, error) {
 	var strategy demonstratingPoPStrategy
 
 	dec := ctx.DecoderFactory().Decoder(
@@ -137,7 +137,7 @@ func newDemonstratingPoPStrategy(ctx app.Context, conf map[string]any) (PopStrat
 	return &strategy, nil
 }
 
-func (s *demonstratingPoPStrategy) Merge(other PopStrategy) PopStrategy {
+func (s *demonstratingPoPStrategy) Merge(other PoPStrategy) PoPStrategy {
 	if other == nil {
 		return s
 	}
@@ -169,8 +169,19 @@ func (s *demonstratingPoPStrategy) Assert(
 		return NewInvalidDPoPProofError("proof of possession is required")
 	}
 
-	if token.Scheme != SchemeDPoP {
-		return NewInvalidDPoPProofError("malformed token scheme - DPoP expected")
+	// we're not assuming a token type. it must be explicitly specified
+	if len(token.Type) == 0 && len(token.Claims.TokenType) == 0 {
+		return NewInvalidDPoPProofError("malformed token type - DPoP expected")
+	}
+
+	if len(token.Type) != 0 && token.Type != TypeDPoP {
+		return NewInvalidDPoPProofError("malformed token type - DPoP expected")
+	}
+
+	// RFC 9449 §6.2: If the token_type member is included in the
+	// introspection response, it MUST contain the value DPoP.
+	if len(token.Claims.TokenType) != 0 && token.Claims.TokenType != TypeDPoP {
+		return NewInvalidDPoPProofError("malformed token type - DPoP expected")
 	}
 
 	if len(cnf.JWKThumbprint) == 0 {

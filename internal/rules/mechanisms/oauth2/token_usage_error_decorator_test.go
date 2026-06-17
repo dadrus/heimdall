@@ -114,7 +114,7 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 		},
 		"malformed request without error details and error uri": {
 			decorator:      TokenUsageErrorDecorator{Enabled: new(true), Realm: "example"},
-			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(NewInvalidRequestError(SchemeBearer, "")),
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(NewInvalidRequestError(TypeBearer, "")),
 			expectedCode:   http.StatusBadRequest,
 			expectedHeader: `Bearer realm="example", error="invalid_request"`,
 		},
@@ -127,13 +127,13 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 				Realm:                "example",
 			},
 			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(
-				NewInvalidRequestError(SchemeBearer, "malformed request: invalid JWT format")),
+				NewInvalidRequestError(TypeBearer, "malformed request: invalid JWT format")),
 			expectedCode:   http.StatusBadRequest,
 			expectedHeader: `Bearer realm="example", error="invalid_request", error_uri="https://example.com/error", error_description="malformed request: invalid JWT format"`,
 		},
 		"insufficient scope without anything else": {
 			decorator:      TokenUsageErrorDecorator{Enabled: new(true)},
-			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(NewInsufficientScopeError(SchemeBearer, "", nil)),
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(NewInsufficientScopeError(TypeBearer, "", nil)),
 			expectedCode:   http.StatusForbidden,
 			expectedHeader: `Bearer error="insufficient_scope"`,
 		},
@@ -144,7 +144,7 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 				Realm:                "example",
 			},
 			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(
-				NewInsufficientScopeError(SchemeBearer, "scope matching error", []string{"foo", "bar"})),
+				NewInsufficientScopeError(TypeBearer, "scope matching error", []string{"foo", "bar"})),
 			expectedCode:   http.StatusForbidden,
 			expectedHeader: `Bearer realm="example", error="insufficient_scope", scope="foo bar"`,
 		},
@@ -157,13 +157,13 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 				ErrorURI:             "https://example.com/error",
 			},
 			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(
-				NewInsufficientScopeError(SchemeBearer, "scope matching error", []string{"foo", "bar"})),
+				NewInsufficientScopeError(TypeBearer, "scope matching error", []string{"foo", "bar"})),
 			expectedCode:   http.StatusForbidden,
 			expectedHeader: `Bearer realm="example", error="insufficient_scope", error_uri="https://example.com/error", error_description="scope matching error", scope="foo bar"`,
 		},
 		"invalid token without error details and error uri": {
 			decorator:      TokenUsageErrorDecorator{Enabled: new(true), Realm: "Please authenticate"},
-			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(NewInvalidTokenError(SchemeBearer, "")),
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(NewInvalidTokenError(TypeBearer, "")),
 			expectedCode:   http.StatusUnauthorized,
 			expectedHeader: `Bearer realm="Please authenticate", error="invalid_token"`,
 		},
@@ -175,7 +175,7 @@ func TestBearerTokenUsageErrorDecoratorDecorateErrorResponse(t *testing.T) {
 				ErrorURI:             "https://example.com/error",
 				Realm:                "Please authenticate",
 			},
-			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(NewInvalidTokenError(SchemeBearer, "assertion error")),
+			cause:          errorchain.New(pipeline.ErrAuthentication).CausedBy(NewInvalidTokenError(TypeBearer, "assertion error")),
 			expectedCode:   http.StatusUnauthorized,
 			expectedHeader: `Bearer realm="Please authenticate", error="invalid_token", error_uri="https://example.com/error", error_description="assertion error"`,
 		},

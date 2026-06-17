@@ -18,8 +18,8 @@ var (
 )
 
 type oauth2ChallengeError struct {
-	message string
-	scheme  TokenScheme
+	message   string
+	tokenType TokenType
 }
 
 func (e *oauth2ChallengeError) Error() string {
@@ -35,7 +35,7 @@ func (e *oauth2ChallengeError) commonParams(
 	errorCode string,
 ) []httpx.Option {
 	opts := []httpx.Option{
-		httpx.WithPrefix(string(e.scheme)),
+		httpx.WithPrefix(string(e.tokenType)),
 		httpx.WithKeyValue("realm", policy.Realm),
 		httpx.WithKeyValue("error", errorCode),
 	}
@@ -73,11 +73,11 @@ type InvalidRequestError struct {
 	oauth2ChallengeError
 }
 
-func NewInvalidRequestError(scheme TokenScheme, message string) *InvalidRequestError {
+func NewInvalidRequestError(tokenType TokenType, message string) *InvalidRequestError {
 	return &InvalidRequestError{
 		oauth2ChallengeError: oauth2ChallengeError{
-			message: message,
-			scheme:  scheme,
+			message:   message,
+			tokenType: tokenType,
 		},
 	}
 }
@@ -98,11 +98,11 @@ type InvalidTokenError struct {
 	oauth2ChallengeError
 }
 
-func NewInvalidTokenError(scheme TokenScheme, message string) *InvalidTokenError {
+func NewInvalidTokenError(tokenType TokenType, message string) *InvalidTokenError {
 	return &InvalidTokenError{
 		oauth2ChallengeError: oauth2ChallengeError{
-			message: message,
-			scheme:  scheme,
+			message:   message,
+			tokenType: tokenType,
 		},
 	}
 }
@@ -126,14 +126,14 @@ type InsufficientScopeError struct {
 }
 
 func NewInsufficientScopeError(
-	scheme TokenScheme,
+	tokenType TokenType,
 	message string,
 	requiredScopes []string,
 ) *InsufficientScopeError {
 	return &InsufficientScopeError{
 		oauth2ChallengeError: oauth2ChallengeError{
-			message: message,
-			scheme:  scheme,
+			message:   message,
+			tokenType: tokenType,
 		},
 		requiredScopes: requiredScopes,
 	}
@@ -165,8 +165,8 @@ type InvalidDPoPProofError struct {
 func NewInvalidDPoPProofError(message string) *InvalidDPoPProofError {
 	return &InvalidDPoPProofError{
 		oauth2ChallengeError: oauth2ChallengeError{
-			message: message,
-			scheme:  SchemeDPoP,
+			message:   message,
+			tokenType: TypeDPoP,
 		},
 	}
 }
@@ -208,8 +208,8 @@ func NewUseDPoPNonceError(
 ) *UseDPoPNonceError {
 	return &UseDPoPNonceError{
 		oauth2ChallengeError: oauth2ChallengeError{
-			message: message,
-			scheme:  SchemeDPoP,
+			message:   message,
+			tokenType: TypeDPoP,
 		},
 		issuer:  issuer,
 		binding: binding,

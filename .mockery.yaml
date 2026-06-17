@@ -105,6 +105,13 @@ packages:
     interfaces:
       Mechanism: {}
       Repository: {}
+  github.com/dadrus/heimdall/internal/rules/mechanisms/oauth2:
+    interfaces:
+      PoPStrategy:
+        config:
+          dir: "{{ .InterfaceDir }}"
+          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          pkgname: "{{ .SrcPackageName }}"
   github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/webhook:
     config:
       dir: "{{ .InterfaceDir }}"

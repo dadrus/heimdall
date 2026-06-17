@@ -16,11 +16,6 @@
 
 package oauth2
 
-import (
-	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/x"
-)
-
 type Confirmation struct {
 	JWKThumbprint               string `json:"jkt,omitempty"`
 	CertificateThumbprintSHA256 string `json:"x5t#S256,omitempty"` //nolint:tagliatelle
@@ -38,28 +33,6 @@ type Claims struct {
 	IssuedAt     *NumericDate  `json:"iat,omitempty"`
 	JTI          string        `json:"jti,omitempty"`
 	Confirmation *Confirmation `json:"cnf,omitempty"`
-}
-
-func (c Claims) Validate(ctx pipeline.Context, token *Token, exp Expectation) error {
-	if err := exp.AssertIssuer(token, c.Issuer); err != nil {
-		return err
-	}
-
-	if err := exp.AssertAudience(token, c.Audience); err != nil {
-		return err
-	}
-
-	if err := exp.AssertValidity(token, c.NotBefore.Time(), c.Expiry.Time()); err != nil {
-		return err
-	}
-
-	if err := exp.AssertIssuanceTime(token, c.IssuedAt.Time()); err != nil {
-		return err
-	}
-
-	if err := exp.AssertProofOfPossession(ctx, token); err != nil {
-		return err
-	}
-
-	return exp.AssertScopes(token, x.IfThenElse(len(c.Scp) != 0, c.Scp, c.Scope))
+	ClientID     string        `json:"client_id,omitempty"`
+	TokenType    TokenType     `json:"token_type,omitempty"`
 }
