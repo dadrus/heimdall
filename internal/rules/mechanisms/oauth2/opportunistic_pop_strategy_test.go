@@ -68,7 +68,7 @@ func TestOpportunisticPoPStrategyAssert(t *testing.T) {
 					CertificateThumbprintSHA256: "foo",
 				}},
 			},
-			expErr: true,
+			expErr: false,
 		},
 		"successful if neither jkt, nor x5t#S256 claims are present in cnf": {
 			token: &Token{

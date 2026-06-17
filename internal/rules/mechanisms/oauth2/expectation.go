@@ -56,7 +56,7 @@ func (e Expectation) Merge(other Expectation) Expectation {
 func (e Expectation) AssertAlgorithm(token *Token) error {
 	alg := token.Header.Algorithm
 	if !slices.Contains(e.AllowedAlgorithms, jose.SignatureAlgorithm(alg)) {
-		return NewInvalidTokenError(token.Type, "algorithm "+string(alg)+" is not allowed")
+		return NewInvalidTokenError(token.Type, "algorithm "+alg+" is not allowed")
 	}
 
 	return nil

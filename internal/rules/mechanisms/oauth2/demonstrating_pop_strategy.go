@@ -111,10 +111,10 @@ func newDemonstratingPoPStrategy(ctx app.Context, conf map[string]any) (PoPStrat
 	}
 
 	secret := ctx.Config().MasterKey
-	if len(secret.Source) == 0 {
+	if secret == nil {
 		return nil, errorchain.NewWithMessage(
 			pipeline.ErrConfiguration,
-			"master_key is required if DPoP nonce validation is enabled",
+			"master_key is not configured, but required if DPoP nonce validation is enabled",
 		)
 	}
 

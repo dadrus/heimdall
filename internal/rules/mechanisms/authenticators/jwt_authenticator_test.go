@@ -3144,7 +3144,7 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 					ScopesMatcher: oauth2.ExactScopeStrategyMatcher{"foo", "bar"},
 				},
 			},
-			cause:          errorchain.New(pipeline.ErrAuthentication).
+			cause: errorchain.New(pipeline.ErrAuthentication).
 				CausedBy(oauth2.NewInvalidTokenError(oauth2.TypeBearer, "")),
 			expectedCode:   http.StatusUnauthorized,
 			expectedHeader: `Bearer error="invalid_token"`,
