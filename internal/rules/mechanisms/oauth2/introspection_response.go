@@ -33,7 +33,7 @@ func (c IntrospectionResponse) Validate(
 	exp Expectation,
 ) error {
 	if !c.Active {
-		return ErrTokenNotActive
+		return NewInvalidTokenError(tokenType, "token is not active")
 	}
 
 	token := NewIntrospectionToken(tokenType, rawToken, c.Claims)

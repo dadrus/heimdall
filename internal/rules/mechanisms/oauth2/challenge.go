@@ -7,7 +7,7 @@ type ChallengePolicy struct {
 	ErrorURI              string
 	IncludeErrorDetails   bool
 	IncludeRequiredScopes bool
-	DPoPAlgorithms        []string
+	IncludeDPoPAlgorithms bool
 }
 
 type Challenge struct {

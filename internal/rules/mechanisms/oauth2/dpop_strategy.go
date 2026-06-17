@@ -166,6 +166,10 @@ func (s *DPoPStrategy) Assert(
 
 	proofJWT, err := jwt.ParseSigned(proof, allowedAlgorithms)
 	if err != nil {
+		if _, ok := errors.AsType[*jose.ErrUnexpectedSignatureAlgorithm](err); ok {
+			return errorchain.New(NewInvalidDPoPProofError("algorithm is not allowed", allowedAlgorithms...))
+		}
+
 		return errorchain.New(NewInvalidDPoPProofError("failed to parse proof")).
 			CausedBy(err)
 	}

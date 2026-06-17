@@ -1,20 +1,28 @@
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package oauth2
 
 import (
-	"errors"
 	"net/http"
 	"strings"
 
+	"github.com/go-jose/go-jose/v4"
+
 	"github.com/dadrus/heimdall/internal/x/httpx"
-)
-
-var (
-	ErrAssertion  = errors.New("assertion error")
-	ErrScopeMatch = errors.New("scope matching error")
-	ErrDPoPProof  = errors.New("DPoP proof error")
-	ErrDPoPNonce  = errors.New("DPoP nonce error")
-
-	ErrTokenNotActive = errors.New("token is not active")
 )
 
 type oauth2ChallengeError struct {
@@ -23,7 +31,7 @@ type oauth2ChallengeError struct {
 }
 
 func (e *oauth2ChallengeError) Error() string {
-	if e.message == "" {
+	if len(e.message) == 0 {
 		return "oauth2 assertion error"
 	}
 
@@ -40,11 +48,11 @@ func (e *oauth2ChallengeError) commonParams(
 		httpx.WithKeyValue("error", errorCode),
 	}
 
-	if policy.ErrorURI != "" {
+	if len(policy.ErrorURI) != 0 {
 		opts = append(opts, httpx.WithKeyValue("error_uri", policy.ErrorURI))
 	}
 
-	if policy.IncludeErrorDetails && e.message != "" {
+	if policy.IncludeErrorDetails && len(e.message) != 0 {
 		opts = append(opts, httpx.WithKeyValue("error_description", e.message))
 	}
 
@@ -54,7 +62,6 @@ func (e *oauth2ChallengeError) commonParams(
 type ScopeMismatchError struct {
 	required []string
 	missing  []string
-	cause    error
 }
 
 func NewScopeMismatchError(required, missing []string) *ScopeMismatchError {
@@ -65,7 +72,6 @@ func NewScopeMismatchError(required, missing []string) *ScopeMismatchError {
 }
 
 func (e *ScopeMismatchError) Error() string            { return "scope matching error" }
-func (e *ScopeMismatchError) Unwrap() error            { return e.cause }
 func (e *ScopeMismatchError) RequiredScopes() []string { return e.required }
 func (e *ScopeMismatchError) MissingScopes() []string  { return e.missing }
 
@@ -160,25 +166,35 @@ func (e *InsufficientScopeError) Challenge(policy ChallengePolicy) (*Challenge, 
 
 type InvalidDPoPProofError struct {
 	oauth2ChallengeError
+
+	algorithms []jose.SignatureAlgorithm
 }
 
-func NewInvalidDPoPProofError(message string) *InvalidDPoPProofError {
+func NewInvalidDPoPProofError(message string, algorithms ...jose.SignatureAlgorithm) *InvalidDPoPProofError {
 	return &InvalidDPoPProofError{
 		oauth2ChallengeError: oauth2ChallengeError{
 			message:   message,
 			tokenType: TypeDPoP,
 		},
+		algorithms: algorithms,
 	}
 }
 
 func (e *InvalidDPoPProofError) Challenge(policy ChallengePolicy) (*Challenge, error) {
 	opts := e.commonParams(policy, "invalid_dpop_proof")
 
-	if len(policy.DPoPAlgorithms) != 0 {
-		opts = append(opts, httpx.WithKeyValue(
-			"algs",
-			strings.Join(policy.DPoPAlgorithms, " "),
-		))
+	if policy.IncludeDPoPAlgorithms && len(e.algorithms) != 0 {
+		// join the allowed algorithms
+		builder := &strings.Builder{}
+		for i, alg := range e.algorithms {
+			builder.WriteString(string(alg))
+
+			if i < len(e.algorithms)-1 {
+				builder.WriteString(" ")
+			}
+		}
+
+		opts = append(opts, httpx.WithKeyValue("algs", builder.String()))
 	}
 
 	header := make(http.Header)

@@ -3098,14 +3098,14 @@ func TestJwtAuthenticatorDecorateErrorResponse(t *testing.T) {
 				ed: oauth2.TokenUsageErrorDecorator{},
 				a:  oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
 			},
-			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(&oauth2.ScopeMismatchError{}),
 		},
 		"explicitly disabled error signaling": {
 			authenticator: &jwtAuthenticator{
 				ed: oauth2.TokenUsageErrorDecorator{Enabled: new(false)},
 				a:  oauth2.Expectation{ScopesMatcher: oauth2.NoopMatcher{}},
 			},
-			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(oauth2.ErrScopeMatch),
+			cause: errorchain.New(pipeline.ErrAuthentication).CausedBy(&oauth2.ScopeMismatchError{}),
 		},
 		"insufficient scope without configured scopes": {
 			authenticator: &jwtAuthenticator{

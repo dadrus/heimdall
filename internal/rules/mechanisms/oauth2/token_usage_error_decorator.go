@@ -11,11 +11,12 @@ import (
 const wwwAuthenticateHeader = "Www-Authenticate"
 
 type TokenUsageErrorDecorator struct {
-	Enabled              *bool  `mapstructure:"enabled"`
-	IncludeErrorDetails  *bool  `mapstructure:"include_error_description"`
-	IncludeRequiredScope *bool  `mapstructure:"include_required_scope"`
-	ErrorURI             string `mapstructure:"error_uri"                 validate:"omitempty,uri"`
-	Realm                string `mapstructure:"realm"`
+	Enabled               *bool  `mapstructure:"enabled"`
+	IncludeErrorDetails   *bool  `mapstructure:"include_error_description"`
+	IncludeRequiredScope  *bool  `mapstructure:"include_required_scope"`
+	IncludeDPoPAlgorithms *bool  `mapstructure:"include_dpop_algorithms"`
+	ErrorURI              string `mapstructure:"error_uri"                 validate:"omitempty,uri"`
+	Realm                 string `mapstructure:"realm"`
 }
 
 func (d TokenUsageErrorDecorator) Merge(
@@ -31,6 +32,10 @@ func (d TokenUsageErrorDecorator) Merge(
 
 	if d.IncludeRequiredScope == nil {
 		d.IncludeRequiredScope = other.IncludeRequiredScope
+	}
+
+	if d.IncludeDPoPAlgorithms == nil {
+		d.IncludeDPoPAlgorithms = other.IncludeDPoPAlgorithms
 	}
 
 	if len(d.ErrorURI) == 0 {
@@ -85,6 +90,10 @@ func (d TokenUsageErrorDecorator) challengePolicy() ChallengePolicy {
 
 	if d.IncludeRequiredScope != nil {
 		policy.IncludeRequiredScopes = *d.IncludeRequiredScope
+	}
+
+	if d.IncludeDPoPAlgorithms != nil {
+		policy.IncludeDPoPAlgorithms = *d.IncludeDPoPAlgorithms
 	}
 
 	return policy
