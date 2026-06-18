@@ -43,23 +43,6 @@ func TestNewToken(t *testing.T) {
 		raw       string
 		assert    func(t *testing.T, token *Token, err error)
 	}{
-		"creates bearer token by default": {
-			raw: raw,
-			assert: func(t *testing.T, token *Token, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, token)
-
-				assert.Equal(t, raw, token.Raw)
-				assert.Equal(t, TypeBearer, token.Type)
-				assert.Equal(t, string(jose.ES256), token.Header.Algorithm)
-				assert.NotNil(t, token.RawClaims)
-				assert.Equal(t, "issuer", token.RawClaims["iss"])
-				assert.NotNil(t, token.jwt)
-				assert.Empty(t, token.Claims)
-			},
-		},
 		"creates token with explicit type": {
 			tokenType: TypeDPoP,
 			raw:       raw,
@@ -91,7 +74,8 @@ func TestNewToken(t *testing.T) {
 			},
 		},
 		"returns invalid token error if jwt payload cannot be deserialized": {
-			raw: newTestJWS(t, key, []byte("not-json")),
+			tokenType: TypeBearer,
+			raw:       newTestJWS(t, key, []byte("not-json")),
 			assert: func(t *testing.T, token *Token, err error) {
 				t.Helper()
 

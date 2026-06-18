@@ -28,10 +28,6 @@ type Token struct {
 }
 
 func NewToken(tokenType TokenType, value string) (*Token, error) {
-	if len(tokenType) == 0 {
-		tokenType = TypeBearer
-	}
-
 	parsed, err := jwt.ParseSigned(value, SupportedAlgorithms())
 	if err != nil {
 		return nil, NewInvalidTokenError(tokenType, "invalid JWT format")

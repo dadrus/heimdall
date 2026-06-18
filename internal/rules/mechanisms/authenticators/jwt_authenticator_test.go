@@ -2978,7 +2978,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				dpopKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 				require.NoError(t, err)
 
-				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, true)
+				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, oauth2.TypeDPoP, true)
 
 				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
 					endpoint.WithHeader("Accept", "application/json"),
@@ -3072,7 +3072,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				dpopKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 				require.NoError(t, err)
 
-				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, true)
+				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, oauth2.TypeDPoP, true)
 				requestURI := "https://api.example.com/resource"
 
 				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
@@ -3131,6 +3131,178 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.Contains(t, sub.Attributes()["scp"], "foo")
 				assert.Contains(t, sub.Attributes()["scp"], "bar")
 				assert.NotEmpty(t, sub.Attributes()["cnf"])
+			},
+		},
+		"with positive jwk cache hit, dpop bound token from non authorization source and valid proof": {
+			authenticator: &jwtAuthenticator{
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
+					}, nil
+				}),
+				a: oauth2.Expectation{
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384, jose.ES256},
+					TrustedIssuers:    []string{issuer},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+					ProofOfPossession: &oauth2.DPoPStrategy{
+						MaxAge:        time.Minute,
+						ReplayAllowed: new(true),
+					},
+				},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           new(10 * time.Second),
+				principalName: DefaultPrincipalName,
+			},
+			configureMocks: func(
+				t *testing.T,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
+				auth *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				dpopKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+				require.NoError(t, err)
+
+				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, oauth2.TypeDPoP, true)
+				requestURI := "https://api.example.com/resource"
+
+				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+					endpoint.WithHeader("Accept", "application/json"),
+				)
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
+
+				var jwks jose.JSONWebKeySet
+
+				err = json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
+				require.NoError(t, err)
+
+				keys := jwks.Key(kidKeyWithoutCert)
+
+				rawKey, err := json.Marshal(&keys[0])
+				require.NoError(t, err)
+
+				ads.EXPECT().GetAuthData(ctx).
+					Return(extractors.AuthData{
+						Value: rawToken,
+					}, nil)
+
+				cch.EXPECT().Get(mock.Anything, cacheKey).
+					Return(rawKey, nil)
+
+				req := pipelinemocks.NewRequestFunctionsMock(t)
+				req.EXPECT().Header("DPoP").
+					Return(newDPoPJWT(t, dpopKey, rawToken, http.MethodGet, requestURI))
+
+				ctx.EXPECT().Request().
+					Return(&pipeline.Request{
+						RequestFunctions: req,
+						Method:           http.MethodGet,
+						URL: &pipeline.URL{
+							URL: url.URL{
+								Scheme: "https",
+								Host:   "api.example.com",
+								Path:   "/resource",
+							},
+						},
+					})
+			},
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
+				t.Helper()
+
+				assert.False(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Equal(t, principalID, sub.ID())
+				assert.Equal(t, issuer, sub.Attributes()["iss"])
+				assert.Equal(t, principalID, sub.Attributes()["sub"])
+				assert.Equal(t, "DPoP", sub.Attributes()["token_type"])
+				assert.Contains(t, sub.Attributes()["scp"], "foo")
+				assert.Contains(t, sub.Attributes()["scp"], "bar")
+				assert.NotEmpty(t, sub.Attributes()["cnf"])
+			},
+		},
+		"with positive jwk cache hit, dpop bound token from non authorization source without token type claim": {
+			authenticator: &jwtAuthenticator{
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+							endpoint.WithHeader("Accept", "application/json"),
+						),
+					}, nil
+				}),
+				a: oauth2.Expectation{
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384, jose.ES256},
+					TrustedIssuers:    []string{issuer},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+					ProofOfPossession: &oauth2.DPoPStrategy{
+						MaxAge:        time.Minute,
+						ReplayAllowed: new(true),
+					},
+				},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           new(10 * time.Second),
+				principalName: DefaultPrincipalName,
+			},
+			configureMocks: func(
+				t *testing.T,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *extractormocks.AuthDataExtractStrategyMock,
+				auth *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				dpopKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+				require.NoError(t, err)
+
+				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, "", true)
+
+				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
+					endpoint.WithHeader("Accept", "application/json"),
+				)
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithoutCert)
+
+				var jwks jose.JSONWebKeySet
+
+				err = json.Unmarshal(jwksWithOneKeyOnlyEntry, &jwks)
+				require.NoError(t, err)
+
+				keys := jwks.Key(kidKeyWithoutCert)
+
+				rawKey, err := json.Marshal(&keys[0])
+				require.NoError(t, err)
+
+				ads.EXPECT().GetAuthData(ctx).
+					Return(extractors.AuthData{
+						Value: rawToken,
+					}, nil)
+
+				cch.EXPECT().Get(mock.Anything, cacheKey).
+					Return(rawKey, nil)
+			},
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
+				t.Helper()
+
+				assert.False(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.ErrorContains(t, err, "assertion conditions")
+				require.ErrorContains(t, err, "malformed token type - DPoP expected")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 	} {
@@ -3529,6 +3701,7 @@ func createDPoPBoundJWT(
 	issuer string,
 	audience string,
 	dpopKey *ecdsa.PrivateKey,
+	tokenType oauth2.TokenType,
 	setKid bool,
 ) string {
 	t.Helper()
@@ -3552,21 +3725,26 @@ func createDPoPBoundJWT(
 	)
 	require.NoError(t, err)
 
+	claims := map[string]any{
+		"sub": subject,
+		"iss": issuer,
+		"jti": "foo",
+		"iat": time.Now().Unix() - 1,
+		"nbf": time.Now().Unix() - 1,
+		"exp": time.Now().Unix() + 60,
+		"aud": []string{audience},
+		"scp": []string{"foo", "bar"},
+		"cnf": map[string]any{
+			"jkt": base64.RawURLEncoding.EncodeToString(kt),
+		},
+	}
+
+	if len(tokenType) != 0 {
+		claims["token_type"] = tokenType
+	}
+
 	rawJWT, err := jwt.Signed(signer).
-		Claims(map[string]any{
-			"sub": subject,
-			"iss": issuer,
-			"jti": "foo",
-			"iat": time.Now().Unix() - 1,
-			"nbf": time.Now().Unix() - 1,
-			"exp": time.Now().Unix() + 60,
-			"aud": []string{audience},
-			"scp": []string{"foo", "bar"},
-			"cnf": map[string]any{
-				"jkt": base64.RawURLEncoding.EncodeToString(kt),
-			},
-			"token_type": "DPoP",
-		}).
+		Claims(claims).
 		Serialize()
 	require.NoError(t, err)
 
