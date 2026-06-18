@@ -67,7 +67,7 @@ func TestDPoPClaimsValidate(t *testing.T) {
 		HTTPMethod:      http.MethodGet,
 		HTTPURI:         "https://api.example.com/resource",
 		AccessTokenHash: accessTokenHash,
-		IssuedAt:        now.Add(-10 * time.Second),
+		IssuedAt:        NumericDate(now.Add(-10 * time.Second).Unix()),
 		JTI:             "jti",
 	}
 
@@ -193,7 +193,7 @@ func TestDPoPClaimsValidate(t *testing.T) {
 		"fails if iat is missing": {
 			claims: func() DPoPClaims {
 				claims := validClaims
-				claims.IssuedAt = time.Time{}
+				claims.IssuedAt = NumericDate(0)
 
 				return claims
 			}(),
@@ -209,16 +209,16 @@ func TestDPoPClaimsValidate(t *testing.T) {
 
 				var target *InvalidDPoPProofError
 				require.ErrorAs(t, err, &target)
-				require.ErrorContains(t, err, "iat is missing")
+				require.ErrorContains(t, err, "proof is too old")
 
-				assert.Equal(t, "iat is missing", target.message)
+				assert.Equal(t, "proof is too old", target.message)
 				assert.Equal(t, TypeDPoP, target.tokenType)
 			},
 		},
 		"fails if iat is in the future beyond leeway": {
 			claims: func() DPoPClaims {
 				claims := validClaims
-				claims.IssuedAt = now.Add(leeway + time.Second)
+				claims.IssuedAt = NumericDate(now.Add(leeway + time.Second).Unix())
 
 				return claims
 			}(),
@@ -243,7 +243,7 @@ func TestDPoPClaimsValidate(t *testing.T) {
 		"accepts iat in the future within leeway": {
 			claims: func() DPoPClaims {
 				claims := validClaims
-				claims.IssuedAt = now.Add(leeway / 2)
+				claims.IssuedAt = NumericDate(now.Add(leeway / 2).Unix())
 
 				return claims
 			}(),
@@ -267,7 +267,7 @@ func TestDPoPClaimsValidate(t *testing.T) {
 		"fails if proof is too old": {
 			claims: func() DPoPClaims {
 				claims := validClaims
-				claims.IssuedAt = now.Add(-(maxAge + leeway + time.Second))
+				claims.IssuedAt = NumericDate(now.Add(-(maxAge + leeway + time.Second)).Unix())
 
 				return claims
 			}(),

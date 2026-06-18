@@ -1513,7 +1513,7 @@ func newDPoPProof(t *testing.T, conf dpopProofConfig) string {
 			HTTPMethod:      conf.method,
 			HTTPURI:         conf.uri,
 			AccessTokenHash: conf.accessTokenHash,
-			IssuedAt:        conf.issuedAt,
+			IssuedAt:        NumericDate(conf.issuedAt.Unix()),
 			JTI:             conf.jti,
 		}).
 		Serialize()

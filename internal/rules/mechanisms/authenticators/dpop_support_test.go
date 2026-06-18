@@ -48,7 +48,7 @@ func newDPoPJWT(
 			HTTPMethod:      method,
 			HTTPURI:         uri,
 			AccessTokenHash: accessTokenHash,
-			IssuedAt:        time.Now(),
+			IssuedAt:        oauth2.NumericDate(time.Now().Unix()),
 			JTI:             "jti",
 		}).
 		Serialize()

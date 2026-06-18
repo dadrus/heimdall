@@ -35,12 +35,12 @@ type nonceHandler interface {
 }
 
 type DPoPClaims struct {
-	HTTPMethod      string    `json:"htm"`
-	HTTPURI         string    `json:"htu"`
-	AccessTokenHash string    `json:"ath"`
-	IssuedAt        time.Time `json:"iat"`
-	JTI             string    `json:"jti"`
-	Nonce           string    `json:"nonce,omitempty"`
+	HTTPMethod      string      `json:"htm"`
+	HTTPURI         string      `json:"htu"`
+	AccessTokenHash string      `json:"ath"`
+	IssuedAt        NumericDate `json:"iat"`
+	JTI             string      `json:"jti"`
+	Nonce           string      `json:"nonce,omitempty"`
 }
 
 //nolint:cyclop, funlen
@@ -74,15 +74,16 @@ func (c DPoPClaims) Validate(
 		}
 	}
 
-	if c.IssuedAt.IsZero() {
+	iat := c.IssuedAt.Time()
+	if iat.IsZero() {
 		return NewInvalidDPoPProofError("iat is missing")
 	}
 
-	if now.Add(leeway).Before(c.IssuedAt) {
+	if now.Add(leeway).Before(iat) {
 		return NewInvalidDPoPProofError("iat is in the future")
 	}
 
-	ttl := time.Until(c.IssuedAt.Add(maxAge).Add(leeway))
+	ttl := time.Until(iat.Add(maxAge).Add(leeway))
 	if ttl <= 0 {
 		return NewInvalidDPoPProofError("proof is too old")
 	}
