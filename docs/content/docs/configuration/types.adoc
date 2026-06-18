@@ -1072,7 +1072,7 @@ Following properties are available:
 +
 Enables the generation of OAuth2 token usage error challenges using the `WWW-Authenticate` response header. Defaults to `false`.
 +
-For bearer token usage, the challenge uses the `Bearer` authentication scheme. For DPoP tokens, the challenge uses the `DPoP` authentication scheme.
+For bearer token usage, the challenge uses the `Bearer` authentication scheme. For DPoP-bound token usage, the challenge uses the `DPoP` authentication scheme.
 
 * *`realm`*: _string_ (optional)
 +
@@ -1094,6 +1094,12 @@ Whether to include the required scopes using the optional `scope` parameter if t
 +
 CAUTION: Enabling this option may disclose details about the protected resource's authorization model.
 
+* *`include_dpop_algorithms`*: _boolean_ (optional)
++
+Whether to include the optional `algs` parameter in DPoP challenges if DPoP proof validation fails because the proof uses an unsupported signing algorithm. Defaults to `false`.
++
+If enabled, heimdall includes the configured allowed DPoP proof signing algorithms in the `WWW-Authenticate` header, for example `algs="ES256 ES384"`.
+
 .Token usage error signaling configuration and possible challenges
 ====
 [source, yaml]
@@ -1103,6 +1109,7 @@ realm: example
 error_uri: https://docs.example.org/oauth2/errors
 include_error_description: false
 include_required_scope: false
+include_dpop_algorithms: true
 ----
 
 If a bearer access token is missing, invalid, expired, or does not satisfy the configured assertions, heimdall signals the error using a `Bearer` challenge, for example:
@@ -1124,5 +1131,15 @@ WWW-Authenticate: DPoP realm="example",
                   error="use_dpop_nonce",
                   error_uri="https://docs.example.org/oauth2/errors"
 DPoP-Nonce: <nonce>
+----
+
+If DPoP proof validation fails because the proof uses an unsupported signing algorithm and `include_dpop_algorithms` is enabled, heimdall includes the allowed DPoP proof algorithms:
+
+[source, text]
+----
+WWW-Authenticate: DPoP realm="example",
+                  error="invalid_dpop_proof",
+                  algs="ES256 ES384",
+                  error_uri="https://docs.example.org/oauth2/errors"
 ----
 ====
