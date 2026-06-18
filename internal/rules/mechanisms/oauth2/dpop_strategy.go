@@ -151,31 +151,31 @@ func (s *DPoPStrategy) Assert(
 	cnf := token.Claims.Confirmation
 
 	if cnf == nil {
-		return NewInvalidDPoPProofError("proof of possession is required")
+		return NewInvalidDPoPProofError("proof of possession is required", allowedAlgorithms...)
 	}
 
 	// we're not assuming a token type. it must be explicitly specified
 	if len(token.Type) == 0 && len(token.Claims.TokenType) == 0 {
-		return NewInvalidDPoPProofError("malformed token type - DPoP expected")
+		return NewInvalidDPoPProofError("malformed token type - DPoP expected", allowedAlgorithms...)
 	}
 
 	if len(token.Type) != 0 && token.Type != TypeDPoP {
-		return NewInvalidDPoPProofError("malformed token type - DPoP expected")
+		return NewInvalidDPoPProofError("malformed token type - DPoP expected", allowedAlgorithms...)
 	}
 
 	// RFC 9449 §6.2: If the token_type member is included in the
 	// introspection response, it MUST contain the value DPoP.
 	if len(token.Claims.TokenType) != 0 && token.Claims.TokenType != TypeDPoP {
-		return NewInvalidDPoPProofError("malformed token type - DPoP expected")
+		return NewInvalidDPoPProofError("malformed token type - DPoP expected", allowedAlgorithms...)
 	}
 
 	if len(cnf.JWKThumbprint) == 0 {
-		return NewInvalidDPoPProofError("no JWT thumbprint present")
+		return NewInvalidDPoPProofError("no JWT thumbprint present", allowedAlgorithms...)
 	}
 
 	proof := ctx.Request().Header("DPoP")
 	if len(proof) == 0 {
-		return NewInvalidDPoPProofError("proof is missing")
+		return NewInvalidDPoPProofError("proof is missing", allowedAlgorithms...)
 	}
 
 	proofJWT, err := jwt.ParseSigned(proof, allowedAlgorithms)
