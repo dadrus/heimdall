@@ -265,7 +265,7 @@ proof_of_possession:
 				typed, ok := strategy.(*DPoPStrategy)
 				require.True(t, ok)
 
-				assert.Equal(t, 1 * time.Minute, typed.MaxAge)
+				assert.Equal(t, 1*time.Minute, typed.MaxAge)
 				assert.Nil(t, typed.RequireNonce)
 				assert.Nil(t, typed.ReplayAllowed)
 				assert.Nil(t, typed.setInformer)
