@@ -424,8 +424,10 @@ func TestDPoPStrategyMerge(t *testing.T) {
 		"returns receiver if other is nil": {
 			strategy: &DPoPStrategy{
 				MaxAge:        time.Minute,
-				RequireNonce:  new(bool),
-				ReplayAllowed: new(bool),
+				RequireNonce:  new(true),
+				ReplayAllowed: new(true),
+				currentKID:    "1",
+				setInformer:   &secrets.SecretSetInformer[nonceManager]{},
 			},
 			assert: func(t *testing.T, merged PoPStrategy) {
 				t.Helper()
@@ -435,9 +437,11 @@ func TestDPoPStrategyMerge(t *testing.T) {
 
 				assert.Equal(t, time.Minute, typed.MaxAge)
 				require.NotNil(t, typed.RequireNonce)
-				assert.False(t, *typed.RequireNonce)
+				assert.True(t, *typed.RequireNonce)
 				require.NotNil(t, typed.ReplayAllowed)
-				assert.False(t, *typed.ReplayAllowed)
+				assert.True(t, *typed.ReplayAllowed)
+				assert.Equal(t, "1", typed.currentKID)
+				assert.NotNil(t, typed.setInformer)
 			},
 		},
 		"returns receiver if other has different strategy type": {
@@ -453,16 +457,18 @@ func TestDPoPStrategyMerge(t *testing.T) {
 				assert.Equal(t, time.Minute, typed.MaxAge)
 			},
 		},
-		"keeps explicitly configured values": {
+		"keeps explicitly disabled nonce requirement": {
 			strategy: &DPoPStrategy{
 				MaxAge:        time.Minute,
-				RequireNonce:  new(bool),
-				ReplayAllowed: new(bool),
+				RequireNonce:  new(false),
+				ReplayAllowed: new(false),
 			},
 			other: &DPoPStrategy{
 				MaxAge:        2 * time.Minute,
 				RequireNonce:  new(true),
 				ReplayAllowed: new(true),
+				currentKID:    "1",
+				setInformer:   &secrets.SecretSetInformer[nonceManager]{},
 			},
 			assert: func(t *testing.T, merged PoPStrategy) {
 				t.Helper()
@@ -475,14 +481,73 @@ func TestDPoPStrategyMerge(t *testing.T) {
 				assert.False(t, *typed.RequireNonce)
 				require.NotNil(t, typed.ReplayAllowed)
 				assert.False(t, *typed.ReplayAllowed)
+				assert.Empty(t, typed.currentKID)
+				assert.Nil(t, typed.setInformer)
+			},
+		},
+		"keeps explicitly enabled nonce requirement": {
+			strategy: &DPoPStrategy{
+				MaxAge:        time.Minute,
+				RequireNonce:  new(true),
+				ReplayAllowed: new(true),
+				currentKID:    "1",
+				setInformer:   &secrets.SecretSetInformer[nonceManager]{},
+			},
+			other: &DPoPStrategy{
+				MaxAge:        2 * time.Minute,
+				RequireNonce:  new(false),
+				ReplayAllowed: new(false),
+			},
+			assert: func(t *testing.T, merged PoPStrategy) {
+				t.Helper()
+
+				typed, ok := merged.(*DPoPStrategy)
+				require.True(t, ok)
+
+				assert.Equal(t, time.Minute, typed.MaxAge)
+				require.NotNil(t, typed.RequireNonce)
+				assert.True(t, *typed.RequireNonce)
+				require.NotNil(t, typed.ReplayAllowed)
+				assert.True(t, *typed.ReplayAllowed)
+				assert.Equal(t, "1", typed.currentKID)
+				assert.NotNil(t, typed.setInformer)
+			},
+		},
+		"uses nonce manager from other if nonce requirement is inherited": {
+			strategy: &DPoPStrategy{},
+			other: &DPoPStrategy{
+				MaxAge:        2 * time.Minute,
+				RequireNonce:  new(true),
+				ReplayAllowed: new(false),
+				currentKID:    "1",
+				setInformer:   &secrets.SecretSetInformer[nonceManager]{},
+			},
+			assert: func(t *testing.T, merged PoPStrategy) {
+				t.Helper()
+
+				typed, ok := merged.(*DPoPStrategy)
+				require.True(t, ok)
+
+				assert.Equal(t, 2*time.Minute, typed.MaxAge)
+
+				require.NotNil(t, typed.RequireNonce)
+				assert.True(t, *typed.RequireNonce)
+
+				require.NotNil(t, typed.ReplayAllowed)
+				assert.False(t, *typed.ReplayAllowed)
+
+				assert.Equal(t, "1", typed.currentKID)
+				assert.NotNil(t, typed.setInformer)
 			},
 		},
 		"uses values from other for zero values": {
 			strategy: &DPoPStrategy{},
 			other: &DPoPStrategy{
 				MaxAge:        2 * time.Minute,
-				RequireNonce:  new(true),
-				ReplayAllowed: new(true),
+				RequireNonce:  new(false),
+				ReplayAllowed: new(false),
+				currentKID:    "1",
+				setInformer:   &secrets.SecretSetInformer[nonceManager]{},
 			},
 			assert: func(t *testing.T, merged PoPStrategy) {
 				t.Helper()
@@ -492,9 +557,11 @@ func TestDPoPStrategyMerge(t *testing.T) {
 
 				assert.Equal(t, 2*time.Minute, typed.MaxAge)
 				require.NotNil(t, typed.RequireNonce)
-				assert.True(t, *typed.RequireNonce)
+				assert.False(t, *typed.RequireNonce)
 				require.NotNil(t, typed.ReplayAllowed)
-				assert.True(t, *typed.ReplayAllowed)
+				assert.False(t, *typed.ReplayAllowed)
+				assert.Empty(t, typed.currentKID)
+				assert.Nil(t, typed.setInformer)
 			},
 		},
 	} {

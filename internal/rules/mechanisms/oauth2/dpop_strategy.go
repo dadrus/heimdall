@@ -16,7 +16,6 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/nonce"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
@@ -118,11 +117,22 @@ func (s *DPoPStrategy) Merge(other PoPStrategy) PoPStrategy {
 		return s
 	}
 
-	s.MaxAge = x.IfThenElse(s.MaxAge != 0, s.MaxAge, typed.MaxAge)
-	s.RequireNonce = x.IfThenElse(s.RequireNonce != nil,
-		s.RequireNonce, typed.RequireNonce)
-	s.ReplayAllowed = x.IfThenElse(s.ReplayAllowed != nil,
-		s.ReplayAllowed, typed.ReplayAllowed)
+	if s.MaxAge == 0 {
+		s.MaxAge = typed.MaxAge
+	}
+
+	if s.RequireNonce == nil {
+		s.RequireNonce = typed.RequireNonce
+
+		if s.RequireNonce != nil && *s.RequireNonce {
+			s.setInformer = typed.setInformer
+			s.currentKID = typed.currentKID
+		}
+	}
+
+	if s.ReplayAllowed == nil {
+		s.ReplayAllowed = typed.ReplayAllowed
+	}
 
 	return s
 }

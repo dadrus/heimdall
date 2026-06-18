@@ -37,10 +37,6 @@ func NewToken(tokenType TokenType, value string) (*Token, error) {
 		return nil, NewInvalidTokenError(tokenType, "invalid JWT format")
 	}
 
-	if len(parsed.Headers) == 0 {
-		return nil, NewInvalidTokenError(tokenType, "missing JWT header")
-	}
-
 	var rawClaims map[string]any
 	if err := parsed.UnsafeClaimsWithoutVerification(&rawClaims); err != nil {
 		return nil, NewInvalidTokenError(tokenType, "failed to deserialize JWT payload")
