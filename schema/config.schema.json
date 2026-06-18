@@ -1406,9 +1406,10 @@
           "additionalProperties": false,
           "properties": {
             "max_age": {
-              "description": "Maximum accepted age of a DPoP proof.",
+              "description": "Maximum accepted age of a DPoP proof. Defaults to 1m",
               "type": "string",
-              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "1m"
             },
             "nonce_required": {
               "description": "Whether a valid DPoP nonce is required.",

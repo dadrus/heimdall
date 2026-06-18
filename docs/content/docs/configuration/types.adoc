@@ -710,8 +710,8 @@ Proof of possession is a kind of abstract assertion type, so you have to define 
 
 A Proof of Possession assertion configuration entry must contain the following properties:
 
-* `type` - The type of the proof of possession assertion.
-* `config` - The type-specific configuration.
+* `type` - The mandatory type of the proof of possession assertion.
+* `config` - The optional type-specific configuration.
 
 Available proof of possession assertion types are described in the following sections.
 
@@ -721,11 +721,11 @@ This assertion validates DPoP-bound access tokens according to https://www.rfc-e
 
 When configured, heimdall validates the DPoP proof JWT against the presented access token and the current request. This includes validation of the proof signature, the access token binding, the HTTP method and URI binding, proof freshness, and replay protection.
 
-`type` must be set to `dpop`. `config` supports the following properties:
+`type` must be set to `dpop`. `config` is optional and supports the following properties:
 
 * *`max_age`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
-The maximum allowed age of a DPoP proof based on its `iat` claim. Defaults to 1m.
+The maximum allowed age of a DPoP proof based on its `iat` claim. Defaults to `1m`.
 +
 If nonce validation is enabled, this value is also used as the maximum allowed age of a nonce.
 
