@@ -735,11 +735,13 @@ Whether the DPoP proof must contain a nonce previously requested by heimdall. De
 +
 If set to `true`, heimdall requires a link:{{< relref "/docs/operations/secret_management.adoc#_master_key" >}}[master key] to generate and validate DPoP nonces. If DPoP nonce validation is enabled and the master key is not configured, heimdall refuses to start or rejects rules which apply the configuration at rule level.
 
-* *`replay_allowed`*: _boolean_ (optional)
+* *`replay_allowed`*: *boolean* (optional)
 +
 Whether replay of DPoP proofs is allowed. Defaults to `false`.
 +
 If set to `false`, heimdall rejects replayed DPoP proofs based on the `jti` claim.
++
+NOTE: Replay detection is performed on a best-effort basis and depends on the consistency guarantees of the configured link:{{< relref "/docs/operations/cache.adoc" >}}[cache backend].
 
 .DPoP Assertion configuration
 ====

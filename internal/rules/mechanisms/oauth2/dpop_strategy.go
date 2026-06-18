@@ -197,7 +197,9 @@ func (s *DPoPStrategy) Assert(
 		return NewInvalidDPoPProofError("no JWK present")
 	}
 
-	if !header.JSONWebKey.Valid() {
+	if !header.JSONWebKey.IsPublic() || !header.JSONWebKey.Valid() {
+		// with header.JSONWebKey.IsPublic() we ensure no symmetric keys can be
+		// used even though they would be allowed by allowedAlgorithms
 		return NewInvalidDPoPProofError("invalid public JWK")
 	}
 

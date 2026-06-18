@@ -580,7 +580,7 @@ func TestDPoPStrategyAssert(t *testing.T) {
 
 	now := time.Now().UTC()
 	leeway := 10 * time.Second
-	allowedAlgorithms := []jose.SignatureAlgorithm{jose.ES256}
+	allowedAlgorithms := []jose.SignatureAlgorithm{jose.ES256, jose.HS256}
 
 	key := newDPoPTestKey(t)
 	jkt := dpopTestJWKThumbprint(t, key)
@@ -1273,6 +1273,60 @@ func TestDPoPStrategyAssert(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		"fails if proof uses symmetric embedded jwk even if algorithm is allowed": {
+			conf: map[string]any{
+				"max_age": "1m",
+			},
+			token: &Token{
+				Raw:  rawToken,
+				Type: TypeDPoP,
+				Claims: Claims{
+					Confirmation: &Confirmation{JWKThumbprint: jkt},
+				},
+			},
+			setup: func(
+				t *testing.T,
+				_ *app.ContextMock,
+				_ *secretsmocks.ResolverMock,
+				ctx *pipelineMocks.ContextMock,
+				_ *cacheMocks.CacheMock,
+			) {
+				t.Helper()
+
+				key := stringx.ToBytes("0123456789abcdef0123456789abcdef")
+				hash := sha256.Sum256(stringx.ToBytes(rawToken))
+
+				proof := newDPoPProof(t, dpopProofConfig{
+					headerKey:       key,
+					signingKey:      key,
+					rawToken:        rawToken,
+					method:          http.MethodGet,
+					uri:             "https://api.example.com/resource",
+					issuedAt:        now.Add(-10 * time.Second),
+					jti:             "jti",
+					algorithm:       jose.HS256,
+					typeHeader:      "dpop+jwt",
+					includeJWK:      true,
+					accessTokenHash: base64.RawURLEncoding.EncodeToString(hash[:]),
+				})
+
+				requestFunctions := pipelineMocks.NewRequestFunctionsMock(t)
+				requestFunctions.EXPECT().Header("DPoP").Return(proof)
+
+				ctx.EXPECT().Request().Return(&pipeline.Request{
+					RequestFunctions: requestFunctions,
+				})
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				var target *InvalidDPoPProofError
+				require.ErrorAs(t, err, &target)
+				assert.Equal(t, "failed to parse proof", target.message)
+				require.ErrorContains(t, err, "invalid embedded jwk")
+				require.ErrorContains(t, err, "must be public key")
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
@@ -1415,8 +1469,8 @@ func (s noopPoPStrategy) Merge(PoPStrategy) PoPStrategy {
 }
 
 type dpopProofConfig struct {
-	headerKey       *ecdsa.PrivateKey
-	signingKey      *ecdsa.PrivateKey
+	headerKey       any
+	signingKey      any
 	rawToken        string
 	method          string
 	uri             string
@@ -1433,8 +1487,13 @@ func newDPoPProof(t *testing.T, conf dpopProofConfig) string {
 
 	options := (&jose.SignerOptions{}).WithType(jose.ContentType(conf.typeHeader))
 	if conf.includeJWK {
+		headerKey := conf.headerKey
+		if publicKeyProvider, ok := conf.headerKey.(interface{ Public() crypto.PublicKey }); ok {
+			headerKey = publicKeyProvider.Public()
+		}
+
 		options = options.WithHeader("jwk", jose.JSONWebKey{
-			Key:       conf.headerKey.Public(),
+			Key:       headerKey,
 			Algorithm: string(conf.algorithm),
 			Use:       "sig",
 		})
