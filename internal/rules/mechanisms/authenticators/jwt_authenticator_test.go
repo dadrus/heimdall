@@ -2978,7 +2978,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				dpopKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 				require.NoError(t, err)
 
-				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, oauth2.TypeDPoP, true)
+				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, oauth2.TypeDPoP)
 
 				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
 					endpoint.WithHeader("Accept", "application/json"),
@@ -3072,7 +3072,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				dpopKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 				require.NoError(t, err)
 
-				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, oauth2.TypeDPoP, true)
+				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, oauth2.TypeDPoP)
 				requestURI := "https://api.example.com/resource"
 
 				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
@@ -3168,7 +3168,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				dpopKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 				require.NoError(t, err)
 
-				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, oauth2.TypeDPoP, true)
+				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, oauth2.TypeDPoP)
 				requestURI := "https://api.example.com/resource"
 
 				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
@@ -3264,7 +3264,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				dpopKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 				require.NoError(t, err)
 
-				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, "", true)
+				rawToken := createDPoPBoundJWT(t, keyOnlyEntry, principalID, issuer, audience, dpopKey, "")
 
 				ep := endpointtestsupport.NewEndpoint(t, jwksSrv.URL,
 					endpoint.WithHeader("Accept", "application/json"),
@@ -3702,19 +3702,15 @@ func createDPoPBoundJWT(
 	audience string,
 	dpopKey *ecdsa.PrivateKey,
 	tokenType oauth2.TokenType,
-	setKid bool,
 ) string {
 	t.Helper()
 
 	kt, err := (&jose.JSONWebKey{Key: dpopKey.Public()}).Thumbprint(crypto.SHA256)
 	require.NoError(t, err)
 
-	signerOpts := &jose.SignerOptions{}
-	signerOpts = signerOpts.WithType("JWT")
-
-	if setKid {
-		signerOpts = signerOpts.WithHeader("kid", secret.KeyID())
-	}
+	signerOpts := (&jose.SignerOptions{}).
+		WithType("JWT").
+		WithHeader("kid", secret.KeyID())
 
 	signer, err := jose.NewSigner(
 		jose.SigningKey{

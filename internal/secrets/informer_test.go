@@ -1,4 +1,4 @@
-// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus [dadrus@gmx.de](mailto:dadrus@gmx.de)
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -1005,6 +1005,315 @@ func TestCertificateBundleInformerRegistersOnUpdateCallback(t *testing.T) {
 	require.True(t, userCallbackCalled)
 }
 
+func TestNewSecretSetInformer(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		setup  func(t *testing.T, resolver *testResolver, handle *testHandle[[]Secret])
+		opts   []SecretSetInformerOption[string]
+		assert func(
+			t *testing.T,
+			informer *SecretSetInformer[string],
+			err error,
+			resolver *testResolver,
+			handle *testHandle[[]Secret],
+		)
+	}{
+		"creates informer": {
+			opts: []SecretSetInformerOption[string]{
+				WithConverter(func(secrets []Secret) (string, error) {
+					return secrets[0].Selector(), nil
+				}),
+			},
+			setup: func(t *testing.T, resolver *testResolver, handle *testHandle[[]Secret]) {
+				t.Helper()
+
+				resolver.secretSetHandle = handle
+			},
+			assert: func(
+				t *testing.T,
+				informer *SecretSetInformer[string],
+				err error,
+				resolver *testResolver,
+				handle *testHandle[[]Secret],
+			) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, informer)
+				require.Equal(t, Reference{Source: "src", Selector: "selector"}, resolver.secretSetRef)
+				require.Len(t, handle.readiness, 1)
+				require.NotNil(t, handle.callback)
+			},
+		},
+		"returns resolver error": {
+			setup: func(t *testing.T, resolver *testResolver, _ *testHandle[[]Secret]) {
+				t.Helper()
+
+				resolver.secretSetErr = assert.AnError
+			},
+			assert: func(
+				t *testing.T,
+				informer *SecretSetInformer[string],
+				err error,
+				_ *testResolver,
+				_ *testHandle[[]Secret],
+			) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, assert.AnError)
+				require.Nil(t, informer)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			resolver := &testResolver{}
+			handle := newTestHandle[[]Secret]()
+
+			tc.setup(t, resolver, handle)
+
+			informer, err := NewSecretSetInformer(
+				resolver,
+				Reference{Source: "src", Selector: "selector"},
+				tc.opts...,
+			)
+
+			tc.assert(t, informer, err, resolver, handle)
+		})
+	}
+}
+
+func TestSecretSetInformerGet(t *testing.T) {
+	t.Parallel()
+
+	secretSet := []Secret{
+		types.NewStringSecret("selector", "value"),
+	}
+
+	for uc, tc := range map[string]struct {
+		opts               []SecretSetInformerOption[string]
+		emit               func(t *testing.T, handle *testHandle[[]Secret]) error
+		wantValue          string
+		wantOK             bool
+		wantConverterCalls int
+		wantErr            error
+	}{
+		"returns false before first successful update": {
+			opts: []SecretSetInformerOption[string]{
+				WithConverter(func(secrets []Secret) (string, error) {
+					return secrets[0].Selector(), nil
+				}),
+			},
+			wantOK: false,
+		},
+		"returns converted last good value": {
+			opts: []SecretSetInformerOption[string]{
+				WithConverter(func(secrets []Secret) (string, error) {
+					return secrets[0].Selector(), nil
+				}),
+			},
+			emit: func(t *testing.T, handle *testHandle[[]Secret]) error {
+				t.Helper()
+
+				return handle.emit(t.Context(), secretSet)
+			},
+			wantValue:          "selector",
+			wantOK:             true,
+			wantConverterCalls: 1,
+		},
+		"keeps last good value after failed conversion": {
+			opts: []SecretSetInformerOption[string]{
+				WithConverter(func(secrets []Secret) (string, error) {
+					if secrets[0].Selector() == "bad" {
+						return "", assert.AnError
+					}
+
+					return secrets[0].Selector(), nil
+				}),
+			},
+			emit: func(t *testing.T, handle *testHandle[[]Secret]) error {
+				t.Helper()
+
+				if err := handle.emit(t.Context(), secretSet); err != nil {
+					return err
+				}
+
+				return handle.emit(t.Context(), []Secret{
+					types.NewStringSecret("bad", "value"),
+				})
+			},
+			wantValue:          "selector",
+			wantOK:             true,
+			wantConverterCalls: 2,
+			wantErr:            assert.AnError,
+		},
+		"identity converter cannot cast": {
+			emit: func(t *testing.T, handle *testHandle[[]Secret]) error {
+				t.Helper()
+
+				return handle.emit(t.Context(), secretSet)
+			},
+			wantOK:  false,
+			wantErr: ErrSecretConversionFailed,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			handle := newTestHandle[[]Secret]()
+			resolver := &testResolver{secretSetHandle: handle}
+
+			converterCalls := 0
+			opts := wrapSecretSetConverters(tc.opts, &converterCalls)
+
+			informer, err := NewSecretSetInformer(
+				resolver,
+				Reference{Source: "src", Selector: "selector"},
+				opts...,
+			)
+			require.NoError(t, err)
+
+			if tc.emit != nil {
+				err = tc.emit(t, handle)
+				if tc.wantErr != nil {
+					require.Error(t, err)
+					require.ErrorIs(t, err, tc.wantErr)
+				} else {
+					require.NoError(t, err)
+				}
+			}
+
+			got, ok := informer.Get()
+
+			require.Equal(t, tc.wantOK, ok)
+			require.Equal(t, tc.wantValue, got)
+			require.Equal(t, tc.wantConverterCalls, converterCalls)
+		})
+	}
+}
+
+func TestSecretSetInformerGetUsesIdentityConverter(t *testing.T) {
+	t.Parallel()
+
+	secretSet := []Secret{
+		types.NewStringSecret("selector", "value"),
+	}
+	handle := newTestHandle[[]Secret]()
+	resolver := &testResolver{secretSetHandle: handle}
+
+	informer, err := NewSecretSetInformer[[]Secret](
+		resolver,
+		Reference{Source: "src", Selector: "selector"},
+	)
+	require.NoError(t, err)
+
+	require.NoError(t, handle.emit(t.Context(), secretSet))
+
+	got, ok := informer.Get()
+
+	require.True(t, ok)
+	require.Equal(t, secretSet, got)
+}
+
+func TestSecretSetInformerAwaitReady(t *testing.T) {
+	t.Parallel()
+
+	secretSet := []Secret{
+		types.NewStringSecret("selector", "value"),
+	}
+
+	for uc, tc := range map[string]struct {
+		converter func(t *testing.T, secrets []Secret) (string, error)
+		assert    func(t *testing.T, err error)
+	}{
+		"returns nil after successful conversion": {
+			converter: func(t *testing.T, secrets []Secret) (string, error) {
+				t.Helper()
+
+				return secrets[0].Selector(), nil
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+			},
+		},
+		"returns last conversion error on context cancellation": {
+			converter: func(t *testing.T, _ []Secret) (string, error) {
+				t.Helper()
+
+				return "", assert.AnError
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, assert.AnError)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			handle := newTestHandle[[]Secret]()
+			resolver := &testResolver{secretSetHandle: handle}
+
+			_, err := NewSecretSetInformer(
+				resolver,
+				Reference{Source: "src", Selector: "selector"},
+				WithConverter(func(secrets []Secret) (string, error) {
+					return tc.converter(t, secrets)
+				}),
+			)
+			require.NoError(t, err)
+
+			_ = handle.emit(t.Context(), secretSet)
+
+			ctx, cancel := context.WithCancel(t.Context())
+			cancel()
+
+			tc.assert(t, handle.awaitReady(ctx))
+		})
+	}
+}
+
+func TestSecretSetInformerRegistersOnUpdateCallback(t *testing.T) {
+	t.Parallel()
+
+	secretSet := []Secret{
+		types.NewStringSecret("selector", "value"),
+	}
+	handle := newTestHandle[[]Secret]()
+	resolver := &testResolver{secretSetHandle: handle}
+
+	userCallbackCalled := false
+
+	informer, err := NewSecretSetInformer(
+		resolver,
+		Reference{Source: "src", Selector: "selector"},
+		WithConverter(func(secrets []Secret) (string, error) {
+			return secrets[0].Selector(), nil
+		}),
+		WithUpdateCallback(func(_ context.Context, got []Secret, value string) error {
+			userCallbackCalled = true
+
+			require.Equal(t, secretSet, got)
+			require.Equal(t, "selector", value)
+
+			return nil
+		}),
+	)
+
+	require.NoError(t, err)
+	require.NotNil(t, informer)
+
+	require.NoError(t, handle.emit(t.Context(), secretSet))
+	require.True(t, userCallbackCalled)
+}
+
 func TestRefreshOnUpdate(t *testing.T) {
 	t.Parallel()
 
@@ -1232,10 +1541,39 @@ func wrapCertificateBundleConverters(
 	return wrapped
 }
 
+func wrapSecretSetConverters(
+	opts []SecretSetInformerOption[string],
+	calls *int,
+) []SecretSetInformerOption[string] {
+	wrapped := append([]SecretSetInformerOption[string]{}, opts...)
+
+	for idx, opt := range opts {
+		var cfg informerOptions[[]Secret, string]
+		opt(&cfg)
+
+		if cfg.converter == nil {
+			continue
+		}
+
+		converter := cfg.converter
+		wrapped[idx] = WithConverter(func(secrets []Secret) (string, error) {
+			*calls++
+
+			return converter(secrets)
+		})
+	}
+
+	return wrapped
+}
+
 type testResolver struct {
 	secretHandle SecretHandle
 	secretErr    error
 	secretRef    Reference
+
+	secretSetHandle SecretSetHandle
+	secretSetErr    error
+	secretSetRef    Reference
 
 	credentialsHandle CredentialsHandle
 	credentialsErr    error
@@ -1256,8 +1594,14 @@ func (r *testResolver) Secret(ref Reference) (SecretHandle, error) {
 	return r.secretHandle, nil
 }
 
-func (r *testResolver) SecretSet(_ Reference) (SecretSetHandle, error) {
-	panic("not implemented")
+func (r *testResolver) SecretSet(ref Reference) (SecretSetHandle, error) {
+	r.secretSetRef = ref
+
+	if r.secretSetErr != nil {
+		return nil, r.secretSetErr
+	}
+
+	return r.secretSetHandle, nil
 }
 
 func (r *testResolver) Credentials(ref Reference) (CredentialsHandle, error) {
@@ -1332,4 +1676,5 @@ var (
 	_ CredentialsHandle       = (*testHandle[Credentials])(nil)
 	_ CertificateBundleHandle = (*testHandle[CertificateBundle])(nil)
 	_ readinessRegistrar      = (*testHandle[Secret])(nil)
+	_ readinessRegistrar      = (*testHandle[[]Secret])(nil)
 )
