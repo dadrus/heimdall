@@ -70,6 +70,10 @@ func newDPoPStrategy(ctx app.Context, conf map[string]any) (PoPStrategy, error) 
 		)
 	}
 
+	if strategy.MaxAge == 0 {
+		strategy.MaxAge = 1 * time.Minute
+	}
+
 	nonceRequired := strategy.RequireNonce != nil && *strategy.RequireNonce
 	if !nonceRequired {
 		return &strategy, nil

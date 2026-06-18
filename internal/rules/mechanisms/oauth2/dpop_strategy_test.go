@@ -151,7 +151,7 @@ func TestNewDPoPStrategy(t *testing.T) {
 				typed, ok := strategy.(*DPoPStrategy)
 				require.True(t, ok)
 
-				assert.Zero(t, typed.MaxAge)
+				assert.Equal(t, 1*time.Minute, typed.MaxAge)
 				assert.Nil(t, typed.RequireNonce)
 				assert.Nil(t, typed.ReplayAllowed)
 				assert.Nil(t, typed.setInformer)
@@ -656,9 +656,7 @@ func TestDPoPStrategyAssert(t *testing.T) {
 			},
 		},
 		"fails if confirmation is missing": {
-			conf: map[string]any{
-				"max_age": "1m",
-			},
+			conf: map[string]any{},
 			token: &Token{
 				Raw:  rawToken,
 				Type: TypeDPoP,
@@ -672,9 +670,7 @@ func TestDPoPStrategyAssert(t *testing.T) {
 			},
 		},
 		"fails if token type is missing": {
-			conf: map[string]any{
-				"max_age": "1m",
-			},
+			conf: map[string]any{"max_age": "1m"},
 			token: &Token{
 				Raw: rawToken,
 				Claims: Claims{
@@ -690,10 +686,7 @@ func TestDPoPStrategyAssert(t *testing.T) {
 			},
 		},
 		"accepts dpop token type from introspection claims": {
-			conf: map[string]any{
-				"max_age":        "1m",
-				"replay_allowed": true,
-			},
+			conf: map[string]any{"replay_allowed": true},
 			token: &Token{
 				Raw: rawToken,
 				Claims: Claims{
@@ -732,9 +725,7 @@ func TestDPoPStrategyAssert(t *testing.T) {
 			},
 		},
 		"fails if authorization token type is not dpop": {
-			conf: map[string]any{
-				"max_age": "1m",
-			},
+			conf: map[string]any{},
 			token: &Token{
 				Raw:  rawToken,
 				Type: TypeBearer,
@@ -1223,6 +1214,63 @@ func TestDPoPStrategyAssert(t *testing.T) {
 
 				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "master key is not available")
+			},
+		},
+		"accepts proof older than leeway but younger than default max age": {
+			conf: map[string]any{
+				"replay_allowed": true,
+			},
+			token: &Token{
+				Raw:  rawToken,
+				Type: TypeDPoP,
+				Claims: Claims{
+					Confirmation: &Confirmation{
+						JWKThumbprint: jkt,
+					},
+				},
+			},
+			setup: func(
+				t *testing.T,
+				_ *app.ContextMock,
+				_ *secretsmocks.ResolverMock,
+				ctx *pipelineMocks.ContextMock,
+				_ *cacheMocks.CacheMock,
+			) {
+				t.Helper()
+
+				hash := sha256.Sum256(stringx.ToBytes(rawToken))
+
+				proof := newDPoPProof(t, dpopProofConfig{
+					headerKey:       key,
+					signingKey:      key,
+					rawToken:        rawToken,
+					method:          http.MethodGet,
+					uri:             "https://api.example.com/resource",
+					issuedAt:        now.Add(-30 * time.Second),
+					jti:             "jti",
+					algorithm:       jose.ES256,
+					typeHeader:      "dpop+jwt",
+					includeJWK:      true,
+					accessTokenHash: base64.RawURLEncoding.EncodeToString(hash[:]),
+				})
+
+				requestFunctions := pipelineMocks.NewRequestFunctionsMock(t)
+				requestFunctions.EXPECT().Header("DPoP").Return(proof)
+
+				parsedURL, err := url.Parse("https://api.example.com/resource?foo=bar#fragment")
+				require.NoError(t, err)
+
+				ctx.EXPECT().Context().Return(t.Context())
+				ctx.EXPECT().Request().Return(&pipeline.Request{
+					Method:           http.MethodGet,
+					URL:              &pipeline.URL{URL: *parsedURL},
+					RequestFunctions: requestFunctions,
+				})
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
 			},
 		},
 	} {
