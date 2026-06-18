@@ -1114,7 +1114,7 @@ include_dpop_algorithms: true
 
 If a bearer access token is missing, invalid, expired, or does not satisfy the configured assertions, heimdall signals the error using a `Bearer` challenge, for example:
 
-[source, text]
+[source, yaml]
 ----
 WWW-Authenticate: Bearer realm="example",
                   error="invalid_token",
@@ -1125,7 +1125,7 @@ Line breaks are used to enhance readability.
 
 And if e.g., a DPoP token failed validation due to invalid nonce, heimdall returns a `use_dpop_nonce` challenge and includes a fresh nonce in the `DPoP-Nonce` response header:
 
-[source, text]
+[source, yaml]
 ----
 WWW-Authenticate: DPoP realm="example",
                   error="use_dpop_nonce",
@@ -1135,7 +1135,7 @@ DPoP-Nonce: <nonce>
 
 If DPoP proof validation fails because the proof uses an unsupported signing algorithm and `include_dpop_algorithms` is enabled, heimdall includes the allowed DPoP proof algorithms:
 
-[source, text]
+[source, yaml]
 ----
 WWW-Authenticate: DPoP realm="example",
                   error="invalid_dpop_proof",
