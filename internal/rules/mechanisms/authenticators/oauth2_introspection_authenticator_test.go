@@ -18,9 +18,15 @@ package authenticators
 
 import (
 	"context"
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -1083,7 +1089,7 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrInternal)
-				require.ErrorContains(t, err, "received introspection response")
+				require.ErrorContains(t, err, "failed to unmarshal introspection response")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -2099,6 +2105,449 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.NotEmpty(t, principal.Attributes["nbf"])
 				assert.NotEmpty(t, principal.Attributes["iat"])
 				assert.NotEmpty(t, principal.Attributes["exp"])
+			},
+		},
+		"with default cache, cache hit and failing dpop proof validation": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						IntrospectionEndpoint: endpointtestsupport.NewEndpoint(t, srv.URL,
+							endpoint.WithMethod(http.MethodPost),
+							endpoint.WithHeader("Content-Type", "application/x-www-form-urlencoded"),
+							endpoint.WithHeader("Accept", "application/json"),
+						),
+					}, nil
+				}),
+				a: oauth2.Expectation{
+					TrustedIssuers:    []string{"foobar"},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES256},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+					ProofOfPossession: &oauth2.DPoPStrategy{
+						MaxAge:        time.Minute,
+						ReplayAllowed: new(true),
+					},
+				},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				principalName: DefaultPrincipalName,
+			},
+			configureMocks: func(
+				t *testing.T,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+				require.NoError(t, err)
+
+				kt, err := (&jose.JSONWebKey{Key: key.Public()}).Thumbprint(crypto.SHA256)
+				require.NoError(t, err)
+
+				ads.EXPECT().GetAuthData(ctx).
+					Return(extractors.AuthData{
+						Scheme: "DPoP",
+						Value:  "test_access_token",
+					}, nil)
+
+				req := pipelinemocks.NewRequestFunctionsMock(t)
+				req.EXPECT().Header("DPoP").Return("")
+
+				ctx.EXPECT().Request().
+					Return(&pipeline.Request{
+						RequestFunctions: req,
+						Method:           http.MethodGet,
+						URL: &pipeline.URL{
+							URL: url.URL{
+								Scheme: "https",
+								Host:   "api.example.com",
+								Path:   "/resource",
+							},
+						},
+					})
+
+				rawIntrospectResponse, err := json.Marshal(map[string]any{
+					"active":     true,
+					"scope":      "foo bar",
+					"username":   "unknown",
+					"token_type": "DPoP",
+					"aud":        "bar",
+					"sub":        "foo",
+					"iss":        "foobar",
+					"iat":        time.Now().Unix(),
+					"nbf":        time.Now().Unix(),
+					"exp":        time.Now().Unix() + 30,
+					"cnf": map[string]any{
+						"jkt": base64.RawURLEncoding.EncodeToString(kt),
+					},
+				})
+				require.NoError(t, err)
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).
+					Return(rawIntrospectResponse, nil)
+			},
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
+				t.Helper()
+
+				assert.False(t, introspectionEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.ErrorContains(t, err, "assertion conditions")
+				require.ErrorContains(t, err, "proof is missing")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
+		"with default cache, cache hit and successful dpop proof validation": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						IntrospectionEndpoint: endpointtestsupport.NewEndpoint(t, srv.URL,
+							endpoint.WithMethod(http.MethodPost),
+							endpoint.WithHeader("Content-Type", "application/x-www-form-urlencoded"),
+							endpoint.WithHeader("Accept", "application/json"),
+						),
+					}, nil
+				}),
+				a: oauth2.Expectation{
+					TrustedIssuers:    []string{"foobar"},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES256},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+					ProofOfPossession: &oauth2.DPoPStrategy{
+						MaxAge:        time.Minute,
+						ReplayAllowed: new(true),
+					},
+				},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				principalName: DefaultPrincipalName,
+			},
+			configureMocks: func(
+				t *testing.T,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+				require.NoError(t, err)
+
+				kt, err := (&jose.JSONWebKey{Key: key.Public()}).Thumbprint(crypto.SHA256)
+				require.NoError(t, err)
+
+				rawToken := "test_access_token"
+				requestURI := "https://api.example.com/resource"
+
+				ads.EXPECT().GetAuthData(ctx).
+					Return(extractors.AuthData{
+						Scheme: "DPoP",
+						Value:  rawToken,
+					}, nil)
+
+				req := pipelinemocks.NewRequestFunctionsMock(t)
+				req.EXPECT().Header("DPoP").
+					Return(newDPoPJWT(t, key, rawToken, http.MethodGet, requestURI))
+
+				ctx.EXPECT().Request().
+					Return(&pipeline.Request{
+						RequestFunctions: req,
+						Method:           http.MethodGet,
+						URL: &pipeline.URL{
+							URL: url.URL{
+								Scheme: "https",
+								Host:   "api.example.com",
+								Path:   "/resource",
+							},
+						},
+					})
+
+				rawIntrospectResponse, err := json.Marshal(map[string]any{
+					"active":     true,
+					"scope":      "foo bar",
+					"username":   "unknown",
+					"token_type": "DPoP",
+					"aud":        "bar",
+					"sub":        "foo",
+					"iss":        "foobar",
+					"iat":        time.Now().Unix(),
+					"nbf":        time.Now().Unix(),
+					"exp":        time.Now().Unix() + 30,
+					"cnf": map[string]any{
+						"jkt": base64.RawURLEncoding.EncodeToString(kt),
+					},
+				})
+				require.NoError(t, err)
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).
+					Return(rawIntrospectResponse, nil)
+			},
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
+				t.Helper()
+
+				assert.False(t, introspectionEndpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Equal(t, "foo", sub.ID())
+				require.Len(t, sub.Attributes(), 11)
+				assert.Equal(t, "foo bar", sub.Attributes()["scope"])
+				assert.Equal(t, true, sub.Attributes()["active"]) //nolint:testifylint
+				assert.Equal(t, "unknown", sub.Attributes()["username"])
+				assert.Equal(t, "foobar", sub.Attributes()["iss"])
+				assert.Equal(t, "bar", sub.Attributes()["aud"])
+				assert.Equal(t, "DPoP", sub.Attributes()["token_type"])
+				assert.NotEmpty(t, sub.Attributes()["cnf"])
+				assert.NotEmpty(t, sub.Attributes()["nbf"])
+				assert.NotEmpty(t, sub.Attributes()["iat"])
+				assert.NotEmpty(t, sub.Attributes()["exp"])
+			},
+		},
+		"with disabled cache, dpop access token, but without dpop proof": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						IntrospectionEndpoint: endpointtestsupport.NewEndpoint(t, srv.URL,
+							endpoint.WithMethod(http.MethodPost),
+							endpoint.WithHeader("Content-Type", "application/x-www-form-urlencoded"),
+							endpoint.WithHeader("Accept", "application/json"),
+						),
+					}, nil
+				}),
+				a: oauth2.Expectation{
+					TrustedIssuers:    []string{"foobar"},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES256},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+					ProofOfPossession: &oauth2.DPoPStrategy{
+						MaxAge:        time.Minute,
+						ReplayAllowed: new(true),
+					},
+				},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
+			},
+			configureMocks: func(
+				t *testing.T,
+				ctx *pipelinemocks.ContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).
+					Return(extractors.AuthData{
+						Scheme: "DPoP",
+						Value:  "test_access_token",
+					}, nil)
+
+				req := pipelinemocks.NewRequestFunctionsMock(t)
+				req.EXPECT().Header("DPoP").
+					Return("")
+
+				ctx.EXPECT().Request().
+					Return(&pipeline.Request{
+						RequestFunctions: req,
+						Method:           http.MethodGet,
+						URL: &pipeline.URL{
+							URL: url.URL{
+								Scheme: "https",
+								Host:   "api.example.com",
+								Path:   "/resource",
+							},
+						},
+					})
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkIntrospectionRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, http.MethodPost, req.Method)
+
+					require.NoError(t, req.ParseForm())
+					require.Len(t, req.Form, 2)
+					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
+					assert.Equal(t, "test_access_token", req.Form.Get("token"))
+				}
+
+				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+				require.NoError(t, err)
+
+				kt, err := (&jose.JSONWebKey{Key: key.Public()}).Thumbprint(crypto.SHA256)
+				require.NoError(t, err)
+
+				rawIntrospectResponse, err := json.Marshal(map[string]any{
+					"active":     true,
+					"scope":      "foo bar",
+					"username":   "unknown",
+					"token_type": "DPoP",
+					"aud":        "bar",
+					"sub":        "foo",
+					"iss":        "foobar",
+					"iat":        time.Now().Unix(),
+					"nbf":        time.Now().Unix(),
+					"exp":        time.Now().Unix() + 30,
+					"cnf": map[string]any{
+						"jkt": base64.RawURLEncoding.EncodeToString(kt),
+					},
+				})
+				require.NoError(t, err)
+
+				introspectionResponseContentType = "application/json"
+				introspectionResponseContent = rawIntrospectResponse
+				introspectionResponseCode = http.StatusOK
+			},
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
+				t.Helper()
+
+				assert.True(t, introspectionEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.ErrorContains(t, err, "assertion conditions")
+				require.ErrorContains(t, err, "proof is missing")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
+		"with disabled cache, and mismatching key thumbprint for dpop proof": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						IntrospectionEndpoint: endpointtestsupport.NewEndpoint(t, srv.URL,
+							endpoint.WithMethod(http.MethodPost),
+							endpoint.WithHeader("Content-Type", "application/x-www-form-urlencoded"),
+							endpoint.WithHeader("Accept", "application/json"),
+						),
+					}, nil
+				}),
+				a: oauth2.Expectation{
+					TrustedIssuers:    []string{"foobar"},
+					AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES256},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{"admin"},
+					ProofOfPossession: &oauth2.DPoPStrategy{
+						MaxAge:        time.Minute,
+						ReplayAllowed: new(true),
+					},
+				},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
+			},
+			configureMocks: func(
+				t *testing.T,
+				ctx *pipelinemocks.ContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+				require.NoError(t, err)
+
+				rawToken := "test_access_token"
+				requestURI := "https://api.example.com/resource"
+
+				ads.EXPECT().GetAuthData(ctx).
+					Return(extractors.AuthData{
+						Scheme: "DPoP",
+						Value:  rawToken,
+					}, nil)
+
+				req := pipelinemocks.NewRequestFunctionsMock(t)
+				req.EXPECT().Header("DPoP").
+					Return(newDPoPJWT(t, key, rawToken, http.MethodGet, requestURI))
+
+				ctx.EXPECT().Request().
+					Return(&pipeline.Request{
+						RequestFunctions: req,
+						Method:           http.MethodGet,
+						URL: &pipeline.URL{
+							URL: url.URL{
+								Scheme: "https",
+								Host:   "api.example.com",
+								Path:   "/resource",
+							},
+						},
+					})
+
+				ctx.EXPECT().Context().
+					Return(cache.WithContext(t.Context(), mocks.NewCacheMock(t)))
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkIntrospectionRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+					assert.Equal(t, http.MethodPost, req.Method)
+
+					require.NoError(t, req.ParseForm())
+					require.Len(t, req.Form, 2)
+					assert.Equal(t, "access_token", req.Form.Get("token_type_hint"))
+					assert.Equal(t, "test_access_token", req.Form.Get("token"))
+				}
+
+				// this key differs from the one embedded into the dpop proof jwt
+				key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+				require.NoError(t, err)
+
+				kt, err := (&jose.JSONWebKey{Key: key.Public()}).Thumbprint(crypto.SHA256)
+				require.NoError(t, err)
+
+				rawIntrospectResponse, err := json.Marshal(map[string]any{
+					"active":     true,
+					"scope":      "read",
+					"username":   "unknown",
+					"token_type": "DPoP",
+					"aud":        "bar",
+					"sub":        "foo",
+					"iss":        "foobar",
+					"iat":        time.Now().Unix(),
+					"nbf":        time.Now().Unix(),
+					"exp":        time.Now().Unix() + 30,
+					"cnf": map[string]any{
+						"jkt": base64.RawURLEncoding.EncodeToString(kt),
+					},
+				})
+				require.NoError(t, err)
+
+				introspectionResponseContentType = "application/json"
+				introspectionResponseContent = rawIntrospectResponse
+				introspectionResponseCode = http.StatusOK
+			},
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
+				t.Helper()
+
+				assert.True(t, introspectionEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.ErrorContains(t, err, "assertion conditions")
+				require.ErrorContains(t, err, "proof key")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
 	} {

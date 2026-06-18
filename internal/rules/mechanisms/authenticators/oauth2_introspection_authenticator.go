@@ -17,7 +17,6 @@
 package authenticators
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -320,6 +319,7 @@ func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map
 	return nil, err
 }
 
+//nolint:cyclop
 func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
 	ctx pipeline.Context,
 	authData extractors.AuthData,
@@ -327,7 +327,11 @@ func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
 	cch := cache.Ctx(ctx.Context())
 	logger := zerolog.Ctx(ctx.Context())
 
-	var cacheKey string
+	var (
+		cacheKey string
+		cacheHit bool
+		rawResp  []byte
+	)
 
 	claims, err := a.extractTokenClaims(authData.Value)
 	if err != nil {
@@ -349,38 +353,41 @@ func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			logger.Debug().Msg("Reusing introspection response from cache")
 
-			return entry, nil
+			cacheHit = true
+			rawResp = entry
 		}
 	}
 
-	introspectResp, rawResp, err := a.fetchTokenIntrospectionResponse(
-		ctx,
-		metadata.IntrospectionEndpoint.CreateClient(req.URL.Hostname()),
-		req,
-	)
-	if err != nil {
-		return nil, err
+	if rawResp == nil {
+		rawResp, err = a.fetchTokenIntrospectionResponse(
+			ctx,
+			metadata.IntrospectionEndpoint.CreateClient(req.URL.Hostname()),
+			req,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// verification of the issuer is optional according to RFC 7662. The below implementation
-	// ensures it is done only if explicitly configured.
-	assertions := a.a
-	if len(introspectResp.Issuer) != 0 {
-		// configured assertions take precedence over those available in the metadata
-		assertions = assertions.Merge(a.a.Merge(oauth2.Expectation{TrustedIssuers: []string{metadata.Issuer}}))
-	}
+	var introspectResp oauth2.IntrospectionResponse
 
-	if err = introspectResp.Validate(ctx, oauth2.TokenType(authData.Scheme), authData.Value, assertions); err != nil {
+	if err = json.Unmarshal(rawResp, &introspectResp); err != nil {
 		return nil, errorchain.NewWithMessage(
-			pipeline.ErrAuthentication,
-			"access token does not satisfy assertion conditions",
+			pipeline.ErrInternal,
+			"failed to unmarshal introspection response",
 		).WithAspects(a).
 			CausedBy(err)
 	}
 
-	if cacheTTL := a.getCacheTTL(introspectResp); cacheTTL > 0 {
-		if err = cch.Set(ctx.Context(), cacheKey, rawResp, cacheTTL); err != nil {
-			logger.Warn().Err(err).Msg("Failed to cache introspection response")
+	if err = a.validateIntrospectionResponse(ctx, authData, metadata, &introspectResp); err != nil {
+		return nil, err
+	}
+
+	if !cacheHit && len(cacheKey) != 0 {
+		if cacheTTL := a.getCacheTTL(&introspectResp); cacheTTL > 0 {
+			if err = cch.Set(ctx.Context(), cacheKey, rawResp, cacheTTL); err != nil {
+				logger.Warn().Err(err).Msg("Failed to cache introspection response")
+			}
 		}
 	}
 
@@ -411,24 +418,25 @@ func (a *oauth2IntrospectionAuthenticator) createRequest(
 }
 
 func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
-	ctx pipeline.Context, client *http.Client, req *http.Request,
-) (*oauth2.IntrospectionResponse, []byte, error) {
+	ctx pipeline.Context,
+	client *http.Client,
+	req *http.Request,
+) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
 	logger.Debug().Msg("Retrieving information about the access token from the introspection endpoint")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		var clientErr *url.Error
-		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, nil, errorchain.NewWithMessage(
+		if clientErr, ok := errors.AsType[*url.Error](err); ok && clientErr.Timeout() {
+			return nil, errorchain.NewWithMessage(
 				pipeline.ErrCommunicationTimeout,
 				"request to the introspection endpoint timed out",
 			).WithAspects(a).
 				CausedBy(err)
 		}
 
-		return nil, nil, errorchain.NewWithMessage(
+		return nil, errorchain.NewWithMessage(
 			pipeline.ErrCommunication,
 			"request to the introspection endpoint failed",
 		).WithAspects(a).
@@ -442,28 +450,49 @@ func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
 
 func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 	resp *http.Response,
-) (*oauth2.IntrospectionResponse, []byte, error) {
+) ([]byte, error) {
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, nil, errorchain.NewWithMessagef(
+		return nil, errorchain.NewWithMessagef(
 			pipeline.ErrCommunication,
 			"unexpected response code: %v", resp.StatusCode,
 		).WithAspects(a)
 	}
 
-	var (
-		introspectionResponse oauth2.IntrospectionResponse
-		buf                   bytes.Buffer
-	)
-
-	if err := json.NewDecoder(io.TeeReader(resp.Body, &buf)).Decode(&introspectionResponse); err != nil {
-		return nil, nil, errorchain.NewWithMessage(
+	rawResp, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(
 			pipeline.ErrInternal,
-			"failed to unmarshal received introspection response",
+			"failed to read introspection response",
 		).WithAspects(a).
 			CausedBy(err)
 	}
 
-	return &introspectionResponse, buf.Bytes(), nil
+	return rawResp, nil
+}
+
+func (a *oauth2IntrospectionAuthenticator) validateIntrospectionResponse(
+	ctx pipeline.Context,
+	authData extractors.AuthData,
+	metadata oauth2.ServerMetadata,
+	introspectResp *oauth2.IntrospectionResponse,
+) error {
+	// verification of the issuer is optional according to RFC 7662. The below implementation
+	// ensures it is done only if explicitly configured.
+	assertions := a.a
+	if len(introspectResp.Issuer) != 0 {
+		// configured assertions take precedence over those available in the metadata
+		assertions = a.a.Merge(oauth2.Expectation{TrustedIssuers: []string{metadata.Issuer}})
+	}
+
+	if err := introspectResp.Validate(ctx, oauth2.TokenType(authData.Scheme), authData.Value, assertions); err != nil {
+		return errorchain.NewWithMessage(
+			pipeline.ErrAuthentication,
+			"access token does not satisfy assertion conditions",
+		).WithAspects(a).
+			CausedBy(err)
+	}
+
+	return nil
 }
 
 func (a *oauth2IntrospectionAuthenticator) isCacheEnabled() bool {
