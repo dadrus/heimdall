@@ -903,7 +903,7 @@ func TestDPoPStrategyAssert(t *testing.T) {
 				var target *InvalidDPoPProofError
 				require.ErrorAs(t, err, &target)
 				assert.Equal(t, "algorithm is not allowed", target.message)
-				assert.Equal(t, []jose.SignatureAlgorithm{jose.ES256}, target.algorithms)
+				assert.Equal(t, []jose.SignatureAlgorithm{jose.ES256, jose.HS256}, target.algorithms)
 			},
 		},
 		"fails if typ header is invalid": {
