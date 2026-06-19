@@ -166,33 +166,27 @@ func (a *basicAuthAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 
 	authData, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return errorchain.
-			NewWithMessage(
-				pipeline.ErrAuthentication,
-				"expected header not present in request",
-			).
-			WithErrorContext(a).
+		return errorchain.NewWithMessage(
+			pipeline.ErrAuthentication,
+			"expected header not present in request",
+		).WithAspects(a).
 			CausedBy(err)
 	}
 
-	res, err := base64.StdEncoding.DecodeString(authData)
+	res, err := base64.StdEncoding.DecodeString(authData.Value)
 	if err != nil {
-		return errorchain.
-			NewWithMessage(
-				pipeline.ErrAuthentication,
-				"failed to decode received credentials value",
-			).
-			WithErrorContext(a)
+		return errorchain.NewWithMessage(
+			pipeline.ErrAuthentication,
+			"failed to decode received credentials value",
+		).WithAspects(a)
 	}
 
 	userIDAndPassword := strings.Split(string(res), ":")
 	if len(userIDAndPassword) != basicAuthSchemeCredentialsElements {
-		return errorchain.
-			NewWithMessage(
-				pipeline.ErrAuthentication,
-				"malformed user-id - password scheme",
-			).
-			WithErrorContext(a)
+		return errorchain.NewWithMessage(
+			pipeline.ErrAuthentication,
+			"malformed user-id - password scheme",
+		).WithAspects(a)
 	}
 
 	checker, ok := a.informer.Get()
@@ -207,8 +201,7 @@ func (a *basicAuthAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subj
 		return errorchain.NewWithMessage(
 			pipeline.ErrAuthentication,
 			"invalid user credentials",
-		).
-			WithErrorContext(a).
+		).WithAspects(a).
 			CausedBy(err)
 	}
 

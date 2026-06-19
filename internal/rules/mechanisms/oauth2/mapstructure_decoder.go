@@ -21,6 +21,7 @@ import (
 
 	"github.com/go-viper/mapstructure/v2"
 
+	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
@@ -41,8 +42,7 @@ func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 			return data, nil
 		}
 
-		// we care about these two cases only
-		switch from.Kind() {
+		switch from.Kind() { //nolint:exhaustive
 		case reflect.Map:
 			matcher, err = decodeMatcherFromMap(data)
 			if err != nil {
@@ -54,64 +54,76 @@ func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 			}
 
 			return createMatcherFromValues(createMatcher, data)
-		default:
-			return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration, "invalid structure for scopes matcher")
 		}
 
 		return matcher, nil
 	}
 }
 
-type ScopeMatcherFactory func(scopes []string) (ScopesMatcher, error)
+type scopeMatcherFactory func(scopes []string) (ScopesMatcher, error)
 
 func decodeMatcherFromMap(data any) (ScopesMatcher, error) {
-	var (
-		createMatcher ScopeMatcherFactory
-		err           error
-	)
+	typed, err := asStringMap(data)
+	if err != nil {
+		return nil, err
+	}
 
-	typed := map[string]any{}
-
-	if m, ok := data.(map[any]any); ok {
-		// nolint: forcetypeassert
-		// ok if panics
-		for k, v := range m {
-			typed[k.(string)] = v
-		}
-	} else if m, ok := data.(map[string]any); ok {
-		typed = m
-	} else {
-		return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration, "invalid structure for scopes matcher")
+	createMatcher := func(scopes []string) (ScopesMatcher, error) {
+		return ExactScopeStrategyMatcher(scopes), nil
 	}
 
 	if name, ok := typed["matching_strategy"]; ok {
-		createMatcher, err = matcherFactory(name.(string)) //nolint: forcetypeassert
+		strategy, ok := name.(string)
+		if !ok {
+			return nil, errorchain.NewWithMessage(
+				pipeline.ErrConfiguration,
+				"invalid matching strategy type",
+			)
+		}
+
+		createMatcher, err = matcherFactory(strategy)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		createMatcher = func(scopes []string) (ScopesMatcher, error) {
-			return ExactScopeStrategyMatcher(scopes), nil
-		}
 	}
 
-	if values, ok := typed["values"]; ok {
-		return createMatcherFromValues(createMatcher, values)
+	values, ok := typed["values"]
+	if !ok {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"invalid structure for scopes matcher",
+		)
 	}
 
-	return nil, errorchain.NewWithMessage(pipeline.ErrConfiguration, "invalid structure for scopes matcher")
+	return createMatcherFromValues(createMatcher, values)
 }
 
-func createMatcherFromValues(createMatcher ScopeMatcherFactory, values any) (ScopesMatcher, error) {
-	scopes := make([]string, len(values.([]any))) // nolint: forcetypeassert
-	for i, v := range values.([]any) {            // nolint: forcetypeassert
-		scopes[i] = v.(string) // nolint: forcetypeassert
+func createMatcherFromValues(createMatcher scopeMatcherFactory, values any) (ScopesMatcher, error) {
+	raw, ok := values.([]any)
+	if !ok {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"invalid scope values",
+		)
+	}
+
+	scopes := make([]string, len(raw))
+	for i, value := range raw {
+		scope, ok := value.(string)
+		if !ok {
+			return nil, errorchain.NewWithMessagef(
+				pipeline.ErrConfiguration,
+				"invalid scope value '%v'", value,
+			)
+		}
+
+		scopes[i] = scope
 	}
 
 	return createMatcher(scopes)
 }
 
-func matcherFactory(name string) (ScopeMatcherFactory, error) {
+func matcherFactory(name string) (scopeMatcherFactory, error) {
 	switch name {
 	case "exact":
 		return func(scopes []string) (ScopesMatcher, error) {
@@ -127,5 +139,71 @@ func matcherFactory(name string) (ScopeMatcherFactory, error) {
 		}, nil
 	default:
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration, "unsupported strategy \"%s\"", name)
+	}
+}
+
+func DecodePoPStrategyHookFunc(ctx app.Context) mapstructure.DecodeHookFunc {
+	return func(from reflect.Type, to reflect.Type, data any) (any, error) {
+		if from.Kind() != reflect.Map {
+			return data, nil
+		}
+
+		if !reflect.TypeFor[*PoPStrategy]().Elem().AssignableTo(to) {
+			return data, nil
+		}
+
+		raw, err := asStringMap(data)
+		if err != nil {
+			return nil, err
+		}
+
+		typ, _ := raw["type"].(string)
+
+		conf, err := asStringMap(raw["config"])
+		if err != nil {
+			return nil, err
+		}
+
+		switch PoPType(typ) {
+		case DPoP:
+			return newDPoPStrategy(ctx, conf)
+		case MTLS:
+			return &mtlsPoPStrategy{}, nil
+		default:
+			return nil, errorchain.NewWithMessagef(
+				pipeline.ErrConfiguration,
+				"unsupported proof_of_possession type \"%s\"", typ)
+		}
+	}
+}
+
+func asStringMap(data any) (map[string]any, error) {
+	if data == nil {
+		return map[string]any{}, nil
+	}
+
+	switch typed := data.(type) {
+	case map[string]any:
+		return typed, nil
+	case map[any]any:
+		result := make(map[string]any, len(typed))
+		for key, value := range typed {
+			strKey, ok := key.(string)
+			if !ok {
+				return nil, errorchain.NewWithMessage(
+					pipeline.ErrConfiguration,
+					"configuration contains non-string key",
+				)
+			}
+
+			result[strKey] = value
+		}
+
+		return result, nil
+	default:
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"unexpected configuration type",
+		)
 	}
 }

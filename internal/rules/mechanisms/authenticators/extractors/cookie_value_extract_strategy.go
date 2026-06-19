@@ -27,10 +27,13 @@ type CookieValueExtractStrategy struct {
 	Name string
 }
 
-func (es CookieValueExtractStrategy) GetAuthData(s pipeline.Context) (string, error) {
+func (es CookieValueExtractStrategy) GetAuthData(s pipeline.Context) (AuthData, error) {
 	if val := s.Request().Cookie(es.Name); len(val) != 0 {
-		return strings.TrimSpace(val), nil
+		return AuthData{
+			Value:  strings.TrimSpace(val),
+			Source: SourceCookie,
+		}, nil
 	}
 
-	return "", errorchain.NewWithMessagef(pipeline.ErrArgument, "no '%s' cookie present", es.Name)
+	return AuthData{}, errorchain.NewWithMessagef(pipeline.ErrArgument, "no '%s' cookie present", es.Name)
 }

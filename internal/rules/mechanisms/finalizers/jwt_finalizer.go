@@ -138,7 +138,7 @@ func (f *jwtFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error
 	if sub == nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed to execute jwt finalizer due to 'nil' identity").
-			WithErrorContext(f)
+			WithAspects(f)
 	}
 
 	cch := cache.Ctx(ctx.Context())
@@ -247,7 +247,7 @@ func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject)
 		if err != nil {
 			return "", errorchain.NewWithMessage(pipeline.ErrInternal,
 				"failed to render values").
-				WithErrorContext(f).
+				WithAspects(f).
 				CausedBy(err)
 		}
 
@@ -259,7 +259,7 @@ func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject)
 		if err != nil {
 			return "", errorchain.
 				NewWithMessage(pipeline.ErrInternal, "failed to render claims").
-				WithErrorContext(f).
+				WithAspects(f).
 				CausedBy(err)
 		}
 
@@ -268,7 +268,7 @@ func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject)
 		if err = json.Unmarshal(stringx.ToBytes(claims), &result); err != nil {
 			return "", errorchain.
 				NewWithMessage(pipeline.ErrInternal, "failed to unmarshal claims rendered by template").
-				WithErrorContext(f).
+				WithAspects(f).
 				CausedBy(err)
 		}
 	}
@@ -277,7 +277,7 @@ func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject)
 	if err != nil {
 		return "", errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed to sign token").
-			WithErrorContext(f).
+			WithAspects(f).
 			CausedBy(err)
 	}
 

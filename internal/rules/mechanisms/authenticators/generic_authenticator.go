@@ -139,11 +139,11 @@ func (a *genericAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subjec
 	if err != nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "failed to get authentication data from request").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
-	payload, err := a.getPrincipalInformation(ctx, authData)
+	payload, err := a.getPrincipalInformation(ctx, authData.Value)
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (a *genericAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subjec
 	if err != nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed to extract principal information from response").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -249,12 +249,12 @@ func (a *genericAuthenticator) getPrincipalInformation(ctx pipeline.Context, aut
 	if a.sessionLifespanConf != nil {
 		session, err = a.sessionLifespanConf.CreateSessionLifespan(payload)
 		if err != nil {
-			return nil, errorchain.New(pipeline.ErrInternal).WithErrorContext(a).CausedBy(err)
+			return nil, errorchain.New(pipeline.ErrInternal).WithAspects(a).CausedBy(err)
 		}
 
 		if session != nil {
 			if err = session.Assert(); err != nil {
-				return nil, errorchain.New(pipeline.ErrAuthentication).WithErrorContext(a).CausedBy(err)
+				return nil, errorchain.New(pipeline.ErrAuthentication).WithAspects(a).CausedBy(err)
 			}
 		}
 	}
@@ -281,14 +281,14 @@ func (a *genericAuthenticator) fetchPrincipalInformation(ctx pipeline.Context, a
 			return nil, errorchain.
 				NewWithMessage(pipeline.ErrCommunicationTimeout,
 					"request to the endpoint to get information about the user timed out").
-				WithErrorContext(a).
+				WithAspects(a).
 				CausedBy(err)
 		}
 
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrCommunication,
 				"request to the endpoint to get information about the user failed").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -313,7 +313,7 @@ func (a *genericAuthenticator) createRequest(ctx pipeline.Context, authData stri
 				pipeline.ErrInternal,
 				"failed to render payload for the authenticator endpoint",
 			).
-				WithErrorContext(a).
+				WithAspects(a).
 				CausedBy(err)
 		}
 
@@ -324,7 +324,7 @@ func (a *genericAuthenticator) createRequest(ctx pipeline.Context, authData stri
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed creating request").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -357,16 +357,16 @@ func (a *genericAuthenticator) readResponse(resp *http.Response) ([]byte, error)
 	switch {
 	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
 		return nil, errorchain.NewWithMessage(pipeline.ErrAuthentication,
-			"received authentication data rejected").WithErrorContext(a)
+			"received authentication data rejected").WithAspects(a)
 	case resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices:
 		return nil, errorchain.NewWithMessagef(pipeline.ErrCommunication,
-			"unexpected response code: %v", resp.StatusCode).WithErrorContext(a)
+			"unexpected response code: %v", resp.StatusCode).WithAspects(a)
 	}
 
 	rawData, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to read response").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 

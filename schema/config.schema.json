@@ -1378,16 +1378,60 @@
           "type": "string",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
           "default": "10s"
+        },
+        "proof_of_possession": {
+          "$ref": "#/definitions/proofOfPossessionConfiguration"
         }
       }
     },
-    "bearerTokenUsageErrorSignaling": {
-      "description": "Configures RFC 6750 Bearer token error signaling using the WWW-Authenticate response header.",
+    "proofOfPossessionConfiguration": {
+      "description": "Configures proof-of-possession verification for OAuth2 access tokens.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type"
+      ],
+      "properties": {
+        "type": {
+          "description": "The proof-of-possession mechanism to enforce.",
+          "type": "string",
+          "enum": [
+            "dpop",
+            "mtls"
+          ]
+        },
+        "config": {
+          "description": "DPoP proof validation settings.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_age": {
+              "description": "Maximum accepted age of a DPoP proof. Defaults to 1m",
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "1m"
+            },
+            "nonce_required": {
+              "description": "Whether a valid DPoP nonce is required.",
+              "type": "boolean",
+              "default": false
+            },
+            "replay_allowed": {
+              "description": "Whether DPoP proof replay detection should be disabled.",
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    },
+    "tokenUsageErrorSignaling": {
+      "description": "Configures OAuth2 token usage error signaling for authenticators that validate access tokens. If enabled, heimdall adds `WWW-Authenticate` response headers for supported token usage schemes. Bearer token usage is signaled with the `Bearer` authentication scheme. DPoP-bound token usage and DPoP-specific validation failures are signaled with the `DPoP` authentication scheme.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "enabled": {
-          "description": "Enables or disables RFC 6750 Bearer token error signaling.",
+          "description": "Enables or disables token error signaling.",
           "type": "boolean",
           "default": false
         },
@@ -1401,13 +1445,18 @@
           "type": "boolean",
           "default": false
         },
+        "include_dpop_algorithms": {
+          "description": "Whether to include the optional algs parameter for invalid_dpop_proof challenges if the DPoP proof uses an unsupported signing algorithm.",
+          "type": "boolean",
+          "default": false
+        },
         "error_uri": {
           "description": "Optional URI identifying a human-readable web page with information about the error.",
           "type": "string",
           "format": "uri"
         },
         "realm": {
-          "description": "Optional Bearer realm value included in the WWW-Authenticate header.",
+          "description": "Optional realm value included in the WWW-Authenticate header.",
           "type": "string",
           "default": "Please authenticate"
         }
@@ -1599,7 +1648,7 @@
               ]
             },
             "error_signaling": {
-              "$ref": "#/definitions/bearerTokenUsageErrorSignaling"
+              "$ref": "#/definitions/tokenUsageErrorSignaling"
             }
           }
         }
@@ -1670,7 +1719,7 @@
               "$ref": "#/definitions/secretReference"
             },
             "error_signaling": {
-              "$ref": "#/definitions/bearerTokenUsageErrorSignaling"
+              "$ref": "#/definitions/tokenUsageErrorSignaling"
             }
           }
         }
@@ -2983,6 +3032,10 @@
           }
         ]
       }
+    },
+    "master_key": {
+      "description": "Master key used to derive keys for different internal operations, like e.g., a key for DPoP Nonce generation and validation",
+      "$ref": "#/definitions/secretReference"
     }
   }
 }

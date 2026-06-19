@@ -6,6 +6,7 @@ package mocks
 
 import (
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mock "github.com/stretchr/testify/mock"
 )
 
@@ -37,22 +38,22 @@ func (_m *AuthDataExtractStrategyMock) EXPECT() *AuthDataExtractStrategyMock_Exp
 }
 
 // GetAuthData provides a mock function for the type AuthDataExtractStrategyMock
-func (_mock *AuthDataExtractStrategyMock) GetAuthData(ctx pipeline.Context) (string, error) {
+func (_mock *AuthDataExtractStrategyMock) GetAuthData(ctx pipeline.Context) (extractors.AuthData, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetAuthData")
 	}
 
-	var r0 string
+	var r0 extractors.AuthData
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) (string, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) (extractors.AuthData, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) string); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) extractors.AuthData); ok {
 		r0 = returnFunc(ctx)
 	} else {
-		r0 = ret.Get(0).(string)
+		r0 = ret.Get(0).(extractors.AuthData)
 	}
 	if returnFunc, ok := ret.Get(1).(func(pipeline.Context) error); ok {
 		r1 = returnFunc(ctx)
@@ -68,7 +69,7 @@ type AuthDataExtractStrategyMock_GetAuthData_Call struct {
 }
 
 // GetAuthData is a helper method to define mock.On call
-//   - ctx heimdall.Context
+//   - ctx pipeline.Context
 func (_e *AuthDataExtractStrategyMock_Expecter) GetAuthData(ctx interface{}) *AuthDataExtractStrategyMock_GetAuthData_Call {
 	return &AuthDataExtractStrategyMock_GetAuthData_Call{Call: _e.mock.On("GetAuthData", ctx)}
 }
@@ -86,12 +87,12 @@ func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) Run(run func(ctx pipelin
 	return _c
 }
 
-func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) Return(s string, err error) *AuthDataExtractStrategyMock_GetAuthData_Call {
-	_c.Call.Return(s, err)
+func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) Return(authData extractors.AuthData, err error) *AuthDataExtractStrategyMock_GetAuthData_Call {
+	_c.Call.Return(authData, err)
 	return _c
 }
 
-func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) RunAndReturn(run func(ctx pipeline.Context) (string, error)) *AuthDataExtractStrategyMock_GetAuthData_Call {
+func (_c *AuthDataExtractStrategyMock_GetAuthData_Call) RunAndReturn(run func(ctx pipeline.Context) (extractors.AuthData, error)) *AuthDataExtractStrategyMock_GetAuthData_Call {
 	_c.Call.Return(run)
 	return _c
 }

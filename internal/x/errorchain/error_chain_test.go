@@ -1,19 +1,3 @@
-// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-// SPDX-License-Identifier: Apache-2.0
-
 package errorchain_test
 
 import (
@@ -35,174 +19,214 @@ var (
 
 type errCtx struct{}
 
-func (e *errCtx) Foo() string {
-	return "foo"
-}
+func (e *errCtx) Foo() string { return "foo" }
 
 type testError struct{}
 
-func (e *testError) Error() string {
-	return "test error 3"
+func (e *testError) Error() string { return "test error 3" }
+func (e *testError) Bar() string   { return "bar" }
+
+type barAspect struct{}
+
+func (a *barAspect) Bar() string { return "aspect bar" }
+
+type namedCtx struct {
+	name string
 }
 
-func (e *testError) Bar() string {
-	return "bar"
-}
+func (c *namedCtx) Foo() string { return c.name }
 
 func TestErrorChainNew(t *testing.T) {
 	t.Parallel()
 
-	// WHEN
 	err := errorchain.New(errTest1)
 
-	// THEN
 	require.Error(t, err)
 	require.ErrorIs(t, err, errTest1)
-	assert.Equal(t, err.Error(), errTest1.Error())
-	assert.Nil(t, err.ErrorContext())
+	assert.Equal(t, errTest1.Error(), err.Error())
 }
 
 func TestErrorChainNewWithMessage(t *testing.T) {
 	t.Parallel()
 
-	// WHEN
 	err := errorchain.NewWithMessage(errTest1, "foobar")
 
-	// THEN
 	require.Error(t, err)
 	require.ErrorIs(t, err, errTest1)
-	assert.Equal(t, err.Error(), errTest1.Error()+": foobar")
-	assert.Nil(t, err.ErrorContext())
+	assert.Equal(t, errTest1.Error()+": foobar", err.Error())
 }
 
 func TestErrorChainNewWithFormattedMessage(t *testing.T) {
 	t.Parallel()
 
-	// WHEN
 	err := errorchain.NewWithMessagef(errTest1, "%s%s", "foo", "bar")
 
-	// THEN
 	require.Error(t, err)
 	require.ErrorIs(t, err, errTest1)
-	assert.Equal(t, err.Error(), errTest1.Error()+": foobar")
-	assert.Nil(t, err.ErrorContext())
+	assert.Equal(t, errTest1.Error()+": foobar", err.Error())
 }
 
 func TestErrorChainNewWithCause(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
 	type Fooer interface{ Foo() string }
 
-	var fooer Fooer
-
-	// WHEN
 	err := errorchain.NewWithMessage(errTest1, "foo").CausedBy(errTest2)
 
-	// THEN
 	require.Error(t, err)
 	require.ErrorIs(t, err, errTest1)
 	require.ErrorIs(t, err, errTest2)
-	assert.Equal(t, err.Error(), errTest1.Error()+": foo: "+errTest2.Error())
-	assert.Nil(t, err.ErrorContext())
+	assert.Equal(t, errTest1.Error()+": foo: "+errTest2.Error(), err.Error())
+	assert.ElementsMatch(t, []error{errTest1, errTest2}, err.Errors())
 
-	errs := err.Errors()
-	assert.ElementsMatch(t, errs, []error{errTest1, errTest2})
-
+	var fooer Fooer
 	require.NotErrorAs(t, err, &fooer)
 }
 
-func TestErrorChainNewWithCauseAndContextDetachedFromError(t *testing.T) {
+func TestErrorChainErrorAsFindsAspectFromTopLevel(t *testing.T) {
 	t.Parallel()
-	// GIVEN
+
 	type Fooer interface{ Foo() string }
 
-	var fooer Fooer
-
-	// WHEN
 	err := errorchain.NewWithMessage(errTest1, "foo").
-		WithErrorContext(&errCtx{}).
+		WithAspects(&errCtx{}).
 		CausedBy(errTest2)
 
-	// THEN
-	require.Error(t, err)
-	require.ErrorIs(t, err, errTest1)
-	require.ErrorIs(t, err, errTest2)
-	assert.Equal(t, err.Error(), errTest1.Error()+": foo: "+errTest2.Error())
-	assert.Equal(t, &errCtx{}, err.ErrorContext())
-
-	errs := err.Errors()
-	assert.ElementsMatch(t, errs, []error{errTest1, errTest2})
-
+	var fooer Fooer
 	require.ErrorAs(t, err, &fooer)
 	assert.Equal(t, "foo", fooer.Foo())
 }
 
-func TestErrorChainNewWithCauseAndContextAttachedToError(t *testing.T) {
+func TestErrorChainErrorAsFindsAspectFromCauseLevel(t *testing.T) {
 	t.Parallel()
-	// GIVEN
+
+	type Fooer interface{ Foo() string }
+
+	err := errorchain.NewWithMessage(errTest1, "foo").
+		CausedBy(errTest2).
+		WithAspects(&errCtx{})
+
+	var fooer Fooer
+	require.ErrorAs(t, err, &fooer)
+	assert.Equal(t, "foo", fooer.Foo())
+}
+
+func TestErrorChainErrorAsFindsAspectsFromDifferentLevels(t *testing.T) {
+	t.Parallel()
+
+	type Fooer interface{ Foo() string }
+
 	type Barer interface{ Bar() string }
 
+	err := errorchain.NewWithMessage(errTest1, "foo").
+		WithAspects(&errCtx{}).
+		CausedBy(errTest2).
+		CausedBy(errors.New("test error 4")).
+		WithAspects(&testError{})
+
+	var fooer Fooer
+	require.ErrorAs(t, err, &fooer)
+	assert.Equal(t, "foo", fooer.Foo())
+
 	var barer Barer
-
-	errTest := &testError{}
-
-	// WHEN
-	err := errorchain.NewWithMessage(errTest, "foo").
-		CausedBy(errTest2)
-
-	// THEN
-	require.Error(t, err)
-	require.ErrorIs(t, err, errTest)
-	require.ErrorIs(t, err, errTest2)
-	assert.Equal(t, err.Error(), errTest.Error()+": foo: "+errTest2.Error())
-	assert.Nil(t, err.ErrorContext())
-
-	errs := err.Errors()
-	assert.ElementsMatch(t, errs, []error{errTest, errTest2})
-
 	require.ErrorAs(t, err, &barer)
 	assert.Equal(t, "bar", barer.Bar())
 }
 
-func TestErrorChainAsUsedWithConcreteType(t *testing.T) {
+func TestErrorChainErrorAsReturnsFirstMatchingAspect(t *testing.T) {
 	t.Parallel()
-	// GIVEN
-	type Barer struct{}
 
-	var barer Barer
+	type Fooer interface{ Foo() string }
 
-	errTest := &testError{}
+	err := errorchain.NewWithMessage(errTest1, "foo").
+		WithAspects(&namedCtx{name: "first"}).
+		CausedBy(errTest2).
+		WithAspects(&namedCtx{name: "second"})
 
-	err := errorchain.NewWithMessage(errTest, "foo").
-		WithErrorContext(errTest2)
-
-	defer func() { recover() }()
-
-	// WHEN
-	err.As(&barer)
-
-	// THEN
-	t.Errorf("should have panicked")
+	var fooer Fooer
+	require.ErrorAs(t, err, &fooer)
+	assert.Equal(t, "first", fooer.Foo())
 }
 
-func TestErrorChainAsUsedWithNotAssignableInterface(t *testing.T) {
+func TestErrorChainErrorAsPanicsForConcreteAspectTarget(t *testing.T) {
 	t.Parallel()
-	// GIVEN
-	type Barer interface{ Foo() string }
 
-	var barer Barer
+	err := errorchain.NewWithMessage(errTest1, "foo").
+		WithAspects(&errCtx{})
+
+	var (
+		value  *errCtx
+		target any = &value
+	)
+
+	require.PanicsWithValue(t,
+		"errors: *target must be interface or implement error",
+		func() {
+			errors.As(err, target)
+		},
+	)
+}
+
+func TestErrorChainErrorAsFindsWrappedError(t *testing.T) {
+	t.Parallel()
+
+	type Barer interface{ Bar() string }
 
 	errTest := &testError{}
 
 	err := errorchain.NewWithMessage(errTest, "foo").
-		WithErrorContext(errTest2)
+		CausedBy(errTest2)
 
-	// WHEN
-	res := err.As(&barer)
+	var barer Barer
+	require.ErrorAs(t, err, &barer)
+	assert.Equal(t, "bar", barer.Bar())
+}
 
-	// THEN
-	assert.False(t, res)
+func TestErrorChainUnwrapWithoutCauseReturnsNil(t *testing.T) {
+	t.Parallel()
+
+	err := errorchain.New(errTest1)
+
+	assert.NoError(t, errors.Unwrap(err))
+}
+
+func TestErrorChainAsIgnoresNilAspect(t *testing.T) {
+	t.Parallel()
+
+	type Fooer interface{ Foo() string }
+
+	err := errorchain.New(errTest1).
+		WithAspects(nil, &errCtx{})
+
+	var fooer Fooer
+	require.ErrorAs(t, err, &fooer)
+	assert.Equal(t, "foo", fooer.Foo())
+}
+
+func TestErrorChainAsIgnoresNonAssignableAspect(t *testing.T) {
+	t.Parallel()
+
+	type Fooer interface{ Foo() string }
+
+	err := errorchain.New(errTest1).
+		WithAspects(errTest2, &errCtx{})
+
+	var fooer Fooer
+	require.ErrorAs(t, err, &fooer)
+	assert.Equal(t, "foo", fooer.Foo())
+}
+
+func TestErrorChainErrorAsPrefersAspectOverWrappedError(t *testing.T) {
+	t.Parallel()
+
+	type Barer interface{ Bar() string }
+
+	err := errorchain.NewWithMessage(&testError{}, "foo").
+		WithAspects(&barAspect{})
+
+	var barer Barer
+	require.ErrorAs(t, err, &barer)
+	assert.Equal(t, "aspect bar", barer.Bar())
 }
 
 func TestErrorChainString(t *testing.T) {
@@ -253,12 +277,9 @@ func TestErrorChainString(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			// data from the test case
-			value := tc.err.String()
+			t.Parallel()
 
-			// THEN
-			assert.Equal(t, tc.want, value)
+			assert.Equal(t, tc.want, tc.err.String())
 		})
 	}
 }
@@ -311,11 +332,10 @@ func TestErrorChainJSONMarshal(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			// data from the test case
+			t.Parallel()
+
 			res, err := json.Marshal(tc.err)
 
-			// THEN
 			require.NoError(t, err)
 			assert.JSONEq(t, tc.want, string(res))
 		})
@@ -370,23 +390,23 @@ func TestErrorChainXMLMarshal(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			// data from the test case
+			t.Parallel()
+
 			res, err := xml.Marshal(tc.err)
 
-			// THEN
 			require.NoError(t, err)
 			assert.Equal(t, tc.want, string(res))
 		})
 	}
 
-	// GIVEN
-	testErr := errorchain.NewWithMessage(errTest1, "foo").CausedBy(errTest2)
+	t.Run("uses top level error code and message", func(t *testing.T) {
+		t.Parallel()
 
-	// WHEN
-	res, err := xml.Marshal(testErr)
+		testErr := errorchain.NewWithMessage(errTest1, "foo").CausedBy(errTest2)
 
-	// THEN
-	require.NoError(t, err)
-	assert.Equal(t, `<error><code>testError1</code><message>foo</message></error>`, string(res))
+		res, err := xml.Marshal(testErr)
+
+		require.NoError(t, err)
+		assert.Equal(t, `<error><code>testError1</code><message>foo</message></error>`, string(res))
+	})
 }

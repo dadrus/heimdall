@@ -17,7 +17,6 @@
 package authenticators
 
 import (
-	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -68,7 +67,7 @@ type oauth2IntrospectionAuthenticator struct {
 	sf            PrincipalFactory
 	ads           extractors.AuthDataExtractStrategy
 	ttl           *time.Duration
-	ed            oauth2.BearerTokenUsageErrorDecorator
+	ed            oauth2.TokenUsageErrorDecorator
 }
 
 // nolint: funlen, cyclop
@@ -84,13 +83,13 @@ func newOAuth2IntrospectionAuthenticator(
 		Msg("Creating authenticator")
 
 	type Config struct {
-		IntrospectionEndpoint *endpoint.Endpoint                    `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
-		MetadataEndpoint      *oauth2.MetadataEndpoint              `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
-		PrincipalInfo         PrincipalInfo                         `mapstructure:"principal"               validate:"-"`                                                                          //nolint:lll,tagalign
-		Assertions            oauth2.Expectation                    `mapstructure:"assertions"`
-		ErrorDecorator        oauth2.BearerTokenUsageErrorDecorator `mapstructure:"error_signaling"`
-		AuthDataSource        extractors.CompositeExtractStrategy   `mapstructure:"token_source"`
-		CacheTTL              *time.Duration                        `mapstructure:"cache_ttl"`
+		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint"  validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"`           //nolint:lll,tagalign
+		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"       validate:"required_without=IntrospectionEndpoint,excluded_with=IntrospectionEndpoint"` //nolint:lll,tagalign
+		PrincipalInfo         PrincipalInfo                       `mapstructure:"principal"               validate:"-"`                                                                          //nolint:lll,tagalign
+		Assertions            oauth2.Expectation                  `mapstructure:"assertions"`
+		ErrorDecorator        oauth2.TokenUsageErrorDecorator     `mapstructure:"error_signaling"`
+		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"`
+		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config
@@ -98,9 +97,10 @@ func newOAuth2IntrospectionAuthenticator(
 		template.WithName("authenticator."+AuthenticatorOAuth2Introspection+"."+name),
 		template.WithSecretResolver(app.SecretResolver()),
 	); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for %s authenticator '%s'", AuthenticatorOAuth2Introspection, name).
-			CausedBy(err)
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s authenticator '%s'", AuthenticatorOAuth2Introspection, name,
+		).CausedBy(err)
 	}
 
 	if conf.IntrospectionEndpoint != nil &&
@@ -135,6 +135,7 @@ func newOAuth2IntrospectionAuthenticator(
 		func() extractors.CompositeExtractStrategy {
 			return extractors.CompositeExtractStrategy{
 				extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"},
+				extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"},
 				extractors.QueryParameterExtractStrategy{Name: "access_token"},
 				extractors.BodyParameterExtractStrategy{Name: "access_token"},
 			}
@@ -189,25 +190,26 @@ func (a *oauth2IntrospectionAuthenticator) Execute(ctx pipeline.Context, sub pip
 		Str("_id", a.id).
 		Msg("Executing authenticator")
 
-	accessToken, err := a.ads.GetAuthData(ctx)
+	token, err := a.ads.GetAuthData(ctx)
 	if err != nil {
-		return errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "no access token present").
-			WithErrorContext(a).
+		return errorchain.NewWithMessage(
+			pipeline.ErrAuthentication,
+			"no access token present",
+		).WithAspects(a).
 			CausedBy(err)
 	}
 
-	rawResp, err := a.getPrincipalInformation(ctx, accessToken)
+	rawResp, err := a.getPrincipalInformation(ctx, token)
 	if err != nil {
 		return err
 	}
 
 	principal, err := a.sf.CreatePrincipal(rawResp)
 	if err != nil {
-		return errorchain.
-			NewWithMessage(pipeline.ErrInternal,
-				"failed to extract principal information from introspection response").
-			WithErrorContext(a).
+		return errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"failed to extract principal information from introspection response",
+		).WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -234,22 +236,23 @@ func (a *oauth2IntrospectionAuthenticator) CreateStep(
 	}
 
 	type Config struct {
-		IntrospectionEndpoint *endpoint.Endpoint                    `mapstructure:"introspection_endpoint" validate:"not_allowed"` //nolint:lll
-		MetadataEndpoint      *oauth2.MetadataEndpoint              `mapstructure:"metadata_endpoint"      validate:"not_allowed"` //nolint:lll
-		SubjectInfo           *PrincipalInfo                        `mapstructure:"principal"              validate:"not_allowed"` //nolint:lll
-		AuthDataSource        extractors.CompositeExtractStrategy   `mapstructure:"token_source"           validate:"not_allowed"` //nolint:lll
-		Assertions            oauth2.Expectation                    `mapstructure:"assertions"`
-		CacheTTL              *time.Duration                        `mapstructure:"cache_ttl"`
-		ErrorDecorator        oauth2.BearerTokenUsageErrorDecorator `mapstructure:"error_signaling"`
+		IntrospectionEndpoint *endpoint.Endpoint                  `mapstructure:"introspection_endpoint" validate:"not_allowed"` //nolint:lll
+		MetadataEndpoint      *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint"      validate:"not_allowed"` //nolint:lll
+		SubjectInfo           *PrincipalInfo                      `mapstructure:"principal"              validate:"not_allowed"` //nolint:lll
+		AuthDataSource        extractors.CompositeExtractStrategy `mapstructure:"token_source"           validate:"not_allowed"` //nolint:lll
+		Assertions            oauth2.Expectation                  `mapstructure:"assertions"`
+		CacheTTL              *time.Duration                      `mapstructure:"cache_ttl"`
+		ErrorDecorator        oauth2.TokenUsageErrorDecorator     `mapstructure:"error_signaling"`
 	}
 
 	var conf Config
 	if err := decodeConfig(a.app, def.Config, &conf,
 		template.WithName("authenticator."+AuthenticatorOAuth2Introspection+"."+a.name),
 	); err != nil {
-		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
-			"failed decoding config for %s authenticator '%s'", AuthenticatorOAuth2Introspection, a.name).
-			CausedBy(err)
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"failed decoding config for %s authenticator '%s'", AuthenticatorOAuth2Introspection, a.name,
+		).CausedBy(err)
 	}
 
 	return &oauth2IntrospectionAuthenticator{
@@ -267,7 +270,7 @@ func (a *oauth2IntrospectionAuthenticator) CreateStep(
 }
 
 func (a *oauth2IntrospectionAuthenticator) DecorateErrorResponse(err error, er *pipeline.ErrorResponse) {
-	a.ed.Decorate(err, a.a.ScopesMatcher.Scopes(), er)
+	a.ed.Decorate(err, er)
 }
 
 func (a *oauth2IntrospectionAuthenticator) Name() string          { return a.name }
@@ -288,21 +291,24 @@ func (a *oauth2IntrospectionAuthenticator) serverMetadata(
 
 	metadata, err := a.r.Get(ctx.Context(), args)
 	if err != nil {
-		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
-			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)
+		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"failed retrieving oauth2 server metadata",
+		).CausedBy(err).WithAspects(a)
 	}
 
 	if metadata.IntrospectionEndpoint == nil {
-		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
-			"received server metadata does not contain the required introspection_endpoint").
-			WithErrorContext(a)
+		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"received server metadata does not contain the required introspection_endpoint",
+		).WithAspects(a)
 	}
 
 	return metadata, nil
 }
 
 func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map[string]any, error) {
-	jwtToken, err := jwt.ParseSigned(token, supportedAlgorithms())
+	jwtToken, err := jwt.ParseSigned(token, oauth2.SupportedAlgorithms())
 	if err == nil {
 		claims := map[string]any{}
 		if err = jwtToken.UnsafeClaimsWithoutVerification(&claims); err == nil {
@@ -313,16 +319,21 @@ func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map
 	return nil, err
 }
 
+//nolint:cyclop
 func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
 	ctx pipeline.Context,
-	token string,
+	authData extractors.AuthData,
 ) ([]byte, error) {
 	cch := cache.Ctx(ctx.Context())
 	logger := zerolog.Ctx(ctx.Context())
 
-	var cacheKey string
+	var (
+		cacheKey string
+		cacheHit bool
+		rawResp  []byte
+	)
 
-	claims, err := a.extractTokenClaims(token)
+	claims, err := a.extractTokenClaims(authData.Value)
 	if err != nil {
 		logger.Debug().Err(err).Msg("Could not extract issuer information from token.")
 	}
@@ -332,47 +343,51 @@ func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
 		return nil, err
 	}
 
-	req, err := a.createRequest(ctx.Context(), metadata.IntrospectionEndpoint, token, claims)
+	req, err := a.createRequest(ctx.Context(), metadata.IntrospectionEndpoint, authData.Value, claims)
 	if err != nil {
 		return nil, err
 	}
 
 	if a.isCacheEnabled() {
-		cacheKey = a.calculateCacheKey(metadata.IntrospectionEndpoint, req.URL.String(), token)
+		cacheKey = a.calculateCacheKey(metadata.IntrospectionEndpoint, req.URL.String(), authData.Value)
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			logger.Debug().Msg("Reusing introspection response from cache")
 
-			return entry, nil
+			cacheHit = true
+			rawResp = entry
 		}
 	}
 
-	introspectResp, rawResp, err := a.fetchTokenIntrospectionResponse(
-		ctx,
-		metadata.IntrospectionEndpoint.CreateClient(req.URL.Hostname()),
-		req,
-	)
-	if err != nil {
-		return nil, err
+	if rawResp == nil {
+		rawResp, err = a.fetchTokenIntrospectionResponse(
+			ctx,
+			metadata.IntrospectionEndpoint.CreateClient(req.URL.Hostname()),
+			req,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	// verification of the issuer is optional according to RFC 7662. The below implementation
-	// ensures it is done only if explicitly configured.
-	assertions := a.a
-	if len(introspectResp.Issuer) != 0 {
-		// configured assertions take precedence over those available in the metadata
-		assertions = assertions.Merge(a.a.Merge(oauth2.Expectation{TrustedIssuers: []string{metadata.Issuer}}))
-	}
+	var introspectResp oauth2.IntrospectionResponse
 
-	if err = introspectResp.Validate(assertions); err != nil {
-		return nil, errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "access token does not satisfy assertion conditions").
-			WithErrorContext(a).
+	if err = json.Unmarshal(rawResp, &introspectResp); err != nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"failed to unmarshal introspection response",
+		).WithAspects(a).
 			CausedBy(err)
 	}
 
-	if cacheTTL := a.getCacheTTL(introspectResp); cacheTTL > 0 {
-		if err = cch.Set(ctx.Context(), cacheKey, rawResp, cacheTTL); err != nil {
-			logger.Warn().Err(err).Msg("Failed to cache introspection response")
+	if err = a.validateIntrospectionResponse(ctx, authData, metadata, &introspectResp); err != nil {
+		return nil, err
+	}
+
+	if !cacheHit && len(cacheKey) != 0 {
+		if cacheTTL := a.getCacheTTL(&introspectResp); cacheTTL > 0 {
+			if err = cch.Set(ctx.Context(), cacheKey, rawResp, cacheTTL); err != nil {
+				logger.Warn().Err(err).Msg("Failed to cache introspection response")
+			}
 		}
 	}
 
@@ -392,9 +407,10 @@ func (a *oauth2IntrospectionAuthenticator) createRequest(
 		map[string]any{"TokenIssuer": claims["iss"]},
 	)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(pipeline.ErrInternal, "failed creating request").
-			WithErrorContext(a).
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"failed creating request",
+		).WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -402,26 +418,28 @@ func (a *oauth2IntrospectionAuthenticator) createRequest(
 }
 
 func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
-	ctx pipeline.Context, client *http.Client, req *http.Request,
-) (*oauth2.IntrospectionResponse, []byte, error) {
+	ctx pipeline.Context,
+	client *http.Client,
+	req *http.Request,
+) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
 	logger.Debug().Msg("Retrieving information about the access token from the introspection endpoint")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		var clientErr *url.Error
-		if errors.As(err, &clientErr) && clientErr.Timeout() {
-			return nil, nil, errorchain.
-				NewWithMessage(pipeline.ErrCommunicationTimeout,
-					"request to the introspection endpoint timed out").
-				WithErrorContext(a).
+		if clientErr, ok := errors.AsType[*url.Error](err); ok && clientErr.Timeout() {
+			return nil, errorchain.NewWithMessage(
+				pipeline.ErrCommunicationTimeout,
+				"request to the introspection endpoint timed out",
+			).WithAspects(a).
 				CausedBy(err)
 		}
 
-		return nil, nil, errorchain.
-			NewWithMessage(pipeline.ErrCommunication, "request to the introspection endpoint failed").
-			WithErrorContext(a).
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrCommunication,
+			"request to the introspection endpoint failed",
+		).WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -432,26 +450,49 @@ func (a *oauth2IntrospectionAuthenticator) fetchTokenIntrospectionResponse(
 
 func (a *oauth2IntrospectionAuthenticator) readIntrospectionResponse(
 	resp *http.Response,
-) (*oauth2.IntrospectionResponse, []byte, error) {
+) ([]byte, error) {
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, nil, errorchain.
-			NewWithMessagef(pipeline.ErrCommunication, "unexpected response code: %v", resp.StatusCode).
-			WithErrorContext(a)
+		return nil, errorchain.NewWithMessagef(
+			pipeline.ErrCommunication,
+			"unexpected response code: %v", resp.StatusCode,
+		).WithAspects(a)
 	}
 
-	var (
-		introspectionResponse oauth2.IntrospectionResponse
-		buf                   bytes.Buffer
-	)
-
-	if err := json.NewDecoder(io.TeeReader(resp.Body, &buf)).Decode(&introspectionResponse); err != nil {
-		return nil, nil, errorchain.
-			NewWithMessage(pipeline.ErrInternal, "failed to unmarshal received introspection response").
-			WithErrorContext(a).
+	rawResp, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"failed to read introspection response",
+		).WithAspects(a).
 			CausedBy(err)
 	}
 
-	return &introspectionResponse, buf.Bytes(), nil
+	return rawResp, nil
+}
+
+func (a *oauth2IntrospectionAuthenticator) validateIntrospectionResponse(
+	ctx pipeline.Context,
+	authData extractors.AuthData,
+	metadata oauth2.ServerMetadata,
+	introspectResp *oauth2.IntrospectionResponse,
+) error {
+	// verification of the issuer is optional according to RFC 7662. The below implementation
+	// ensures it is done only if explicitly configured.
+	assertions := a.a
+	if len(introspectResp.Issuer) != 0 {
+		// configured assertions take precedence over those available in the metadata
+		assertions = a.a.Merge(oauth2.Expectation{TrustedIssuers: []string{metadata.Issuer}})
+	}
+
+	if err := introspectResp.Validate(ctx, oauth2.TokenType(authData.Scheme), authData.Value, assertions); err != nil {
+		return errorchain.NewWithMessage(
+			pipeline.ErrAuthentication,
+			"access token does not satisfy assertion conditions",
+		).WithAspects(a).
+			CausedBy(err)
+	}
+
+	return nil
 }
 
 func (a *oauth2IntrospectionAuthenticator) isCacheEnabled() bool {

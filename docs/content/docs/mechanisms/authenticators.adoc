@@ -316,9 +316,9 @@ Where to extract the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_
 +
 How long to cache the response. If not set, caching of the introspection response is based on the available token expiration information. To disable caching, set it to `0s`. If you set the ttl to a custom value > 0, the expiration time (if available) of the token will be considered. The cache key is calculated from the `introspection_endpoint` configuration and the value of the access token.
 
-* *`error_signaling`*: _link:{{< relref "/docs/configuration/types.adoc#_bearer_token_usage_error_signaling" >}}[Bearer Token Usage Error Signaling]_ (optional, overridable)
+* *`error_signaling`*: _link:{{< relref "/docs/configuration/types.adoc#_token_usage_error_signaling" >}}[Token Usage Error Signaling]_ (optional, overridable)
 +
-Configures whether failures should be signaled using the `WWW-Authenticate` response header according to https://www.rfc-editor.org/rfc/rfc6750[RFC 6750].
+Configures whether failures should be signaled using the `WWW-Authenticate` response header according to https://www.rfc-editor.org/rfc/rfc6750[RFC 6750] and related RFCs.
 
 .Minimal possible configuration based on the Introspection endpoint
 ====
@@ -428,9 +428,9 @@ Enables or disables the verification of the JWK certificate used for JWT signatu
 +
 The reference to the trust anchors, to be used for the JWK certificate validation. Defaults to system trust store.
 
-* *`error_signaling`*: _link:{{< relref "/docs/configuration/types.adoc#_bearer_token_usage_error_signaling" >}}[Bearer Token Usage Error Signaling]_ (optional, overridable)
+* *`error_signaling`*: _link:{{< relref "/docs/configuration/types.adoc#_token_usage_error_signaling" >}}[Token Usage Error Signaling]_ (optional, overridable)
 +
-Configures whether failures should be signaled using the `WWW-Authenticate` response header according to https://www.rfc-editor.org/rfc/rfc6750[RFC 6750].
+Configures whether failures should be signaled using the `WWW-Authenticate` response header according to https://www.rfc-editor.org/rfc/rfc6750[RFC 6750] and related RFCs.
 
 NOTE: If a JWT does not reference a `kid`, heimdall always fetches a JWKS from the configured endpoint (so no caching is done) and iterates over the received keys until one matches. If none matches, the authenticator fails.
 

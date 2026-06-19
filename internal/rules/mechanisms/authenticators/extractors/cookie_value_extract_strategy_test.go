@@ -47,7 +47,9 @@ func TestExtractExistingCookieValue(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	assert.Equal(t, cookieValue, val)
+	assert.Equal(t, cookieValue, val.Value)
+	assert.Equal(t, SourceCookie, val.Source)
+	assert.Empty(t, val.Scheme)
 }
 
 func TestExtractNotExistingCookieValue(t *testing.T) {

@@ -52,7 +52,9 @@ func TestCompositeExtractCookieValueWithoutScheme(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	assert.Equal(t, actualValue, val)
+	assert.Equal(t, actualValue, val.Value)
+	assert.Equal(t, SourceCookie, val.Source)
+	assert.Empty(t, val.Scheme)
 }
 
 func TestCompositeExtractHeaderValueWithScheme(t *testing.T) {
@@ -83,7 +85,9 @@ func TestCompositeExtractHeaderValueWithScheme(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	assert.Equal(t, actualValue, val)
+	assert.Equal(t, actualValue, val.Value)
+	assert.Equal(t, SourceHeader, val.Source)
+	assert.Equal(t, headerScheme, val.Scheme)
 }
 
 func TestCompositeExtractStrategyOrder(t *testing.T) {
@@ -111,5 +115,7 @@ func TestCompositeExtractStrategyOrder(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	assert.Equal(t, actualValue, val)
+	assert.Equal(t, actualValue, val.Value)
+	assert.Equal(t, SourceHeader, val.Source)
+	assert.Equal(t, headerScheme, val.Scheme)
 }

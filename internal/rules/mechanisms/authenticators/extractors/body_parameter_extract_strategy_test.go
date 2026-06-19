@@ -32,7 +32,7 @@ func TestExtractBodyParameter(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		parameterName  string
 		configureMocks func(t *testing.T, ctx *mocks.ContextMock)
-		assert         func(t *testing.T, err error, authData string)
+		assert         func(t *testing.T, err error, authData AuthData)
 	}{
 		"body is a string": {
 			parameterName: "foobar",
@@ -44,7 +44,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, _ string) {
+			assert: func(t *testing.T, err error, _ AuthData) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -62,7 +62,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, _ string) {
+			assert: func(t *testing.T, err error, _ AuthData) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -80,7 +80,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, _ string) {
+			assert: func(t *testing.T, err error, _ AuthData) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -98,7 +98,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, _ string) {
+			assert: func(t *testing.T, err error, _ AuthData) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -116,7 +116,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, _ string) {
+			assert: func(t *testing.T, err error, _ AuthData) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -134,7 +134,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, _ string) {
+			assert: func(t *testing.T, err error, _ AuthData) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -152,7 +152,7 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, _ string) {
+			assert: func(t *testing.T, err error, _ AuthData) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -170,11 +170,13 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData string) {
+			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "foo", authData)
+				assert.Equal(t, "foo", authData.Value)
+				assert.Equal(t, SourceBody, authData.Source)
+				assert.Empty(t, authData.Scheme)
 			},
 		},
 		"form url encoded body contains required parameter": {
@@ -187,11 +189,13 @@ func TestExtractBodyParameter(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
-			assert: func(t *testing.T, err error, authData string) {
+			assert: func(t *testing.T, err error, authData AuthData) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, "foo", authData)
+				assert.Equal(t, "foo", authData.Value)
+				assert.Equal(t, SourceBody, authData.Source)
+				assert.Empty(t, authData.Scheme)
 			},
 		},
 	} {

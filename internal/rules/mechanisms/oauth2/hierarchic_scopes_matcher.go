@@ -16,23 +16,21 @@
 
 package oauth2
 
-import (
-	"strings"
-
-	"github.com/dadrus/heimdall/internal/x/errorchain"
-)
+import "strings"
 
 type HierarchicScopeStrategyMatcher []string
 
-func (m HierarchicScopeStrategyMatcher) Scopes() []string {
-	return []string(m)
-}
-
 func (m HierarchicScopeStrategyMatcher) Match(scopes []string) error {
+	var missing []string
+
 	for _, required := range m {
 		if !m.doMatch(scopes, required) {
-			return errorchain.NewWithMessagef(ErrScopeMatch, "required scope %s is missing", required)
+			missing = append(missing, required)
 		}
+	}
+
+	if len(missing) != 0 {
+		return NewScopeMismatchError([]string(m), missing)
 	}
 
 	return nil

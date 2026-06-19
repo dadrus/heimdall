@@ -14,11 +14,11 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package authenticators
+package oauth2
 
 import "github.com/go-jose/go-jose/v4"
 
-func supportedAlgorithms() []jose.SignatureAlgorithm {
+func SupportedAlgorithms() []jose.SignatureAlgorithm {
 	return []jose.SignatureAlgorithm{
 		// ECDSA
 		jose.ES256, jose.ES384, jose.ES512, jose.EdDSA,

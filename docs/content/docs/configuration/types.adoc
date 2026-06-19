@@ -30,10 +30,18 @@ Issuers to trust.
 * *`allowed_algorithms`*: _string array_ (optional)
 +
 Algorithms, which are trusted (according to https://datatracker.ietf.org/doc/html/rfc7518[RFC 7518]). Defaults to the following list: ES256, ES384, ES512, PS384, PS512.
++
+NOTE: If https://datatracker.ietf.org/doc/html/rfc9449[DPoP] validation is enabled using `proof_of_possession` (see below), these algorithms are also used to validate DPoP proof JWT signatures.
 
 * *`validity_leeway`* _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
 The time leeway to consider while verifying the `iat`, `exp` and the `nbf`. Defaults to 10 seconds.
++
+NOTE: If DPoP validation is enabled using `proof_of_possession` (see below), this leeway is also considered while validating the `iat` claim of the DPoP proof JWT.
+
+* *`proof_of_possession`*: _link:{{< relref "#_proof_of_possession_assertion" >}}[Proof of Possession Assertion]_ (optional)
++
+Configures proof-of-possession validation for access tokens. If configured, heimdall enforces the configured proof-of-possession assertion. Otherwise, proof-of-possession validation is performed opportunistically. That means, if e.g., an access token is recognized as DPoP-bound, heimdall tries to satisfy the DPoP requirements according to https://www.rfc-editor.org/rfc/rfc9449[RFC 9449].
 
 .Assertions configuration
 ====
@@ -50,9 +58,17 @@ scopes:
 allowed_algorithms:
  - ES512
 validity_leeway: 5s
+proof_of_possession:
+  type: dpop
+  config:
+    max_age: 1m
+    nonce_required: false
+    replay_allowed: false
 ----
 
-Here we say, the token must have been issued either by the issuer `foo`, or the issuer `bar`, the `aud` claim must contain `zap`, the scope claim (either `scp` or `scope`) must be present and contain the scope `baz`, if the token or the introspection response is signed, it must have been signed by using the `ES512` algorithm (ECDSA using P-521 and SHA-512) and if the information about token validity is present, we respect a deviation of 5 seconds.
+Here we say, the token must have been issued either by the issuer `foo`, or the issuer `bar`, the `aud` claim must contain `zap`, the scope claim (either `scp` or `scope`) must be present and contain the scope `baz`, if the token is signed, it must have been signed by using the `ES512` algorithm (ECDSA using P-521 and SHA-512), and if the information about token validity is present, we respect a deviation of 5 seconds.
+
+In addition, the access token must satisfy the configured proof-of-possession assertion. In the example above, heimdall validates DPoP-bound access tokens according to RFC 9449. The DPoP proof must be bound to the presented access token, the current HTTP method and URI, and must satisfy the configured freshness and replay protection settings.
 
 ====
 
@@ -274,7 +290,7 @@ Authentication strategy is kind of abstract type, so you have to define which sp
 
 An AuthStrategy configuration entry must contain the following two properties:
 
-* `type` - The type of the strategy. Available types are described in the following sections.
+* `type` - The type of the strategy.
 * `config` - The strategy specific configuration.
 
 Available strategies are described in the following sections.
@@ -491,48 +507,6 @@ message: No groups ending with @acme.co present
 ----
 ====
 
-== Bearer Token Usage Error Signaling
-
-This type configures how heimdall signals errors for authenticators using OAuth2 Bearer tokens according to https://www.rfc-editor.org/rfc/rfc6750[RFC 6750].
-
-Following properties are available:
-
-* *`enabled`*: _boolean_ (optional)
-+
-Enables the generation of the `WWW-Authenticate` response header using the `Bearer` authentication scheme. Defaults to `false`.
-
-* *`realm`*: _string_ (optional)
-+
-The realm to include in the `WWW-Authenticate` header. Defaults to `"Please authenticate"`.
-
-* *`error_uri`*: _URI_ (optional)
-+
-A URI identifying a human-readable page with information about the error.
-
-* *`include_error_description`*: _boolean_ (optional)
-+
-Whether to include the optional `error_description` parameter. Defaults to `false`.
-+
-CAUTION: Enabling this option may disclose implementation details and should be used with care.
-
-* *`include_required_scope`*: _boolean_ (optional)
-+
-Whether to include the required scopes using the optional `scope` parameter if the error is `insufficient_scope`. Defaults to `false`.
-+
-CAUTION: Enabling this option may disclose details about the protected resource's authorization model.
-
-.Bearer token usage error signaling configuration
-====
-[source, yaml]
-----
-enabled: true
-realm: example
-error_uri: https://docs.example.org/oauth2/errors
-include_error_description: false
-include_required_scope: false
-----
-====
-
 == ByteSize
 
 ByteSize is actually a string type, which adheres to the following pattern: `^[0-9]+(B|KB|MB)$`
@@ -687,6 +661,100 @@ Defaults to `false` if not otherwise stated in the description of the configurat
 * *`cache_ttl`* _link:{{< relref "#_duration" >}}[Duration]_ (optional)
 +
 Specifies how long heimdall should cache the response if it does not contain any explicit expiration time (no heuristic freshness lifetime is calculated). If this property is not set, heimdall considers such responses uncacheable. Unless specified otherwise in the configuration type description utilizing the HTTP Cache settings, the default value is `0s`.
+
+
+== Principal
+
+This configuration type enables extraction of principal information from responses received by heimdall from authentication services. Following properties are available.
+
+* *`id`*: _string_ (mandatory)
++
+A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the id of the principal in the JSON object.
+
+* *`attributes`*: _string or map_ (optional)
++
+If this property is defined as a single string, it must be a https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the attributes of the principal in the JSON object. Defaults to `@this`. Otherwise, if it defined as a key-value map, the values of that map must be https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] expressions.
+
+.Extracting principal id from an https://tools.ietf.org/html/rfc7662[OAuth2 Introspection] endpoint response.
+====
+
+This example shows how to extract the principal id from an https://tools.ietf.org/html/rfc7662[OAuth2 Introspection] endpoint response and set the principal attributes to the entire response
+
+[source, yaml]
+----
+id: sub
+attributes: "@this"
+----
+
+Setting `attributes` was actually not required, as `@this` would be set by default anyway.
+====
+
+.Extracting principal from an https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response
+====
+
+In this example the `id` is set to the value of the `identity.id` property from the response. Additionally, some of the present attributes are mapped to particular names.
+
+[source, yaml]
+----
+id: identity.id
+attributes:
+  email: identity.traits.email
+  username: identity.traits.user
+----
+====
+
+
+== Proof of Possession Assertion
+
+Proof of possession is a kind of abstract assertion type, so you have to define which specific type to use. Each type has its own configuration options.
+
+A Proof of Possession assertion configuration entry must contain the following properties:
+
+* `type` - The mandatory type of the proof of possession assertion.
+* `config` - The optional type-specific configuration.
+
+Available proof of possession assertion types are described in the following sections.
+
+=== DPoP Assertion
+
+This assertion validates DPoP-bound access tokens according to https://www.rfc-editor.org/rfc/rfc9449[RFC 9449].
+
+When configured, heimdall validates the DPoP proof JWT against the presented access token and the current request. This includes validation of the proof signature, the access token binding, the HTTP method and URI binding, proof freshness, and replay protection.
+
+`type` must be set to `dpop`. `config` is optional and supports the following properties:
+
+* *`max_age`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+The maximum allowed age of a DPoP proof based on its `iat` claim. Defaults to `1m`.
++
+If nonce validation is enabled, this value is also used as the maximum allowed age of a nonce.
+
+* *`nonce_required`*: _boolean_ (optional)
++
+Whether the DPoP proof must contain a nonce previously requested by heimdall. Defaults to `false`.
++
+If set to `true`, heimdall requires a link:{{< relref "/docs/operations/secret_management.adoc#_master_key" >}}[master key] to generate and validate DPoP nonces. If DPoP nonce validation is enabled and the master key is not configured, heimdall refuses to start or rejects rules which apply the configuration at rule level.
+
+* *`replay_allowed`*: *boolean* (optional)
++
+Whether replay of DPoP proofs is allowed. Defaults to `false`.
++
+If set to `false`, heimdall rejects replayed DPoP proofs based on the `jti` claim.
++
+NOTE: Replay detection is performed on a best-effort basis and depends on the consistency guarantees of the configured link:{{< relref "/docs/operations/cache.adoc" >}}[cache backend].
+
+.DPoP Assertion configuration
+====
+[source, yaml]
+----
+type: dpop
+config:
+  max_age: 1m
+  nonce_required: true
+  replay_allowed: false
+----
+
+====
 
 == Respond
 
@@ -952,47 +1020,6 @@ The name used to specify the issuer. E.g. if a JWT is generated, this value is u
 +
 The reference to the cryptographic material. At least one private key must be present.
 
-== Principal
-
-This configuration type enables extraction of principal information from responses received by heimdall from authentication services. Following properties are available.
-
-* *`id`*: _string_ (mandatory)
-+
-A https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the id of the principal in the JSON object.
-
-* *`attributes`*: _string or map_ (optional)
-+
-If this property is defined as a single string, it must be a https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] pointing to the attributes of the principal in the JSON object. Defaults to `@this`. Otherwise, if it defined as a key-value map, the values of that map must be https://github.com/tidwall/gjson/blob/master/SYNTAX.md[GJSON Path] expressions.
-
-.Extracting principal id from an https://tools.ietf.org/html/rfc7662[OAuth2 Introspection] endpoint response.
-====
-
-This example shows how to extract the principal id from an https://tools.ietf.org/html/rfc7662[OAuth2 Introspection] endpoint response and set the principal attributes to the entire response
-
-[source, yaml]
-----
-id: sub
-attributes: "@this"
-----
-
-Setting `attributes` was actually not required, as `@this` would be set by default anyway.
-====
-
-.Extracting principal from an https://www.ory.sh/docs/kratos/[Ory Kratos] "whoami" endpoint response
-====
-
-In this example the `id` is set to the value of the `identity.id` property from the response. Additionally, some of the present attributes are mapped to particular names.
-
-[source, yaml]
-----
-id: identity.id
-attributes:
-  email: identity.traits.email
-  username: identity.traits.user
-----
-====
-
-
 == TLS
 Following are the supported TLS configuration properties:
 
@@ -1032,5 +1059,89 @@ min_version: TLS1.2
 cipher_suites:
   - TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
   - TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+----
+====
+
+== Token Usage Error Signaling
+
+This type configures how heimdall signals token usage errors for authenticators using OAuth2 access tokens according to https://www.rfc-editor.org/rfc/rfc6750[RFC 6750], https://www.rfc-editor.org/rfc/rfc9449[RFC 9449], and related specifications.
+
+If enabled, heimdall adds `WWW-Authenticate` response headers for supported OAuth2 token usage schemes. For regular bearer token usage, heimdall uses the `Bearer` authentication scheme as defined by RFC 6750. If a request uses DPoP or fails DPoP-specific validation, heimdall uses the `DPoP` authentication scheme and DPoP-specific error values where applicable.
+
+Following properties are available:
+
+* *`enabled`*: _boolean_ (optional)
++
+Enables the generation of OAuth2 token usage error challenges using the `WWW-Authenticate` response header. Defaults to `false`.
++
+For bearer token usage, the challenge uses the `Bearer` authentication scheme. For DPoP-bound token usage, the challenge uses the `DPoP` authentication scheme.
+
+* *`realm`*: _string_ (optional)
++
+The realm to include in the `WWW-Authenticate` header. Defaults to `"Please authenticate"`.
+
+* *`error_uri`*: _URI_ (optional)
++
+A URI identifying a human-readable page with information about the error.
+
+* *`include_error_description`*: _boolean_ (optional)
++
+Whether to include the optional `error_description` parameter. Defaults to `false`.
++
+CAUTION: Enabling this option may disclose implementation details and should be used with care.
+
+* *`include_required_scope`*: _boolean_ (optional)
++
+Whether to include the required scopes using the optional `scope` parameter if the error is `insufficient_scope`. Defaults to `false`.
++
+CAUTION: Enabling this option may disclose details about the protected resource's authorization model.
+
+* *`include_dpop_algorithms`*: _boolean_ (optional)
++
+Whether to include the optional `algs` parameter in DPoP challenges if DPoP proof validation fails because the proof uses an unsupported signing algorithm. Defaults to `false`.
++
+If enabled, heimdall includes the configured allowed DPoP proof signing algorithms in the `WWW-Authenticate` header, for example `algs="ES256 ES384"`.
+
+.Token usage error signaling configuration and possible challenges
+====
+[source, yaml]
+----
+enabled: true
+realm: example
+error_uri: https://docs.example.org/oauth2/errors
+include_error_description: false
+include_required_scope: false
+include_dpop_algorithms: true
+----
+
+If a bearer access token is missing, invalid, expired, or does not satisfy the configured assertions, heimdall signals the error using a `Bearer` challenge, for example:
+
+[source, yaml]
+----
+WWW-Authenticate: Bearer realm="example",
+                  error="invalid_token",
+                  error_uri="https://docs.example.org/oauth2/errors"
+----
+
+Line breaks are used to enhance readability.
+
+And if e.g., a DPoP token failed validation due to invalid nonce, heimdall returns a `use_dpop_nonce` challenge and includes a fresh nonce in the `DPoP-Nonce` response header:
+
+[source, yaml]
+----
+WWW-Authenticate: DPoP realm="example",
+                  error="use_dpop_nonce",
+                  error_uri="https://docs.example.org/oauth2/errors"
+DPoP-Nonce: <nonce>
+----
+
+If DPoP proof validation fails because the proof uses an unsupported signing algorithm and `include_dpop_algorithms` is enabled, heimdall includes the allowed DPoP proof algorithms:
+
+[source, yaml]
+----
+WWW-Authenticate: DPoP realm="example",
+                  error="invalid_dpop_proof",
+                  algs="ES256 ES384",
+                  error_uri="https://docs.example.org/oauth2/errors"
 ----
 ====

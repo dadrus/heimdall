@@ -50,7 +50,9 @@ func TestExtractQueryParameter(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
-	assert.Equal(t, queryParamValue, val)
+	assert.Equal(t, queryParamValue, val.Value)
+	assert.Equal(t, SourceQueryParameter, val.Source)
+	assert.Empty(t, val.Scheme)
 }
 
 func TestExtractNotExistingQueryParameterValue(t *testing.T) {

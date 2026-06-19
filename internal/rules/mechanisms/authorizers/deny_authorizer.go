@@ -66,7 +66,7 @@ func (a *denyAuthorizer) Execute(ctx pipeline.Context, _ pipeline.Subject) error
 
 	return errorchain.
 		NewWithMessage(pipeline.ErrAuthorization, "denied by authorizer").
-		WithErrorContext(a)
+		WithAspects(a)
 }
 
 func (a *denyAuthorizer) CreateStep(
@@ -80,7 +80,7 @@ func (a *denyAuthorizer) CreateStep(
 	if len(def.Config) != 0 {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrConfiguration, "allow authorizer cannot be reconfigured").
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	auth := *a

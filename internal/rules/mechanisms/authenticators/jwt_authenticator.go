@@ -28,7 +28,6 @@ import (
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
-	"github.com/go-jose/go-jose/v4/jwt"
 	"github.com/goccy/go-json"
 	"github.com/rs/zerolog"
 
@@ -84,7 +83,7 @@ type jwtAuthenticator struct {
 	ads             extractors.AuthDataExtractStrategy
 	informer        *secrets.CertificateBundleInformer[*x509.CertPool]
 	validateJWKCert bool
-	ed              oauth2.BearerTokenUsageErrorDecorator
+	ed              oauth2.TokenUsageErrorDecorator
 }
 
 // nolint: funlen, cyclop
@@ -96,15 +95,15 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 		Msg("Creating authenticator")
 
 	type Config struct {
-		JWKSEndpoint     *endpoint.Endpoint                    `mapstructure:"jwks_endpoint"     validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
-		MetadataEndpoint *oauth2.MetadataEndpoint              `mapstructure:"metadata_endpoint" validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
-		Assertions       oauth2.Expectation                    `mapstructure:"assertions"        validate:"required_with=JWKSEndpoint"`                                       //nolint:lll,tagalign
-		PrincipalInfo    PrincipalInfo                         `mapstructure:"principal"         validate:"-"`                                                                //nolint:lll,tagalign
-		ErrorDecorator   oauth2.BearerTokenUsageErrorDecorator `mapstructure:"error_signaling"`
-		AuthDataSource   extractors.CompositeExtractStrategy   `mapstructure:"jwt_source"`
-		CacheTTL         *time.Duration                        `mapstructure:"cache_ttl"`
-		ValidateJWK      *bool                                 `mapstructure:"validate_jwk"`
-		TrustAnchors     *config.Secret                        `mapstructure:"trust_anchors"     validate:"omitempty"`
+		JWKSEndpoint     *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"     validate:"required_without=MetadataEndpoint,excluded_with=MetadataEndpoint"` //nolint:lll,tagalign
+		MetadataEndpoint *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint" validate:"required_without=JWKSEndpoint,excluded_with=JWKSEndpoint"`         //nolint:lll,tagalign
+		Assertions       oauth2.Expectation                  `mapstructure:"assertions"        validate:"required_with=JWKSEndpoint"`                                       //nolint:lll,tagalign
+		PrincipalInfo    PrincipalInfo                       `mapstructure:"principal"         validate:"-"`                                                                //nolint:lll,tagalign
+		ErrorDecorator   oauth2.TokenUsageErrorDecorator     `mapstructure:"error_signaling"`
+		AuthDataSource   extractors.CompositeExtractStrategy `mapstructure:"jwt_source"`
+		CacheTTL         *time.Duration                      `mapstructure:"cache_ttl"`
+		ValidateJWK      *bool                               `mapstructure:"validate_jwk"`
+		TrustAnchors     *config.Secret                      `mapstructure:"trust_anchors"     validate:"omitempty"`
 	}
 
 	var (
@@ -189,6 +188,7 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 		func() extractors.CompositeExtractStrategy {
 			return extractors.CompositeExtractStrategy{
 				extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"},
+				extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"},
 				extractors.QueryParameterExtractStrategy{Name: "access_token"},
 				extractors.BodyParameterExtractStrategy{Name: "access_token"},
 			}
@@ -243,31 +243,23 @@ func (a *jwtAuthenticator) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 		Str("_id", a.id).
 		Msg("Executing authenticator")
 
-	jwtAd, err := a.ads.GetAuthData(ctx)
+	token, err := a.ads.GetAuthData(ctx)
 	if err != nil {
 		return errorchain.NewWithMessage(pipeline.ErrAuthentication, "no JWT present").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
-	token, err := jwt.ParseSigned(jwtAd, supportedAlgorithms())
-	if err != nil {
-		return errorchain.NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
-			WithErrorContext(a).
-			CausedBy(errorchain.NewWithMessage(pipeline.ErrMalformedRequest, "invalid JWT format").
-				CausedBy(err))
-	}
-
-	rawClaims, err := a.verifyToken(ctx, token)
+	plainPayload, err := a.verifyToken(ctx, token)
 	if err != nil {
 		return err
 	}
 
-	principal, err := a.sf.CreatePrincipal(rawClaims)
+	principal, err := a.sf.CreatePrincipal(plainPayload)
 	if err != nil {
 		return errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed to extract principal information from jwt").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -294,15 +286,15 @@ func (a *jwtAuthenticator) CreateStep(
 	}
 
 	type Config struct {
-		JWKSEndpoint     *endpoint.Endpoint                    `mapstructure:"jwks_endpoint"     validate:"not_allowed"`
-		MetadataEndpoint *oauth2.MetadataEndpoint              `mapstructure:"metadata_endpoint" validate:"not_allowed"`
-		SubjectInfo      *PrincipalInfo                        `mapstructure:"principal"         validate:"not_allowed"`
-		AuthDataSource   extractors.CompositeExtractStrategy   `mapstructure:"jwt_source"        validate:"not_allowed"`
-		ValidateJWK      *bool                                 `mapstructure:"validate_jwk"      validate:"not_allowed"`
-		TrustAnchors     *config.Secret                        `mapstructure:"trust_anchors"     validate:"not_allowed"`
-		Assertions       oauth2.Expectation                    `mapstructure:"assertions"        validate:"-"`
-		ErrorDecorator   oauth2.BearerTokenUsageErrorDecorator `mapstructure:"error_signaling"`
-		CacheTTL         *time.Duration                        `mapstructure:"cache_ttl"`
+		JWKSEndpoint     *endpoint.Endpoint                  `mapstructure:"jwks_endpoint"     validate:"not_allowed"`
+		MetadataEndpoint *oauth2.MetadataEndpoint            `mapstructure:"metadata_endpoint" validate:"not_allowed"`
+		SubjectInfo      *PrincipalInfo                      `mapstructure:"principal"         validate:"not_allowed"`
+		AuthDataSource   extractors.CompositeExtractStrategy `mapstructure:"jwt_source"        validate:"not_allowed"`
+		ValidateJWK      *bool                               `mapstructure:"validate_jwk"      validate:"not_allowed"`
+		TrustAnchors     *config.Secret                      `mapstructure:"trust_anchors"     validate:"not_allowed"`
+		Assertions       oauth2.Expectation                  `mapstructure:"assertions"        validate:"-"`
+		ErrorDecorator   oauth2.TokenUsageErrorDecorator     `mapstructure:"error_signaling"`
+		CacheTTL         *time.Duration                      `mapstructure:"cache_ttl"`
 	}
 
 	var conf Config
@@ -332,7 +324,7 @@ func (a *jwtAuthenticator) CreateStep(
 }
 
 func (a *jwtAuthenticator) DecorateErrorResponse(err error, er *pipeline.ErrorResponse) {
-	a.ed.Decorate(err, a.a.ScopesMatcher.Scopes(), er)
+	a.ed.Decorate(err, er)
 }
 
 func (a *jwtAuthenticator) Name() string          { return a.name }
@@ -392,27 +384,27 @@ func (a *jwtAuthenticator) serverMetadata(
 	metadata, err := a.r.Get(ctx.Context(), map[string]any{"TokenIssuer": claims["iss"]})
 	if err != nil {
 		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
-			"failed retrieving oauth2 server metadata").CausedBy(err).WithErrorContext(a)
+			"failed retrieving oauth2 server metadata").CausedBy(err).WithAspects(a)
 	}
 
 	if metadata.JWKSEndpoint == nil {
 		return oauth2.ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"received server metadata does not contain the required jwks_uri").
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	return metadata, nil
 }
 
-func (a *jwtAuthenticator) verifyToken(ctx pipeline.Context, token *jwt.JSONWebToken) (json.RawMessage, error) {
-	claims := map[string]any{}
-	if err := token.UnsafeClaimsWithoutVerification(&claims); err != nil {
-		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed to deserialize JWT").
-			WithErrorContext(a).
+func (a *jwtAuthenticator) verifyToken(ctx pipeline.Context, rawToken extractors.AuthData) (json.RawMessage, error) {
+	tok, err := oauth2.NewToken(oauth2.TokenType(rawToken.Scheme), rawToken.Value)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(pipeline.ErrAuthentication, "failed to parse JWT").
+			WithAspects(a).
 			CausedBy(err)
 	}
 
-	metadata, err := a.serverMetadata(ctx, claims)
+	metadata, err := a.serverMetadata(ctx, tok.RawClaims)
 	if err != nil {
 		return nil, err
 	}
@@ -422,31 +414,33 @@ func (a *jwtAuthenticator) verifyToken(ctx pipeline.Context, token *jwt.JSONWebT
 		TrustedIssuers: []string{metadata.Issuer},
 	})
 
-	if len(token.Headers[0].KeyID) == 0 {
-		return a.verifyTokenWithoutKID(ctx, token, claims, metadata.JWKSEndpoint, &assertions)
+	if len(tok.Header.KeyID) == 0 {
+		return a.verifyTokenWithoutKID(ctx, tok, metadata.JWKSEndpoint, &assertions)
 	}
 
-	sigKey, err := a.getKey(ctx, token.Headers[0].KeyID, claims, metadata.JWKSEndpoint)
+	sigKey, err := a.getKey(ctx, tok.Header.KeyID, tok.RawClaims, metadata.JWKSEndpoint)
 	if err != nil {
 		return nil, err
 	}
 
-	return a.verifyTokenWithKey(token, sigKey, &assertions)
+	return a.verifyTokenWithKey(ctx, tok, sigKey, &assertions)
 }
 
 func (a *jwtAuthenticator) verifyTokenWithoutKID(
 	ctx pipeline.Context,
-	token *jwt.JSONWebToken,
-	tokenClaims map[string]any,
+	tok *oauth2.Token,
 	ep *endpoint.Endpoint,
 	assertions *oauth2.Expectation,
 ) (json.RawMessage, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Info().Msg("No kid present in the JWT")
 
-	var rawClaims json.RawMessage
+	var (
+		rawClaims json.RawMessage
+		err       error
+	)
 
-	req, err := a.createRequest(ctx.Context(), ep, tokenClaims)
+	req, err := a.createRequest(ctx.Context(), ep, tok.RawClaims)
 	if err != nil {
 		return nil, err
 	}
@@ -464,7 +458,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 			continue
 		}
 
-		rawClaims, err = a.verifyTokenWithKey(token, &sigKey, assertions)
+		rawClaims, err = a.verifyTokenWithKey(ctx, tok, &sigKey, assertions)
 		if err == nil {
 			break
 		}
@@ -476,7 +470,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrAuthentication,
 				"None of the keys received from the JWKS endpoint could be used to verify the JWT").
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	return rawClaims, nil
@@ -521,14 +515,14 @@ func (a *jwtAuthenticator) getKey(
 		return nil, errorchain.
 			NewWithMessagef(pipeline.ErrAuthentication,
 				"no (unique) key found for the keyID='%s' referenced in the JWT", keyID).
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	jwk := &keys[0]
 	if err = a.validateJWK(jwk); err != nil {
 		return nil, errorchain.
 			NewWithMessagef(pipeline.ErrAuthentication, "JWK for keyID=%s is invalid", keyID).
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -556,13 +550,13 @@ func (a *jwtAuthenticator) fetchJWKS(
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.
 				NewWithMessage(pipeline.ErrCommunicationTimeout, "request to JWKS endpoint timed out").
-				WithErrorContext(a).
+				WithAspects(a).
 				CausedBy(err)
 		}
 
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrCommunication, "request to JWKS endpoint failed").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -578,7 +572,7 @@ func (a *jwtAuthenticator) createRequest(
 	if err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed creating request").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -589,7 +583,7 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		return nil, errorchain.
 			NewWithMessagef(pipeline.ErrCommunication, "unexpected response. code: %v", resp.StatusCode).
-			WithErrorContext(a)
+			WithAspects(a)
 	}
 
 	// unmarshal the received key set
@@ -598,7 +592,7 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 	if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed to unmarshal received jwks").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
@@ -606,48 +600,23 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 }
 
 func (a *jwtAuthenticator) verifyTokenWithKey(
-	token *jwt.JSONWebToken, key *jose.JSONWebKey, assertions *oauth2.Expectation,
+	ctx pipeline.Context,
+	tok *oauth2.Token,
+	key *jose.JSONWebKey,
+	assertions *oauth2.Expectation,
 ) (json.RawMessage, error) {
-	header := token.Headers[0]
-
-	if len(header.Algorithm) != 0 && key.Algorithm != header.Algorithm {
-		return nil, errorchain.
-			NewWithMessage(pipeline.ErrAuthentication,
-				"algorithm in the JWT header does not match the algorithm referenced in the key").
-			WithErrorContext(a)
-	}
-
-	if err := assertions.AssertAlgorithm(key.Algorithm); err != nil {
-		return nil, errorchain.
-			NewWithMessagef(pipeline.ErrAuthentication, "%s algorithm is not allowed", key.Algorithm).
-			WithErrorContext(a).
-			CausedBy(err)
-	}
-
-	var (
-		mapClaims map[string]any
-		claims    oauth2.Claims
-	)
-
-	if err := token.Claims(key, &mapClaims, &claims); err != nil {
-		return nil, errorchain.
-			NewWithMessage(pipeline.ErrAuthentication, "failed to verify JWT signature").
-			WithErrorContext(a).
-			CausedBy(err)
-	}
-
-	if err := claims.Validate(*assertions); err != nil {
+	if err := tok.Verify(ctx, *assertions, key); err != nil {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrAuthentication, "access token does not satisfy assertion conditions").
-			WithErrorContext(a).
+			WithAspects(a).
 			CausedBy(err)
 	}
 
-	rawPayload, err := json.Marshal(mapClaims)
+	rawPayload, err := json.Marshal(tok.RawClaims)
 	if err != nil {
 		return nil, errorchain.
-			NewWithMessage(pipeline.ErrInternal, "failed to marshal jwt payload").
-			WithErrorContext(a).
+			NewWithMessage(pipeline.ErrInternal, "failed to marshal jwt plain payload").
+			WithAspects(a).
 			CausedBy(err)
 	}
 

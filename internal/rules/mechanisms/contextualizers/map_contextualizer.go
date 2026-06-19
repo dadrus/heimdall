@@ -76,7 +76,7 @@ func (c *mapContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subject) 
 	resp, err := c.renderTemplates(ctx, sub)
 	if err != nil {
 		return errorchain.NewWithMessage(pipeline.ErrInternal, "failed to render templates for the map contextualizer").
-			WithErrorContext(c).
+			WithAspects(c).
 			CausedBy(err)
 	}
 
@@ -145,7 +145,7 @@ func (c *mapContextualizer) renderTemplates(
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
 			"failed to render values for the map contextualizer").
-			WithErrorContext(c).
+			WithAspects(c).
 			CausedBy(err)
 	}
 
@@ -160,7 +160,7 @@ func (c *mapContextualizer) renderTemplates(
 		}); err != nil {
 			return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 				"failed to render item %s for the map contextualizer", key).
-				WithErrorContext(c).
+				WithAspects(c).
 				CausedBy(err)
 		}
 

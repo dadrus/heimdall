@@ -29,11 +29,15 @@ secret_management:
     config:
       path: /path/to/secrets.json
       watch: true
-  jwks_secrets:
+  master_secrets:
     type: jwks
     config:
       path: /path/to/jwks.json
       watch: true
+
+master_key:
+  source: master_secrets
+  selector: key_1
 
 
 serve:
@@ -268,6 +272,12 @@ mechanisms:
             - bar
           audience:
             - bla
+          proof_of_possession:
+            type: dpop
+            config:
+              max_age: 1m
+              nonce_required: true
+              replay_allowed: false
         principal:
           attributes: "@this"
           id: sub
@@ -275,6 +285,7 @@ mechanisms:
           enabled: true
           include_error_description: false
           include_required_scope: true
+          include_dpop_algorithms: true
           error_uri: https://docs.example.org/oauth2/errors
           realm: example
     - id: oauth2_introspection_using_metadata_endpoint
@@ -329,6 +340,19 @@ mechanisms:
             - RSA
           issuers:
             - bla
+          proof_of_possession:
+            type: dpop
+            config:
+              max_age: 1m
+              nonce_required: true
+              replay_allowed: false
+        error_signaling:
+          enabled: true
+          include_error_description: false
+          include_required_scope: true
+          include_dpop_algorithms: true
+          error_uri: https://docs.example.org/oauth2/errors
+          realm: example
         principal:
           attributes: "@this"
           id: "identity.id"

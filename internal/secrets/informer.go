@@ -36,14 +36,17 @@ type (
 	SecretConverter[T any]            = Converter[Secret, T]
 	CredentialsConverter[T any]       = Converter[Credentials, T]
 	CertificateBundleConverter[T any] = Converter[CertificateBundle, T]
+	SecretSetConverter[T any]         = Converter[[]Secret, T]
 
 	SecretUpdateFunc[T any]            = UpdateCallback[Secret, T]
 	CredentialsUpdateFunc[T any]       = UpdateCallback[Credentials, T]
 	CertificateBundleUpdateFunc[T any] = UpdateCallback[CertificateBundle, T]
+	SecretSetUpdateFunc[T any]         = UpdateCallback[[]Secret, T]
 
 	SecretInformerOption[T any]            = InformerOption[Secret, T]
 	CredentialsInformerOption[T any]       = InformerOption[Credentials, T]
 	CertificateBundleInformerOption[T any] = InformerOption[CertificateBundle, T]
+	SecretSetInformerOption[T any]         = InformerOption[[]Secret, T]
 
 	readinessRegistrar interface {
 		registerReadiness(await func(context.Context) error)
@@ -113,6 +116,10 @@ type CredentialsInformer[T any] struct {
 }
 
 type CertificateBundleInformer[T any] struct {
+	state *informerState[T]
+}
+
+type SecretSetInformer[T any] struct {
 	state *informerState[T]
 }
 
@@ -227,6 +234,36 @@ func NewCertificateBundleInformer[T any](
 }
 
 func (i *CertificateBundleInformer[T]) Get() (T, bool) {
+	return i.state.get()
+}
+
+func NewSecretSetInformer[T any](
+	resolver Resolver,
+	reference Reference,
+	opts ...SecretSetInformerOption[T],
+) (*SecretSetInformer[T], error) {
+	cfg := applyInformerOptions(opts...)
+
+	hdl, err := resolver.SecretSet(reference)
+	if err != nil {
+		return nil, err
+	}
+
+	state := newInformerState[T]()
+	registerReadiness(hdl, state.awaitReady)
+
+	hdl.OnUpdate(func(ctx context.Context, keys []Secret) error {
+		return cfg.refresh.Apply(ctx, func(ctx context.Context) error {
+			return applyUpdate(ctx, state, cfg, keys)
+		})
+	})
+
+	return &SecretSetInformer[T]{
+		state: state,
+	}, nil
+}
+
+func (i *SecretSetInformer[T]) Get() (T, bool) {
 	return i.state.get()
 }
 

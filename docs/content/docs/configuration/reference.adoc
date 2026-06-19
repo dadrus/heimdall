@@ -51,12 +51,15 @@ secret_management:
     config:
       path: /path/to/yaml/or/json/file
       watch: true
-  jwks_secrets:
+  master_secrets:
     type: jwks
-    allow_in_rules: false
     config:
       path: /path/to/jwks.file
       watch: false
+
+master_key:
+  source: master_secrets
+  selector: my_key
 
 serve:
   host: 127.0.0.1
@@ -152,8 +155,6 @@ cache:
     client_cache:
       ttl: 10m
     max_flush_delay: 20us
-
-secrets_reload_enabled: true
 
 log:
   level: debug
@@ -287,6 +288,11 @@ mechanisms:
           - foo
         allowed_algorithms:
           - RS256
+        proof_of_possession:
+          type: dpop
+          config:
+            max_age: 30s
+            nonce_required: true
       principal:
         id: "sub"
         attributes: "@this"

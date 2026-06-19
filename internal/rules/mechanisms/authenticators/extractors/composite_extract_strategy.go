@@ -23,7 +23,7 @@ import (
 
 type CompositeExtractStrategy []AuthDataExtractStrategy
 
-func (ce CompositeExtractStrategy) GetAuthData(ctx pipeline.Context) (string, error) {
+func (ce CompositeExtractStrategy) GetAuthData(ctx pipeline.Context) (AuthData, error) {
 	// preallocation not possible
 	var errors []error //nolint:prealloc
 
@@ -41,5 +41,5 @@ func (ce CompositeExtractStrategy) GetAuthData(ctx pipeline.Context) (string, er
 		err = err.CausedBy(errors[i])
 	}
 
-	return "", err
+	return AuthData{}, err
 }

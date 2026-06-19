@@ -78,7 +78,7 @@ func (f *noopFinalizer) CreateStep(
 	if len(def.Config) != 0 {
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrConfiguration, "noop finalizer cannot be reconfigured").
-			WithErrorContext(f)
+			WithAspects(f)
 	}
 
 	fin := *f

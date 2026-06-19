@@ -812,7 +812,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("", pipeline.ErrCommunicationTimeout)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{}, pipeline.ErrCommunicationTimeout)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
@@ -847,7 +847,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test"}, nil)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
@@ -876,7 +876,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("test", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test"}, nil)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
@@ -905,7 +905,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "session_token"}, nil)
 			},
 			assert: func(t *testing.T, err error, _ pipeline.Subject) {
 				t.Helper()
@@ -934,7 +934,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "session_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -973,7 +973,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "session_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1028,7 +1028,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "session_token"}, nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1081,7 +1081,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "session_token"}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return([]byte(`{ "user_id": "barbar" }`), nil)
 			},
 			assert: func(t *testing.T, err error, sub pipeline.Subject) {
@@ -1120,7 +1120,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqFuns})
 
-				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "session_token"}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar" }`), auth.ttl).Return(nil)
 			},
@@ -1177,7 +1177,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqFuns})
 
-				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "session_token"}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			instructServer: func(t *testing.T) {
@@ -1232,7 +1232,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "session_token"}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			instructServer: func(t *testing.T) {
@@ -1291,7 +1291,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
 
-				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "session_token"}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar", "exp": `+exp+` }`), 5*time.Second).Return(nil)
 			},
@@ -1353,7 +1353,7 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
 
-				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "session_token"}, nil)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar", "exp": `+exp+` }`), 30*time.Second).Return(nil)
 			},
