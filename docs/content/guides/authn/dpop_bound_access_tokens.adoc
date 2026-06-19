@@ -161,7 +161,7 @@ providers: # <11>
     {
       "kty": "oct",
       "kid": "dpop-nonce-master-key-1",
-      "k": "2M0G6EosV6PZq4N2FxmDqkJYb3mHkYaJzMX7Wm3Jj1o",
+      "k": "2M0G6EosV6PZq4N2FxmDqkJYb3mHkYaJzMX7Wm3Jj1o"
     }
   ]
 }
@@ -194,14 +194,30 @@ This rule matches requests to `/api` and any sub-path. It link:{{< relref "/docs
 [source, toml]
 ----
 [project]
-name = "heimdall-dpop-client"
+name = "heimdall-dpop-smoke-client"
 version = "0.1.0"
 requires-python = ">=3.13"
+
 dependencies = [
-  "httpx>=0.28.1",
-  "pyjwt[crypto]>=2.10.1"
+    "httpx==0.28.1",
+    "pyjwt[crypto]==2.10.1",
+    "click==8.4.1"
+]
+
+[project.scripts]
+client = "dpop_client:cli"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+include = [
+    "dpop_client.py"
 ]
 ----
++
+The `[project.scripts]` entry exposes the CLI as `client`, which lets `uv` invoke it as `uv run client <command>` without specifying the file path.
 +
 Then, create a file named `dpop_client.py` in the `client` directory:
 +
@@ -209,44 +225,53 @@ Then, create a file named `dpop_client.py` in the `client` directory:
 ----
 from __future__ import annotations
 
-import argparse
 import base64
 import hashlib
 import json
+import os
 import secrets
+import shutil
 import time
 import uuid
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.parse import parse_qs, urlencode, urlsplit, urlunsplit
 
+import click
 import httpx
 import jwt
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePrivateKey
 
-STATE_DIR = Path("/work/.state")
+
+def env(name: str, default: str | None = None) -> str:
+    value = os.environ.get(name, default)
+
+    if value is None:
+        raise click.ClickException(f"Missing required environment variable: {name}")
+
+    return value
+
+
+STATE_DIR = Path(env("STATE_DIR", ".state"))
 KEY_FILE = STATE_DIR / "dpop-private-key.pem"
 OTHER_KEY_FILE = STATE_DIR / "other-dpop-private-key.pem"
 TOKEN_FILE = STATE_DIR / "token.json"
-REPLAY_PROOF_FILE = STATE_DIR / "replay-proof.jwt"
+RESOURCE_SERVER_DPOP_STATE_FILE = STATE_DIR / "resource-server-dpop-state.json"
 
-INTERNAL_ISSUER = "http://keycloak:8080/realms/dpop"
-BROWSER_ISSUER = "http://127.0.0.1:8080/realms/dpop"
+AUTHORIZATION_ENDPOINT = env("AUTHORIZATION_ENDPOINT")
+TOKEN_ENDPOINT = env("TOKEN_ENDPOINT")
+PROTECTED_API = env("PROTECTED_API")
+CLIENT_ID = env("CLIENT_ID")
 
-AUTHORIZATION_ENDPOINT = f"{BROWSER_ISSUER}/protocol/openid-connect/auth"
-TOKEN_ENDPOINT = f"{INTERNAL_ISSUER}/protocol/openid-connect/token"
-PROTECTED_API = "http://heimdall:4456/api"
-
-CLIENT_ID = "heimdall-dpop-client"
 REDIRECT_HOST = "0.0.0.0"
-REDIRECT_PORT = 8765
+REDIRECT_PORT = int(env("REDIRECT_PORT", "8765"))
 REDIRECT_PATH = "/callback"
 REDIRECT_URI = f"http://127.0.0.1:{REDIRECT_PORT}{REDIRECT_PATH}"
-SCOPE = "openid profile email"
+SCOPE = env("SCOPE", "openid profile email")
 
 
 @dataclass(frozen=True)
@@ -263,6 +288,18 @@ class CallbackResult:
     state: str
 
 
+@dataclass(frozen=True)
+class ResourceServerDpopState:
+    access_token_hash: str
+    proof: str
+    nonce: str
+
+
+class CallbackServer(ThreadingHTTPServer):
+    callback_result: CallbackResult | None
+    callback_error: str | None
+
+
 def b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
@@ -276,7 +313,7 @@ def access_token_hash(access_token: str) -> str:
     return b64url(hashlib.sha256(access_token.encode("ascii")).digest())
 
 
-def write_key(path: Path) -> None:
+def generate_private_key(path: Path) -> None:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
 
     private_key = ec.generate_private_key(ec.SECP256R1())
@@ -288,30 +325,30 @@ def write_key(path: Path) -> None:
         )
     )
 
-    print(f"Created DPoP key: {path}")
-    print(f"JWK thumbprint: {jwk_thumbprint(public_jwk(private_key))}")
+    click.echo(f"Created DPoP key: {path}")
+    click.echo(f"JWK thumbprint: {jwk_thumbprint(public_jwk(private_key))}")
 
 
 def load_private_key(path: Path = KEY_FILE) -> EllipticCurvePrivateKey:
     if not path.exists():
-        write_key(path)
+        generate_private_key(path)
 
     key = serialization.load_pem_private_key(path.read_bytes(), password=None)
 
     if not isinstance(key, EllipticCurvePrivateKey):
-        raise TypeError("The configured DPoP key is not an EC private key")
+        raise click.ClickException("The configured DPoP key is not an EC private key")
 
     return key
 
 
 def public_jwk(private_key: EllipticCurvePrivateKey) -> dict[str, Any]:
-    public_numbers = private_key.public_key().public_numbers()
+    numbers = private_key.public_key().public_numbers()
 
     return {
         "kty": "EC",
         "crv": "P-256",
-        "x": b64url(public_numbers.x.to_bytes(32, "big")),
-        "y": b64url(public_numbers.y.to_bytes(32, "big")),
+        "x": b64url(numbers.x.to_bytes(32, "big")),
+        "y": b64url(numbers.y.to_bytes(32, "big")),
     }
 
 
@@ -377,11 +414,13 @@ def wait_for_authorization_code(expected_state: str) -> CallbackResult:
                 return
 
             params = parse_qs(parsed.query)
+            server = cast(CallbackServer, self.server)
 
             if "error" in params:
                 error = params.get("error", ["unknown_error"])[0]
                 description = params.get("error_description", [""])[0]
-                self.server.callback_error = f"{error}: {description}"  # type: ignore[attr-defined]
+                server.callback_error = f"{error}: {description}"
+
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(b"Login failed. You can close this tab.")
@@ -391,20 +430,22 @@ def wait_for_authorization_code(expected_state: str) -> CallbackResult:
             state = params.get("state", [None])[0]
 
             if code is None or state is None:
-                self.server.callback_error = "Callback did not include code and state"  # type: ignore[attr-defined]
+                server.callback_error = "Callback did not include code and state"
+
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(b"Invalid callback. You can close this tab.")
                 return
 
             if state != expected_state:
-                self.server.callback_error = "Callback state did not match"  # type: ignore[attr-defined]
+                server.callback_error = "Callback state did not match"
+
                 self.send_response(400)
                 self.end_headers()
                 self.wfile.write(b"Invalid state. You can close this tab.")
                 return
 
-            self.server.callback_result = CallbackResult(code=code, state=state)  # type: ignore[attr-defined]
+            server.callback_result = CallbackResult(code=code, state=state)
 
             self.send_response(200)
             self.send_header("content-type", "text/plain; charset=utf-8")
@@ -414,29 +455,125 @@ def wait_for_authorization_code(expected_state: str) -> CallbackResult:
         def log_message(self, format: str, *args: object) -> None:
             return
 
-    server = ThreadingHTTPServer((REDIRECT_HOST, REDIRECT_PORT), CallbackHandler)
-    server.callback_result = None  # type: ignore[attr-defined]
-    server.callback_error = None  # type: ignore[attr-defined]
+    server = cast(CallbackServer, ThreadingHTTPServer((REDIRECT_HOST, REDIRECT_PORT), CallbackHandler))
+    server.callback_result = None
+    server.callback_error = None
     server.timeout = 300
 
-    print(f"Waiting for redirect on {REDIRECT_URI}")
+    click.echo(f"Waiting for redirect on {REDIRECT_URI}")
 
-    while server.callback_result is None and server.callback_error is None:  # type: ignore[attr-defined]
+    while server.callback_result is None and server.callback_error is None:
         server.handle_request()
 
-    if server.callback_error is not None:  # type: ignore[attr-defined]
-        raise RuntimeError(str(server.callback_error))  # type: ignore[attr-defined]
+    if server.callback_error is not None:
+        raise click.ClickException(server.callback_error)
 
-    result = server.callback_result  # type: ignore[attr-defined]
-    if not isinstance(result, CallbackResult):
-        raise RuntimeError("Did not receive authorization callback")
+    if server.callback_result is None:
+        raise click.ClickException("Did not receive authorization callback")
 
-    return result
+    return server.callback_result
 
 
-def login() -> str:
+def store_token_response(token_response: dict[str, Any]) -> str:
+    TOKEN_FILE.write_text(json.dumps(token_response, indent=2), encoding="utf-8")
+    return str(token_response["access_token"])
+
+
+def print_token_summary(token_response: dict[str, Any]) -> None:
+    access_token = str(token_response["access_token"])
+    claims = jwt.decode(access_token, options={"verify_signature": False})
+
+    click.echo(f"token_type: {token_response.get('token_type')}")
+    click.echo("selected access token claims:")
+    click.echo(
+        json.dumps(
+            {
+                "iss": claims.get("iss"),
+                "aud": claims.get("aud"),
+                "sub": claims.get("sub"),
+                "azp": claims.get("azp"),
+                "preferred_username": claims.get("preferred_username"),
+                "cnf": claims.get("cnf"),
+            },
+            indent=2,
+        )
+    )
+
+
+def load_access_token() -> str:
+    if not TOKEN_FILE.exists():
+        raise click.ClickException("No access token found. Run `python dpop_client.py login` first.")
+
+    return str(json.loads(TOKEN_FILE.read_text(encoding="utf-8"))["access_token"])
+
+
+def delete_file(path: Path) -> bool:
+    if not path.exists():
+        return False
+
+    path.unlink()
+    return True
+
+
+def clear_resource_server_dpop_state() -> bool:
+    return delete_file(RESOURCE_SERVER_DPOP_STATE_FILE)
+
+
+def load_resource_server_dpop_state(access_token: str) -> ResourceServerDpopState | None:
+    if not RESOURCE_SERVER_DPOP_STATE_FILE.exists():
+        return None
+
+    try:
+        raw_state = json.loads(RESOURCE_SERVER_DPOP_STATE_FILE.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return None
+
+    if raw_state.get("access_token_hash") != access_token_hash(access_token):
+        return None
+
+    proof = raw_state.get("proof")
+    nonce = raw_state.get("nonce")
+
+    if not isinstance(proof, str) or not isinstance(nonce, str) or not proof or not nonce:
+        return None
+
+    return ResourceServerDpopState(
+        access_token_hash=raw_state["access_token_hash"],
+        proof=proof,
+        nonce=nonce,
+    )
+
+
+def store_resource_server_dpop_state(*, access_token: str, proof: str, nonce: str | None) -> None:
+    if nonce is None:
+        clear_resource_server_dpop_state()
+        return
+
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    RESOURCE_SERVER_DPOP_STATE_FILE.write_text(
+        json.dumps(
+            {
+                "access_token_hash": access_token_hash(access_token),
+                "proof": proof,
+                "nonce": nonce,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+
+def reset_state() -> None:
+    if STATE_DIR.exists():
+        shutil.rmtree(STATE_DIR)
+
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def login_with_authorization_code() -> str:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     load_private_key(KEY_FILE)
+    clear_resource_server_dpop_state()
 
     state = b64url(secrets.token_bytes(32))
     code_verifier = b64url(secrets.token_bytes(32))
@@ -456,12 +593,11 @@ def login() -> str:
         )
     )
 
-    print("Open this URL in your browser:")
-    print(authorization_url)
-    print()
+    click.echo("Open this URL in your browser:")
+    click.echo(authorization_url)
+    click.echo()
 
     callback = wait_for_authorization_code(expected_state=state)
-
     proof = create_proof(method="POST", url=TOKEN_ENDPOINT)
 
     response = httpx.post(
@@ -478,40 +614,38 @@ def login() -> str:
     )
 
     if response.is_error:
-        print(response.text)
-        response.raise_for_status()
+        raise click.ClickException(response.text)
 
     token_response = response.json()
-    TOKEN_FILE.write_text(json.dumps(token_response, indent=2), encoding="utf-8")
-
-    access_token = str(token_response["access_token"])
-    claims = jwt.decode(access_token, options={"verify_signature": False})
-
-    print(f"token_type: {token_response.get('token_type')}")
-    print("selected access token claims:")
-    print(
-        json.dumps(
-            {
-                "iss": claims.get("iss"),
-                "aud": claims.get("aud"),
-                "sub": claims.get("sub"),
-                "azp": claims.get("azp"),
-                "preferred_username": claims.get("preferred_username"),
-                "cnf": claims.get("cnf"),
-            },
-            indent=2,
-        )
-    )
+    access_token = store_token_response(token_response)
+    print_token_summary(token_response)
 
     return access_token
 
 
-def load_access_token() -> str:
-    if not TOKEN_FILE.exists():
-        raise RuntimeError("No access token found. Run `python dpop_client.py login` first.")
+def create_or_reuse_api_proof(
+    *,
+    access_token: str,
+    nonce: str | None,
+    replay: bool,
+    wrong_key: bool,
+    wrong_ath: bool,
+    wrong_htu: bool,
+) -> str:
+    if replay:
+        state = load_resource_server_dpop_state(access_token)
+        if state is not None:
+            return state.proof
 
-    token_response = json.loads(TOKEN_FILE.read_text(encoding="utf-8"))
-    return str(token_response["access_token"])
+    return create_proof(
+        method="GET",
+        url=PROTECTED_API,
+        access_token=access_token,
+        nonce=nonce,
+        key_file=OTHER_KEY_FILE if wrong_key else KEY_FILE,
+        wrong_ath=wrong_ath,
+        wrong_htu=wrong_htu,
+    )
 
 
 def send_api_request(
@@ -526,27 +660,27 @@ def send_api_request(
     replay: bool = False,
 ) -> ApiResult:
     headers = {"Authorization": f"{scheme} {access_token}"}
+    proof: str | None = None
 
     if include_proof:
-        if replay and REPLAY_PROOF_FILE.exists():
-            proof = REPLAY_PROOF_FILE.read_text(encoding="utf-8")
-        else:
-            proof = create_proof(
-                method="GET",
-                url=PROTECTED_API,
-                access_token=access_token,
-                nonce=nonce,
-                key_file=OTHER_KEY_FILE if wrong_key else KEY_FILE,
-                wrong_ath=wrong_ath,
-                wrong_htu=wrong_htu,
-            )
-
-            if replay:
-                REPLAY_PROOF_FILE.write_text(proof, encoding="utf-8")
-
+        proof = create_or_reuse_api_proof(
+            access_token=access_token,
+            nonce=nonce,
+            replay=replay,
+            wrong_key=wrong_key,
+            wrong_ath=wrong_ath,
+            wrong_htu=wrong_htu,
+        )
         headers["DPoP"] = proof
 
     response = httpx.get(PROTECTED_API, headers=headers, timeout=10)
+
+    if include_proof and proof is not None and response.status_code < 400:
+        store_resource_server_dpop_state(
+            access_token=access_token,
+            proof=proof,
+            nonce=nonce,
+        )
 
     return ApiResult(
         status_code=response.status_code,
@@ -557,91 +691,107 @@ def send_api_request(
 
 
 def print_result(result: ApiResult) -> None:
-    print(f"HTTP {result.status_code}")
+    click.echo(f"HTTP {result.status_code}")
 
     if result.www_authenticate:
-        print(f"WWW-Authenticate: {result.www_authenticate}")
+        click.echo(f"WWW-Authenticate: {result.www_authenticate}")
 
     if result.dpop_nonce:
-        print(f"DPoP-Nonce: {result.dpop_nonce}")
+        click.echo(f"DPoP-Nonce: {result.dpop_nonce}")
 
     try:
         body = json.dumps(json.loads(result.body), indent=2)
     except (json.JSONDecodeError, ValueError):
         body = result.body
 
-    print(body)
+    click.echo(body)
 
 
-def call_api(args: argparse.Namespace) -> None:
+@click.group(context_settings={"help_option_names": ["-h", "--help"]})
+def cli() -> None:
+    """Small client to showcase heimdall DPoP capabilities."""
+
+
+@cli.command()
+def keygen() -> None:
+    """Create the primary DPoP key."""
+    generate_private_key(KEY_FILE)
+
+
+@cli.command("other-keygen")
+def other_keygen() -> None:
+    """Create a second DPoP key for negative tests."""
+    generate_private_key(OTHER_KEY_FILE)
+
+
+@cli.command()
+def login() -> None:
+    """Run Authorization Code + PKCE and store a DPoP-bound access token."""
+    login_with_authorization_code()
+
+
+@cli.command("clear-state")
+def clear_state() -> None:
+    """Delete all local client state and generate a fresh primary DPoP key."""
+    reset_state()
+    generate_private_key(KEY_FILE)
+
+
+@cli.command()
+@click.option("--scheme", default="DPoP", show_default=True)
+@click.option("--no-proof", is_flag=True, help="Do not send a DPoP proof.")
+@click.option("--wrong-key", is_flag=True, help="Sign the DPoP proof with a different key.")
+@click.option("--wrong-ath", is_flag=True, help="Use a wrong access token hash in the proof.")
+@click.option("--wrong-htu", is_flag=True, help="Use a wrong target URI in the proof.")
+@click.option("--replay", is_flag=True, help="Reuse the previously successful DPoP proof.")
+@click.option("--retry-nonce/--no-retry-nonce", default=True, show_default=True)
+def call(
+    scheme: str,
+    no_proof: bool,
+    wrong_key: bool,
+    wrong_ath: bool,
+    wrong_htu: bool,
+    replay: bool,
+    retry_nonce: bool,
+) -> None:
+    """Call the protected API through heimdall."""
     access_token = load_access_token()
 
     result = send_api_request(
         access_token=access_token,
-        scheme=args.scheme,
-        include_proof=not args.no_proof,
-        wrong_key=args.wrong_key,
-        wrong_ath=args.wrong_ath,
-        wrong_htu=args.wrong_htu,
-        replay=args.replay,
+        scheme=scheme,
+        include_proof=not no_proof,
+        wrong_key=wrong_key,
+        wrong_ath=wrong_ath,
+        wrong_htu=wrong_htu,
+        replay=replay,
     )
 
-    if result.status_code == 401 and result.dpop_nonce and args.retry_nonce:
-        print("Received DPoP nonce challenge from heimdall")
-        print(f"DPoP-Nonce: {result.dpop_nonce}")
-        print("Retrying with nonce")
+    if result.status_code == 401 and result.dpop_nonce and retry_nonce:
+        click.echo("Received DPoP nonce challenge from heimdall")
+        click.echo(f"DPoP-Nonce: {result.dpop_nonce}")
+        click.echo("Retrying with nonce")
 
         result = send_api_request(
             access_token=access_token,
             nonce=result.dpop_nonce,
-            scheme=args.scheme,
-            include_proof=not args.no_proof,
-            wrong_key=args.wrong_key,
-            wrong_ath=args.wrong_ath,
-            wrong_htu=args.wrong_htu,
-            replay=args.replay,
+            scheme=scheme,
+            include_proof=not no_proof,
+            wrong_key=wrong_key,
+            wrong_ath=wrong_ath,
+            wrong_htu=wrong_htu,
+            replay=replay,
         )
 
     print_result(result)
 
 
-def main() -> None:
-    parser = argparse.ArgumentParser()
-    sub = parser.add_subparsers(dest="command", required=True)
-
-    sub.add_parser("keygen")
-    sub.add_parser("other-keygen")
-    sub.add_parser("login")
-
-    call = sub.add_parser("call")
-    call.add_argument("--scheme", default="DPoP")
-    call.add_argument("--no-proof", action="store_true")
-    call.add_argument("--wrong-key", action="store_true")
-    call.add_argument("--wrong-ath", action="store_true")
-    call.add_argument("--wrong-htu", action="store_true")
-    call.add_argument("--replay", action="store_true")
-    call.add_argument("--no-retry-nonce", dest="retry_nonce", action="store_false")
-    call.set_defaults(retry_nonce=True)
-
-    args = parser.parse_args()
-
-    if args.command == "keygen":
-        write_key(KEY_FILE)
-    elif args.command == "other-keygen":
-        write_key(OTHER_KEY_FILE)
-    elif args.command == "login":
-        login()
-    elif args.command == "call":
-        call_api(args)
-
-
 if __name__ == "__main__":
-    main()
+    cli()
 ----
 +
-The client implements the Authorization Code flow with PKCE.
-The `login` command generates an EC P-256 key pair on first run, constructs a Keycloak authorization URL, starts a local HTTP server on port 8765 to receive the callback, and exchanges the authorization code for a DPoP-bound access token, which it saves to disk.
-The `call` command loads the cached token and calls the protected API, automatically handling heimdall's nonce challenge.
+The client is a https://click.palletsprojects.com/[Click] CLI with four commands: `keygen` generates the EC P-256 DPoP key pair; `login` runs the Authorization Code + PKCE flow — it constructs an authorization URL, starts a local callback server on port 8765, and exchanges the authorization code for a DPoP-bound access token that it stores in the state directory; `call` loads the cached token and calls the protected API, automatically handling heimdall's nonce challenge; and `clear-state` wipes the state directory and generates a fresh key pair.
+All configuration (endpoints, client ID, state directory) is read from environment variables, which are supplied by the Docker Compose setup.
 
 . Create a file named `dpop-realm.json` in the root directory with the following contents:
 +
@@ -922,16 +1072,18 @@ services:
     working_dir: /work/client
     volumes:
       - .:/work
-      - dpop-client-state:/work/.state
+      - dpop-client-state:/tmp/.state
     environment:
       UV_LINK_MODE: copy
       UV_PROJECT_ENVIRONMENT: /tmp/heimdall-dpop-client-venv
-    command: uv run python dpop_client.py call
+      AUTHORIZATION_ENDPOINT: http://127.0.0.1:8080/realms/dpop/protocol/openid-connect/auth
+      TOKEN_ENDPOINT: http://keycloak:8080/realms/dpop/protocol/openid-connect/token
+      PROTECTED_API: http://heimdall:4456/api
+      CLIENT_ID: heimdall-dpop-client
+      STATE_DIR: /tmp/.state
+    command: uv run client keygen
     ports:
       - "8765:8765"
-    depends_on:
-      heimdall:
-        condition: service_started
 
 volumes:
   keycloak-key-material:
@@ -943,7 +1095,7 @@ volumes:
 <3> A short-lived container that generates a local root CA and a Keycloak signing certificate signed by that CA. The key material is stored in the `keycloak-key-material` volume and the root CA is placed in `keycloak-system-trust` so downstream containers can trust it. The script is idempotent and exits immediately if the material already exists.
 <4> Keycloak starts in development mode with the `--import-realm` flag, which automatically imports the `dpop` realm on first startup. `--hostname=127.0.0.1` is intentional: it ensures the `iss` claim in issued tokens uses the host-accessible address, which is required for the Authorization Code flow redirect to work from a browser.
 <5> A short-lived container that waits for Keycloak to be ready and then imports the generated RSA signing key into the `dpop` realm via the Admin API. heimdall does not start until this service exits successfully, guaranteeing that the trusted signing key is in place before any token validation is attempted.
-<6> The DPoP client runs inside a container backed by the `uv` Python runtime. The root directory is mounted at `/work`, and the `dpop-client-state` volume is mounted at `/work/.state` to persist the DPoP key pair and token across runs without writing to the host filesystem. Port 8765 is published so the browser can complete the Authorization Code redirect to the local callback server.
+<6> The DPoP client runs inside a container backed by the `uv` Python runtime. The root directory is mounted at `/work`, and the `dpop-client-state` volume is mounted at `/tmp/.state` to persist the DPoP key pair and token across runs without writing to the host filesystem. Port 8765 is published so the browser can complete the Authorization Code redirect to the local callback server. The OIDC endpoints and client ID are injected as environment variables. Note that `AUTHORIZATION_ENDPOINT` uses `127.0.0.1` (the browser-accessible address) while `TOKEN_ENDPOINT` uses the Docker-internal `keycloak` hostname.
 
 == Use the Setup
 
@@ -951,34 +1103,36 @@ volumes:
 +
 [source, bash]
 ----
-docker compose up keycloak upstream heimdall
+docker compose up
 ----
 +
 Docker Compose starts all services in dependency order: first `key-material` generates the PKI, then `keycloak` imports the realm, then `keycloak-key-importer` imports the signing key, and finally `heimdall` and `upstream` start.
+The `dpop-client` service also runs at this point — it executes `keygen` as its default command, generates a DPoP key pair in the shared state volume, and exits.
 Wait until heimdall is up and running by watching the logs. Look for a line indicating heimdall has started successfully:
 +
 [source, text]
 ----
 heimdall  | ... level=INFO msg="Started" ...
 ----
++
+The remaining steps require a separate terminal while this one continues streaming logs.
 
 . Log in as alice using the Authorization Code flow. The `--service-ports` flag is required to publish port 8765 to the host so the browser can complete the redirect:
 +
 [source, bash]
 ----
-docker compose run --service-ports --rm dpop-client uv run python dpop_client.py login
+docker compose run --service-ports --rm dpop-client uv run client login
 ----
 +
-The command generates a DPoP key pair (on first run), prints an authorization URL, and starts a local callback server on port 8765.
+The command prints an authorization URL and starts a local callback server on port 8765.
 Open the printed URL in your browser and log in with username `alice` and password `alice`.
 After a successful login, the browser is redirected back and the terminal shows output similar to the following:
 +
 [source, text]
 ----
-Created DPoP key: /work/.state/dpop-private-key.pem
-JWK thumbprint: CnytcIWTLO-FIpS3t3LZFjXKgHCrHNlBxQ_xaFJtV6Y
 Open this URL in your browser:
 http://127.0.0.1:8080/realms/dpop/protocol/openid-connect/auth?...
+
 Waiting for redirect on http://127.0.0.1:8765/callback
 token_type: DPoP
 selected access token claims:
@@ -997,13 +1151,13 @@ selected access token claims:
 `token_type: DPoP` confirms that Keycloak issued a DPoP-bound access token rather than a plain bearer token.
 The `cnf.jkt` claim is the SHA-256 thumbprint of the client's public key, cryptographically binding this token to the generated key pair.
 +
-NOTE: The key pair and access token are stored in a named Docker volume (`dpop-client-state`) and reused by subsequent commands. You can call the API multiple times until the token expires without logging in again.
+NOTE: The DPoP key pair was created by the keygen step during `docker compose up` and persisted in the `dpop-client-state` Docker volume. The access token is stored there too after a successful login, so you can call the API multiple times without logging in again until the token expires.
 
 . Call the protected API:
 +
 [source, bash]
 ----
-docker compose run --rm dpop-client uv run python dpop_client.py call
+docker compose run --rm dpop-client uv run client call
 ----
 +
 Because `nonce_required` is set to `true` in heimdall's configuration, the first request is rejected with a `401 Unauthorized` and a `use_dpop_nonce` challenge.
@@ -1047,6 +1201,13 @@ HTTP 200
 The `HTTP 200` confirms that heimdall validated the DPoP-bound access token together with the DPoP proof and forwarded the request to the upstream service.
 Two headers are worth noting in the echoed request body: `Authorization` uses the `DPoP` scheme instead of `Bearer`, and `Dpop` carries the proof JWT.
 The nonce value is structured as `<key-id>.<encrypted-payload>.<tag>` — heimdall embeds the expiry and binding inside the nonce itself.
+
+. Take a look at further options of the client if you want to see further cases in action:
++
+[source, bash]
+----
+docker compose run --rm dpop-client uv run client -h
+----
 
 == Cleanup
 
