@@ -890,7 +890,7 @@ services:
       - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
       - ./secrets.jwks:/etc/heimdall/secrets.jwks:ro
       - ./rules:/etc/heimdall/rules:ro
-      - keycloak-system-trust:/etc/ssl/certs:ro
+      - system-trust:/etc/ssl/certs:ro
     depends_on:
       keycloak-key-importer:
         condition: service_completed_successfully
@@ -905,7 +905,7 @@ services:
     image: alpine:3.22
     volumes:
       - keycloak-key-material:/keymaterial
-      - keycloak-system-trust:/system-trust
+      - system-trust:/system-trust
     command:
       - sh
       - -ec
@@ -1072,7 +1072,7 @@ services:
     working_dir: /work/client
     volumes:
       - .:/work
-      - dpop-client-state:/tmp/.state
+      - client-state:/tmp/.state
     environment:
       UV_LINK_MODE: copy
       UV_PROJECT_ENVIRONMENT: /tmp/heimdall-dpop-client-venv
@@ -1087,15 +1087,15 @@ services:
 
 volumes:
   keycloak-key-material:
-  keycloak-system-trust:
-  dpop-client-state:
+  system-trust:
+  client-state:
 ----
-<1> Heimdall runs in proxy mode and is available at `\http://127.0.0.1:9090` on localhost. The `--insecure` flag disables enforcement of some security settings you can learn about link:{{< relref "/docs/operations/security.adoc#_defaults" >}}[here]. The `keycloak-system-trust` volume is mounted as the system CA store so heimdall trusts the certificate Keycloak uses to sign JWKs.
+<1> Heimdall runs in proxy mode and is available at `\http://127.0.0.1:9090` on localhost. The `--insecure` flag disables enforcement of some security settings you can learn about link:{{< relref "/docs/operations/security.adoc#_defaults" >}}[here]. The `system-trust` volume is mounted as the system CA store so heimdall trusts the certificate Keycloak uses to sign JWKs.
 <2> The upstream service echoes back everything it receives, simulating our protected API.
-<3> A short-lived container that generates a local root CA and a Keycloak signing certificate signed by that CA. The key material is stored in the `keycloak-key-material` volume and the root CA is placed in `keycloak-system-trust` so downstream containers can trust it. The script is idempotent and exits immediately if the material already exists.
+<3> A short-lived container that generates a local root CA and a Keycloak signing certificate signed by that CA. The key material is stored in the `keycloak-key-material` volume and the root CA is placed in `system-trust` so downstream containers can trust it. The script is idempotent and exits immediately if the material already exists.
 <4> Keycloak starts in development mode with the `--import-realm` flag, which automatically imports the `dpop` realm on first startup. `--hostname=127.0.0.1` is intentional: it ensures the `iss` claim in issued tokens uses the host-accessible address, which is required for the Authorization Code flow redirect to work from a browser.
 <5> A short-lived container that waits for Keycloak to be ready and then imports the generated RSA signing key into the `dpop` realm via the Admin API. heimdall does not start until this service exits successfully, guaranteeing that the trusted signing key is in place before any token validation is attempted.
-<6> The DPoP client runs inside a container backed by the `uv` Python runtime. The root directory is mounted at `/work`, and the `dpop-client-state` volume is mounted at `/tmp/.state` to persist the DPoP key pair and token across runs without writing to the host filesystem. Port 8765 is published so the browser can complete the Authorization Code redirect to the local callback server. The OIDC endpoints and client ID are injected as environment variables. Note that `AUTHORIZATION_ENDPOINT` uses `127.0.0.1` (the browser-accessible address) while `TOKEN_ENDPOINT` uses the Docker-internal `keycloak` hostname.
+<6> The DPoP client runs inside a container backed by the `uv` Python runtime. The root directory is mounted at `/work`, and the `client-state` volume is mounted at `/tmp/.state` to persist the DPoP key pair and token across runs without writing to the host filesystem. Port 8765 is published so the browser can complete the Authorization Code redirect to the local callback server. The OIDC endpoints and client ID are injected as environment variables. Note that `AUTHORIZATION_ENDPOINT` uses `127.0.0.1` (the browser-accessible address) while `TOKEN_ENDPOINT` uses the Docker-internal `keycloak` hostname.
 
 == Use the Setup
 
@@ -1151,7 +1151,7 @@ selected access token claims:
 `token_type: DPoP` confirms that Keycloak issued a DPoP-bound access token rather than a plain bearer token.
 The `cnf.jkt` claim is the SHA-256 thumbprint of the client's public key, cryptographically binding this token to the generated key pair.
 +
-NOTE: The DPoP key pair was created by the keygen step during `docker compose up` and persisted in the `dpop-client-state` Docker volume. The access token is stored there too after a successful login, so you can call the API multiple times without logging in again until the token expires.
+NOTE: The DPoP key pair was created by the keygen step during `docker compose up` and persisted in the `client-state` Docker volume. The access token is stored there too after a successful login, so you can call the API multiple times without logging in again until the token expires.
 
 . Call the protected API:
 +
@@ -1167,7 +1167,7 @@ You should see output similar to the following:
 [source, text]
 ----
 Received DPoP nonce challenge from heimdall
-DPoP-Nonce: dpop-nonce-master-key-1.d2q_rPeTzcU0sdlI-huDgMh7KzFiJTyf4_CddYrzlYU.iU1PUjPgLv7u3KDmkjMMsxEIJls1K6qJjDUvTbAl8MQQSvskeUcAgpABIxHHU7B
+DPoP-Nonce: ZHBvcC1ub25jZS1tYXN0Z...
 Retrying with nonce
 HTTP 200
 {
@@ -1179,10 +1179,10 @@ HTTP 200
   ],
   "headers": {
     "Authorization": [
-      "DPoP eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."
+      "DPoP eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia..."
     ],
     "Dpop": [
-      "eyJhbGciOiJFUzI1NiIsImp3ayI6eyJjcnYiOiJQLTI1NiIsImt0eSI6IkVDIi4uLn0sInR5cCI6ImRwb3Arand0In0..."
+      "eyJhbGciOiJFUzI1NiIsImp3ayI6eyJjcnYiOiJQLTI1Ni..."
     ],
     "Forwarded": [
       "for=172.20.0.5;host=\"heimdall:4456\";proto=http"
@@ -1200,7 +1200,6 @@ HTTP 200
 +
 The `HTTP 200` confirms that heimdall validated the DPoP-bound access token together with the DPoP proof and forwarded the request to the upstream service.
 Two headers are worth noting in the echoed request body: `Authorization` uses the `DPoP` scheme instead of `Bearer`, and `Dpop` carries the proof JWT.
-The nonce value is structured as `<key-id>.<encrypted-payload>.<tag>` — heimdall embeds the expiry and binding inside the nonce itself.
 
 . Take a look at further options of the client if you want to see further cases in action:
 +
