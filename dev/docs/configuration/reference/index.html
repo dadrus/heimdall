@@ -45,12 +45,15 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
     <span class=na>config</span><span class=pi>:</span>
       <span class=na>path</span><span class=pi>:</span> <span class=s>/path/to/yaml/or/json/file</span>
       <span class=na>watch</span><span class=pi>:</span> <span class=kc>true</span>
-  <span class=na>jwks_secrets</span><span class=pi>:</span>
+  <span class=na>master_secrets</span><span class=pi>:</span>
     <span class=na>type</span><span class=pi>:</span> <span class=s>jwks</span>
-    <span class=na>allow_in_rules</span><span class=pi>:</span> <span class=kc>false</span>
     <span class=na>config</span><span class=pi>:</span>
       <span class=na>path</span><span class=pi>:</span> <span class=s>/path/to/jwks.file</span>
       <span class=na>watch</span><span class=pi>:</span> <span class=kc>false</span>
+
+<span class=na>master_key</span><span class=pi>:</span>
+  <span class=na>source</span><span class=pi>:</span> <span class=s>master_secrets</span>
+  <span class=na>selector</span><span class=pi>:</span> <span class=s>my_key</span>
 
 <span class=na>serve</span><span class=pi>:</span>
   <span class=na>host</span><span class=pi>:</span> <span class=s>127.0.0.1</span>
@@ -146,8 +149,6 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
     <span class=na>client_cache</span><span class=pi>:</span>
       <span class=na>ttl</span><span class=pi>:</span> <span class=s>10m</span>
     <span class=na>max_flush_delay</span><span class=pi>:</span> <span class=s>20us</span>
-
-<span class=na>secrets_reload_enabled</span><span class=pi>:</span> <span class=kc>true</span>
 
 <span class=na>log</span><span class=pi>:</span>
   <span class=na>level</span><span class=pi>:</span> <span class=s>debug</span>
@@ -281,6 +282,11 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
           <span class=pi>-</span> <span class=s>foo</span>
         <span class=na>allowed_algorithms</span><span class=pi>:</span>
           <span class=pi>-</span> <span class=s>RS256</span>
+        <span class=na>proof_of_possession</span><span class=pi>:</span>
+          <span class=na>type</span><span class=pi>:</span> <span class=s>dpop</span>
+          <span class=na>config</span><span class=pi>:</span>
+            <span class=na>max_age</span><span class=pi>:</span> <span class=s>30s</span>
+            <span class=na>nonce_required</span><span class=pi>:</span> <span class=kc>true</span>
       <span class=na>principal</span><span class=pi>:</span>
         <span class=na>id</span><span class=pi>:</span> <span class=s2>&#34;</span><span class=s>sub&#34;</span>
         <span class=na>attributes</span><span class=pi>:</span> <span class=s2>&#34;</span><span class=s>@this&#34;</span>
@@ -466,5 +472,5 @@ dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li cla
       <span class=na>secret</span><span class=pi>:</span>
         <span class=na>source</span><span class=pi>:</span> <span class=s>tls_store</span>
         <span class=na>selector</span><span class=pi>:</span> <span class=s>k8s_key</span>
-      <span class=na>min_version</span><span class=pi>:</span> <span class=s>TLS1.3</span></code></pre></div></div></linkable-headline-area></div><p class="text-end fst-italic fs-7 pb-3">Last updated on <span class=fw-bold>Jun 6, 2026</span></p><hr><div class="d-flex justify-content-between py-3"><a href=../../../docs/configuration/types/ class="fs-6 fw-bold text-dark link-secondary link-underline-opacity-0"><svg width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.354 1.646a.5.5.0 010 .708L5.707 8l5.647 5.646a.5.5.0 01-.708.708l-6-6a.5.5.0 010-.708l6-6a.5.5.0 01.708.0z"/></svg>
+      <span class=na>min_version</span><span class=pi>:</span> <span class=s>TLS1.3</span></code></pre></div></div></linkable-headline-area></div><p class="text-end fst-italic fs-7 pb-3">Last updated on <span class=fw-bold>Jun 19, 2026</span></p><hr><div class="d-flex justify-content-between py-3"><a href=../../../docs/configuration/types/ class="fs-6 fw-bold text-dark link-secondary link-underline-opacity-0"><svg width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.354 1.646a.5.5.0 010 .708L5.707 8l5.647 5.646a.5.5.0 01-.708.708l-6-6a.5.5.0 010-.708l6-6a.5.5.0 01.708.0z"/></svg>
 Type Definitions</a></div></div></main></div><footer class="footer py-4 py-md-5 px-4 px-md-3 mt-3"><div class=container><div class=row><div class="col-lg-3 mb-3"><p class=fs-5>Heimdall</p><ul class="list-unstyled small text-muted"><li class=mb-2>2022-2024 © Heimdall Project Authors. All rights reserved.</li><li class=mb-2><a href=https://github.com/dadrus/heimdall/blob/master/LICENSE>Apache 2.0 licensed</a></li></ul></div><div class="col-6 col-lg-2 offset-lg-1 mb-3"><h5>Links</h5><ul class=list-unstyled><li class=mb-2><a href=../../../>Home</a></li><li class=mb-2><a href=../../../docs/getting_started/discover_heimdall>Docs</a></li><li class=mb-2><a href=../../../guides/>Guides</a></li><li class=mb-2><a href=../../../openapi/>API</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Guides</h5><ul class=list-unstyled><li class=mb-2><a href=../../../guides/proxies/>API Gateways & Proxies</a></li><li class=mb-2><a href=../../../guides/authz/>Authorization Services</a></li><li class=mb-2><a href=../../../guides/authn/>Authentication Protocols & Services</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Community</h5><ul class=list-unstyled><li class=mb-2><a href=https://github.com/dadrus/heimdall>Github</a></li><li class=mb-2><a href=https://discord.gg/qQgg8xKuyb>Discord</a></li></ul></div></div></div></footer><script src=../../../js/main.js defer></script></body></html>

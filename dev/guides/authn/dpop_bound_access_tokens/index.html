@@ -1,0 +1,1025 @@
+<!doctype html><html lang=en><head><title>Protect APIs with DPoP-bound Access Tokens</title><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><meta name=description content="An open source Identity Aware Proxy and an Access Control Decision service for cloud native applications"><meta name=dc.relation content="https://dadrus.github.io/"><meta name=theme-color content="#1A94D2"><link rel=stylesheet href=../../../css/styles.min.css media=screen><link rel='shortcut icon' type=image/x-icon href=../../../favicon.ico></head><body><header class="navbar navbar-expand-md navbar-dark bg-dark sticky-top"><nav class="container-xxl flex-wrap flex-lg-nowrap px-0" aria-label="Main navigation"><button class="btn btn-outline-dark d-lg-none navbar-toggler border-0 shadow-none ps-3" type=button data-bs-toggle=offcanvas data-bs-target=#docsMenuContent aria-controls=docsMenuContent aria-expanded=false aria-label="Open docs menu">
+<svg width="36" height="36" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5.0 01.5-.5h10a.5.5.0 010 1H3a.5.5.0 01-.5-.5m0-4a.5.5.0 01.5-.5h10a.5.5.0 010 1H3A.5.5.0 012.5 8m0-4a.5.5.0 01.5-.5h10a.5.5.0 010 1H3A.5.5.0 012.5 4"/></svg></button><nav class="offcanvas offcanvas-start d-md-none text-bg-light" tabindex=-1 id=docsMenuContent aria-labelledby=docsMenuContentLabel><div class=offcanvas-header><h5 class=offcanvas-title id=docsMenuContentLabel>Browse guides</h5><button type=button class=btn-close data-bs-dismiss=offcanvas aria-label="Close docs menu"></button></div><div class="offcanvas-body docs-sidebar"><div class=docs-search-button><button type=button class="btn btn-outline-secondary mb-3 d-none d-md-block w-100 text-start" data-bs-toggle=modal data-bs-target=#docSearch aria-controls=docSearch aria-expanded=false aria-label="Open search">
+<svg width="20" height="20" fill="currentColor" class="bi bi-search me-2" viewBox="0 0 20 20"><path d="M11.742 10.344a6.5 6.5.0 10-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85a1 1 0 00-.115-.1zM12 6.5a5.5 5.5.0 11-11 0 5.5 5.5.0 0111 0"/></svg>
+<span>Quick search...</span></button></div><nav id=SideBarToc><ul><li><span>API Gateways & Proxies</span><ul><li><a href=../../../guides/proxies/caddy/>Caddy Integration</a></li><li><a href=../../../guides/proxies/contour/>Contour Integration</a></li><li><a href=../../../guides/proxies/emissary/>Emissary Ingress Integration</a></li><li><a href=../../../guides/proxies/envoy/>Envoy Integration</a></li><li><a href=../../../guides/proxies/envoy_gateway/>Envoy Gateway Integration</a></li><li><a href=../../../guides/proxies/haproxy/>HAProxy Integration</a></li><li><a href=../../../guides/proxies/istio/>Istio Service Mesh Integration</a></li><li><a href=../../../guides/proxies/kgateway/>KGateway Integration</a></li><li><a href=../../../guides/proxies/nginx/>NGINX Integration</a></li><li><a href=../../../guides/proxies/traefik/>Traefik Proxy Integration</a></li></ul></li><li><span>Authorization Services</span><ul><li><a href=../../../guides/authz/opa/>Integration with OPA</a></li><li><a href=../../../guides/authz/openfga/>Integration with OpenFGA</a></li></ul></li><li><span>Authentication Protocols & Services</span><ul><li><a href=../../../guides/authn/oidc_first_party_auth/>First-Party Authentication with OpenID Connect</a></li><li><a class=active href=../../../guides/authn/dpop_bound_access_tokens/>Protect APIs with DPoP-bound Access Tokens</a></li></ul></li></ul></nav></div></nav><div class="d-flex align-items-center px-4"><a class="navbar-brand navbar-brand-highlight text-white me-0" href=../../../ style=font-weight:500;font-size:1.5rem>Heimdall</a><ul class="navbar-nav d-none d-md-flex ms-3"><li class=nav-item><a class='nav-link text-white' href=../../../docs/getting_started/discover_heimdall>Docs</a></li><li class=nav-item><a class='nav-link text-white active' href=../../../guides/>Guides</a></li><li class=nav-item><a class='nav-link text-white' href=../../../openapi/>API</a></li></ul></div><div class=d-flex><button type=button class="btn btn-outline-dark navbar-toggler border-0 shadow-none" data-bs-toggle=modal data-bs-target=#docSearch aria-controls=docSearch aria-expanded=false aria-label="Open search">
+<span class="bi bi-search"></span>
+</button>
+<button class="btn btn-outline-dark navbar-toggler border-0 shadow-none pe-3" type=button data-bs-toggle=offcanvas data-bs-target=#mainMenuContent aria-controls=mainMenuContent aria-expanded=false aria-label="Open main menu">
+<svg width="24" height="24" fill="currentColor" class="bi bi-three-dots" viewBox="0 0 16 16"><path d="M3 9.5a1.5 1.5.0 110-3 1.5 1.5.0 010 3m5 0a1.5 1.5.0 110-3 1.5 1.5.0 010 3m5 0a1.5 1.5.0 110-3 1.5 1.5.0 010 3"/></svg></button><div class="offcanvas offcanvas-end text-bg-dark" tabindex=-1 id=mainMenuContent aria-labelledby=mainMenuContentLabel><div class=offcanvas-header><h5 class="offcanvas-title text-white" id=mainMenuContentLabel>Heimdall</h5><button type=button class="btn-close btn-close-white" data-bs-dismiss=offcanvas aria-label="Close main menu"></button></div><div class=offcanvas-body><ul class="navbar-nav flex-column d-md-none d-lg-none d-xl-none"><li class=nav-item><a class='nav-link text-white' href=../../../docs/getting_started/discover_heimdall>Docs</a></li><li class=nav-item><a class='nav-link text-white active' href=../../../guides/>Guides</a></li><li class=nav-item><a class='nav-link text-white' href=../../../openapi/>API</a></li></ul><hr class="text-white-50 d-md-none"><ul class="navbar-nav flex-column ms-auto"><doc-version-select class="nav-item dropdown" version-file=/heimdall/data.json current-version=dev current-page=/guides/authn/dpop_bound_access_tokens/><button class="btn btn-dark dropdown-toggle me-4" data-bs-toggle=dropdown aria-expanded=false>
+dev</button></doc-version-select></ul><ul class="navbar-nav flex-column"><li class="nav-item mb-1 pe-4"><a class="nav-link text-white" style=align-self:center href=https://github.com/dadrus/heimdall><svg role="img" width="20" height="20" fill="currentColor" class="bi bi-github text-white" viewBox="0 0 16 16"><title>GitHub</title><path d="M8 0C3.58.0.0 3.58.0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38.0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95.0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12.0.0.67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15.0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48.0 1.07-.01 1.93-.01 2.2.0.21.15.46.55.38A8.012 8.012.0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+<small class="ms-2 d-md-none">GitHub</small></a></li></ul></div></div></div></nav></header><div class=modal id=docSearch tabindex=-1 aria-labelledby=docSearchLabel aria-hidden=true><doc-search class="col-auto me-auto mw-75" index-file=/heimdall/dev/index.json path-prefix=/heimdall/dev><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class=modal-content><div class="modal-header p-2"><div class=input-group><div class="input-group-text bg-body border-0 fs-4"><svg width="16" height="16" fill="currentColor" class="bi bi-search text-secondary my-0" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5.0 10-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85a1 1 0 00-.115-.1zM12 6.5a5.5 5.5.0 11-11 0 5.5 5.5.0 0111 0"/></svg></div><input id=search-input class="form-control search-bar border-0" type=search placeholder="Search documentation " aria-label="Search docs..." autocomplete=off autofocus><div class="input-group-text bg-body border-0"><a class="btn input-group-text text-muted border p-1 bg-light-subtle fs-7 fw-bold font-monospace" data-bs-dismiss=modal aria-label=Close>ESC</a></div></div></div><div class=modal-body><div class=search-results><p class="text-center mt-5">No recent searches</p></div></div><div class=modal-footer></div></div></div></doc-search></div><div class="container-xxl docs-layout px-4"><aside class="d-none pe-3 docs-sidebar"><div class=docs-search-button><button type=button class="btn btn-outline-secondary mb-3 d-none d-md-block w-100 text-start" data-bs-toggle=modal data-bs-target=#docSearch aria-controls=docSearch aria-expanded=false aria-label="Open search">
+<svg width="20" height="20" fill="currentColor" class="bi bi-search me-2" viewBox="0 0 20 20"><path d="M11.742 10.344a6.5 6.5.0 10-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85a1 1 0 00-.115-.1zM12 6.5a5.5 5.5.0 11-11 0 5.5 5.5.0 0111 0"/></svg>
+<span>Quick search...</span></button></div><nav id=SideBarToc><ul><li><span>API Gateways & Proxies</span><ul><li><a href=../../../guides/proxies/caddy/>Caddy Integration</a></li><li><a href=../../../guides/proxies/contour/>Contour Integration</a></li><li><a href=../../../guides/proxies/emissary/>Emissary Ingress Integration</a></li><li><a href=../../../guides/proxies/envoy/>Envoy Integration</a></li><li><a href=../../../guides/proxies/envoy_gateway/>Envoy Gateway Integration</a></li><li><a href=../../../guides/proxies/haproxy/>HAProxy Integration</a></li><li><a href=../../../guides/proxies/istio/>Istio Service Mesh Integration</a></li><li><a href=../../../guides/proxies/kgateway/>KGateway Integration</a></li><li><a href=../../../guides/proxies/nginx/>NGINX Integration</a></li><li><a href=../../../guides/proxies/traefik/>Traefik Proxy Integration</a></li></ul></li><li><span>Authorization Services</span><ul><li><a href=../../../guides/authz/opa/>Integration with OPA</a></li><li><a href=../../../guides/authz/openfga/>Integration with OpenFGA</a></li></ul></li><li><span>Authentication Protocols & Services</span><ul><li><a href=../../../guides/authn/oidc_first_party_auth/>First-Party Authentication with OpenID Connect</a></li><li><a class=active href=../../../guides/authn/dpop_bound_access_tokens/>Protect APIs with DPoP-bound Access Tokens</a></li></ul></li></ul></nav></aside><main class=docs-main><div class="d-md-none docs-location bg-body"><nav style="--bs-breadcrumb-divider:'>'" aria-label=breadcrumb><ol class="breadcrumb mb-0"><li class="breadcrumb-item fw-bold">Authentication Protocols & Services</li><li class="breadcrumb-item active" aria-current=page>Protect APIs with DPoP-bound Access Tokens</li></ol></nav></div><div class="docs-intro pt-3 pe-3"><h1>Protect APIs with DPoP-bound Access Tokens</h1><p>This guide explains how to use heimdall to protect an API with DPoP-bound access tokens issued by an OAuth 2.0 authorization server.</p></div><aside class="text-muted docs-toc"><strong class="d-md-block h6 pb-2 my-2 ms-2 border-bottom d-none d-md-none d-lg-block">On this page</strong><div id=page-content-toc class="mt-1 mb-3 text-muted d-none d-md-none d-lg-block docs-toc-content"><nav id=TableOfContents><ul><li><a href=#_overview>Overview</a></li><li><a href=#_prerequisites>Prerequisites</a></li><li><a href=#_configure_the_base_setup>Configure the Base Setup</a></li><li><a href=#_use_the_setup>Use the Setup</a></li><li><a href=#_cleanup>Cleanup</a></li></ul></nav></div><button class="btn btn-outline-secondary text-decoration-none d-lg-none collapsed" type=button data-bs-toggle=collapse data-bs-target=#page-content-toc-collapsible aria-expanded=false aria-controls=page-content-toc-collapsible>
+On this page
+<svg width="16" height="16" fill="currentColor" class="bi bi-chevron-expand" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M3.646 9.146a.5.5.0 01.708.0L8 12.793l3.646-3.647a.5.5.0 01.708.708l-4 4a.5.5.0 01-.708.0l-4-4a.5.5.0 010-.708m0-2.292a.5.5.0 00.708.0L8 3.207l3.646 3.647a.5.5.0 00.708-.708l-4-4a.5.5.0 00-.708.0l-4 4a.5.5.0 000 .708"/></svg></button><div id=page-content-toc-collapsible class="mt-1 mb-3 text-muted d-lg-none collapse docs-toc-content"><div class="card card-body"><nav id=TableOfContents><ul><li><a href=#_overview>Overview</a></li><li><a href=#_prerequisites>Prerequisites</a></li><li><a href=#_configure_the_base_setup>Configure the Base Setup</a></li><li><a href=#_use_the_setup>Use the Setup</a></li><li><a href=#_cleanup>Cleanup</a></li></ul></nav></div></div></aside><div class="docs-content pe-3"><div data-bs-spy=scroll data-bs-target=#page-content-toc class=mt-3><linkable-headline-area><div class=paragraph><p>By the end of this guide, you’ll have a setup where heimdall protects an API with DPoP-bound access tokens issued by <a href=https://www.keycloak.org/>Keycloak</a>.
+Although this guide uses Keycloak as authorization server, you can use the same approach with any OAuth 2.0 authorization server that issues DPoP-bound access tokens according to <a href=https://www.rfc-editor.org/rfc/rfc9449>RFC 9449</a>.</p></div><div class=sect1><h2 id=_overview>Overview</h2><div class=sectionbody><div class=paragraph><p>DPoP, short for Demonstrating Proof-of-Possession, sender-constrains OAuth 2.0 access tokens.
+Instead of treating an access token as a pure bearer credential, the client proves possession of the private key the token is bound to on every request.</p></div><div class=paragraph><p>Technically, the setup includes:</p></div><div class=ulist><ul><li><p><a href=https://www.keycloak.org/>Keycloak</a> - Issues DPoP-bound access tokens.</p></li><li><p>A DPoP-capable client - Requests an access token and creates DPoP proofs for calls to the protected API.</p></li><li><p>heimdall - Validates the access token and the corresponding DPoP proof.</p></li><li><p><a href=https://hub.docker.com/r/traefik/whoami/>traefik/whoami</a> - Simulates the protected upstream service.</p></li></ul></div><div class=paragraph><p>The DPoP-specific flow looks like this:</p></div><div class=imageblock><div class=content><img src=diag-ditaa-md5-387f61915a6f374bb91f66b4dcdddd50.png alt=Diagram width=640 height=252></div></div><div class=paragraph><p>In this guide, heimdall is configured to require DPoP nonces.
+That means the first request to the protected API is answered with a nonce challenge.
+The client then repeats the request with a fresh proof that includes the nonce returned by heimdall.</p></div><div class="admonitionblock note"><table><tbody><tr><td class=icon><i class="fa icon-note" title=Note></i></td><td class=content>heimdall runs in <a href=../../../docs/concepts/operating_modes/>proxy mode</a> here, sitting directly in front of the upstream service and handling both DPoP validation and request forwarding in a single hop. The same functionality can also be achieved when heimdall is integrated with any reverse proxy as a <a href=../../../docs/concepts/operating_modes/#_decision_mode>decision service</a> — the DPoP configuration stays exactly the same. See the <a href=../../../guides/proxies/>proxy integration guides</a> for Traefik, NGINX, Envoy, and others. We kept this guide to standalone proxy mode to avoid extra moving parts.</td></tr></tbody></table></div></div></div><div class=sect1><h2 id=_prerequisites>Prerequisites</h2><div class=sectionbody><div class=paragraph><p>To follow this guide, you need the following tools installed locally:</p></div><div class=ulist><ul><li><p><a href=https://docs.docker.com/install/>Docker</a></p></li><li><p><a href=https://docs.docker.com/compose/install/>Docker Compose</a></p></li></ul></div></div></div><div class=sect1><h2 id=_configure_the_base_setup>Configure the Base Setup</h2><div class=sectionbody><div class="olist arabic"><ol class=arabic><li><p>Create a directory for the configuration files named <code>heimdall-dpop</code>. Inside this directory, create two additional directories named <code>rules</code> and <code>client</code>. The <code>rules</code> directory will contain heimdall’s rules, and the <code>client</code> directory will contain the DPoP client used to obtain tokens and call the protected API.</p><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=bash><span class=nb>mkdir </span>heimdall-dpop
+<span class=nb>cd </span>heimdall-dpop
+<span class=nb>mkdir </span>rules client</code></pre></div></div></li><li><p>Create a configuration file for heimdall named <code>heimdall-config.yaml</code> with the following contents:</p><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>log</span><span class=pi>:</span> <i class=conum data-value=1></i><b>(1)</b>
+  <span class=na>level</span><span class=pi>:</span> <span class=s>debug</span>
+
+<span class=na>tracing</span><span class=pi>:</span>
+  <span class=na>enabled</span><span class=pi>:</span> <span class=kc>false</span>
+
+<span class=na>metrics</span><span class=pi>:</span>
+  <span class=na>enabled</span><span class=pi>:</span> <span class=kc>false</span>
+
+<span class=na>secret_management</span><span class=pi>:</span> <i class=conum data-value=2></i><b>(2)</b>
+  <span class=na>nonce_keys</span><span class=pi>:</span>
+    <span class=na>type</span><span class=pi>:</span> <span class=s>jwks</span>
+    <span class=na>config</span><span class=pi>:</span>
+      <span class=na>path</span><span class=pi>:</span> <span class=s>/etc/heimdall/secrets.jwks</span>
+
+<span class=na>master_key</span><span class=pi>:</span> <i class=conum data-value=3></i><b>(3)</b>
+  <span class=na>source</span><span class=pi>:</span> <span class=s>nonce_keys</span>
+  <span class=na>selector</span><span class=pi>:</span> <span class=s>dpop-nonce-master-key-1</span>
+
+<span class=na>mechanisms</span><span class=pi>:</span>
+  <span class=na>authenticators</span><span class=pi>:</span>
+    <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>deny_all</span> <i class=conum data-value=4></i><b>(4)</b>
+      <span class=na>type</span><span class=pi>:</span> <span class=s>unauthorized</span>
+    <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>dpop_jwt</span> <i class=conum data-value=5></i><b>(5)</b>
+      <span class=na>type</span><span class=pi>:</span> <span class=s>jwt</span>
+      <span class=na>config</span><span class=pi>:</span>
+        <span class=na>jwks_endpoint</span><span class=pi>:</span>
+          <span class=na>url</span><span class=pi>:</span> <span class=s>http://keycloak:8080/realms/dpop/protocol/openid-connect/certs</span>
+        <span class=na>assertions</span><span class=pi>:</span>
+          <span class=na>issuers</span><span class=pi>:</span>
+            <span class=pi>-</span> <span class=s>http://keycloak:8080/realms/dpop</span>
+            <span class=pi>-</span> <span class=s>http://127.0.0.1:8080/realms/dpop</span>
+          <span class=na>allowed_algorithms</span><span class=pi>:</span>
+            <span class=pi>-</span> <span class=s>RS256</span>
+            <span class=pi>-</span> <span class=s>ES256</span>
+          <span class=na>validity_leeway</span><span class=pi>:</span> <span class=s>10s</span>
+          <span class=na>proof_of_possession</span><span class=pi>:</span> <i class=conum data-value=6></i><b>(6)</b>
+            <span class=na>type</span><span class=pi>:</span> <span class=s>dpop</span>
+            <span class=na>config</span><span class=pi>:</span>
+              <span class=na>max_age</span><span class=pi>:</span> <span class=s>1m</span>
+              <span class=na>nonce_required</span><span class=pi>:</span> <span class=kc>true</span>
+              <span class=na>replay_allowed</span><span class=pi>:</span> <span class=kc>false</span>
+        <span class=na>error_signaling</span><span class=pi>:</span> <i class=conum data-value=7></i><b>(7)</b>
+          <span class=na>enabled</span><span class=pi>:</span> <span class=kc>true</span>
+          <span class=na>include_error_description</span><span class=pi>:</span> <span class=kc>true</span>
+          <span class=na>include_dpop_algorithms</span><span class=pi>:</span> <span class=kc>true</span>
+
+  <span class=na>finalizers</span><span class=pi>:</span>
+    <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>noop</span> <i class=conum data-value=8></i><b>(8)</b>
+      <span class=na>type</span><span class=pi>:</span> <span class=s>noop</span>
+
+  <span class=na>error_handlers</span><span class=pi>:</span>
+    <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>default</span> <i class=conum data-value=9></i><b>(9)</b>
+      <span class=na>type</span><span class=pi>:</span> <span class=s>default</span>
+
+<span class=na>default_rule</span><span class=pi>:</span> <i class=conum data-value=10></i><b>(10)</b>
+  <span class=na>execute</span><span class=pi>:</span>
+    <span class=pi>-</span> <span class=na>authenticator</span><span class=pi>:</span> <span class=s>deny_all</span>
+    <span class=pi>-</span> <span class=na>finalizer</span><span class=pi>:</span> <span class=s>noop</span>
+  <span class=na>on_error</span><span class=pi>:</span>
+    <span class=pi>-</span> <span class=na>error_handler</span><span class=pi>:</span> <span class=s>default</span>
+
+<span class=na>providers</span><span class=pi>:</span> <i class=conum data-value=11></i><b>(11)</b>
+  <span class=na>file_system</span><span class=pi>:</span>
+    <span class=na>src</span><span class=pi>:</span> <span class=s>/etc/heimdall/rules</span>
+    <span class=na>watch</span><span class=pi>:</span> <span class=kc>true</span></code></pre></div></div><div class="colist arabic"><table><tbody><tr><td><i class=conum data-value=1></i><b>1</b></td><td>By default, heimdall logs at the <code>error</code> level. We set it to <code>debug</code> to see detailed information about rule execution and DPoP validation results. Tracing and metrics are disabled to avoid errors from a missing OTEL collector. For more details, see the <a href=../../../docs/operations/observability/#_logging>Observability</a> chapter.</td></tr><tr><td><i class=conum data-value=2></i><b>2</b></td><td>A <a href=../../../docs/operations/secret_management/>secret source</a> named <code>nonce_keys</code> backed by a JWKS file. It provides the symmetric key material required for DPoP nonce generation and validation.</td></tr><tr><td><i class=conum data-value=3></i><b>3</b></td><td>The <code>master_key</code> setting references the key that heimdall uses to generate and validate DPoP nonces. It must point to a symmetric key from a configured secret source. This setting is required whenever <code>nonce_required</code> is set to <code>true</code>.</td></tr><tr><td><i class=conum data-value=4></i><b>4</b></td><td>The <a href=../../../docs/mechanisms/authenticators/#_unauthorized><code>unauthorized</code></a> authenticator named <code>deny_all</code> rejects every request. It is used by the default rule to lock down all endpoints that are not explicitly matched by a regular rule.</td></tr><tr><td><i class=conum data-value=5></i><b>5</b></td><td>The <a href=../../../docs/mechanisms/authenticators/#_jwt><code>jwt</code></a> authenticator named <code>dpop_jwt</code>. It validates access tokens against the JWKS endpoint directly. Two issuer values are configured because the token’s <code>iss</code> claim reflects the URL the client used when obtaining it: the browser-based Authorization Code flow reaches Keycloak at <code>127.0.0.1:8080</code>, while heimdall fetches the JWKS over the internal Docker network at <code>keycloak:8080</code>.</td></tr><tr><td><i class=conum data-value=6></i><b>6</b></td><td>The DPoP proof-of-possession assertion. With <code>nonce_required: true</code>, heimdall rejects any request that does not include a valid nonce and issues a <code>DPoP-Nonce</code> challenge so the client can retry. With <code>replay_allowed: false</code>, heimdall rejects previously seen DPoP proofs based on their <code>jti</code> claim.</td></tr><tr><td><i class=conum data-value=7></i><b>7</b></td><td>Configures <a href=../../../docs/configuration/types/#_token_usage_error_signaling>WWW-Authenticate error signaling</a> according to <a href=https://www.rfc-editor.org/rfc/rfc9449>RFC 9449</a>. When DPoP nonce validation fails, heimdall returns a <code>use_dpop_nonce</code> error in the <code>WWW-Authenticate</code> header along with a fresh <code>DPoP-Nonce</code> header.</td></tr><tr><td><i class=conum data-value=8></i><b>8</b></td><td>The <a href=../../../docs/mechanisms/finalizers/#_noop><code>noop</code></a> finalizer passes the request to the upstream service without modifying it.</td></tr><tr><td><i class=conum data-value=9></i><b>9</b></td><td>The <a href=../../../docs/mechanisms/error_handlers/#_default><code>default</code></a> error handler returns a plain HTTP error response.</td></tr><tr><td><i class=conum data-value=10></i><b>10</b></td><td>The <a href=../../../docs/rules/default_rule/>default rule</a> acts as a security baseline: it rejects all requests that are not matched by a more specific rule. Regular rules <a href=../../../docs/concepts/rules/#_default_rule_inheritance>inherit</a> from this rule and only need to specify what they override.</td></tr><tr><td><i class=conum data-value=11></i><b>11</b></td><td>The <a href=../../../docs/rules/providers/#_filesystem><code>file_system</code></a> provider loads rules from the <code>/etc/heimdall/rules</code> directory and watches for changes.</td></tr></tbody></table></div></li><li><p>Create a file named <code>secrets.jwks</code> with the following contents:</p><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=json><span class=p>{</span><span class=w>
+  </span><span class=nl>&#34;keys&#34;</span><span class=p>:</span><span class=w> </span><span class=p>[</span><span class=w>
+    </span><span class=p>{</span><span class=w>
+      </span><span class=nl>&#34;kty&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;oct&#34;</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;kid&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;dpop-nonce-master-key-1&#34;</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;k&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;2M0G6EosV6PZq4N2FxmDqkJYb3mHkYaJzMX7Wm3Jj1o&#34;</span><span class=w>
+    </span><span class=p>}</span><span class=w>
+  </span><span class=p>]</span><span class=w>
+</span><span class=p>}</span></code></pre></div></div><div class="admonitionblock warning"><table><tbody><tr><td class=icon><i class="fa icon-warning" title=Warning></i></td><td class=content>Do not use this key for anything beyond this guide. Use your own securely generated key material in real deployments.</td></tr></tbody></table></div></li><li><p>Create a file named <code>upstream-rules.yaml</code> in the <code>rules</code> directory with the following contents:</p><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>version</span><span class=pi>:</span> <span class=s2>&#34;</span><span class=s>1beta1&#34;</span>
+
+<span class=na>rules</span><span class=pi>:</span>
+  <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>upstream:api</span>
+    <span class=na>match</span><span class=pi>:</span>
+      <span class=na>routes</span><span class=pi>:</span>
+        <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/api</span>
+        <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/api/&lt;**&gt;</span>
+    <span class=na>forward_to</span><span class=pi>:</span>
+      <span class=na>host</span><span class=pi>:</span> <span class=s>upstream:8081</span>
+    <span class=na>execute</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=na>authenticator</span><span class=pi>:</span> <span class=s>dpop_jwt</span></code></pre></div></div><div class=paragraph><p>This rule matches requests to <code>/api</code> and any sub-path. It <a href=../../../docs/concepts/rules/#_default_rule_inheritance>inherits</a> the finalizer and error handler from the default rule and only overrides the authenticator, replacing the deny-all baseline with the <code>dpop_jwt</code> authenticator that accepts DPoP-bound access tokens. Requests that pass validation are forwarded to the upstream service.</p></div></li><li><p>Create the DPoP client. First, create a file named <code>pyproject.toml</code> in the <code>client</code> directory:</p><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=toml><span class=k>[</span><span class=n>project</span><span class=k>]</span>
+<span class=n>name</span> <span class=o>=</span><span class=w> </span><span class=s>&#34;heimdall-dpop-smoke-client&#34;</span>
+<span class=n>version</span> <span class=o>=</span><span class=w> </span><span class=s>&#34;0.1.0&#34;</span>
+<span class=n>requires-python</span> <span class=o>=</span><span class=w> </span><span class=s>&#34;&gt;=3.13&#34;</span>
+
+<span class=n>dependencies</span> <span class=o>=</span><span class=w> </span><span class=p>[</span>
+    <span class=s>&#34;httpx==0.28.1&#34;</span><span class=p>,</span>
+    <span class=s>&#34;pyjwt[crypto]==2.10.1&#34;</span><span class=p>,</span>
+    <span class=s>&#34;click==8.4.1&#34;</span>
+<span class=p>]</span>
+
+<span class=k>[</span><span class=n>project</span><span class=k>.</span><span class=n>scripts</span><span class=k>]</span>
+<span class=n>client</span> <span class=o>=</span><span class=w> </span><span class=s>&#34;dpop_client:cli&#34;</span>
+
+<span class=k>[</span><span class=n>build-system</span><span class=k>]</span>
+<span class=n>requires</span> <span class=o>=</span><span class=w> </span><span class=p>[</span><span class=s>&#34;hatchling&#34;</span><span class=p>]</span>
+<span class=n>build-backend</span> <span class=o>=</span><span class=w> </span><span class=s>&#34;hatchling.build&#34;</span>
+
+<span class=k>[</span><span class=n>tool</span><span class=k>.</span><span class=n>hatch</span><span class=k>.</span><span class=n>build</span><span class=k>]</span>
+<span class=n>include</span> <span class=o>=</span><span class=w> </span><span class=p>[</span>
+    <span class=s>&#34;dpop_client.py&#34;</span>
+<span class=p>]</span></code></pre></div></div><div class=paragraph><p>The <code>[project.scripts]</code> entry exposes the CLI as <code>client</code>, which lets <code>uv</code> invoke it as <code>uv run client &lt;command></code> without specifying the file path.</p></div><div class=paragraph><p>Then, create a file named <code>dpop_client.py</code> in the <code>client</code> directory:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=python><span class=kn>from</span> <span class=nn>__future__</span> <span class=kn>import</span> <span class=n>annotations</span>
+
+<span class=kn>import</span> <span class=nn>base64</span>
+<span class=kn>import</span> <span class=nn>hashlib</span>
+<span class=kn>import</span> <span class=nn>json</span>
+<span class=kn>import</span> <span class=nn>os</span>
+<span class=kn>import</span> <span class=nn>secrets</span>
+<span class=kn>import</span> <span class=nn>shutil</span>
+<span class=kn>import</span> <span class=nn>time</span>
+<span class=kn>import</span> <span class=nn>uuid</span>
+<span class=kn>from</span> <span class=nn>dataclasses</span> <span class=kn>import</span> <span class=n>dataclass</span>
+<span class=kn>from</span> <span class=nn>http.server</span> <span class=kn>import</span> <span class=n>BaseHTTPRequestHandler</span><span class=p>,</span> <span class=n>ThreadingHTTPServer</span>
+<span class=kn>from</span> <span class=nn>pathlib</span> <span class=kn>import</span> <span class=n>Path</span>
+<span class=kn>from</span> <span class=nn>typing</span> <span class=kn>import</span> <span class=n>Any</span><span class=p>,</span> <span class=n>cast</span>
+<span class=kn>from</span> <span class=nn>urllib.parse</span> <span class=kn>import</span> <span class=n>parse_qs</span><span class=p>,</span> <span class=n>urlencode</span><span class=p>,</span> <span class=n>urlsplit</span><span class=p>,</span> <span class=n>urlunsplit</span>
+
+<span class=kn>import</span> <span class=nn>click</span>
+<span class=kn>import</span> <span class=nn>httpx</span>
+<span class=kn>import</span> <span class=nn>jwt</span>
+<span class=kn>from</span> <span class=nn>cryptography.hazmat.primitives</span> <span class=kn>import</span> <span class=n>serialization</span>
+<span class=kn>from</span> <span class=nn>cryptography.hazmat.primitives.asymmetric</span> <span class=kn>import</span> <span class=n>ec</span>
+<span class=kn>from</span> <span class=nn>cryptography.hazmat.primitives.asymmetric.ec</span> <span class=kn>import</span> <span class=n>EllipticCurvePrivateKey</span>
+
+
+<span class=k>def</span> <span class=nf>env</span><span class=p>(</span><span class=n>name</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span> <span class=n>default</span><span class=p>:</span> <span class=nb>str</span> <span class=o>|</span> <span class=bp>None</span> <span class=o>=</span> <span class=bp>None</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+    <span class=n>value</span> <span class=o>=</span> <span class=n>os</span><span class=p>.</span><span class=n>environ</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=n>name</span><span class=p>,</span> <span class=n>default</span><span class=p>)</span>
+
+    <span class=k>if</span> <span class=n>value</span> <span class=ow>is</span> <span class=bp>None</span><span class=p>:</span>
+        <span class=k>raise</span> <span class=n>click</span><span class=p>.</span><span class=nc>ClickException</span><span class=p>(</span><span class=sa>f</span><span class=sh>&#34;</span><span class=s>Missing required environment variable: </span><span class=si>{</span><span class=n>name</span><span class=si>}</span><span class=sh>&#34;</span><span class=p>)</span>
+
+    <span class=k>return</span> <span class=n>value</span>
+
+
+<span class=n>STATE_DIR</span> <span class=o>=</span> <span class=n>Path</span><span class=p>(</span><span class=n>env</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>STATE_DIR</span><span class=sh>&#34;</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>.state</span><span class=sh>&#34;</span><span class=p>))</span>
+<span class=n>KEY_FILE</span> <span class=o>=</span> <span class=n>STATE_DIR</span> <span class=o>/</span> <span class=sh>&#34;</span><span class=s>dpop-private-key.pem</span><span class=sh>&#34;</span>
+<span class=n>OTHER_KEY_FILE</span> <span class=o>=</span> <span class=n>STATE_DIR</span> <span class=o>/</span> <span class=sh>&#34;</span><span class=s>other-dpop-private-key.pem</span><span class=sh>&#34;</span>
+<span class=n>TOKEN_FILE</span> <span class=o>=</span> <span class=n>STATE_DIR</span> <span class=o>/</span> <span class=sh>&#34;</span><span class=s>token.json</span><span class=sh>&#34;</span>
+<span class=n>RESOURCE_SERVER_DPOP_STATE_FILE</span> <span class=o>=</span> <span class=n>STATE_DIR</span> <span class=o>/</span> <span class=sh>&#34;</span><span class=s>resource-server-dpop-state.json</span><span class=sh>&#34;</span>
+
+<span class=n>AUTHORIZATION_ENDPOINT</span> <span class=o>=</span> <span class=n>env</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>AUTHORIZATION_ENDPOINT</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=n>TOKEN_ENDPOINT</span> <span class=o>=</span> <span class=n>env</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>TOKEN_ENDPOINT</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=n>PROTECTED_API</span> <span class=o>=</span> <span class=n>env</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>PROTECTED_API</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=n>CLIENT_ID</span> <span class=o>=</span> <span class=n>env</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>CLIENT_ID</span><span class=sh>&#34;</span><span class=p>)</span>
+
+<span class=n>REDIRECT_HOST</span> <span class=o>=</span> <span class=sh>&#34;</span><span class=s>0.0.0.0</span><span class=sh>&#34;</span>
+<span class=n>REDIRECT_PORT</span> <span class=o>=</span> <span class=nb>int</span><span class=p>(</span><span class=n>env</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>REDIRECT_PORT</span><span class=sh>&#34;</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>8765</span><span class=sh>&#34;</span><span class=p>))</span>
+<span class=n>REDIRECT_PATH</span> <span class=o>=</span> <span class=sh>&#34;</span><span class=s>/callback</span><span class=sh>&#34;</span>
+<span class=n>REDIRECT_URI</span> <span class=o>=</span> <span class=sa>f</span><span class=sh>&#34;</span><span class=s>http://127.0.0.1:</span><span class=si>{</span><span class=n>REDIRECT_PORT</span><span class=si>}{</span><span class=n>REDIRECT_PATH</span><span class=si>}</span><span class=sh>&#34;</span>
+<span class=n>SCOPE</span> <span class=o>=</span> <span class=n>env</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>SCOPE</span><span class=sh>&#34;</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>openid profile email</span><span class=sh>&#34;</span><span class=p>)</span>
+
+
+<span class=nd>@dataclass</span><span class=p>(</span><span class=n>frozen</span><span class=o>=</span><span class=bp>True</span><span class=p>)</span>
+<span class=k>class</span> <span class=nc>ApiResult</span><span class=p>:</span>
+    <span class=n>status_code</span><span class=p>:</span> <span class=nb>int</span>
+    <span class=n>body</span><span class=p>:</span> <span class=nb>str</span>
+    <span class=n>dpop_nonce</span><span class=p>:</span> <span class=nb>str</span> <span class=o>|</span> <span class=bp>None</span>
+    <span class=n>www_authenticate</span><span class=p>:</span> <span class=nb>str</span> <span class=o>|</span> <span class=bp>None</span>
+
+
+<span class=nd>@dataclass</span><span class=p>(</span><span class=n>frozen</span><span class=o>=</span><span class=bp>True</span><span class=p>)</span>
+<span class=k>class</span> <span class=nc>CallbackResult</span><span class=p>:</span>
+    <span class=n>code</span><span class=p>:</span> <span class=nb>str</span>
+    <span class=n>state</span><span class=p>:</span> <span class=nb>str</span>
+
+
+<span class=nd>@dataclass</span><span class=p>(</span><span class=n>frozen</span><span class=o>=</span><span class=bp>True</span><span class=p>)</span>
+<span class=k>class</span> <span class=nc>ResourceServerDpopState</span><span class=p>:</span>
+    <span class=n>access_token_hash</span><span class=p>:</span> <span class=nb>str</span>
+    <span class=n>proof</span><span class=p>:</span> <span class=nb>str</span>
+    <span class=n>nonce</span><span class=p>:</span> <span class=nb>str</span>
+
+
+<span class=k>class</span> <span class=nc>CallbackServer</span><span class=p>(</span><span class=n>ThreadingHTTPServer</span><span class=p>):</span>
+    <span class=n>callback_result</span><span class=p>:</span> <span class=n>CallbackResult</span> <span class=o>|</span> <span class=bp>None</span>
+    <span class=n>callback_error</span><span class=p>:</span> <span class=nb>str</span> <span class=o>|</span> <span class=bp>None</span>
+
+
+<span class=k>def</span> <span class=nf>b64url</span><span class=p>(</span><span class=n>data</span><span class=p>:</span> <span class=nb>bytes</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+    <span class=k>return</span> <span class=n>base64</span><span class=p>.</span><span class=nf>urlsafe_b64encode</span><span class=p>(</span><span class=n>data</span><span class=p>).</span><span class=nf>rstrip</span><span class=p>(</span><span class=sa>b</span><span class=sh>&#34;</span><span class=s>=</span><span class=sh>&#34;</span><span class=p>).</span><span class=nf>decode</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>ascii</span><span class=sh>&#34;</span><span class=p>)</span>
+
+
+<span class=k>def</span> <span class=nf>normalize_htu</span><span class=p>(</span><span class=n>url</span><span class=p>:</span> <span class=nb>str</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+    <span class=n>parsed</span> <span class=o>=</span> <span class=n>urlsplit</span><span class=p>(</span><span class=n>url</span><span class=p>)</span>
+    <span class=k>return</span> <span class=n>urlunsplit</span><span class=p>((</span><span class=n>parsed</span><span class=p>.</span><span class=n>scheme</span><span class=p>,</span> <span class=n>parsed</span><span class=p>.</span><span class=n>netloc</span><span class=p>,</span> <span class=n>parsed</span><span class=p>.</span><span class=n>path</span><span class=p>,</span> <span class=sh>&#34;&#34;</span><span class=p>,</span> <span class=sh>&#34;&#34;</span><span class=p>))</span>
+
+
+<span class=k>def</span> <span class=nf>access_token_hash</span><span class=p>(</span><span class=n>access_token</span><span class=p>:</span> <span class=nb>str</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+    <span class=k>return</span> <span class=n>b64url</span><span class=p>(</span><span class=n>hashlib</span><span class=p>.</span><span class=nf>sha256</span><span class=p>(</span><span class=n>access_token</span><span class=p>.</span><span class=nf>encode</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>ascii</span><span class=sh>&#34;</span><span class=p>)).</span><span class=nf>digest</span><span class=p>())</span>
+
+
+<span class=k>def</span> <span class=nf>generate_private_key</span><span class=p>(</span><span class=n>path</span><span class=p>:</span> <span class=n>Path</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=bp>None</span><span class=p>:</span>
+    <span class=n>STATE_DIR</span><span class=p>.</span><span class=nf>mkdir</span><span class=p>(</span><span class=n>parents</span><span class=o>=</span><span class=bp>True</span><span class=p>,</span> <span class=n>exist_ok</span><span class=o>=</span><span class=bp>True</span><span class=p>)</span>
+
+    <span class=n>private_key</span> <span class=o>=</span> <span class=n>ec</span><span class=p>.</span><span class=nf>generate_private_key</span><span class=p>(</span><span class=n>ec</span><span class=p>.</span><span class=nc>SECP256R1</span><span class=p>())</span>
+    <span class=n>path</span><span class=p>.</span><span class=nf>write_bytes</span><span class=p>(</span>
+        <span class=n>private_key</span><span class=p>.</span><span class=nf>private_bytes</span><span class=p>(</span>
+            <span class=n>encoding</span><span class=o>=</span><span class=n>serialization</span><span class=p>.</span><span class=n>Encoding</span><span class=p>.</span><span class=n>PEM</span><span class=p>,</span>
+            <span class=nb>format</span><span class=o>=</span><span class=n>serialization</span><span class=p>.</span><span class=n>PrivateFormat</span><span class=p>.</span><span class=n>PKCS8</span><span class=p>,</span>
+            <span class=n>encryption_algorithm</span><span class=o>=</span><span class=n>serialization</span><span class=p>.</span><span class=nc>NoEncryption</span><span class=p>(),</span>
+        <span class=p>)</span>
+    <span class=p>)</span>
+
+    <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=sa>f</span><span class=sh>&#34;</span><span class=s>Created DPoP key: </span><span class=si>{</span><span class=n>path</span><span class=si>}</span><span class=sh>&#34;</span><span class=p>)</span>
+    <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=sa>f</span><span class=sh>&#34;</span><span class=s>JWK thumbprint: </span><span class=si>{</span><span class=n>jwk_thumbprint</span><span class=p>(</span><span class=n>public_jwk</span><span class=p>(</span><span class=n>private_key</span><span class=p>))</span><span class=si>}</span><span class=sh>&#34;</span><span class=p>)</span>
+
+
+<span class=k>def</span> <span class=nf>load_private_key</span><span class=p>(</span><span class=n>path</span><span class=p>:</span> <span class=n>Path</span> <span class=o>=</span> <span class=n>KEY_FILE</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=n>EllipticCurvePrivateKey</span><span class=p>:</span>
+    <span class=k>if</span> <span class=ow>not</span> <span class=n>path</span><span class=p>.</span><span class=nf>exists</span><span class=p>():</span>
+        <span class=n>generate_private_key</span><span class=p>(</span><span class=n>path</span><span class=p>)</span>
+
+    <span class=n>key</span> <span class=o>=</span> <span class=n>serialization</span><span class=p>.</span><span class=nf>load_pem_private_key</span><span class=p>(</span><span class=n>path</span><span class=p>.</span><span class=nf>read_bytes</span><span class=p>(),</span> <span class=n>password</span><span class=o>=</span><span class=bp>None</span><span class=p>)</span>
+
+    <span class=k>if</span> <span class=ow>not</span> <span class=nb>isinstance</span><span class=p>(</span><span class=n>key</span><span class=p>,</span> <span class=n>EllipticCurvePrivateKey</span><span class=p>):</span>
+        <span class=k>raise</span> <span class=n>click</span><span class=p>.</span><span class=nc>ClickException</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>The configured DPoP key is not an EC private key</span><span class=sh>&#34;</span><span class=p>)</span>
+
+    <span class=k>return</span> <span class=n>key</span>
+
+
+<span class=k>def</span> <span class=nf>public_jwk</span><span class=p>(</span><span class=n>private_key</span><span class=p>:</span> <span class=n>EllipticCurvePrivateKey</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>dict</span><span class=p>[</span><span class=nb>str</span><span class=p>,</span> <span class=n>Any</span><span class=p>]:</span>
+    <span class=n>numbers</span> <span class=o>=</span> <span class=n>private_key</span><span class=p>.</span><span class=nf>public_key</span><span class=p>().</span><span class=nf>public_numbers</span><span class=p>()</span>
+
+    <span class=k>return</span> <span class=p>{</span>
+        <span class=sh>&#34;</span><span class=s>kty</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>EC</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>crv</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>P-256</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=sh>&#34;</span><span class=s>x</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>b64url</span><span class=p>(</span><span class=n>numbers</span><span class=p>.</span><span class=n>x</span><span class=p>.</span><span class=nf>to_bytes</span><span class=p>(</span><span class=mi>32</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>big</span><span class=sh>&#34;</span><span class=p>)),</span>
+        <span class=sh>&#34;</span><span class=s>y</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>b64url</span><span class=p>(</span><span class=n>numbers</span><span class=p>.</span><span class=n>y</span><span class=p>.</span><span class=nf>to_bytes</span><span class=p>(</span><span class=mi>32</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>big</span><span class=sh>&#34;</span><span class=p>)),</span>
+    <span class=p>}</span>
+
+
+<span class=k>def</span> <span class=nf>jwk_thumbprint</span><span class=p>(</span><span class=n>jwk</span><span class=p>:</span> <span class=nb>dict</span><span class=p>[</span><span class=nb>str</span><span class=p>,</span> <span class=n>Any</span><span class=p>])</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+    <span class=n>canonical</span> <span class=o>=</span> <span class=n>json</span><span class=p>.</span><span class=nf>dumps</span><span class=p>(</span>
+        <span class=p>{</span><span class=sh>&#34;</span><span class=s>crv</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>jwk</span><span class=p>[</span><span class=sh>&#34;</span><span class=s>crv</span><span class=sh>&#34;</span><span class=p>],</span> <span class=sh>&#34;</span><span class=s>kty</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>jwk</span><span class=p>[</span><span class=sh>&#34;</span><span class=s>kty</span><span class=sh>&#34;</span><span class=p>],</span> <span class=sh>&#34;</span><span class=s>x</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>jwk</span><span class=p>[</span><span class=sh>&#34;</span><span class=s>x</span><span class=sh>&#34;</span><span class=p>],</span> <span class=sh>&#34;</span><span class=s>y</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>jwk</span><span class=p>[</span><span class=sh>&#34;</span><span class=s>y</span><span class=sh>&#34;</span><span class=p>]},</span>
+        <span class=n>separators</span><span class=o>=</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>,</span><span class=sh>&#34;</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>:</span><span class=sh>&#34;</span><span class=p>),</span>
+        <span class=n>sort_keys</span><span class=o>=</span><span class=bp>True</span><span class=p>,</span>
+    <span class=p>)</span>
+
+    <span class=k>return</span> <span class=n>b64url</span><span class=p>(</span><span class=n>hashlib</span><span class=p>.</span><span class=nf>sha256</span><span class=p>(</span><span class=n>canonical</span><span class=p>.</span><span class=nf>encode</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>utf-8</span><span class=sh>&#34;</span><span class=p>)).</span><span class=nf>digest</span><span class=p>())</span>
+
+
+<span class=k>def</span> <span class=nf>create_proof</span><span class=p>(</span>
+    <span class=o>*</span><span class=p>,</span>
+    <span class=n>method</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span>
+    <span class=n>url</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span>
+    <span class=n>access_token</span><span class=p>:</span> <span class=nb>str</span> <span class=o>|</span> <span class=bp>None</span> <span class=o>=</span> <span class=bp>None</span><span class=p>,</span>
+    <span class=n>nonce</span><span class=p>:</span> <span class=nb>str</span> <span class=o>|</span> <span class=bp>None</span> <span class=o>=</span> <span class=bp>None</span><span class=p>,</span>
+    <span class=n>key_file</span><span class=p>:</span> <span class=n>Path</span> <span class=o>=</span> <span class=n>KEY_FILE</span><span class=p>,</span>
+    <span class=n>wrong_ath</span><span class=p>:</span> <span class=nb>bool</span> <span class=o>=</span> <span class=bp>False</span><span class=p>,</span>
+    <span class=n>wrong_htu</span><span class=p>:</span> <span class=nb>bool</span> <span class=o>=</span> <span class=bp>False</span><span class=p>,</span>
+    <span class=n>fixed_jti</span><span class=p>:</span> <span class=nb>str</span> <span class=o>|</span> <span class=bp>None</span> <span class=o>=</span> <span class=bp>None</span><span class=p>,</span>
+<span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+    <span class=n>private_key</span> <span class=o>=</span> <span class=n>load_private_key</span><span class=p>(</span><span class=n>key_file</span><span class=p>)</span>
+
+    <span class=n>claims</span><span class=p>:</span> <span class=nb>dict</span><span class=p>[</span><span class=nb>str</span><span class=p>,</span> <span class=n>Any</span><span class=p>]</span> <span class=o>=</span> <span class=p>{</span>
+        <span class=sh>&#34;</span><span class=s>jti</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>fixed_jti</span> <span class=ow>or</span> <span class=nb>str</span><span class=p>(</span><span class=n>uuid</span><span class=p>.</span><span class=nf>uuid4</span><span class=p>()),</span>
+        <span class=sh>&#34;</span><span class=s>htm</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>method</span><span class=p>.</span><span class=nf>upper</span><span class=p>(),</span>
+        <span class=sh>&#34;</span><span class=s>htu</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>http://heimdall:4456/not-api</span><span class=sh>&#34;</span> <span class=k>if</span> <span class=n>wrong_htu</span> <span class=k>else</span> <span class=n>normalize_htu</span><span class=p>(</span><span class=n>url</span><span class=p>),</span>
+        <span class=sh>&#34;</span><span class=s>iat</span><span class=sh>&#34;</span><span class=p>:</span> <span class=nb>int</span><span class=p>(</span><span class=n>time</span><span class=p>.</span><span class=nf>time</span><span class=p>()),</span>
+    <span class=p>}</span>
+
+    <span class=k>if</span> <span class=n>access_token</span> <span class=ow>is</span> <span class=ow>not</span> <span class=bp>None</span><span class=p>:</span>
+        <span class=n>claims</span><span class=p>[</span><span class=sh>&#34;</span><span class=s>ath</span><span class=sh>&#34;</span><span class=p>]</span> <span class=o>=</span> <span class=n>access_token_hash</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>not-the-token</span><span class=sh>&#34;</span><span class=p>)</span> <span class=k>if</span> <span class=n>wrong_ath</span> <span class=k>else</span> <span class=n>access_token_hash</span><span class=p>(</span><span class=n>access_token</span><span class=p>)</span>
+
+    <span class=k>if</span> <span class=n>nonce</span> <span class=ow>is</span> <span class=ow>not</span> <span class=bp>None</span><span class=p>:</span>
+        <span class=n>claims</span><span class=p>[</span><span class=sh>&#34;</span><span class=s>nonce</span><span class=sh>&#34;</span><span class=p>]</span> <span class=o>=</span> <span class=n>nonce</span>
+
+    <span class=k>return</span> <span class=n>jwt</span><span class=p>.</span><span class=nf>encode</span><span class=p>(</span>
+        <span class=n>payload</span><span class=o>=</span><span class=n>claims</span><span class=p>,</span>
+        <span class=n>key</span><span class=o>=</span><span class=n>private_key</span><span class=p>,</span>
+        <span class=n>algorithm</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>ES256</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=n>headers</span><span class=o>=</span><span class=p>{</span><span class=sh>&#34;</span><span class=s>typ</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>dpop+jwt</span><span class=sh>&#34;</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>alg</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>ES256</span><span class=sh>&#34;</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>jwk</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>public_jwk</span><span class=p>(</span><span class=n>private_key</span><span class=p>)},</span>
+    <span class=p>)</span>
+
+
+<span class=k>def</span> <span class=nf>code_challenge</span><span class=p>(</span><span class=n>code_verifier</span><span class=p>:</span> <span class=nb>str</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+    <span class=k>return</span> <span class=n>b64url</span><span class=p>(</span><span class=n>hashlib</span><span class=p>.</span><span class=nf>sha256</span><span class=p>(</span><span class=n>code_verifier</span><span class=p>.</span><span class=nf>encode</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>ascii</span><span class=sh>&#34;</span><span class=p>)).</span><span class=nf>digest</span><span class=p>())</span>
+
+
+<span class=k>def</span> <span class=nf>wait_for_authorization_code</span><span class=p>(</span><span class=n>expected_state</span><span class=p>:</span> <span class=nb>str</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=n>CallbackResult</span><span class=p>:</span>
+    <span class=k>class</span> <span class=nc>CallbackHandler</span><span class=p>(</span><span class=n>BaseHTTPRequestHandler</span><span class=p>):</span>
+        <span class=n>server_version</span> <span class=o>=</span> <span class=sh>&#34;</span><span class=s>heimdall-dpop-client/1.0</span><span class=sh>&#34;</span>
+
+        <span class=k>def</span> <span class=nf>do_GET</span><span class=p>(</span><span class=n>self</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=bp>None</span><span class=p>:</span>
+            <span class=n>parsed</span> <span class=o>=</span> <span class=n>urlsplit</span><span class=p>(</span><span class=n>self</span><span class=p>.</span><span class=n>path</span><span class=p>)</span>
+
+            <span class=k>if</span> <span class=n>parsed</span><span class=p>.</span><span class=n>path</span> <span class=o>!=</span> <span class=n>REDIRECT_PATH</span><span class=p>:</span>
+                <span class=n>self</span><span class=p>.</span><span class=nf>send_response</span><span class=p>(</span><span class=mi>404</span><span class=p>)</span>
+                <span class=n>self</span><span class=p>.</span><span class=nf>end_headers</span><span class=p>()</span>
+                <span class=n>self</span><span class=p>.</span><span class=n>wfile</span><span class=p>.</span><span class=nf>write</span><span class=p>(</span><span class=sa>b</span><span class=sh>&#34;</span><span class=s>Not found</span><span class=sh>&#34;</span><span class=p>)</span>
+                <span class=k>return</span>
+
+            <span class=n>params</span> <span class=o>=</span> <span class=n>parse_qs</span><span class=p>(</span><span class=n>parsed</span><span class=p>.</span><span class=n>query</span><span class=p>)</span>
+            <span class=n>server</span> <span class=o>=</span> <span class=n>cast</span><span class=p>(</span><span class=n>CallbackServer</span><span class=p>,</span> <span class=n>self</span><span class=p>.</span><span class=n>server</span><span class=p>)</span>
+
+            <span class=k>if</span> <span class=sh>&#34;</span><span class=s>error</span><span class=sh>&#34;</span> <span class=ow>in</span> <span class=n>params</span><span class=p>:</span>
+                <span class=n>error</span> <span class=o>=</span> <span class=n>params</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>error</span><span class=sh>&#34;</span><span class=p>,</span> <span class=p>[</span><span class=sh>&#34;</span><span class=s>unknown_error</span><span class=sh>&#34;</span><span class=p>])[</span><span class=mi>0</span><span class=p>]</span>
+                <span class=n>description</span> <span class=o>=</span> <span class=n>params</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>error_description</span><span class=sh>&#34;</span><span class=p>,</span> <span class=p>[</span><span class=sh>&#34;&#34;</span><span class=p>])[</span><span class=mi>0</span><span class=p>]</span>
+                <span class=n>server</span><span class=p>.</span><span class=n>callback_error</span> <span class=o>=</span> <span class=sa>f</span><span class=sh>&#34;</span><span class=si>{</span><span class=n>error</span><span class=si>}</span><span class=s>: </span><span class=si>{</span><span class=n>description</span><span class=si>}</span><span class=sh>&#34;</span>
+
+                <span class=n>self</span><span class=p>.</span><span class=nf>send_response</span><span class=p>(</span><span class=mi>400</span><span class=p>)</span>
+                <span class=n>self</span><span class=p>.</span><span class=nf>end_headers</span><span class=p>()</span>
+                <span class=n>self</span><span class=p>.</span><span class=n>wfile</span><span class=p>.</span><span class=nf>write</span><span class=p>(</span><span class=sa>b</span><span class=sh>&#34;</span><span class=s>Login failed. You can close this tab.</span><span class=sh>&#34;</span><span class=p>)</span>
+                <span class=k>return</span>
+
+            <span class=n>code</span> <span class=o>=</span> <span class=n>params</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>code</span><span class=sh>&#34;</span><span class=p>,</span> <span class=p>[</span><span class=bp>None</span><span class=p>])[</span><span class=mi>0</span><span class=p>]</span>
+            <span class=n>state</span> <span class=o>=</span> <span class=n>params</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>state</span><span class=sh>&#34;</span><span class=p>,</span> <span class=p>[</span><span class=bp>None</span><span class=p>])[</span><span class=mi>0</span><span class=p>]</span>
+
+            <span class=k>if</span> <span class=n>code</span> <span class=ow>is</span> <span class=bp>None</span> <span class=ow>or</span> <span class=n>state</span> <span class=ow>is</span> <span class=bp>None</span><span class=p>:</span>
+                <span class=n>server</span><span class=p>.</span><span class=n>callback_error</span> <span class=o>=</span> <span class=sh>&#34;</span><span class=s>Callback did not include code and state</span><span class=sh>&#34;</span>
+
+                <span class=n>self</span><span class=p>.</span><span class=nf>send_response</span><span class=p>(</span><span class=mi>400</span><span class=p>)</span>
+                <span class=n>self</span><span class=p>.</span><span class=nf>end_headers</span><span class=p>()</span>
+                <span class=n>self</span><span class=p>.</span><span class=n>wfile</span><span class=p>.</span><span class=nf>write</span><span class=p>(</span><span class=sa>b</span><span class=sh>&#34;</span><span class=s>Invalid callback. You can close this tab.</span><span class=sh>&#34;</span><span class=p>)</span>
+                <span class=k>return</span>
+
+            <span class=k>if</span> <span class=n>state</span> <span class=o>!=</span> <span class=n>expected_state</span><span class=p>:</span>
+                <span class=n>server</span><span class=p>.</span><span class=n>callback_error</span> <span class=o>=</span> <span class=sh>&#34;</span><span class=s>Callback state did not match</span><span class=sh>&#34;</span>
+
+                <span class=n>self</span><span class=p>.</span><span class=nf>send_response</span><span class=p>(</span><span class=mi>400</span><span class=p>)</span>
+                <span class=n>self</span><span class=p>.</span><span class=nf>end_headers</span><span class=p>()</span>
+                <span class=n>self</span><span class=p>.</span><span class=n>wfile</span><span class=p>.</span><span class=nf>write</span><span class=p>(</span><span class=sa>b</span><span class=sh>&#34;</span><span class=s>Invalid state. You can close this tab.</span><span class=sh>&#34;</span><span class=p>)</span>
+                <span class=k>return</span>
+
+            <span class=n>server</span><span class=p>.</span><span class=n>callback_result</span> <span class=o>=</span> <span class=n>CallbackResult</span><span class=p>(</span><span class=n>code</span><span class=o>=</span><span class=n>code</span><span class=p>,</span> <span class=n>state</span><span class=o>=</span><span class=n>state</span><span class=p>)</span>
+
+            <span class=n>self</span><span class=p>.</span><span class=nf>send_response</span><span class=p>(</span><span class=mi>200</span><span class=p>)</span>
+            <span class=n>self</span><span class=p>.</span><span class=nf>send_header</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>content-type</span><span class=sh>&#34;</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>text/plain; charset=utf-8</span><span class=sh>&#34;</span><span class=p>)</span>
+            <span class=n>self</span><span class=p>.</span><span class=nf>end_headers</span><span class=p>()</span>
+            <span class=n>self</span><span class=p>.</span><span class=n>wfile</span><span class=p>.</span><span class=nf>write</span><span class=p>(</span><span class=sa>b</span><span class=sh>&#34;</span><span class=s>Login successful. You can close this tab and return to the terminal.</span><span class=sh>&#34;</span><span class=p>)</span>
+
+        <span class=k>def</span> <span class=nf>log_message</span><span class=p>(</span><span class=n>self</span><span class=p>,</span> <span class=nb>format</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span> <span class=o>*</span><span class=n>args</span><span class=p>:</span> <span class=nb>object</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=bp>None</span><span class=p>:</span>
+            <span class=k>return</span>
+
+    <span class=n>server</span> <span class=o>=</span> <span class=n>cast</span><span class=p>(</span><span class=n>CallbackServer</span><span class=p>,</span> <span class=n>ThreadingHTTPServer</span><span class=p>((</span><span class=n>REDIRECT_HOST</span><span class=p>,</span> <span class=n>REDIRECT_PORT</span><span class=p>),</span> <span class=n>CallbackHandler</span><span class=p>))</span>
+    <span class=n>server</span><span class=p>.</span><span class=n>callback_result</span> <span class=o>=</span> <span class=bp>None</span>
+    <span class=n>server</span><span class=p>.</span><span class=n>callback_error</span> <span class=o>=</span> <span class=bp>None</span>
+    <span class=n>server</span><span class=p>.</span><span class=n>timeout</span> <span class=o>=</span> <span class=mi>300</span>
+
+    <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=sa>f</span><span class=sh>&#34;</span><span class=s>Waiting for redirect on </span><span class=si>{</span><span class=n>REDIRECT_URI</span><span class=si>}</span><span class=sh>&#34;</span><span class=p>)</span>
+
+    <span class=k>while</span> <span class=n>server</span><span class=p>.</span><span class=n>callback_result</span> <span class=ow>is</span> <span class=bp>None</span> <span class=ow>and</span> <span class=n>server</span><span class=p>.</span><span class=n>callback_error</span> <span class=ow>is</span> <span class=bp>None</span><span class=p>:</span>
+        <span class=n>server</span><span class=p>.</span><span class=nf>handle_request</span><span class=p>()</span>
+
+    <span class=k>if</span> <span class=n>server</span><span class=p>.</span><span class=n>callback_error</span> <span class=ow>is</span> <span class=ow>not</span> <span class=bp>None</span><span class=p>:</span>
+        <span class=k>raise</span> <span class=n>click</span><span class=p>.</span><span class=nc>ClickException</span><span class=p>(</span><span class=n>server</span><span class=p>.</span><span class=n>callback_error</span><span class=p>)</span>
+
+    <span class=k>if</span> <span class=n>server</span><span class=p>.</span><span class=n>callback_result</span> <span class=ow>is</span> <span class=bp>None</span><span class=p>:</span>
+        <span class=k>raise</span> <span class=n>click</span><span class=p>.</span><span class=nc>ClickException</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>Did not receive authorization callback</span><span class=sh>&#34;</span><span class=p>)</span>
+
+    <span class=k>return</span> <span class=n>server</span><span class=p>.</span><span class=n>callback_result</span>
+
+
+<span class=k>def</span> <span class=nf>store_token_response</span><span class=p>(</span><span class=n>token_response</span><span class=p>:</span> <span class=nb>dict</span><span class=p>[</span><span class=nb>str</span><span class=p>,</span> <span class=n>Any</span><span class=p>])</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+    <span class=n>TOKEN_FILE</span><span class=p>.</span><span class=nf>write_text</span><span class=p>(</span><span class=n>json</span><span class=p>.</span><span class=nf>dumps</span><span class=p>(</span><span class=n>token_response</span><span class=p>,</span> <span class=n>indent</span><span class=o>=</span><span class=mi>2</span><span class=p>),</span> <span class=n>encoding</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>utf-8</span><span class=sh>&#34;</span><span class=p>)</span>
+    <span class=k>return</span> <span class=nb>str</span><span class=p>(</span><span class=n>token_response</span><span class=p>[</span><span class=sh>&#34;</span><span class=s>access_token</span><span class=sh>&#34;</span><span class=p>])</span>
+
+
+<span class=k>def</span> <span class=nf>print_token_summary</span><span class=p>(</span><span class=n>token_response</span><span class=p>:</span> <span class=nb>dict</span><span class=p>[</span><span class=nb>str</span><span class=p>,</span> <span class=n>Any</span><span class=p>])</span> <span class=o>-&gt;</span> <span class=bp>None</span><span class=p>:</span>
+    <span class=n>access_token</span> <span class=o>=</span> <span class=nb>str</span><span class=p>(</span><span class=n>token_response</span><span class=p>[</span><span class=sh>&#34;</span><span class=s>access_token</span><span class=sh>&#34;</span><span class=p>])</span>
+    <span class=n>claims</span> <span class=o>=</span> <span class=n>jwt</span><span class=p>.</span><span class=nf>decode</span><span class=p>(</span><span class=n>access_token</span><span class=p>,</span> <span class=n>options</span><span class=o>=</span><span class=p>{</span><span class=sh>&#34;</span><span class=s>verify_signature</span><span class=sh>&#34;</span><span class=p>:</span> <span class=bp>False</span><span class=p>})</span>
+
+    <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=sa>f</span><span class=sh>&#34;</span><span class=s>token_type: </span><span class=si>{</span><span class=n>token_response</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#39;</span><span class=s>token_type</span><span class=sh>&#39;</span><span class=p>)</span><span class=si>}</span><span class=sh>&#34;</span><span class=p>)</span>
+    <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>selected access token claims:</span><span class=sh>&#34;</span><span class=p>)</span>
+    <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span>
+        <span class=n>json</span><span class=p>.</span><span class=nf>dumps</span><span class=p>(</span>
+            <span class=p>{</span>
+                <span class=sh>&#34;</span><span class=s>iss</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>claims</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>iss</span><span class=sh>&#34;</span><span class=p>),</span>
+                <span class=sh>&#34;</span><span class=s>aud</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>claims</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>aud</span><span class=sh>&#34;</span><span class=p>),</span>
+                <span class=sh>&#34;</span><span class=s>sub</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>claims</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>sub</span><span class=sh>&#34;</span><span class=p>),</span>
+                <span class=sh>&#34;</span><span class=s>azp</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>claims</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>azp</span><span class=sh>&#34;</span><span class=p>),</span>
+                <span class=sh>&#34;</span><span class=s>preferred_username</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>claims</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>preferred_username</span><span class=sh>&#34;</span><span class=p>),</span>
+                <span class=sh>&#34;</span><span class=s>cnf</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>claims</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>cnf</span><span class=sh>&#34;</span><span class=p>),</span>
+            <span class=p>},</span>
+            <span class=n>indent</span><span class=o>=</span><span class=mi>2</span><span class=p>,</span>
+        <span class=p>)</span>
+    <span class=p>)</span>
+
+
+<span class=k>def</span> <span class=nf>load_access_token</span><span class=p>()</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+    <span class=k>if</span> <span class=ow>not</span> <span class=n>TOKEN_FILE</span><span class=p>.</span><span class=nf>exists</span><span class=p>():</span>
+        <span class=k>raise</span> <span class=n>click</span><span class=p>.</span><span class=nc>ClickException</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>No access token found. Run `python dpop_client.py login` first.</span><span class=sh>&#34;</span><span class=p>)</span>
+
+    <span class=k>return</span> <span class=nb>str</span><span class=p>(</span><span class=n>json</span><span class=p>.</span><span class=nf>loads</span><span class=p>(</span><span class=n>TOKEN_FILE</span><span class=p>.</span><span class=nf>read_text</span><span class=p>(</span><span class=n>encoding</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>utf-8</span><span class=sh>&#34;</span><span class=p>))[</span><span class=sh>&#34;</span><span class=s>access_token</span><span class=sh>&#34;</span><span class=p>])</span>
+
+
+<span class=k>def</span> <span class=nf>delete_file</span><span class=p>(</span><span class=n>path</span><span class=p>:</span> <span class=n>Path</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>bool</span><span class=p>:</span>
+    <span class=k>if</span> <span class=ow>not</span> <span class=n>path</span><span class=p>.</span><span class=nf>exists</span><span class=p>():</span>
+        <span class=k>return</span> <span class=bp>False</span>
+
+    <span class=n>path</span><span class=p>.</span><span class=nf>unlink</span><span class=p>()</span>
+    <span class=k>return</span> <span class=bp>True</span>
+
+
+<span class=k>def</span> <span class=nf>clear_resource_server_dpop_state</span><span class=p>()</span> <span class=o>-&gt;</span> <span class=nb>bool</span><span class=p>:</span>
+    <span class=k>return</span> <span class=n>delete_file</span><span class=p>(</span><span class=n>RESOURCE_SERVER_DPOP_STATE_FILE</span><span class=p>)</span>
+
+
+<span class=k>def</span> <span class=nf>load_resource_server_dpop_state</span><span class=p>(</span><span class=n>access_token</span><span class=p>:</span> <span class=nb>str</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=n>ResourceServerDpopState</span> <span class=o>|</span> <span class=bp>None</span><span class=p>:</span>
+    <span class=k>if</span> <span class=ow>not</span> <span class=n>RESOURCE_SERVER_DPOP_STATE_FILE</span><span class=p>.</span><span class=nf>exists</span><span class=p>():</span>
+        <span class=k>return</span> <span class=bp>None</span>
+
+    <span class=k>try</span><span class=p>:</span>
+        <span class=n>raw_state</span> <span class=o>=</span> <span class=n>json</span><span class=p>.</span><span class=nf>loads</span><span class=p>(</span><span class=n>RESOURCE_SERVER_DPOP_STATE_FILE</span><span class=p>.</span><span class=nf>read_text</span><span class=p>(</span><span class=n>encoding</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>utf-8</span><span class=sh>&#34;</span><span class=p>))</span>
+    <span class=k>except</span> <span class=n>json</span><span class=p>.</span><span class=n>JSONDecodeError</span><span class=p>:</span>
+        <span class=k>return</span> <span class=bp>None</span>
+
+    <span class=k>if</span> <span class=n>raw_state</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>access_token_hash</span><span class=sh>&#34;</span><span class=p>)</span> <span class=o>!=</span> <span class=n>access_token_hash</span><span class=p>(</span><span class=n>access_token</span><span class=p>):</span>
+        <span class=k>return</span> <span class=bp>None</span>
+
+    <span class=n>proof</span> <span class=o>=</span> <span class=n>raw_state</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>proof</span><span class=sh>&#34;</span><span class=p>)</span>
+    <span class=n>nonce</span> <span class=o>=</span> <span class=n>raw_state</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>nonce</span><span class=sh>&#34;</span><span class=p>)</span>
+
+    <span class=k>if</span> <span class=ow>not</span> <span class=nb>isinstance</span><span class=p>(</span><span class=n>proof</span><span class=p>,</span> <span class=nb>str</span><span class=p>)</span> <span class=ow>or</span> <span class=ow>not</span> <span class=nb>isinstance</span><span class=p>(</span><span class=n>nonce</span><span class=p>,</span> <span class=nb>str</span><span class=p>)</span> <span class=ow>or</span> <span class=ow>not</span> <span class=n>proof</span> <span class=ow>or</span> <span class=ow>not</span> <span class=n>nonce</span><span class=p>:</span>
+        <span class=k>return</span> <span class=bp>None</span>
+
+    <span class=k>return</span> <span class=n>ResourceServerDpopState</span><span class=p>(</span>
+        <span class=n>access_token_hash</span><span class=o>=</span><span class=n>raw_state</span><span class=p>[</span><span class=sh>&#34;</span><span class=s>access_token_hash</span><span class=sh>&#34;</span><span class=p>],</span>
+        <span class=n>proof</span><span class=o>=</span><span class=n>proof</span><span class=p>,</span>
+        <span class=n>nonce</span><span class=o>=</span><span class=n>nonce</span><span class=p>,</span>
+    <span class=p>)</span>
+
+
+<span class=k>def</span> <span class=nf>store_resource_server_dpop_state</span><span class=p>(</span><span class=o>*</span><span class=p>,</span> <span class=n>access_token</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span> <span class=n>proof</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span> <span class=n>nonce</span><span class=p>:</span> <span class=nb>str</span> <span class=o>|</span> <span class=bp>None</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=bp>None</span><span class=p>:</span>
+    <span class=k>if</span> <span class=n>nonce</span> <span class=ow>is</span> <span class=bp>None</span><span class=p>:</span>
+        <span class=n>clear_resource_server_dpop_state</span><span class=p>()</span>
+        <span class=k>return</span>
+
+    <span class=n>STATE_DIR</span><span class=p>.</span><span class=nf>mkdir</span><span class=p>(</span><span class=n>parents</span><span class=o>=</span><span class=bp>True</span><span class=p>,</span> <span class=n>exist_ok</span><span class=o>=</span><span class=bp>True</span><span class=p>)</span>
+    <span class=n>RESOURCE_SERVER_DPOP_STATE_FILE</span><span class=p>.</span><span class=nf>write_text</span><span class=p>(</span>
+        <span class=n>json</span><span class=p>.</span><span class=nf>dumps</span><span class=p>(</span>
+            <span class=p>{</span>
+                <span class=sh>&#34;</span><span class=s>access_token_hash</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>access_token_hash</span><span class=p>(</span><span class=n>access_token</span><span class=p>),</span>
+                <span class=sh>&#34;</span><span class=s>proof</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>proof</span><span class=p>,</span>
+                <span class=sh>&#34;</span><span class=s>nonce</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>nonce</span><span class=p>,</span>
+            <span class=p>},</span>
+            <span class=n>indent</span><span class=o>=</span><span class=mi>2</span><span class=p>,</span>
+        <span class=p>),</span>
+        <span class=n>encoding</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>utf-8</span><span class=sh>&#34;</span><span class=p>,</span>
+    <span class=p>)</span>
+
+
+<span class=k>def</span> <span class=nf>reset_state</span><span class=p>()</span> <span class=o>-&gt;</span> <span class=bp>None</span><span class=p>:</span>
+    <span class=k>if</span> <span class=n>STATE_DIR</span><span class=p>.</span><span class=nf>exists</span><span class=p>():</span>
+        <span class=n>shutil</span><span class=p>.</span><span class=nf>rmtree</span><span class=p>(</span><span class=n>STATE_DIR</span><span class=p>)</span>
+
+    <span class=n>STATE_DIR</span><span class=p>.</span><span class=nf>mkdir</span><span class=p>(</span><span class=n>parents</span><span class=o>=</span><span class=bp>True</span><span class=p>,</span> <span class=n>exist_ok</span><span class=o>=</span><span class=bp>True</span><span class=p>)</span>
+
+
+<span class=k>def</span> <span class=nf>login_with_authorization_code</span><span class=p>()</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+    <span class=n>STATE_DIR</span><span class=p>.</span><span class=nf>mkdir</span><span class=p>(</span><span class=n>parents</span><span class=o>=</span><span class=bp>True</span><span class=p>,</span> <span class=n>exist_ok</span><span class=o>=</span><span class=bp>True</span><span class=p>)</span>
+    <span class=n>load_private_key</span><span class=p>(</span><span class=n>KEY_FILE</span><span class=p>)</span>
+    <span class=n>clear_resource_server_dpop_state</span><span class=p>()</span>
+
+    <span class=n>state</span> <span class=o>=</span> <span class=n>b64url</span><span class=p>(</span><span class=n>secrets</span><span class=p>.</span><span class=nf>token_bytes</span><span class=p>(</span><span class=mi>32</span><span class=p>))</span>
+    <span class=n>code_verifier</span> <span class=o>=</span> <span class=n>b64url</span><span class=p>(</span><span class=n>secrets</span><span class=p>.</span><span class=nf>token_bytes</span><span class=p>(</span><span class=mi>32</span><span class=p>))</span>
+
+    <span class=n>authorization_url</span> <span class=o>=</span> <span class=p>(</span>
+        <span class=sa>f</span><span class=sh>&#34;</span><span class=si>{</span><span class=n>AUTHORIZATION_ENDPOINT</span><span class=si>}</span><span class=s>?</span><span class=sh>&#34;</span>
+        <span class=o>+</span> <span class=n>urlencode</span><span class=p>(</span>
+            <span class=p>{</span>
+                <span class=sh>&#34;</span><span class=s>response_type</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>code</span><span class=sh>&#34;</span><span class=p>,</span>
+                <span class=sh>&#34;</span><span class=s>client_id</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>CLIENT_ID</span><span class=p>,</span>
+                <span class=sh>&#34;</span><span class=s>redirect_uri</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>REDIRECT_URI</span><span class=p>,</span>
+                <span class=sh>&#34;</span><span class=s>scope</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>SCOPE</span><span class=p>,</span>
+                <span class=sh>&#34;</span><span class=s>state</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>state</span><span class=p>,</span>
+                <span class=sh>&#34;</span><span class=s>code_challenge</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>code_challenge</span><span class=p>(</span><span class=n>code_verifier</span><span class=p>),</span>
+                <span class=sh>&#34;</span><span class=s>code_challenge_method</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>S256</span><span class=sh>&#34;</span><span class=p>,</span>
+            <span class=p>}</span>
+        <span class=p>)</span>
+    <span class=p>)</span>
+
+    <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>Open this URL in your browser:</span><span class=sh>&#34;</span><span class=p>)</span>
+    <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=n>authorization_url</span><span class=p>)</span>
+    <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>()</span>
+
+    <span class=n>callback</span> <span class=o>=</span> <span class=n>wait_for_authorization_code</span><span class=p>(</span><span class=n>expected_state</span><span class=o>=</span><span class=n>state</span><span class=p>)</span>
+    <span class=n>proof</span> <span class=o>=</span> <span class=n>create_proof</span><span class=p>(</span><span class=n>method</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>POST</span><span class=sh>&#34;</span><span class=p>,</span> <span class=n>url</span><span class=o>=</span><span class=n>TOKEN_ENDPOINT</span><span class=p>)</span>
+
+    <span class=n>response</span> <span class=o>=</span> <span class=n>httpx</span><span class=p>.</span><span class=nf>post</span><span class=p>(</span>
+        <span class=n>TOKEN_ENDPOINT</span><span class=p>,</span>
+        <span class=n>headers</span><span class=o>=</span><span class=p>{</span><span class=sh>&#34;</span><span class=s>DPoP</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>proof</span><span class=p>},</span>
+        <span class=n>data</span><span class=o>=</span><span class=p>{</span>
+            <span class=sh>&#34;</span><span class=s>grant_type</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sh>&#34;</span><span class=s>authorization_code</span><span class=sh>&#34;</span><span class=p>,</span>
+            <span class=sh>&#34;</span><span class=s>client_id</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>CLIENT_ID</span><span class=p>,</span>
+            <span class=sh>&#34;</span><span class=s>code</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>callback</span><span class=p>.</span><span class=n>code</span><span class=p>,</span>
+            <span class=sh>&#34;</span><span class=s>redirect_uri</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>REDIRECT_URI</span><span class=p>,</span>
+            <span class=sh>&#34;</span><span class=s>code_verifier</span><span class=sh>&#34;</span><span class=p>:</span> <span class=n>code_verifier</span><span class=p>,</span>
+        <span class=p>},</span>
+        <span class=n>timeout</span><span class=o>=</span><span class=mi>10</span><span class=p>,</span>
+    <span class=p>)</span>
+
+    <span class=k>if</span> <span class=n>response</span><span class=p>.</span><span class=n>is_error</span><span class=p>:</span>
+        <span class=k>raise</span> <span class=n>click</span><span class=p>.</span><span class=nc>ClickException</span><span class=p>(</span><span class=n>response</span><span class=p>.</span><span class=n>text</span><span class=p>)</span>
+
+    <span class=n>token_response</span> <span class=o>=</span> <span class=n>response</span><span class=p>.</span><span class=nf>json</span><span class=p>()</span>
+    <span class=n>access_token</span> <span class=o>=</span> <span class=n>store_token_response</span><span class=p>(</span><span class=n>token_response</span><span class=p>)</span>
+    <span class=n>print_token_summary</span><span class=p>(</span><span class=n>token_response</span><span class=p>)</span>
+
+    <span class=k>return</span> <span class=n>access_token</span>
+
+
+<span class=k>def</span> <span class=nf>create_or_reuse_api_proof</span><span class=p>(</span>
+    <span class=o>*</span><span class=p>,</span>
+    <span class=n>access_token</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span>
+    <span class=n>nonce</span><span class=p>:</span> <span class=nb>str</span> <span class=o>|</span> <span class=bp>None</span><span class=p>,</span>
+    <span class=n>replay</span><span class=p>:</span> <span class=nb>bool</span><span class=p>,</span>
+    <span class=n>wrong_key</span><span class=p>:</span> <span class=nb>bool</span><span class=p>,</span>
+    <span class=n>wrong_ath</span><span class=p>:</span> <span class=nb>bool</span><span class=p>,</span>
+    <span class=n>wrong_htu</span><span class=p>:</span> <span class=nb>bool</span><span class=p>,</span>
+<span class=p>)</span> <span class=o>-&gt;</span> <span class=nb>str</span><span class=p>:</span>
+    <span class=k>if</span> <span class=n>replay</span><span class=p>:</span>
+        <span class=n>state</span> <span class=o>=</span> <span class=n>load_resource_server_dpop_state</span><span class=p>(</span><span class=n>access_token</span><span class=p>)</span>
+        <span class=k>if</span> <span class=n>state</span> <span class=ow>is</span> <span class=ow>not</span> <span class=bp>None</span><span class=p>:</span>
+            <span class=k>return</span> <span class=n>state</span><span class=p>.</span><span class=n>proof</span>
+
+    <span class=k>return</span> <span class=n>create_proof</span><span class=p>(</span>
+        <span class=n>method</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>GET</span><span class=sh>&#34;</span><span class=p>,</span>
+        <span class=n>url</span><span class=o>=</span><span class=n>PROTECTED_API</span><span class=p>,</span>
+        <span class=n>access_token</span><span class=o>=</span><span class=n>access_token</span><span class=p>,</span>
+        <span class=n>nonce</span><span class=o>=</span><span class=n>nonce</span><span class=p>,</span>
+        <span class=n>key_file</span><span class=o>=</span><span class=n>OTHER_KEY_FILE</span> <span class=k>if</span> <span class=n>wrong_key</span> <span class=k>else</span> <span class=n>KEY_FILE</span><span class=p>,</span>
+        <span class=n>wrong_ath</span><span class=o>=</span><span class=n>wrong_ath</span><span class=p>,</span>
+        <span class=n>wrong_htu</span><span class=o>=</span><span class=n>wrong_htu</span><span class=p>,</span>
+    <span class=p>)</span>
+
+
+<span class=k>def</span> <span class=nf>send_api_request</span><span class=p>(</span>
+    <span class=o>*</span><span class=p>,</span>
+    <span class=n>access_token</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span>
+    <span class=n>nonce</span><span class=p>:</span> <span class=nb>str</span> <span class=o>|</span> <span class=bp>None</span> <span class=o>=</span> <span class=bp>None</span><span class=p>,</span>
+    <span class=n>scheme</span><span class=p>:</span> <span class=nb>str</span> <span class=o>=</span> <span class=sh>&#34;</span><span class=s>DPoP</span><span class=sh>&#34;</span><span class=p>,</span>
+    <span class=n>include_proof</span><span class=p>:</span> <span class=nb>bool</span> <span class=o>=</span> <span class=bp>True</span><span class=p>,</span>
+    <span class=n>wrong_key</span><span class=p>:</span> <span class=nb>bool</span> <span class=o>=</span> <span class=bp>False</span><span class=p>,</span>
+    <span class=n>wrong_ath</span><span class=p>:</span> <span class=nb>bool</span> <span class=o>=</span> <span class=bp>False</span><span class=p>,</span>
+    <span class=n>wrong_htu</span><span class=p>:</span> <span class=nb>bool</span> <span class=o>=</span> <span class=bp>False</span><span class=p>,</span>
+    <span class=n>replay</span><span class=p>:</span> <span class=nb>bool</span> <span class=o>=</span> <span class=bp>False</span><span class=p>,</span>
+<span class=p>)</span> <span class=o>-&gt;</span> <span class=n>ApiResult</span><span class=p>:</span>
+    <span class=n>headers</span> <span class=o>=</span> <span class=p>{</span><span class=sh>&#34;</span><span class=s>Authorization</span><span class=sh>&#34;</span><span class=p>:</span> <span class=sa>f</span><span class=sh>&#34;</span><span class=si>{</span><span class=n>scheme</span><span class=si>}</span><span class=s> </span><span class=si>{</span><span class=n>access_token</span><span class=si>}</span><span class=sh>&#34;</span><span class=p>}</span>
+    <span class=n>proof</span><span class=p>:</span> <span class=nb>str</span> <span class=o>|</span> <span class=bp>None</span> <span class=o>=</span> <span class=bp>None</span>
+
+    <span class=k>if</span> <span class=n>include_proof</span><span class=p>:</span>
+        <span class=n>proof</span> <span class=o>=</span> <span class=n>create_or_reuse_api_proof</span><span class=p>(</span>
+            <span class=n>access_token</span><span class=o>=</span><span class=n>access_token</span><span class=p>,</span>
+            <span class=n>nonce</span><span class=o>=</span><span class=n>nonce</span><span class=p>,</span>
+            <span class=n>replay</span><span class=o>=</span><span class=n>replay</span><span class=p>,</span>
+            <span class=n>wrong_key</span><span class=o>=</span><span class=n>wrong_key</span><span class=p>,</span>
+            <span class=n>wrong_ath</span><span class=o>=</span><span class=n>wrong_ath</span><span class=p>,</span>
+            <span class=n>wrong_htu</span><span class=o>=</span><span class=n>wrong_htu</span><span class=p>,</span>
+        <span class=p>)</span>
+        <span class=n>headers</span><span class=p>[</span><span class=sh>&#34;</span><span class=s>DPoP</span><span class=sh>&#34;</span><span class=p>]</span> <span class=o>=</span> <span class=n>proof</span>
+
+    <span class=n>response</span> <span class=o>=</span> <span class=n>httpx</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=n>PROTECTED_API</span><span class=p>,</span> <span class=n>headers</span><span class=o>=</span><span class=n>headers</span><span class=p>,</span> <span class=n>timeout</span><span class=o>=</span><span class=mi>10</span><span class=p>)</span>
+
+    <span class=k>if</span> <span class=n>include_proof</span> <span class=ow>and</span> <span class=n>proof</span> <span class=ow>is</span> <span class=ow>not</span> <span class=bp>None</span> <span class=ow>and</span> <span class=n>response</span><span class=p>.</span><span class=n>status_code</span> <span class=o>&lt;</span> <span class=mi>400</span><span class=p>:</span>
+        <span class=n>store_resource_server_dpop_state</span><span class=p>(</span>
+            <span class=n>access_token</span><span class=o>=</span><span class=n>access_token</span><span class=p>,</span>
+            <span class=n>proof</span><span class=o>=</span><span class=n>proof</span><span class=p>,</span>
+            <span class=n>nonce</span><span class=o>=</span><span class=n>nonce</span><span class=p>,</span>
+        <span class=p>)</span>
+
+    <span class=k>return</span> <span class=n>ApiResult</span><span class=p>(</span>
+        <span class=n>status_code</span><span class=o>=</span><span class=n>response</span><span class=p>.</span><span class=n>status_code</span><span class=p>,</span>
+        <span class=n>body</span><span class=o>=</span><span class=n>response</span><span class=p>.</span><span class=n>text</span><span class=p>,</span>
+        <span class=n>dpop_nonce</span><span class=o>=</span><span class=n>response</span><span class=p>.</span><span class=n>headers</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>DPoP-Nonce</span><span class=sh>&#34;</span><span class=p>),</span>
+        <span class=n>www_authenticate</span><span class=o>=</span><span class=n>response</span><span class=p>.</span><span class=n>headers</span><span class=p>.</span><span class=nf>get</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>WWW-Authenticate</span><span class=sh>&#34;</span><span class=p>),</span>
+    <span class=p>)</span>
+
+
+<span class=k>def</span> <span class=nf>print_result</span><span class=p>(</span><span class=n>result</span><span class=p>:</span> <span class=n>ApiResult</span><span class=p>)</span> <span class=o>-&gt;</span> <span class=bp>None</span><span class=p>:</span>
+    <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=sa>f</span><span class=sh>&#34;</span><span class=s>HTTP </span><span class=si>{</span><span class=n>result</span><span class=p>.</span><span class=n>status_code</span><span class=si>}</span><span class=sh>&#34;</span><span class=p>)</span>
+
+    <span class=k>if</span> <span class=n>result</span><span class=p>.</span><span class=n>www_authenticate</span><span class=p>:</span>
+        <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=sa>f</span><span class=sh>&#34;</span><span class=s>WWW-Authenticate: </span><span class=si>{</span><span class=n>result</span><span class=p>.</span><span class=n>www_authenticate</span><span class=si>}</span><span class=sh>&#34;</span><span class=p>)</span>
+
+    <span class=k>if</span> <span class=n>result</span><span class=p>.</span><span class=n>dpop_nonce</span><span class=p>:</span>
+        <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=sa>f</span><span class=sh>&#34;</span><span class=s>DPoP-Nonce: </span><span class=si>{</span><span class=n>result</span><span class=p>.</span><span class=n>dpop_nonce</span><span class=si>}</span><span class=sh>&#34;</span><span class=p>)</span>
+
+    <span class=k>try</span><span class=p>:</span>
+        <span class=n>body</span> <span class=o>=</span> <span class=n>json</span><span class=p>.</span><span class=nf>dumps</span><span class=p>(</span><span class=n>json</span><span class=p>.</span><span class=nf>loads</span><span class=p>(</span><span class=n>result</span><span class=p>.</span><span class=n>body</span><span class=p>),</span> <span class=n>indent</span><span class=o>=</span><span class=mi>2</span><span class=p>)</span>
+    <span class=k>except</span> <span class=p>(</span><span class=n>json</span><span class=p>.</span><span class=n>JSONDecodeError</span><span class=p>,</span> <span class=ne>ValueError</span><span class=p>):</span>
+        <span class=n>body</span> <span class=o>=</span> <span class=n>result</span><span class=p>.</span><span class=n>body</span>
+
+    <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=n>body</span><span class=p>)</span>
+
+
+<span class=nd>@click.group</span><span class=p>(</span><span class=n>context_settings</span><span class=o>=</span><span class=p>{</span><span class=sh>&#34;</span><span class=s>help_option_names</span><span class=sh>&#34;</span><span class=p>:</span> <span class=p>[</span><span class=sh>&#34;</span><span class=s>-h</span><span class=sh>&#34;</span><span class=p>,</span> <span class=sh>&#34;</span><span class=s>--help</span><span class=sh>&#34;</span><span class=p>]})</span>
+<span class=k>def</span> <span class=nf>cli</span><span class=p>()</span> <span class=o>-&gt;</span> <span class=bp>None</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Small client to showcase heimdall DPoP capabilities.</span><span class=sh>&#34;&#34;&#34;</span>
+
+
+<span class=nd>@cli.command</span><span class=p>()</span>
+<span class=k>def</span> <span class=nf>keygen</span><span class=p>()</span> <span class=o>-&gt;</span> <span class=bp>None</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Create the primary DPoP key.</span><span class=sh>&#34;&#34;&#34;</span>
+    <span class=n>generate_private_key</span><span class=p>(</span><span class=n>KEY_FILE</span><span class=p>)</span>
+
+
+<span class=nd>@cli.command</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>other-keygen</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=k>def</span> <span class=nf>other_keygen</span><span class=p>()</span> <span class=o>-&gt;</span> <span class=bp>None</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Create a second DPoP key for negative tests.</span><span class=sh>&#34;&#34;&#34;</span>
+    <span class=n>generate_private_key</span><span class=p>(</span><span class=n>OTHER_KEY_FILE</span><span class=p>)</span>
+
+
+<span class=nd>@cli.command</span><span class=p>()</span>
+<span class=k>def</span> <span class=nf>login</span><span class=p>()</span> <span class=o>-&gt;</span> <span class=bp>None</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Run Authorization Code + PKCE and store a DPoP-bound access token.</span><span class=sh>&#34;&#34;&#34;</span>
+    <span class=n>login_with_authorization_code</span><span class=p>()</span>
+
+
+<span class=nd>@cli.command</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>clear-state</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=k>def</span> <span class=nf>clear_state</span><span class=p>()</span> <span class=o>-&gt;</span> <span class=bp>None</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Delete all local client state and generate a fresh primary DPoP key.</span><span class=sh>&#34;&#34;&#34;</span>
+    <span class=n>reset_state</span><span class=p>()</span>
+    <span class=n>generate_private_key</span><span class=p>(</span><span class=n>KEY_FILE</span><span class=p>)</span>
+
+
+<span class=nd>@cli.command</span><span class=p>()</span>
+<span class=nd>@click.option</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>--scheme</span><span class=sh>&#34;</span><span class=p>,</span> <span class=n>default</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>DPoP</span><span class=sh>&#34;</span><span class=p>,</span> <span class=n>show_default</span><span class=o>=</span><span class=bp>True</span><span class=p>)</span>
+<span class=nd>@click.option</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>--no-proof</span><span class=sh>&#34;</span><span class=p>,</span> <span class=n>is_flag</span><span class=o>=</span><span class=bp>True</span><span class=p>,</span> <span class=nb>help</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>Do not send a DPoP proof.</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=nd>@click.option</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>--wrong-key</span><span class=sh>&#34;</span><span class=p>,</span> <span class=n>is_flag</span><span class=o>=</span><span class=bp>True</span><span class=p>,</span> <span class=nb>help</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>Sign the DPoP proof with a different key.</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=nd>@click.option</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>--wrong-ath</span><span class=sh>&#34;</span><span class=p>,</span> <span class=n>is_flag</span><span class=o>=</span><span class=bp>True</span><span class=p>,</span> <span class=nb>help</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>Use a wrong access token hash in the proof.</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=nd>@click.option</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>--wrong-htu</span><span class=sh>&#34;</span><span class=p>,</span> <span class=n>is_flag</span><span class=o>=</span><span class=bp>True</span><span class=p>,</span> <span class=nb>help</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>Use a wrong target URI in the proof.</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=nd>@click.option</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>--replay</span><span class=sh>&#34;</span><span class=p>,</span> <span class=n>is_flag</span><span class=o>=</span><span class=bp>True</span><span class=p>,</span> <span class=nb>help</span><span class=o>=</span><span class=sh>&#34;</span><span class=s>Reuse the previously successful DPoP proof.</span><span class=sh>&#34;</span><span class=p>)</span>
+<span class=nd>@click.option</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>--retry-nonce/--no-retry-nonce</span><span class=sh>&#34;</span><span class=p>,</span> <span class=n>default</span><span class=o>=</span><span class=bp>True</span><span class=p>,</span> <span class=n>show_default</span><span class=o>=</span><span class=bp>True</span><span class=p>)</span>
+<span class=k>def</span> <span class=nf>call</span><span class=p>(</span>
+    <span class=n>scheme</span><span class=p>:</span> <span class=nb>str</span><span class=p>,</span>
+    <span class=n>no_proof</span><span class=p>:</span> <span class=nb>bool</span><span class=p>,</span>
+    <span class=n>wrong_key</span><span class=p>:</span> <span class=nb>bool</span><span class=p>,</span>
+    <span class=n>wrong_ath</span><span class=p>:</span> <span class=nb>bool</span><span class=p>,</span>
+    <span class=n>wrong_htu</span><span class=p>:</span> <span class=nb>bool</span><span class=p>,</span>
+    <span class=n>replay</span><span class=p>:</span> <span class=nb>bool</span><span class=p>,</span>
+    <span class=n>retry_nonce</span><span class=p>:</span> <span class=nb>bool</span><span class=p>,</span>
+<span class=p>)</span> <span class=o>-&gt;</span> <span class=bp>None</span><span class=p>:</span>
+    <span class=sh>&#34;&#34;&#34;</span><span class=s>Call the protected API through heimdall.</span><span class=sh>&#34;&#34;&#34;</span>
+    <span class=n>access_token</span> <span class=o>=</span> <span class=n>load_access_token</span><span class=p>()</span>
+
+    <span class=n>result</span> <span class=o>=</span> <span class=n>send_api_request</span><span class=p>(</span>
+        <span class=n>access_token</span><span class=o>=</span><span class=n>access_token</span><span class=p>,</span>
+        <span class=n>scheme</span><span class=o>=</span><span class=n>scheme</span><span class=p>,</span>
+        <span class=n>include_proof</span><span class=o>=</span><span class=ow>not</span> <span class=n>no_proof</span><span class=p>,</span>
+        <span class=n>wrong_key</span><span class=o>=</span><span class=n>wrong_key</span><span class=p>,</span>
+        <span class=n>wrong_ath</span><span class=o>=</span><span class=n>wrong_ath</span><span class=p>,</span>
+        <span class=n>wrong_htu</span><span class=o>=</span><span class=n>wrong_htu</span><span class=p>,</span>
+        <span class=n>replay</span><span class=o>=</span><span class=n>replay</span><span class=p>,</span>
+    <span class=p>)</span>
+
+    <span class=k>if</span> <span class=n>result</span><span class=p>.</span><span class=n>status_code</span> <span class=o>==</span> <span class=mi>401</span> <span class=ow>and</span> <span class=n>result</span><span class=p>.</span><span class=n>dpop_nonce</span> <span class=ow>and</span> <span class=n>retry_nonce</span><span class=p>:</span>
+        <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>Received DPoP nonce challenge from heimdall</span><span class=sh>&#34;</span><span class=p>)</span>
+        <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=sa>f</span><span class=sh>&#34;</span><span class=s>DPoP-Nonce: </span><span class=si>{</span><span class=n>result</span><span class=p>.</span><span class=n>dpop_nonce</span><span class=si>}</span><span class=sh>&#34;</span><span class=p>)</span>
+        <span class=n>click</span><span class=p>.</span><span class=nf>echo</span><span class=p>(</span><span class=sh>&#34;</span><span class=s>Retrying with nonce</span><span class=sh>&#34;</span><span class=p>)</span>
+
+        <span class=n>result</span> <span class=o>=</span> <span class=n>send_api_request</span><span class=p>(</span>
+            <span class=n>access_token</span><span class=o>=</span><span class=n>access_token</span><span class=p>,</span>
+            <span class=n>nonce</span><span class=o>=</span><span class=n>result</span><span class=p>.</span><span class=n>dpop_nonce</span><span class=p>,</span>
+            <span class=n>scheme</span><span class=o>=</span><span class=n>scheme</span><span class=p>,</span>
+            <span class=n>include_proof</span><span class=o>=</span><span class=ow>not</span> <span class=n>no_proof</span><span class=p>,</span>
+            <span class=n>wrong_key</span><span class=o>=</span><span class=n>wrong_key</span><span class=p>,</span>
+            <span class=n>wrong_ath</span><span class=o>=</span><span class=n>wrong_ath</span><span class=p>,</span>
+            <span class=n>wrong_htu</span><span class=o>=</span><span class=n>wrong_htu</span><span class=p>,</span>
+            <span class=n>replay</span><span class=o>=</span><span class=n>replay</span><span class=p>,</span>
+        <span class=p>)</span>
+
+    <span class=n>print_result</span><span class=p>(</span><span class=n>result</span><span class=p>)</span>
+
+
+<span class=k>if</span> <span class=n>__name__</span> <span class=o>==</span> <span class=sh>&#34;</span><span class=s>__main__</span><span class=sh>&#34;</span><span class=p>:</span>
+    <span class=n>cli</span><span class=p>()</span></code></pre></div></div><div class=paragraph><p>The client is a <a href=https://click.palletsprojects.com/>Click</a> CLI with four commands: <code>keygen</code> generates the EC P-256 DPoP key pair; <code>login</code> runs the Authorization Code + PKCE flow — it constructs an authorization URL, starts a local callback server on port 8765, and exchanges the authorization code for a DPoP-bound access token that it stores in the state directory; <code>call</code> loads the cached token and calls the protected API, automatically handling heimdall’s nonce challenge; and <code>clear-state</code> wipes the state directory and generates a fresh key pair.
+All configuration (endpoints, client ID, state directory) is read from environment variables, which are supplied by the Docker Compose setup.</p></div></li><li><p>Create a file named <code>dpop-realm.json</code> in the root directory with the following contents:</p><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=json><span class=p>{</span><span class=w>
+  </span><span class=nl>&#34;realm&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;dpop&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;enabled&#34;</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;sslRequired&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;none&#34;</span><span class=p>,</span><span class=w>
+  </span><span class=nl>&#34;clients&#34;</span><span class=p>:</span><span class=w> </span><span class=p>[</span><span class=w>
+    </span><span class=p>{</span><span class=w>
+      </span><span class=nl>&#34;clientId&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;heimdall-dpop-client&#34;</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;name&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;heimdall DPoP Client&#34;</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;enabled&#34;</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;protocol&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;openid-connect&#34;</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;publicClient&#34;</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;standardFlowEnabled&#34;</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;directAccessGrantsEnabled&#34;</span><span class=p>:</span><span class=w> </span><span class=kc>false</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;serviceAccountsEnabled&#34;</span><span class=p>:</span><span class=w> </span><span class=kc>false</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;implicitFlowEnabled&#34;</span><span class=p>:</span><span class=w> </span><span class=kc>false</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;redirectUris&#34;</span><span class=p>:</span><span class=w> </span><span class=p>[</span><span class=w>
+        </span><span class=s2>&#34;http://127.0.0.1:8765/callback&#34;</span><span class=w>
+      </span><span class=p>],</span><span class=w>
+      </span><span class=nl>&#34;webOrigins&#34;</span><span class=p>:</span><span class=w> </span><span class=p>[</span><span class=w>
+        </span><span class=s2>&#34;+&#34;</span><span class=w>
+      </span><span class=p>],</span><span class=w>
+      </span><span class=nl>&#34;attributes&#34;</span><span class=p>:</span><span class=w> </span><span class=p>{</span><span class=w>
+        </span><span class=nl>&#34;dpop.bound.access.tokens&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;true&#34;</span><span class=p>,</span><span class=w>
+        </span><span class=nl>&#34;pkce.code.challenge.method&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;S256&#34;</span><span class=w>
+      </span><span class=p>},</span><span class=w>
+      </span><span class=nl>&#34;defaultClientScopes&#34;</span><span class=p>:</span><span class=w> </span><span class=p>[</span><span class=w>
+        </span><span class=s2>&#34;web-origins&#34;</span><span class=p>,</span><span class=w>
+        </span><span class=s2>&#34;acr&#34;</span><span class=p>,</span><span class=w>
+        </span><span class=s2>&#34;profile&#34;</span><span class=p>,</span><span class=w>
+        </span><span class=s2>&#34;roles&#34;</span><span class=p>,</span><span class=w>
+        </span><span class=s2>&#34;email&#34;</span><span class=w>
+      </span><span class=p>],</span><span class=w>
+      </span><span class=nl>&#34;optionalClientScopes&#34;</span><span class=p>:</span><span class=w> </span><span class=p>[</span><span class=w>
+        </span><span class=s2>&#34;address&#34;</span><span class=p>,</span><span class=w>
+        </span><span class=s2>&#34;phone&#34;</span><span class=p>,</span><span class=w>
+        </span><span class=s2>&#34;offline_access&#34;</span><span class=p>,</span><span class=w>
+        </span><span class=s2>&#34;microprofile-jwt&#34;</span><span class=w>
+      </span><span class=p>],</span><span class=w>
+      </span><span class=nl>&#34;protocolMappers&#34;</span><span class=p>:</span><span class=w> </span><span class=p>[</span><span class=w>
+        </span><span class=p>{</span><span class=w>
+          </span><span class=nl>&#34;name&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;Subject (sub)&#34;</span><span class=p>,</span><span class=w>
+          </span><span class=nl>&#34;protocol&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;openid-connect&#34;</span><span class=p>,</span><span class=w>
+          </span><span class=nl>&#34;protocolMapper&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;oidc-sub-mapper&#34;</span><span class=p>,</span><span class=w>
+          </span><span class=nl>&#34;consentRequired&#34;</span><span class=p>:</span><span class=w> </span><span class=kc>false</span><span class=p>,</span><span class=w>
+          </span><span class=nl>&#34;config&#34;</span><span class=p>:</span><span class=w> </span><span class=p>{</span><span class=w>
+            </span><span class=nl>&#34;access.token.claim&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;true&#34;</span><span class=p>,</span><span class=w>
+            </span><span class=nl>&#34;id.token.claim&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;true&#34;</span><span class=p>,</span><span class=w>
+            </span><span class=nl>&#34;introspection.token.claim&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;true&#34;</span><span class=w>
+          </span><span class=p>}</span><span class=w>
+        </span><span class=p>}</span><span class=w>
+      </span><span class=p>]</span><span class=w>
+    </span><span class=p>}</span><span class=w>
+  </span><span class=p>],</span><span class=w>
+  </span><span class=nl>&#34;users&#34;</span><span class=p>:</span><span class=w> </span><span class=p>[</span><span class=w>
+    </span><span class=p>{</span><span class=w>
+      </span><span class=nl>&#34;username&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;alice&#34;</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;enabled&#34;</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;emailVerified&#34;</span><span class=p>:</span><span class=w> </span><span class=kc>true</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;firstName&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;Alice&#34;</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;lastName&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;DPoP&#34;</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;email&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;alice@example.org&#34;</span><span class=p>,</span><span class=w>
+      </span><span class=nl>&#34;credentials&#34;</span><span class=p>:</span><span class=w> </span><span class=p>[</span><span class=w>
+        </span><span class=p>{</span><span class=w>
+          </span><span class=nl>&#34;type&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;password&#34;</span><span class=p>,</span><span class=w>
+          </span><span class=nl>&#34;value&#34;</span><span class=p>:</span><span class=w> </span><span class=s2>&#34;alice&#34;</span><span class=p>,</span><span class=w>
+          </span><span class=nl>&#34;temporary&#34;</span><span class=p>:</span><span class=w> </span><span class=kc>false</span><span class=w>
+        </span><span class=p>}</span><span class=w>
+      </span><span class=p>]</span><span class=w>
+    </span><span class=p>}</span><span class=w>
+  </span><span class=p>]</span><span class=w>
+</span><span class=p>}</span></code></pre></div></div><div class=paragraph><p>Keycloak imports this file automatically on startup.
+It defines a realm named <code>dpop</code>, a public OIDC client named <code>heimdall-dpop-client</code> with DPoP-bound access tokens enforced via <code>dpop.bound.access.tokens: true</code> and PKCE required via <code>pkce.code.challenge.method: S256</code>.
+The Authorization Code flow is enabled (<code>standardFlowEnabled: true</code>) with the redirect URI pointing to the local callback server.
+The Subject mapper ensures the <code>sub</code> claim is included in the access token.
+The user <code>alice</code> with password <code>alice</code> is created for testing.</p></div></li><li><p>Now, let’s bring everything together by creating a file named <code>docker-compose.yaml</code> in the root directory with the following contents:</p><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=yaml><span class=na>services</span><span class=pi>:</span>
+  <span class=na>heimdall</span><span class=pi>:</span> <i class=conum data-value=1></i><b>(1)</b>
+    <span class=na>image</span><span class=pi>:</span> <span class=s>dadrus/heimdall:dev</span>
+    <span class=na>command</span><span class=pi>:</span> <span class=s>serve proxy -c /etc/heimdall/config.yaml --insecure</span>
+    <span class=na>ports</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=s2>&#34;</span><span class=s>9090:4456&#34;</span>
+    <span class=na>volumes</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=s>./heimdall-config.yaml:/etc/heimdall/config.yaml:ro</span>
+      <span class=pi>-</span> <span class=s>./secrets.jwks:/etc/heimdall/secrets.jwks:ro</span>
+      <span class=pi>-</span> <span class=s>./rules:/etc/heimdall/rules:ro</span>
+      <span class=pi>-</span> <span class=s>system-trust:/etc/ssl/certs:ro</span>
+    <span class=na>depends_on</span><span class=pi>:</span>
+      <span class=na>keycloak-key-importer</span><span class=pi>:</span>
+        <span class=na>condition</span><span class=pi>:</span> <span class=s>service_completed_successfully</span>
+      <span class=na>upstream</span><span class=pi>:</span>
+        <span class=na>condition</span><span class=pi>:</span> <span class=s>service_started</span>
+
+  <span class=na>upstream</span><span class=pi>:</span> <i class=conum data-value=2></i><b>(2)</b>
+    <span class=na>image</span><span class=pi>:</span> <span class=s>traefik/whoami:latest</span>
+    <span class=na>command</span><span class=pi>:</span> <span class=s>--port=8081</span>
+
+  <span class=na>key-material</span><span class=pi>:</span> <i class=conum data-value=3></i><b>(3)</b>
+    <span class=na>image</span><span class=pi>:</span> <span class=s>alpine:3.22</span>
+    <span class=na>volumes</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=s>keycloak-key-material:/keymaterial</span>
+      <span class=pi>-</span> <span class=s>system-trust:/system-trust</span>
+    <span class=na>command</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=s>sh</span>
+      <span class=pi>-</span> <span class=s>-ec</span>
+      <span class=pi>-</span> <span class=pi>|</span>
+        <span class=s>apk add --no-cache openssl &gt;/dev/null</span>
+
+        <span class=s>if [ -f /keymaterial/keycloak-signing.key ] &amp;&amp; [ -f /keymaterial/keycloak-signing.crt ] &amp;&amp; [ -f /system-trust/ca-certificates.crt ]; then</span>
+          <span class=s>echo &#34;Key material already exists&#34;</span>
+          <span class=s>exit 0</span>
+        <span class=s>fi</span>
+
+        <span class=s>echo &#34;Generating local CA and Keycloak signing certificate...&#34;</span>
+
+        <span class=s>mkdir -p /keymaterial /system-trust</span>
+
+        <span class=s>openssl genpkey \</span>
+          <span class=s>-algorithm RSA \</span>
+          <span class=s>-pkeyopt rsa_keygen_bits:2048 \</span>
+          <span class=s>-out /keymaterial/root-ca.key</span>
+
+        <span class=s>openssl req \</span>
+          <span class=s>-x509 \</span>
+          <span class=s>-new \</span>
+          <span class=s>-key /keymaterial/root-ca.key \</span>
+          <span class=s>-sha256 \</span>
+          <span class=s>-days 3650 \</span>
+          <span class=s>-subj &#34;/CN=heimdall-dpop-guide-root-ca&#34; \</span>
+          <span class=s>-out /keymaterial/root-ca.crt \</span>
+          <span class=s>-addext &#34;basicConstraints=critical,CA:TRUE,pathlen:0&#34; \</span>
+          <span class=s>-addext &#34;keyUsage=critical,keyCertSign,cRLSign&#34; \</span>
+          <span class=s>-addext &#34;subjectKeyIdentifier=hash&#34;</span>
+
+        <span class=s>openssl genpkey \</span>
+          <span class=s>-algorithm RSA \</span>
+          <span class=s>-pkeyopt rsa_keygen_bits:2048 \</span>
+          <span class=s>-out /keymaterial/keycloak-signing.key</span>
+
+        <span class=s>openssl req \</span>
+          <span class=s>-new \</span>
+          <span class=s>-key /keymaterial/keycloak-signing.key \</span>
+          <span class=s>-subj &#34;/CN=dpop&#34; \</span>
+          <span class=s>-out /keymaterial/keycloak-signing.csr</span>
+
+        <span class=s>cat &gt; /keymaterial/keycloak-signing.ext &lt;&lt;&#39;EOF&#39;</span>
+        <span class=s>basicConstraints=critical,CA:FALSE</span>
+        <span class=s>keyUsage=critical,digitalSignature</span>
+        <span class=s>subjectKeyIdentifier=hash</span>
+        <span class=s>authorityKeyIdentifier=keyid,issuer</span>
+        <span class=s>EOF</span>
+
+        <span class=s>openssl x509 \</span>
+          <span class=s>-req \</span>
+          <span class=s>-in /keymaterial/keycloak-signing.csr \</span>
+          <span class=s>-CA /keymaterial/root-ca.crt \</span>
+          <span class=s>-CAkey /keymaterial/root-ca.key \</span>
+          <span class=s>-CAcreateserial \</span>
+          <span class=s>-out /keymaterial/keycloak-signing.crt \</span>
+          <span class=s>-days 3650 \</span>
+          <span class=s>-sha256 \</span>
+          <span class=s>-extfile /keymaterial/keycloak-signing.ext</span>
+
+        <span class=s>cp /keymaterial/root-ca.crt /system-trust/ca-certificates.crt</span>
+
+        <span class=s>echo &#34;Key material generated&#34;</span>
+
+  <span class=na>keycloak</span><span class=pi>:</span> <i class=conum data-value=4></i><b>(4)</b>
+    <span class=na>image</span><span class=pi>:</span> <span class=s>quay.io/keycloak/keycloak:26.4.0</span>
+    <span class=na>command</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=s>start-dev</span>
+      <span class=pi>-</span> <span class=s>--http-port=8080</span>
+      <span class=pi>-</span> <span class=s>--hostname=127.0.0.1</span>
+      <span class=pi>-</span> <span class=s>--hostname-strict=false</span>
+      <span class=pi>-</span> <span class=s>--import-realm</span>
+    <span class=na>ports</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=s2>&#34;</span><span class=s>8080:8080&#34;</span>
+    <span class=na>environment</span><span class=pi>:</span>
+      <span class=na>KEYCLOAK_ADMIN</span><span class=pi>:</span> <span class=s>admin</span>
+      <span class=na>KEYCLOAK_ADMIN_PASSWORD</span><span class=pi>:</span> <span class=s>admin</span>
+    <span class=na>volumes</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=s>./dpop-realm.json:/opt/keycloak/data/import/dpop-realm.json:ro</span>
+    <span class=na>depends_on</span><span class=pi>:</span>
+      <span class=na>key-material</span><span class=pi>:</span>
+        <span class=na>condition</span><span class=pi>:</span> <span class=s>service_completed_successfully</span>
+
+  <span class=na>keycloak-key-importer</span><span class=pi>:</span> <i class=conum data-value=5></i><b>(5)</b>
+    <span class=na>image</span><span class=pi>:</span> <span class=s>alpine:3.22</span>
+    <span class=na>depends_on</span><span class=pi>:</span>
+      <span class=na>keycloak</span><span class=pi>:</span>
+        <span class=na>condition</span><span class=pi>:</span> <span class=s>service_started</span>
+      <span class=na>key-material</span><span class=pi>:</span>
+        <span class=na>condition</span><span class=pi>:</span> <span class=s>service_completed_successfully</span>
+    <span class=na>volumes</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=s>keycloak-key-material:/keymaterial:ro</span>
+    <span class=na>command</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=s>sh</span>
+      <span class=pi>-</span> <span class=s>-ec</span>
+      <span class=pi>-</span> <span class=pi>|</span>
+        <span class=s>apk add --no-cache curl jq &gt;/dev/null</span>
+
+        <span class=s>echo &#34;Waiting for Keycloak...&#34;</span>
+
+        <span class=s>until curl -fsS http://keycloak:8080/realms/dpop/.well-known/openid-configuration &gt;/dev/null; do</span>
+          <span class=s>sleep 1</span>
+        <span class=s>done</span>
+
+        <span class=s>echo &#34;Requesting admin token...&#34;</span>
+
+        <span class=s>ADMIN_TOKEN=&#34;$$(curl -fsS \</span>
+          <span class=s>-X POST http://keycloak:8080/realms/master/protocol/openid-connect/token \</span>
+          <span class=s>-H &#34;content-type: application/x-www-form-urlencoded&#34; \</span>
+          <span class=s>--data-urlencode &#34;grant_type=password&#34; \</span>
+          <span class=s>--data-urlencode &#34;client_id=admin-cli&#34; \</span>
+          <span class=s>--data-urlencode &#34;username=admin&#34; \</span>
+          <span class=s>--data-urlencode &#34;password=admin&#34; \</span>
+          <span class=s>| jq -r .access_token)&#34;</span>
+
+        <span class=s>REALM_ID=&#34;$$(curl -fsS \</span>
+          <span class=s>-H &#34;authorization: Bearer $${ADMIN_TOKEN}&#34; \</span>
+          <span class=s>http://keycloak:8080/admin/realms/dpop \</span>
+          <span class=s>| jq -r .id)&#34;</span>
+
+        <span class=s>EXISTING_PROVIDER=&#34;$$(curl -fsS \</span>
+          <span class=s>-H &#34;authorization: Bearer $${ADMIN_TOKEN}&#34; \</span>
+          <span class=s>&#34;http://keycloak:8080/admin/realms/dpop/components?type=org.keycloak.keys.KeyProvider&#34; \</span>
+          <span class=s>| jq -r &#39;.[] | select(.name == &#34;heimdall-dpop-rsa&#34;) | .id&#39; \</span>
+          <span class=s>| head -n 1)&#34;</span>
+
+        <span class=s>if [ -n &#34;$${EXISTING_PROVIDER}&#34; ]; then</span>
+          <span class=s>echo &#34;Keycloak RSA signing key provider already exists: $${EXISTING_PROVIDER}&#34;</span>
+          <span class=s>exit 0</span>
+        <span class=s>fi</span>
+
+        <span class=s>jq -n \</span>
+          <span class=s>--arg parentId &#34;$${REALM_ID}&#34; \</span>
+          <span class=s>--rawfile privateKey /keymaterial/keycloak-signing.key \</span>
+          <span class=s>--rawfile certificate /keymaterial/keycloak-signing.crt \</span>
+          <span class=s>&#39;{</span>
+            <span class=s>name: &#34;heimdall-dpop-rsa&#34;,</span>
+            <span class=s>providerId: &#34;rsa&#34;,</span>
+            <span class=s>providerType: &#34;org.keycloak.keys.KeyProvider&#34;,</span>
+            <span class=s>parentId: $$parentId,</span>
+            <span class=s>config: {</span>
+              <span class=s>priority: [&#34;1000&#34;],</span>
+              <span class=s>enabled: [&#34;true&#34;],</span>
+              <span class=s>active: [&#34;true&#34;],</span>
+              <span class=s>algorithm: [&#34;RS256&#34;],</span>
+              <span class=s>privateKey: [$$privateKey],</span>
+              <span class=s>certificate: [$$certificate]</span>
+            <span class=s>}</span>
+          <span class=s>}&#39; &gt; /tmp/key-provider.json</span>
+
+        <span class=s>echo &#34;Importing Keycloak RSA signing key provider...&#34;</span>
+
+        <span class=s>curl -fsS \</span>
+          <span class=s>-X POST http://keycloak:8080/admin/realms/dpop/components \</span>
+          <span class=s>-H &#34;authorization: Bearer $${ADMIN_TOKEN}&#34; \</span>
+          <span class=s>-H &#34;content-type: application/json&#34; \</span>
+          <span class=s>--data-binary @/tmp/key-provider.json</span>
+
+        <span class=s>echo &#34;Keycloak RSA signing key provider imported&#34;</span>
+
+  <span class=na>dpop-client</span><span class=pi>:</span> <i class=conum data-value=6></i><b>(6)</b>
+    <span class=na>image</span><span class=pi>:</span> <span class=s>ghcr.io/astral-sh/uv:python3.13-bookworm-slim</span>
+    <span class=na>working_dir</span><span class=pi>:</span> <span class=s>/work/client</span>
+    <span class=na>volumes</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=s>.:/work</span>
+      <span class=pi>-</span> <span class=s>client-state:/tmp/.state</span>
+    <span class=na>environment</span><span class=pi>:</span>
+      <span class=na>UV_LINK_MODE</span><span class=pi>:</span> <span class=s>copy</span>
+      <span class=na>UV_PROJECT_ENVIRONMENT</span><span class=pi>:</span> <span class=s>/tmp/heimdall-dpop-client-venv</span>
+      <span class=na>AUTHORIZATION_ENDPOINT</span><span class=pi>:</span> <span class=s>http://127.0.0.1:8080/realms/dpop/protocol/openid-connect/auth</span>
+      <span class=na>TOKEN_ENDPOINT</span><span class=pi>:</span> <span class=s>http://keycloak:8080/realms/dpop/protocol/openid-connect/token</span>
+      <span class=na>PROTECTED_API</span><span class=pi>:</span> <span class=s>http://heimdall:4456/api</span>
+      <span class=na>CLIENT_ID</span><span class=pi>:</span> <span class=s>heimdall-dpop-client</span>
+      <span class=na>STATE_DIR</span><span class=pi>:</span> <span class=s>/tmp/.state</span>
+    <span class=na>command</span><span class=pi>:</span> <span class=s>uv run client keygen</span>
+    <span class=na>ports</span><span class=pi>:</span>
+      <span class=pi>-</span> <span class=s2>&#34;</span><span class=s>8765:8765&#34;</span>
+
+<span class=na>volumes</span><span class=pi>:</span>
+  <span class=na>keycloak-key-material</span><span class=pi>:</span>
+  <span class=na>system-trust</span><span class=pi>:</span>
+  <span class=na>client-state</span><span class=pi>:</span></code></pre></div></div><div class="colist arabic"><table><tbody><tr><td><i class=conum data-value=1></i><b>1</b></td><td>Heimdall runs in proxy mode and is available at <code>http://127.0.0.1:9090</code> on localhost. The <code>--insecure</code> flag disables enforcement of some security settings you can learn about <a href=../../../docs/operations/security/#_defaults>here</a>. The <code>system-trust</code> volume is mounted as the system CA store so heimdall trusts the certificate Keycloak uses to sign JWKs.</td></tr><tr><td><i class=conum data-value=2></i><b>2</b></td><td>The upstream service echoes back everything it receives, simulating our protected API.</td></tr><tr><td><i class=conum data-value=3></i><b>3</b></td><td>A short-lived container that generates a local root CA and a Keycloak signing certificate signed by that CA. The key material is stored in the <code>keycloak-key-material</code> volume and the root CA is placed in <code>system-trust</code> so downstream containers can trust it. The script is idempotent and exits immediately if the material already exists.</td></tr><tr><td><i class=conum data-value=4></i><b>4</b></td><td>Keycloak starts in development mode with the <code>--import-realm</code> flag, which automatically imports the <code>dpop</code> realm on first startup. <code>--hostname=127.0.0.1</code> is intentional: it ensures the <code>iss</code> claim in issued tokens uses the host-accessible address, which is required for the Authorization Code flow redirect to work from a browser.</td></tr><tr><td><i class=conum data-value=5></i><b>5</b></td><td>A short-lived container that waits for Keycloak to be ready and then imports the generated RSA signing key into the <code>dpop</code> realm via the Admin API. heimdall does not start until this service exits successfully, guaranteeing that the trusted signing key is in place before any token validation is attempted.</td></tr><tr><td><i class=conum data-value=6></i><b>6</b></td><td>The DPoP client runs inside a container backed by the <code>uv</code> Python runtime. The root directory is mounted at <code>/work</code>, and the <code>client-state</code> volume is mounted at <code>/tmp/.state</code> to persist the DPoP key pair and token across runs without writing to the host filesystem. Port 8765 is published so the browser can complete the Authorization Code redirect to the local callback server. The OIDC endpoints and client ID are injected as environment variables. Note that <code>AUTHORIZATION_ENDPOINT</code> uses <code>127.0.0.1</code> (the browser-accessible address) while <code>TOKEN_ENDPOINT</code> uses the Docker-internal <code>keycloak</code> hostname.</td></tr></tbody></table></div></li></ol></div></div></div><div class=sect1><h2 id=_use_the_setup>Use the Setup</h2><div class=sectionbody><div class="olist arabic"><ol class=arabic><li><p>In the root directory, run the following command to start all services:</p><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=bash>docker compose up</code></pre></div></div><div class=paragraph><p>Docker Compose starts all services in dependency order: first <code>key-material</code> generates the PKI, then <code>keycloak</code> imports the realm, then <code>keycloak-key-importer</code> imports the signing key, and finally <code>heimdall</code> and <code>upstream</code> start.
+The <code>dpop-client</code> service also runs at this point — it executes <code>keygen</code> as its default command, generates a DPoP key pair in the shared state volume, and exits.
+Wait until heimdall is up and running by watching the logs. Look for a line indicating heimdall has started successfully:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>heimdall  | ... level=INFO msg=&#34;Started&#34; ...</code></pre></div></div><div class=paragraph><p>The remaining steps require a separate terminal while this one continues streaming logs.</p></div></li><li><p>Log in as alice using the Authorization Code flow. The <code>--service-ports</code> flag is required to publish port 8765 to the host so the browser can complete the redirect:</p><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=bash>docker compose run <span class=nt>--service-ports</span> <span class=nt>--rm</span> dpop-client uv run client login</code></pre></div></div><div class=paragraph><p>The command prints an authorization URL and starts a local callback server on port 8765.
+Open the printed URL in your browser and log in with username <code>alice</code> and password <code>alice</code>.
+After a successful login, the browser is redirected back and the terminal shows output similar to the following:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>Open this URL in your browser:
+http://127.0.0.1:8080/realms/dpop/protocol/openid-connect/auth?...
+
+Waiting for redirect on http://127.0.0.1:8765/callback
+token_type: DPoP
+selected access token claims:
+{
+  &#34;iss&#34;: &#34;http://127.0.0.1:8080/realms/dpop&#34;,
+  &#34;aud&#34;: null,
+  &#34;sub&#34;: &#34;...&#34;,
+  &#34;azp&#34;: &#34;heimdall-dpop-client&#34;,
+  &#34;preferred_username&#34;: &#34;alice&#34;,
+  &#34;cnf&#34;: {
+    &#34;jkt&#34;: &#34;CnytcIWTLO-FIpS3t3LZFjXKgHCrHNlBxQ_xaFJtV6Y&#34;
+  }
+}</code></pre></div></div><div class=paragraph><p><code>token_type: DPoP</code> confirms that Keycloak issued a DPoP-bound access token rather than a plain bearer token.
+The <code>cnf.jkt</code> claim is the SHA-256 thumbprint of the client’s public key, cryptographically binding this token to the generated key pair.</p></div><div class="admonitionblock note"><table><tbody><tr><td class=icon><i class="fa icon-note" title=Note></i></td><td class=content>The DPoP key pair was created by the keygen step during <code>docker compose up</code> and persisted in the <code>client-state</code> Docker volume. The access token is stored there too after a successful login, so you can call the API multiple times without logging in again until the token expires.</td></tr></tbody></table></div></li><li><p>Call the protected API:</p><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=bash>docker compose run <span class=nt>--rm</span> dpop-client uv run client call</code></pre></div></div><div class=paragraph><p>Because <code>nonce_required</code> is set to <code>true</code> in heimdall’s configuration, the first request is rejected with a <code>401 Unauthorized</code> and a <code>use_dpop_nonce</code> challenge.
+The client automatically retries with a fresh DPoP proof that includes the nonce.
+You should see output similar to the following:</p></div><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=text>Received DPoP nonce challenge from heimdall
+DPoP-Nonce: ZHBvcC1ub25jZS1tYXN0Z...
+Retrying with nonce
+HTTP 200
+{
+  &#34;hostname&#34;: &#34;7a3f2b1c9e8d&#34;,
+  &#34;ip&#34;: [
+    &#34;127.0.0.1&#34;,
+    &#34;::1&#34;,
+    &#34;172.20.0.3&#34;
+  ],
+  &#34;headers&#34;: {
+    &#34;Authorization&#34;: [
+      &#34;DPoP eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia...&#34;
+    ],
+    &#34;Dpop&#34;: [
+      &#34;eyJhbGciOiJFUzI1NiIsImp3ayI6eyJjcnYiOiJQLTI1Ni...&#34;
+    ],
+    &#34;Forwarded&#34;: [
+      &#34;for=172.20.0.5;host=\&#34;heimdall:4456\&#34;;proto=http&#34;
+    ],
+    &#34;User-Agent&#34;: [
+      &#34;python-httpx/0.28.1&#34;
+    ]
+  },
+  &#34;url&#34;: &#34;/api&#34;,
+  &#34;host&#34;: &#34;heimdall:4456&#34;,
+  &#34;method&#34;: &#34;GET&#34;,
+  &#34;remoteAddr&#34;: &#34;172.20.0.4:37742&#34;
+}</code></pre></div></div><div class=paragraph><p>The <code>HTTP 200</code> confirms that heimdall validated the DPoP-bound access token together with the DPoP proof and forwarded the request to the upstream service.
+Two headers are worth noting in the echoed request body: <code>Authorization</code> uses the <code>DPoP</code> scheme instead of <code>Bearer</code>, and <code>Dpop</code> carries the proof JWT.</p></div></li><li><p>Take a look at further options of the client if you want to see further cases in action:</p><div class=listingblock><div class=content><pre class="rouge highlight"><code data-lang=bash>docker compose run <span class=nt>--rm</span> dpop-client uv run client <span class=nt>-h</span></code></pre></div></div></li></ol></div></div></div><div class=sect1><h2 id=_cleanup>Cleanup</h2><div class=sectionbody><div class=paragraph><p>Just stop the environment with <code>CTRL-C</code> and delete the created files. If you started docker compose in the background, tear the environment down with <code>docker compose down</code>.</p></div></div></div></linkable-headline-area></div><p class="text-end fst-italic fs-7 pb-3">Last updated on <span class=fw-bold>Jun 19, 2026</span></p><hr><div class="d-flex justify-content-between py-3"><a href=../../../guides/authn/oidc_first_party_auth/ class="fs-6 fw-bold text-dark link-secondary link-underline-opacity-0"><svg width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.354 1.646a.5.5.0 010 .708L5.707 8l5.647 5.646a.5.5.0 01-.708.708l-6-6a.5.5.0 010-.708l6-6a.5.5.0 01.708.0z"/></svg>
+First-Party Authentication with OpenID Connect</a></div></div></main></div><footer class="footer py-4 py-md-5 px-4 px-md-3 mt-3"><div class=container><div class=row><div class="col-lg-3 mb-3"><p class=fs-5>Heimdall</p><ul class="list-unstyled small text-muted"><li class=mb-2>2022-2024 © Heimdall Project Authors. All rights reserved.</li><li class=mb-2><a href=https://github.com/dadrus/heimdall/blob/master/LICENSE>Apache 2.0 licensed</a></li></ul></div><div class="col-6 col-lg-2 offset-lg-1 mb-3"><h5>Links</h5><ul class=list-unstyled><li class=mb-2><a href=../../../>Home</a></li><li class=mb-2><a href=../../../docs/getting_started/discover_heimdall>Docs</a></li><li class=mb-2><a href=../../../guides/>Guides</a></li><li class=mb-2><a href=../../../openapi/>API</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Guides</h5><ul class=list-unstyled><li class=mb-2><a href=../../../guides/proxies/>API Gateways & Proxies</a></li><li class=mb-2><a href=../../../guides/authz/>Authorization Services</a></li><li class=mb-2><a href=../../../guides/authn/>Authentication Protocols & Services</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Community</h5><ul class=list-unstyled><li class=mb-2><a href=https://github.com/dadrus/heimdall>Github</a></li><li class=mb-2><a href=https://discord.gg/qQgg8xKuyb>Discord</a></li></ul></div></div></div></footer><script src=../../../js/main.js defer></script></body></html>

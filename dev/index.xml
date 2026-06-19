@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Tue, 16 Jun 2026 06:46:24 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1"&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Fri, 19 Jun 2026 08:27:38 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1"&gt;
 &lt;h2 id="_what_is_heimdall"&gt;What is heimdall?&lt;/h2&gt;
 &lt;div class="sectionbody"&gt;
 &lt;div class="paragraph"&gt;
@@ -372,6 +372,16 @@ To allow heimdall communicating with services running in the mesh, add the certi
 &lt;div class="sectionbody"&gt;
 &lt;div class="paragraph"&gt;
 &lt;p&gt;In this guide, we’ll set up a Docker Compose environment where heimdall secures services and controls access for specific endpoints:&lt;/p&gt;
+&lt;/div&gt;</description></item><item><title>Protect APIs with DPoP-bound Access Tokens</title><link>https://dadrus.github.io/guides/authn/dpop_bound_access_tokens/</link><pubDate>Thu, 18 Jun 2026 09:00:00 +0200</pubDate><guid>https://dadrus.github.io/guides/authn/dpop_bound_access_tokens/</guid><description>&lt;div class="paragraph"&gt;
+&lt;p&gt;By the end of this guide, you’ll have a setup where heimdall protects an API with DPoP-bound access tokens issued by &lt;a href="https://www.keycloak.org/"&gt;Keycloak&lt;/a&gt;.
+Although this guide uses Keycloak as authorization server, you can use the same approach with any OAuth 2.0 authorization server that issues DPoP-bound access tokens according to &lt;a href="https://www.rfc-editor.org/rfc/rfc9449"&gt;RFC 9449&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="sect1"&gt;
+&lt;h2 id="_overview"&gt;Overview&lt;/h2&gt;
+&lt;div class="sectionbody"&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;DPoP, short for Demonstrating Proof-of-Possession, sender-constrains OAuth 2.0 access tokens.
+Instead of treating an access token as a pure bearer credential, the client proves possession of the private key the token is bound to on every request.&lt;/p&gt;
 &lt;/div&gt;</description></item><item><title>Configuration</title><link>https://dadrus.github.io/docs/operations/configuration/</link><pubDate>Fri, 08 Jul 2022 09:16:36 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/configuration/</guid><description>&lt;div class="paragraph"&gt;
 &lt;p&gt;In heimdall, configuration encompasses two distinct concepts:&lt;/p&gt;
 &lt;/div&gt;
@@ -737,12 +747,15 @@ A secret source defines where and how secrets are stored; a secret reference poi
  &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;path&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;/path/to/yaml/or/json/file&lt;/span&gt;
  &lt;span class="na"&gt;watch&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
- &lt;span class="na"&gt;jwks_secrets&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;master_secrets&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;jwks&lt;/span&gt;
- &lt;span class="na"&gt;allow_in_rules&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;false&lt;/span&gt;
  &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;path&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;/path/to/jwks.file&lt;/span&gt;
  &lt;span class="na"&gt;watch&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;false&lt;/span&gt;
+
+&lt;span class="na"&gt;master_key&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;source&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;master_secrets&lt;/span&gt;
+ &lt;span class="na"&gt;selector&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;my_key&lt;/span&gt;
 
 &lt;span class="na"&gt;serve&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;host&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;127.0.0.1&lt;/span&gt;
@@ -838,8 +851,6 @@ A secret source defines where and how secrets are stored; a secret reference poi
  &lt;span class="na"&gt;client_cache&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;ttl&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;10m&lt;/span&gt;
  &lt;span class="na"&gt;max_flush_delay&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;20us&lt;/span&gt;
-
-&lt;span class="na"&gt;secrets_reload_enabled&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
 
 &lt;span class="na"&gt;log&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;level&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;debug&lt;/span&gt;
@@ -973,6 +984,11 @@ A secret source defines where and how secrets are stored; a secret reference poi
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;foo&lt;/span&gt;
  &lt;span class="na"&gt;allowed_algorithms&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="pi"&gt;-&lt;/span&gt; &lt;span class="s"&gt;RS256&lt;/span&gt;
+ &lt;span class="na"&gt;proof_of_possession&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;type&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;dpop&lt;/span&gt;
+ &lt;span class="na"&gt;config&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
+ &lt;span class="na"&gt;max_age&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s"&gt;30s&lt;/span&gt;
+ &lt;span class="na"&gt;nonce_required&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;true&lt;/span&gt;
  &lt;span class="na"&gt;principal&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt;
  &lt;span class="na"&gt;id&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;sub&amp;#34;&lt;/span&gt;
  &lt;span class="na"&gt;attributes&lt;/span&gt;&lt;span class="pi"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;#34;&lt;/span&gt;&lt;span class="s"&gt;@this&amp;#34;&lt;/span&gt;

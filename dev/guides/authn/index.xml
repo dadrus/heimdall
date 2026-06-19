@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Authentication Protocols &amp; Services on Heimdall</title><link>https://dadrus.github.io/guides/authn/</link><description>Recent content in Authentication Protocols &amp; Services on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Tue, 16 Jun 2026 06:46:24 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/guides/authn/index.xml" rel="self" type="application/rss+xml"/><item><title>First-Party Authentication with OpenID Connect</title><link>https://dadrus.github.io/guides/authn/oidc_first_party_auth/</link><pubDate>Fri, 04 Nov 2022 09:00:41 +0200</pubDate><guid>https://dadrus.github.io/guides/authn/oidc_first_party_auth/</guid><description>&lt;div class="paragraph"&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Authentication Protocols &amp; Services on Heimdall</title><link>https://dadrus.github.io/guides/authn/</link><description>Recent content in Authentication Protocols &amp; Services on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Fri, 19 Jun 2026 08:27:38 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/guides/authn/index.xml" rel="self" type="application/rss+xml"/><item><title>First-Party Authentication with OpenID Connect</title><link>https://dadrus.github.io/guides/authn/oidc_first_party_auth/</link><pubDate>Fri, 04 Nov 2022 09:00:41 +0200</pubDate><guid>https://dadrus.github.io/guides/authn/oidc_first_party_auth/</guid><description>&lt;div class="paragraph"&gt;
 &lt;p&gt;By the end of this guide, you’ll have a functional setup where heimdall uses &lt;a href="https://www.keycloak.org/"&gt;Keycloak&lt;/a&gt; to authenticate users and route requests based on their authentication status and roles for role-based access control.&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class="paragraph"&gt;
@@ -9,4 +9,14 @@
 &lt;div class="sectionbody"&gt;
 &lt;div class="paragraph"&gt;
 &lt;p&gt;In this guide, we’ll set up a Docker Compose environment where heimdall secures services and controls access for specific endpoints:&lt;/p&gt;
+&lt;/div&gt;</description></item><item><title>Protect APIs with DPoP-bound Access Tokens</title><link>https://dadrus.github.io/guides/authn/dpop_bound_access_tokens/</link><pubDate>Thu, 18 Jun 2026 09:00:00 +0200</pubDate><guid>https://dadrus.github.io/guides/authn/dpop_bound_access_tokens/</guid><description>&lt;div class="paragraph"&gt;
+&lt;p&gt;By the end of this guide, you’ll have a setup where heimdall protects an API with DPoP-bound access tokens issued by &lt;a href="https://www.keycloak.org/"&gt;Keycloak&lt;/a&gt;.
+Although this guide uses Keycloak as authorization server, you can use the same approach with any OAuth 2.0 authorization server that issues DPoP-bound access tokens according to &lt;a href="https://www.rfc-editor.org/rfc/rfc9449"&gt;RFC 9449&lt;/a&gt;.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="sect1"&gt;
+&lt;h2 id="_overview"&gt;Overview&lt;/h2&gt;
+&lt;div class="sectionbody"&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;DPoP, short for Demonstrating Proof-of-Possession, sender-constrains OAuth 2.0 access tokens.
+Instead of treating an access token as a pure bearer credential, the client proves possession of the private key the token is bound to on every request.&lt;/p&gt;
 &lt;/div&gt;</description></item></channel></rss>
