@@ -111,15 +111,22 @@ func (p *payload) encode(key Key) (string, error) {
 	binary.BigEndian.PutUint64(rawPayload[1:9], uint64(p.IssuedAt)) //nolint: gosec
 	copy(rawPayload[9:41], p.Binding[:])
 
-	ciphertext := aead.Seal(ciphertextBuf[:0], nonce[:nonceAEADNonceSize], rawPayload[:], nil)
+	ciphertext := aead.Seal(
+		ciphertextBuf[:0],
+		nonce[:nonceAEADNonceSize],
+		rawPayload[:],
+		stringx.ToBytes(key.KID),
+	)
+
+	kidLen := base64.RawURLEncoding.EncodedLen(len(key.KID))
 	nonceLen := base64.RawURLEncoding.EncodedLen(len(nonce))
 	ciphertextLen := base64.RawURLEncoding.EncodedLen(len(ciphertext))
 
-	out := make([]byte, len(key.KID)+1+nonceLen+1+ciphertextLen)
+	out := make([]byte, kidLen+1+nonceLen+1+ciphertextLen)
 
-	copy(out, key.KID)
+	base64.RawURLEncoding.Encode(out[:kidLen], stringx.ToBytes(key.KID))
 
-	pos := len(key.KID)
+	pos := kidLen
 	out[pos] = '.'
 	pos++
 
@@ -138,15 +145,15 @@ func (p *payload) encode(key Key) (string, error) {
 func (p *payload) decode(resolver KeyResolver, value string) error {
 	var (
 		nonce         [nonceRandomSize]byte
-		ciphertextBuf [maxEncryptedNonceLen]byte
+		ciphertextBuf [noncePayloadSize + nonceAEADTagSize]byte
 	)
 
-	if len(value) == 0 || len(value) > maxEncryptedNonceLen {
+	if len(value) == 0 {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "invalid format")
 	}
 
-	kid, rest, ok := strings.Cut(value, ".")
-	if !ok {
+	kidB64, rest, ok := strings.Cut(value, ".")
+	if !ok || len(kidB64) == 0 {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "invalid format")
 	}
 
@@ -155,7 +162,32 @@ func (p *payload) decode(resolver KeyResolver, value string) error {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "invalid format")
 	}
 
+	kidDecodedLen := base64.RawURLEncoding.DecodedLen(len(kidB64))
+	if kidDecodedLen == 0 {
+		return errorchain.NewWithMessage(ErrNonceInvalid, "invalid format")
+	}
+
+	kidBuf := make([]byte, kidDecodedLen)
+
+	kidSize, err := base64.RawURLEncoding.Decode(kidBuf, stringx.ToBytes(kidB64))
+	if err != nil {
+		return errorchain.NewWithMessage(ErrNonceInvalid, "decoding key id failed").
+			CausedBy(err)
+	}
+
+	if kidSize == 0 {
+		return errorchain.NewWithMessage(ErrNonceInvalid, "invalid format")
+	}
+
+	kid := stringx.ToString(kidBuf[:kidSize])
+	kidAAD := kidBuf[:kidSize]
+
 	if base64.RawURLEncoding.DecodedLen(len(nonceB64)) != nonceRandomSize {
+		return errorchain.NewWithMessage(ErrNonceInvalid, "invalid format")
+	}
+
+	ciphertextDecodedLen := base64.RawURLEncoding.DecodedLen(len(ciphertextB64))
+	if ciphertextDecodedLen != noncePayloadSize+nonceAEADTagSize {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "invalid format")
 	}
 
@@ -164,26 +196,15 @@ func (p *payload) decode(resolver KeyResolver, value string) error {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "key not found").CausedBy(err)
 	}
 
-	nonceSize, err := base64.RawURLEncoding.Decode(nonce[:], stringx.ToBytes(nonceB64))
-	if err != nil {
+	if _, err = base64.RawURLEncoding.Decode(nonce[:], stringx.ToBytes(nonceB64)); err != nil {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "decoding nonce failed").
 			CausedBy(err)
 	}
 
-	if nonceSize != nonceRandomSize {
-		return errorchain.NewWithMessage(ErrNonceInvalid, "invalid format")
-	}
-
-	ciphertextDecodedLen := base64.RawURLEncoding.DecodedLen(len(ciphertextB64))
-
-	ciphertextSize, err := base64.RawURLEncoding.Decode(
-		ciphertextBuf[:ciphertextDecodedLen], stringx.ToBytes(ciphertextB64))
-	if err != nil {
+	if _, err = base64.RawURLEncoding.Decode(ciphertextBuf[:], stringx.ToBytes(ciphertextB64)); err != nil {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "decoding ciphertext failed").
 			CausedBy(err)
 	}
-
-	ciphertext := ciphertextBuf[:ciphertextSize]
 
 	aead, err := newCipher(key.Value, nonce[:])
 	if err != nil {
@@ -191,7 +212,12 @@ func (p *payload) decode(resolver KeyResolver, value string) error {
 			CausedBy(err)
 	}
 
-	rawPayload, err := aead.Open(ciphertext[:0], nonce[:nonceAEADNonceSize], ciphertext, nil)
+	rawPayload, err := aead.Open(
+		ciphertextBuf[:0],
+		nonce[:nonceAEADNonceSize],
+		ciphertextBuf[:],
+		kidAAD,
+	)
 	if err != nil {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "failed to decrypt").CausedBy(err)
 	}

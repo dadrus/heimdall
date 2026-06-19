@@ -39,7 +39,26 @@ func TestNewNonce(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotEmpty(t, nonce)
-				require.Len(t, strings.Split(nonce, "."), 3)
+
+				parts := strings.Split(nonce, ".")
+				require.Len(t, parts, 3)
+				require.Equal(t, base64.RawURLEncoding.EncodeToString([]byte("test-key")), parts[0])
+			},
+		},
+		"succeeds with key id containing separator": {
+			key: Key{
+				KID:   "test.key",
+				Value: []byte("0123456789abcdef0123456789abcdef"),
+			},
+			assert: func(t *testing.T, nonce string, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotEmpty(t, nonce)
+
+				parts := strings.Split(nonce, ".")
+				require.Len(t, parts, 3)
+				require.Equal(t, base64.RawURLEncoding.EncodeToString([]byte("test.key")), parts[0])
 			},
 		},
 	} {
@@ -89,15 +108,6 @@ func TestValidateNonce(t *testing.T) {
 				require.ErrorContains(t, err, "invalid format")
 			},
 		},
-		"fails on too long nonce": {
-			nonce: strings.Repeat("a", maxEncryptedNonceLen+1),
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorContains(t, err, "invalid format")
-			},
-		},
 		"fails on missing separators": {
 			nonce: "foo",
 			assert: func(t *testing.T, err error) {
@@ -107,8 +117,32 @@ func TestValidateNonce(t *testing.T) {
 				require.ErrorContains(t, err, "invalid format")
 			},
 		},
+		"fails on missing key id": {
+			nonce: "." +
+				base64.RawURLEncoding.EncodeToString(make([]byte, nonceRandomSize)) +
+				"." +
+				base64.RawURLEncoding.EncodeToString(make([]byte, noncePayloadSize+nonceAEADTagSize)),
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "invalid format")
+			},
+		},
+		"fails on key id encoding": {
+			nonce: "||||." +
+				base64.RawURLEncoding.EncodeToString(make([]byte, nonceRandomSize)) +
+				"." +
+				base64.RawURLEncoding.EncodeToString(make([]byte, noncePayloadSize+nonceAEADTagSize)),
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "decoding key id failed")
+			},
+		},
 		"fails on missing encrypted payload": {
-			nonce: "kid.nonce",
+			nonce: base64.RawURLEncoding.EncodeToString([]byte("kid")) + ".nonce",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -129,9 +163,9 @@ func TestValidateNonce(t *testing.T) {
 			},
 		},
 		"fails on invalid nonce size": {
-			nonce: "kid." +
-				strings.Repeat("a", base64.RawURLEncoding.EncodedLen(nonceRandomSize-1)) +
-				".baz",
+			nonce: base64.RawURLEncoding.EncodeToString([]byte("kid")) +
+				"." +
+				base64.RawURLEncoding.EncodeToString(make([]byte, nonceRandomSize-1)) + ".baz",
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -140,9 +174,10 @@ func TestValidateNonce(t *testing.T) {
 			},
 		},
 		"fails on nonce encoding": {
-			nonce: "test-key." +
+			nonce: base64.RawURLEncoding.EncodeToString([]byte("test-key")) + "." +
 				strings.Repeat("|", base64.RawURLEncoding.EncodedLen(nonceRandomSize)) +
-				".baz",
+				"." +
+				base64.RawURLEncoding.EncodeToString(make([]byte, noncePayloadSize+nonceAEADTagSize)),
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -150,10 +185,23 @@ func TestValidateNonce(t *testing.T) {
 				require.ErrorContains(t, err, "decoding nonce failed")
 			},
 		},
+		"fails on invalid ciphertext size": {
+			nonce: base64.RawURLEncoding.EncodeToString([]byte("test-key")) + "." +
+				base64.RawURLEncoding.EncodeToString(make([]byte, nonceRandomSize)) +
+				"." +
+				base64.RawURLEncoding.EncodeToString(make([]byte, noncePayloadSize+nonceAEADTagSize-1)),
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "invalid format")
+			},
+		},
 		"fails on cipher encoding": {
-			nonce: "test-key." +
-				strings.Repeat("a", base64.RawURLEncoding.EncodedLen(nonceRandomSize)) +
-				".|||",
+			nonce: base64.RawURLEncoding.EncodeToString([]byte("test-key")) + "." +
+				base64.RawURLEncoding.EncodeToString(make([]byte, nonceRandomSize)) +
+				"." +
+				strings.Repeat("|", base64.RawURLEncoding.EncodedLen(noncePayloadSize+nonceAEADTagSize)),
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -162,7 +210,19 @@ func TestValidateNonce(t *testing.T) {
 			},
 		},
 		"fails on unknown key": {
-			nonce: replaceNoncePart(t, validNonce, 0, "unknown-key"),
+			nonce: replaceNoncePart(t, validNonce, 0, base64.RawURLEncoding.EncodeToString([]byte("unknown-key"))),
+			validateOpts: []ValidateOption{
+				WithBinding(binding),
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorContains(t, err, "key not found")
+			},
+		},
+		"fails on tampered key id": {
+			nonce: replaceNoncePart(t, validNonce, 0, base64.RawURLEncoding.EncodeToString([]byte("test-key-tampered"))),
 			validateOpts: []ValidateOption{
 				WithBinding(binding),
 			},
@@ -222,18 +282,6 @@ func TestValidateNonce(t *testing.T) {
 
 				require.Error(t, err)
 				require.ErrorContains(t, err, "too old")
-			},
-		},
-		"fails on unexpected payload size": {
-			nonce: buildNonce(t, key, make([]byte, noncePayloadSize-1)),
-			validateOpts: []ValidateOption{
-				WithBinding(binding),
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorContains(t, err, "unexpected payload size")
 			},
 		},
 		"fails on unsupported payload version": {
@@ -314,6 +362,46 @@ func TestValidateNonce(t *testing.T) {
 	}
 }
 
+func TestValidateNonceWithKeyAliases(t *testing.T) {
+	t.Parallel()
+
+	key := Key{
+		KID:   "test-key",
+		Value: []byte("0123456789abcdef0123456789abcdef"),
+	}
+
+	aliasKey := Key{
+		KID:   "alias-key",
+		Value: key.Value,
+	}
+
+	resolver := KeyResolverFunc(func(kid string) (Key, error) {
+		switch kid {
+		case key.KID:
+			return key, nil
+		case aliasKey.KID:
+			return aliasKey, nil
+		default:
+			return Key{}, ErrNonceInvalid
+		}
+	})
+
+	var binding [nonceBindingSize]byte
+	copy(binding[:], []byte("test-binding"))
+
+	validNonce, err := NewNonce(key, WithBinding(binding))
+	require.NoError(t, err)
+
+	aliasedNonce := replaceNoncePart(t, validNonce, 0, base64.RawURLEncoding.EncodeToString([]byte(aliasKey.KID)))
+
+	// WHEN
+	err = ValidateNonce(aliasedNonce, resolver, WithBinding(binding))
+
+	// THEN
+	require.Error(t, err)
+	require.ErrorContains(t, err, "failed to decrypt")
+}
+
 func tamperNoncePart(t *testing.T, nonce string, part int) string {
 	t.Helper()
 
@@ -354,9 +442,9 @@ func buildNonce(t *testing.T, key Key, rawPayload []byte) string {
 	aead, err := newCipher(key.Value, nonce[:])
 	require.NoError(t, err)
 
-	ciphertext := aead.Seal(nil, nonce[:nonceAEADNonceSize], rawPayload, nil)
+	ciphertext := aead.Seal(nil, nonce[:nonceAEADNonceSize], rawPayload, []byte(key.KID))
 
-	return key.KID + "." +
+	return base64.RawURLEncoding.EncodeToString([]byte(key.KID)) + "." +
 		base64.RawURLEncoding.EncodeToString(nonce[:]) + "." +
 		base64.RawURLEncoding.EncodeToString(ciphertext)
 }
