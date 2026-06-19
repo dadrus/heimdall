@@ -42,6 +42,14 @@ type payload struct {
 	Binding  [nonceBindingSize]byte
 }
 
+// NewNonce creates a new nonce.
+// The structure is as follows:
+// <nonce> = b64(kid).b64(rand).b64(aead(<version> || <issued-at> || <binding>))
+//
+// The aead key is derived from the provided key and the generated random number
+// for each nonce.
+// kid is authenticity protected.
+// binding is optional and caller-specific.
 func NewNonce(key Key, opts ...CreateOption) (string, error) {
 	cfg := createConfig{}
 	for _, opt := range opts {
@@ -141,7 +149,7 @@ func (p *payload) encode(key Key) (string, error) {
 	return string(out), nil
 }
 
-//nolint:cyclop
+//nolint:cyclop, funlen
 func (p *payload) decode(resolver KeyResolver, value string) error {
 	var (
 		nonce         [nonceRandomSize]byte
@@ -173,10 +181,6 @@ func (p *payload) decode(resolver KeyResolver, value string) error {
 	if err != nil {
 		return errorchain.NewWithMessage(ErrNonceInvalid, "decoding key id failed").
 			CausedBy(err)
-	}
-
-	if kidSize == 0 {
-		return errorchain.NewWithMessage(ErrNonceInvalid, "invalid format")
 	}
 
 	kid := stringx.ToString(kidBuf[:kidSize])
