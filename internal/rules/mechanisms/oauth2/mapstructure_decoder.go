@@ -62,29 +62,27 @@ func DecodeScopesMatcherHookFunc() mapstructure.DecodeHookFunc {
 
 type scopeMatcherFactory func(scopes []string) (ScopesMatcher, error)
 
+type scopePatternSource string
+
+const (
+	scopePatternSourceGranted  scopePatternSource = "granted"
+	scopePatternSourceRequired scopePatternSource = "required"
+)
+
 func decodeMatcherFromMap(data any) (ScopesMatcher, error) {
 	typed, err := asStringMap(data)
 	if err != nil {
 		return nil, err
 	}
 
-	createMatcher := func(scopes []string) (ScopesMatcher, error) {
-		return ExactScopeStrategyMatcher(scopes), nil
+	createMatcher, err := scopeMatcherFactoryFromConfig(typed)
+	if err != nil {
+		return nil, err
 	}
 
-	if name, ok := typed["matching_strategy"]; ok {
-		strategy, ok := name.(string)
-		if !ok {
-			return nil, errorchain.NewWithMessage(
-				pipeline.ErrConfiguration,
-				"invalid matching strategy type",
-			)
-		}
-
-		createMatcher, err = matcherFactory(strategy)
-		if err != nil {
-			return nil, err
-		}
+	match, err := scopeListMatchFromConfig(typed)
+	if err != nil {
+		return nil, err
 	}
 
 	values, ok := typed["values"]
@@ -95,10 +93,118 @@ func decodeMatcherFromMap(data any) (ScopesMatcher, error) {
 		)
 	}
 
-	return createMatcherFromValues(createMatcher, values)
+	scopes, err := scopesFromValues(values)
+	if err != nil {
+		return nil, err
+	}
+
+	return createListMatcher(match, scopes, createMatcher)
+}
+
+func scopeMatcherFactoryFromConfig(typed map[string]any) (scopeMatcherFactory, error) {
+	createMatcher := func(scopes []string) (ScopesMatcher, error) {
+		return ExactScopeStrategyMatcher(scopes), nil
+	}
+
+	rawStrategy, ok := typed["matching_strategy"]
+	if !ok {
+		if _, ok := typed["pattern_source"]; ok {
+			return nil, errorchain.NewWithMessage(
+				pipeline.ErrConfiguration,
+				"scope pattern source is only supported with wildcard matching strategy",
+			)
+		}
+
+		return createMatcher, nil
+	}
+
+	strategy, ok := rawStrategy.(string)
+	if !ok {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"invalid matching strategy type",
+		)
+	}
+
+	patternSource, err := scopePatternSourceFromConfig(typed)
+	if err != nil {
+		return nil, err
+	}
+
+	return matcherFactory(strategy, patternSource)
+}
+
+func scopePatternSourceFromConfig(typed map[string]any) (scopePatternSource, error) {
+	raw, ok := typed["pattern_source"]
+	if !ok {
+		return "", nil
+	}
+
+	source, ok := raw.(string)
+	if !ok {
+		return "", errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"invalid scope pattern source type",
+		)
+	}
+
+	switch source {
+	case string(scopePatternSourceGranted):
+		return scopePatternSourceGranted, nil
+	case string(scopePatternSourceRequired):
+		return scopePatternSourceRequired, nil
+	default:
+		return "", errorchain.NewWithMessagef(
+			pipeline.ErrConfiguration,
+			"unsupported scope pattern source \"%s\"",
+			source,
+		)
+	}
+}
+
+func scopeListMatchFromConfig(typed map[string]any) (string, error) {
+	raw, ok := typed["match"]
+	if !ok {
+		return "all", nil
+	}
+
+	match, ok := raw.(string)
+	if !ok {
+		return "", errorchain.NewWithMessage(
+			pipeline.ErrConfiguration,
+			"invalid scope match type",
+		)
+	}
+
+	return match, nil
+}
+
+func createListMatcher(match string, scopes []string, createMatcher scopeMatcherFactory) (ScopesMatcher, error) {
+	switch match {
+	case "all":
+		return createMatcher(scopes)
+	case "any":
+		matcher, err := NewAnyScopeMatcher(scopes, createMatcher)
+		if err != nil {
+			return nil, err
+		}
+
+		return matcher, nil
+	default:
+		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration, "unsupported scope match \"%s\"", match)
+	}
 }
 
 func createMatcherFromValues(createMatcher scopeMatcherFactory, values any) (ScopesMatcher, error) {
+	scopes, err := scopesFromValues(values)
+	if err != nil {
+		return nil, err
+	}
+
+	return createMatcher(scopes)
+}
+
+func scopesFromValues(values any) ([]string, error) {
 	raw, ok := values.([]any)
 	if !ok {
 		return nil, errorchain.NewWithMessage(
@@ -120,26 +226,57 @@ func createMatcherFromValues(createMatcher scopeMatcherFactory, values any) (Sco
 		scopes[i] = scope
 	}
 
-	return createMatcher(scopes)
+	return scopes, nil
 }
 
-func matcherFactory(name string) (scopeMatcherFactory, error) {
+func matcherFactory(name string, patternSource scopePatternSource) (scopeMatcherFactory, error) {
 	switch name {
 	case "exact":
+		if patternSource != "" {
+			return nil, errorchain.NewWithMessage(
+				pipeline.ErrConfiguration,
+				"scope pattern source is only supported with wildcard matching strategy",
+			)
+		}
+
 		return func(scopes []string) (ScopesMatcher, error) {
 			return ExactScopeStrategyMatcher(scopes), nil
 		}, nil
 	case "hierarchic":
+		if patternSource != "" {
+			return nil, errorchain.NewWithMessage(
+				pipeline.ErrConfiguration,
+				"scope pattern source is only supported with wildcard matching strategy",
+			)
+		}
+
 		return func(scopes []string) (ScopesMatcher, error) {
 			return HierarchicScopeStrategyMatcher(scopes), nil
 		}, nil
 	case "wildcard":
-		return func(scopes []string) (ScopesMatcher, error) {
-			return WildcardScopeStrategyMatcher(scopes), nil
-		}, nil
+		if patternSource == "" {
+			patternSource = scopePatternSourceGranted
+		}
+
+		switch patternSource {
+		case scopePatternSourceGranted:
+			return func(scopes []string) (ScopesMatcher, error) {
+				return WildcardScopeStrategyMatcher(scopes), nil
+			}, nil
+		case scopePatternSourceRequired:
+			return func(scopes []string) (ScopesMatcher, error) {
+				return RequiredWildcardScopeStrategyMatcher(scopes), nil
+			}, nil
+		}
 	default:
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration, "unsupported strategy \"%s\"", name)
 	}
+
+	return nil, errorchain.NewWithMessagef(
+		pipeline.ErrConfiguration,
+		"unsupported scope pattern source \"%s\"",
+		patternSource,
+	)
 }
 
 func DecodePoPStrategyHookFunc(ctx app.Context) mapstructure.DecodeHookFunc {

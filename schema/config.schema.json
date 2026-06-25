@@ -1335,13 +1335,50 @@
                     "wildcard"
                   ]
                 },
+                "match": {
+                  "description": "Sets whether all configured scope values must match, or whether any single configured scope value is sufficient.",
+                  "type": "string",
+                  "default": "all",
+                  "enum": [
+                    "all",
+                    "any"
+                  ]
+                },
+                "pattern_source": {
+                  "description": "Sets which side may contain wildcard patterns when matching_strategy is wildcard. The default value preserves the existing behavior, where granted token scopes may contain wildcard patterns. Use required to allow configured required scopes to contain wildcard patterns matched against concrete token scopes.",
+                  "type": "string",
+                  "default": "granted",
+                  "enum": [
+                    "granted",
+                    "required"
+                  ]
+                },
                 "values": {
                   "type": "array",
                   "items": {
                     "type": "string"
                   }
                 }
-              }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "required": [
+                      "pattern_source"
+                    ]
+                  },
+                  "then": {
+                    "required": [
+                      "matching_strategy"
+                    ],
+                    "properties": {
+                      "matching_strategy": {
+                        "const": "wildcard"
+                      }
+                    }
+                  }
+                }
+              ]
             },
             {
               "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this mechanism.\n If the token used in the Authorization header did not request that specific scope, the request is denied. When only the actual scopes are configured the matching strategy is 'exact'",

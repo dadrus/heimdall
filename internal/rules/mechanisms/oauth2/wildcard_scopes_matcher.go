@@ -24,7 +24,7 @@ func (m WildcardScopeStrategyMatcher) Match(scopes []string) error {
 	var missing []string
 
 	for _, required := range m {
-		if !m.doMatch(scopes, required) {
+		if !wildcardScopeMatch(scopes, required) {
 			missing = append(missing, required)
 		}
 	}
@@ -36,7 +36,17 @@ func (m WildcardScopeStrategyMatcher) Match(scopes []string) error {
 	return nil
 }
 
-func (m WildcardScopeStrategyMatcher) doMatch(matchers []string, needle string) bool {
+func wildcardScopeMatch(matchers []string, needles ...string) bool {
+	for _, needle := range needles {
+		if doWildcardScopeMatch(matchers, needle) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func doWildcardScopeMatch(matchers []string, needle string) bool {
 	needleParts := strings.Split(needle, ".")
 
 	for _, matcher := range matchers {

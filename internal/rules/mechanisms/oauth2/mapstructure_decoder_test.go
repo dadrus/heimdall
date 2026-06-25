@@ -62,6 +62,41 @@ scopes:
 				assert.ElementsMatch(t, matcher, []string{"foo", "bar"})
 			},
 		},
+		"structure with scopes under value, wildcard strategy and default pattern source": {
+			config: []byte(`
+scopes:
+  values:
+    - documents.read
+  matching_strategy: wildcard
+`),
+			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.IsType(t, WildcardScopeStrategyMatcher{}, matcher)
+				require.NoError(t, matcher.Match([]string{"documents.*"}))
+				require.Error(t, matcher.Match([]string{"documents.write"}))
+			},
+		},
+		"structure with scopes under value, wildcard strategy and required pattern source": {
+			config: []byte(`
+scopes:
+  values:
+    - documents.*
+  matching_strategy: wildcard
+  pattern_source: required
+`),
+			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.IsType(t, RequiredWildcardScopeStrategyMatcher{}, matcher)
+				require.NoError(t, matcher.Match([]string{"documents.read"}))
+				require.Error(t, matcher.Match([]string{"reports.read"}))
+			},
+		},
 		"structure with scopes under value and exact strategy": {
 			config: []byte(`
 scopes:
@@ -94,6 +129,72 @@ scopes:
 
 				assert.IsType(t, HierarchicScopeStrategyMatcher{}, matcher)
 				assert.ElementsMatch(t, matcher, []string{"foo", "bar"})
+			},
+		},
+		"structure with scopes under value and any match": {
+			config: []byte(`
+scopes:
+  values:
+    - read
+    - write
+  match: any
+`),
+			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				anyMatcher, ok := matcher.(AnyScopeMatcher)
+				require.True(t, ok)
+				assert.ElementsMatch(t, []string{"read", "write"}, anyMatcher.required)
+				assert.Len(t, anyMatcher.matchers, 2)
+			},
+		},
+		"structure with scopes under value, any match and wildcard strategy": {
+			config: []byte(`
+scopes:
+  values:
+    - documents.read
+    - reports.read
+  match: any
+  matching_strategy: wildcard
+`),
+			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				anyMatcher, ok := matcher.(AnyScopeMatcher)
+				require.True(t, ok)
+				assert.ElementsMatch(t, []string{"documents.read", "reports.read"}, anyMatcher.required)
+				require.Len(t, anyMatcher.matchers, 2)
+				assert.IsType(t, WildcardScopeStrategyMatcher{}, anyMatcher.matchers[0])
+				assert.IsType(t, WildcardScopeStrategyMatcher{}, anyMatcher.matchers[1])
+			},
+		},
+		"structure with scopes under value, any match, wildcard strategy and required pattern source": {
+			config: []byte(`
+scopes:
+  values:
+    - documents.*
+    - reports.*
+  match: any
+  matching_strategy: wildcard
+  pattern_source: required
+`),
+			assert: func(t *testing.T, err error, matcher ScopesMatcher) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				anyMatcher, ok := matcher.(AnyScopeMatcher)
+				require.True(t, ok)
+				assert.ElementsMatch(t, []string{"documents.*", "reports.*"}, anyMatcher.required)
+				require.Len(t, anyMatcher.matchers, 2)
+				assert.IsType(t, RequiredWildcardScopeStrategyMatcher{}, anyMatcher.matchers[0])
+				assert.IsType(t, RequiredWildcardScopeStrategyMatcher{}, anyMatcher.matchers[1])
+				require.NoError(t, matcher.Match([]string{"reports.read"}))
+				require.Error(t, matcher.Match([]string{"admin"}))
 			},
 		},
 		"only scopes provided under values property": {
@@ -166,6 +267,108 @@ scopes:
 
 				require.ErrorIs(t, err, pipeline.ErrConfiguration)
 				require.ErrorContains(t, err, `invalid matching strategy type`)
+			},
+		},
+		"fails if match is unsupported": {
+			config: []byte(`
+scopes:
+  values:
+    - read
+  match: unsupported
+`),
+			assert: func(t *testing.T, err error, _ ScopesMatcher) {
+				t.Helper()
+
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, `unsupported scope match "unsupported"`)
+			},
+		},
+		"fails if match is of wrong type": {
+			config: []byte(`
+scopes:
+  values:
+    - read
+  match: 1
+`),
+			assert: func(t *testing.T, err error, _ ScopesMatcher) {
+				t.Helper()
+
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, `invalid scope match type`)
+			},
+		},
+		"fails if pattern source is unsupported": {
+			config: []byte(`
+scopes:
+  values:
+    - read
+  matching_strategy: wildcard
+  pattern_source: unsupported
+`),
+			assert: func(t *testing.T, err error, _ ScopesMatcher) {
+				t.Helper()
+
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, `unsupported scope pattern source "unsupported"`)
+			},
+		},
+		"fails if pattern source is of wrong type": {
+			config: []byte(`
+scopes:
+  values:
+    - read
+  matching_strategy: wildcard
+  pattern_source: 1
+`),
+			assert: func(t *testing.T, err error, _ ScopesMatcher) {
+				t.Helper()
+
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, `invalid scope pattern source type`)
+			},
+		},
+		"fails if pattern source is configured without wildcard strategy": {
+			config: []byte(`
+scopes:
+  values:
+    - read
+  matching_strategy: exact
+  pattern_source: required
+`),
+			assert: func(t *testing.T, err error, _ ScopesMatcher) {
+				t.Helper()
+
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, `scope pattern source is only supported with wildcard matching strategy`)
+			},
+		},
+		"fails if granted pattern source is configured without wildcard strategy": {
+			config: []byte(`
+scopes:
+  values:
+    - read
+  matching_strategy: exact
+  pattern_source: granted
+`),
+			assert: func(t *testing.T, err error, _ ScopesMatcher) {
+				t.Helper()
+
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, `scope pattern source is only supported with wildcard matching strategy`)
+			},
+		},
+		"fails if pattern source is configured without matching strategy": {
+			config: []byte(`
+scopes:
+  values:
+    - read
+  pattern_source: granted
+`),
+			assert: func(t *testing.T, err error, _ ScopesMatcher) {
+				t.Helper()
+
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, `scope pattern source is only supported with wildcard matching strategy`)
 			},
 		},
 		"fails if values are missing": {
