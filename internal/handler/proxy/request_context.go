@@ -18,6 +18,7 @@ package proxy
 
 import (
 	"crypto/tls"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -136,15 +137,17 @@ func (r *requestContext) Finalize(upstream pipeline.Backend) error {
 		ErrorHandler: func(_ http.ResponseWriter, _ *http.Request, err error) {
 			logger.Error().Err(err).Msg("Proxying error")
 
-			errHolder.err = errorchain.NewWithMessage(pipeline.ErrCommunication, "Failed to proxy request").
-				CausedBy(err)
+			errHolder.err = proxyError(err)
 		},
 		Rewrite: r.rewriteRequest(upstream.URL(), upstream.ForwardHostHeader()),
-		Transport: otelhttp.NewTransport(
-			httpx.NewTraceRoundTripper(r.rt),
-			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
-				return r.Proto + " " + r.Method + " " + r.URL.Path + " @" + r.URL.Host
-			})),
+		Transport: &httpMessageFinalizingRoundTripper{
+			base: otelhttp.NewTransport(
+				httpx.NewTraceRoundTripper(r.rt),
+				otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
+					return r.Proto + " " + r.Method + " " + r.URL.Path + " @" + r.URL.Host
+				})),
+			finalizers: r.HTTPMessageFinalizersForUpstream,
+		},
 	}
 
 	proxy.ServeHTTP(r.rw, r.req)
@@ -175,6 +178,57 @@ func (r *requestContext) rewriteRequest(targetURL *url.URL, passHostHeader bool)
 			proxyReq.Out.Host = proxyReq.In.Host
 		}
 	}
+}
+
+type httpMessageFinalizingRoundTripper struct {
+	base       http.RoundTripper
+	finalizers func() []pipeline.HTTPMessageFinalizer
+}
+
+func (rt *httpMessageFinalizingRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	finalizers := rt.finalizers()
+	if len(finalizers) == 0 {
+		return rt.base.RoundTrip(req)
+	}
+
+	header, err := pipeline.ApplyHTTPMessageFinalizers(
+		pipeline.HTTPMessageFromHTTPRequest(
+			req,
+			pipeline.WithMaxHTTPMessageBodySize(pipeline.MaxHTTPMessageFinalizerBodySize(finalizers...)),
+		),
+		finalizers...,
+	)
+	if err != nil {
+		return nil, errorchain.NewWithMessage(
+			pipeline.ErrInternal,
+			"failed to finalize upstream http message",
+		).CausedBy(err)
+	}
+
+	req.Header = header
+
+	return rt.base.RoundTrip(req)
+}
+
+func proxyError(err error) error {
+	for _, target := range []error{
+		pipeline.ErrArgument,
+		pipeline.ErrAuthentication,
+		pipeline.ErrAuthorization,
+		pipeline.ErrCommunication,
+		pipeline.ErrCommunicationTimeout,
+		pipeline.ErrConfiguration,
+		pipeline.ErrInternal,
+		pipeline.ErrNoRuleFound,
+		pipeline.ErrMalformedRequest,
+	} {
+		if errors.Is(err, target) {
+			return err
+		}
+	}
+
+	return errorchain.NewWithMessage(pipeline.ErrCommunication, "Failed to proxy request").
+		CausedBy(err)
 }
 
 func (r *requestContext) rewriteForwardedHeader(in, out *http.Request) {

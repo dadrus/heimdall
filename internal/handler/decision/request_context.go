@@ -87,6 +87,10 @@ func (r *requestContext) Finalize(_ pipeline.Backend) error {
 
 	zerolog.Ctx(r.Context()).Debug().Msg("Creating response")
 
+	if err := r.applyHTTPMessageFinalizers(); err != nil {
+		return err
+	}
+
 	uh := r.UpstreamHeaders()
 	for name, values := range uh {
 		for _, value := range values {
@@ -101,4 +105,55 @@ func (r *requestContext) Finalize(_ pipeline.Backend) error {
 	r.rw.WriteHeader(r.responseCode)
 
 	return nil
+}
+
+func (r *requestContext) applyHTTPMessageFinalizers() error {
+	finalizers := r.HTTPMessageFinalizersForUpstream()
+	if len(finalizers) == 0 {
+		return nil
+	}
+
+	msg, err := r.HTTPMessage()
+	if err != nil {
+		return err
+	}
+
+	msg.Header = r.upstreamHeaderView(msg.Header)
+
+	header, err := pipeline.ApplyHTTPMessageFinalizers(msg, finalizers...)
+	if err != nil {
+		return err
+	}
+
+	for _, name := range []string{"Content-Digest", "Signature", "Signature-Input"} {
+		r.UpstreamHeaders().Del(name)
+
+		for _, value := range header.Values(name) {
+			r.AddHeaderForUpstream(name, value)
+		}
+	}
+
+	if cookie := header.Get("Cookie"); len(r.UpstreamCookies()) != 0 && len(cookie) != 0 {
+		r.UpstreamHeaders().Set("Cookie", cookie)
+	}
+
+	return nil
+}
+
+func (r *requestContext) upstreamHeaderView(header http.Header) http.Header {
+	res := header.Clone()
+
+	for name, values := range r.UpstreamHeaders() {
+		res.Del(name)
+
+		for _, value := range values {
+			res.Add(name, value)
+		}
+	}
+
+	if cookie := requestcontext.CookieHeader(r.UpstreamCookies()); len(cookie) != 0 {
+		res.Set("Cookie", cookie)
+	}
+
+	return res
 }

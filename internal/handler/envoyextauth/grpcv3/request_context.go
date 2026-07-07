@@ -17,7 +17,9 @@
 package grpcv3
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -30,6 +32,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 
+	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/x"
@@ -68,6 +71,7 @@ type RequestContext struct {
 	reqRawBody      []byte
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
+	upstreamHMFs    []pipeline.HTTPMessageFinalizer
 	err             error
 	hmdlReq         *pipeline.Request
 
@@ -136,6 +140,7 @@ func (r *RequestContext) Reset() {
 	r.reqRawBody = nil
 	r.savedBody = nil
 	r.err = nil
+	r.upstreamHMFs = r.upstreamHMFs[:0]
 
 	clear(r.upstreamHeaders)
 	clear(r.upstreamCookies)
@@ -160,6 +165,36 @@ func canonicalizeHeaders(headers map[string]string) map[string]string {
 func (r *RequestContext) Request() *pipeline.Request { return r.hmdlReq }
 func (r *RequestContext) Headers() map[string]string { return r.reqHeaders }
 func (r *RequestContext) Header(name string) string  { return r.reqHeaders[name] }
+
+func (r *RequestContext) HTTPMessage(options ...pipeline.HTTPMessageOption) (*pipeline.HTTPMessage, error) {
+	header := make(http.Header, len(r.reqHeaders))
+	for name, value := range r.reqHeaders {
+		if name != "Host" {
+			header.Set(name, value)
+		}
+	}
+
+	opts := pipeline.NewHTTPMessageOptions(options...)
+
+	return &pipeline.HTTPMessage{
+		Context:   r.ctx,
+		Method:    r.hmdlReq.Method,
+		Authority: r.hmdlReq.URL.Host,
+		URL:       new(r.hmdlReq.URL.URL),
+		Header:    header,
+		Body: func() (io.ReadCloser, error) {
+			if r.reqRawBody == nil {
+				return http.NoBody, nil
+			}
+
+			if opts.MaxBodySize > 0 && int64(len(r.reqRawBody)) > opts.MaxBodySize {
+				return nil, pipeline.ErrHTTPMessageBodyTooLarge
+			}
+
+			return io.NopCloser(bytes.NewReader(r.reqRawBody)), nil
+		},
+	}, nil
+}
 
 func (r *RequestContext) Cookie(name string) string {
 	values, ok := r.reqHeaders["Cookie"]
@@ -204,6 +239,13 @@ func (r *RequestContext) Error() error                            { return r.err
 func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
 func (r *RequestContext) Outputs() map[string]any                 { return r.outputs }
+func (r *RequestContext) AddHTTPMessageFinalizerForUpstream(finalizer pipeline.HTTPMessageFinalizer) {
+	r.upstreamHMFs = append(r.upstreamHMFs, finalizer)
+}
+
+func (r *RequestContext) HTTPMessageFinalizersForUpstream() []pipeline.HTTPMessageFinalizer {
+	return r.upstreamHMFs
+}
 
 func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
 	r.ctx = ctx
@@ -217,6 +259,10 @@ func (r *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 	}
 
 	zerolog.Ctx(r.ctx).Debug().Msg("Creating response")
+
+	if err := r.applyHTTPMessageFinalizers(); err != nil {
+		return nil, err
+	}
 
 	headers := make([]*envoy_core.HeaderValueOption,
 		len(r.upstreamHeaders)+x.IfThenElse(len(r.upstreamCookies) == 0, 0, 1))
@@ -233,19 +279,11 @@ func (r *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 		hidx++
 	}
 
-	if len(r.upstreamCookies) != 0 {
-		cookies := make([]string, len(r.upstreamCookies))
-		cidx := 0
-
-		for k, v := range r.upstreamCookies {
-			cookies[cidx] = k + "=" + v
-			cidx++
-		}
-
+	if cookie := requestcontext.CookieHeader(r.upstreamCookies); len(cookie) != 0 {
 		headers[hidx] = &envoy_core.HeaderValueOption{
 			Header: &envoy_core.HeaderValue{
 				Key:   "Cookie",
-				Value: strings.Join(cookies, ";"),
+				Value: cookie,
 			},
 		}
 	}
@@ -256,4 +294,51 @@ func (r *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 			OkResponse: &envoy_auth.OkHttpResponse{Headers: headers},
 		},
 	}, nil
+}
+
+func (r *RequestContext) applyHTTPMessageFinalizers() error {
+	finalizers := r.HTTPMessageFinalizersForUpstream()
+	if len(finalizers) == 0 {
+		return nil
+	}
+
+	msg, err := r.HTTPMessage()
+	if err != nil {
+		return err
+	}
+
+	msg.Header = r.upstreamHeaderView(msg.Header)
+
+	header, err := pipeline.ApplyHTTPMessageFinalizers(msg, finalizers...)
+	if err != nil {
+		return err
+	}
+
+	for _, name := range []string{"Content-Digest", "Signature", "Signature-Input"} {
+		r.upstreamHeaders.Del(name)
+
+		for _, value := range header.Values(name) {
+			r.AddHeaderForUpstream(name, value)
+		}
+	}
+
+	return nil
+}
+
+func (r *RequestContext) upstreamHeaderView(header http.Header) http.Header {
+	res := header.Clone()
+
+	for name, values := range r.upstreamHeaders {
+		res.Del(name)
+
+		for _, value := range values {
+			res.Add(name, value)
+		}
+	}
+
+	if cookie := requestcontext.CookieHeader(r.upstreamCookies); len(cookie) != 0 {
+		res.Set("Cookie", cookie)
+	}
+
+	return res
 }

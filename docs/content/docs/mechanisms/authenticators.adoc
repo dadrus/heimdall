@@ -101,6 +101,87 @@ config:
 ----
 ====
 
+== HTTP Message Signatures
+
+This authenticator verifies HTTP message signatures according to https://datatracker.ietf.org/doc/html/rfc9421[RFC 9421]. If verification succeeds, it creates a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_principal" >}}[Principal] from the verified key information. By default, the principal id is the verified signature key id.
+
+To enable the usage of this authenticator, you have to set the `type` property to `http_message_signatures`.
+
+Configuration using the `config` property is mandatory. Following properties are available:
+
+* *`key_store`*: _link:{{< relref "/docs/operations/secret_management.adoc#_secret_references" >}}[Secret Reference]_ (mandatory, not overridable)
++
+Reference to the secret set containing the asymmetric or symmetric keys accepted for request signature verification. For asymmetric keys, heimdall uses the public key corresponding to the configured key material.
+
+* *`required_components`*: _string array_ (mandatory, overridable)
++
+The HTTP message components that must be covered by the signature, for example `@method`, `@authority`, and `@path`. Use `@authority` for request authority coverage. The literal `host` field is rejected for this authenticator because it does not consistently represent authority across HTTP versions.
+
+* *`tag`*: _string_ (optional, overridable)
++
+The required HTTP Message Signatures `tag` parameter. Configure this when a rule must enforce a specific HMS profile. If error signaling is enabled, this also lets heimdall negotiate a missing signature for that profile.
+
+* *`max_age`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
++
+Maximum accepted age of the signature. Defaults to `30s`.
+
+* *`allowed_time_skew`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
++
+Allowed clock skew for `created` and `expires` signature parameters. Defaults to `0s`.
+
+* *`max_body_size`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional, overridable)
++
+Maximum request body size that can be read while verifying signature components such as `content-digest`. Requests whose body exceeds this limit fail authentication. Defaults to `1MB`.
+
+* *`created_timestamp_required`*: _boolean_ (optional, overridable)
++
+Whether the `created` signature parameter is required. Defaults to `true`.
+
+* *`expires_timestamp_required`*: _boolean_ (optional, overridable)
++
+Whether the `expires` signature parameter is required. Defaults to `true`.
+
+* *`validate_all_signatures`*: _boolean_ (optional, overridable)
++
+Whether all request signatures should be validated when no `tag` is configured. Defaults to `true`. If this is set to `false`, `tag` must be configured.
+
+* *`principal`*: _link:{{< relref "/docs/configuration/types.adoc#_principal" >}}[Principal]_ (optional, overridable)
++
+Where to extract the principal information from the verified key data. The default principal id expression is `key_id`.
+
+* *`error_signaling`*: _HTTPMessageSignaturesErrorSignaling_ (optional, overridable)
++
+Configures whether missing or non-applicable signatures should be signaled using the `Accept-Signature` response header. Signature negotiation is only available for tagged HMS profiles, so `tag` must be configured for heimdall to emit this header.
++
+Following properties are available:
+
+** *`enabled`*: _boolean_ (optional, overridable)
++
+Enables the error signaling. Defaults to `false`.
+
+.Full configuration of HTTP Message Signatures authenticator
+====
+[source, yaml]
+----
+id: hms_clients
+type: http_message_signatures
+config:
+  key_store:
+    source: my_jwks_source
+    selector: clients
+  required_components:
+    - "@method"
+    - "@authority"
+    - "@path"
+  max_body_size: 1MB
+  tag: hms-client
+  principal:
+    id: key_id
+  error_signaling:
+    enabled: true
+----
+====
+
 == Generic
 
 This authenticator is kind of a Swiss knife and can do a lot depending on the given configuration. It verifies the authentication status of a principal by making use of values available in cookies, headers, query parameters, or even body of the HTTP request and by communicating with the actual authentication system to perform the verification of the principal authentication status on the one hand, and to get the information about the principal on the other hand. There is however one limitation: it can only deal with JSON responses.

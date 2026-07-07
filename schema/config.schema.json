@@ -1479,6 +1479,18 @@
         }
       }
     },
+    "httpMessageSignaturesErrorSignaling": {
+      "description": "Configures HTTP Message Signatures negotiation using the Accept-Signature response header.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "description": "Enables or disables HTTP Message Signatures error signaling.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
     "authenticatorAnonymous": {
       "description": "Anonymous Authenticator",
       "type": "object",
@@ -1751,6 +1763,106 @@
             },
             "error_signaling": {
               "$ref": "#/definitions/basicAuthErrorSignaling"
+            }
+          }
+        }
+      }
+    },
+    "authenticatorHTTPMessageSignatures": {
+      "description": "HTTP Message Signatures Authenticator",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "const": "http_message_signatures"
+        },
+        "id": {
+          "description": "The unique id of the authenticator to be used in the rule definition",
+          "type": "string"
+        },
+        "config": {
+          "description": "HTTP Message Signatures Authenticator Configuration",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "key_store",
+            "required_components"
+          ],
+          "anyOf": [
+            {
+              "not": {
+                "required": ["validate_all_signatures"],
+                "properties": {
+                  "validate_all_signatures": { "const": false }
+                }
+              }
+            },
+            {
+              "required": ["tag"],
+              "properties": {
+                "tag": { "minLength": 1 }
+              }
+            }
+          ],
+          "properties": {
+            "key_store": {
+              "description": "The secret set containing verification keys.",
+              "$ref": "#/definitions/secretReference"
+            },
+            "required_components": {
+              "description": "The HTTP message components that must be covered by the signature.",
+              "type": "array",
+              "additionalItems": false,
+              "minItems": 1,
+              "items": {
+                "type": "string",
+                "not": {
+                  "pattern": "^\\s*[Hh][Oo][Ss][Tt](\\s*;.*)?$"
+                }
+              }
+            },
+            "tag": {
+              "description": "The required HTTP Message Signatures tag parameter.",
+              "type": "string"
+            },
+            "max_age": {
+              "type": "string",
+              "description": "Maximum accepted age of a signature.",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "30s"
+            },
+            "allowed_time_skew": {
+              "type": "string",
+              "description": "Allowed clock skew for created and expires signature parameters.",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "0s"
+            },
+            "max_body_size": {
+              "type": "string",
+              "description": "Maximum request body size that can be read while verifying signature components such as content-digest.",
+              "pattern": "^[0-9]+(B|KB|MB)$",
+              "default": "1MB"
+            },
+            "created_timestamp_required": {
+              "type": "boolean",
+              "description": "Whether the created signature parameter is required.",
+              "default": true
+            },
+            "expires_timestamp_required": {
+              "type": "boolean",
+              "description": "Whether the expires signature parameter is required.",
+              "default": true
+            },
+            "validate_all_signatures": {
+              "type": "boolean",
+              "description": "Whether all signatures should be validated when no tag is configured.",
+              "default": true
+            },
+            "principal": {
+              "$ref": "#/definitions/principalConfiguration"
+            },
+            "error_signaling": {
+              "$ref": "#/definitions/httpMessageSignaturesErrorSignaling"
             }
           }
         }
@@ -2134,6 +2246,85 @@
                 "type": "string"
               },
               "uniqueItems": true
+            }
+          }
+        }
+      }
+    },
+    "finalizerHTTPMessageSignatures": {
+      "description": "Signs the upstream HTTP request using HTTP Message Signatures",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "config"
+      ],
+      "properties": {
+        "type": {
+          "const": "http_message_signatures"
+        },
+        "id": {
+          "description": "The unique id of the finalizer to be used in the rule definition",
+          "type": "string"
+        },
+        "config": {
+          "description": "HTTP Message Signatures finalizer configuration",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "signer",
+            "components"
+          ],
+          "properties": {
+            "signer": {
+              "description": "Configures signing key material and the signature tag.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "secret"
+              ],
+              "properties": {
+                "name": {
+                  "description": "The signer name used as the HTTP Message Signatures tag.",
+                  "type": "string",
+                  "default": "heimdall"
+                },
+                "secret": {
+                  "description": "Reference to a secret in the secret store to sign the HTTP message with.",
+                  "$ref": "#/definitions/secretReference"
+                }
+              }
+            },
+            "components": {
+              "description": "HTTP message components to cover with the signature. Use @authority for request authority coverage; host is rejected.",
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "string"
+              }
+            },
+            "ttl": {
+              "description": "Sets the validity duration of the signature.",
+              "type": "string",
+              "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+              "default": "1m",
+              "examples": [
+                "1h",
+                "1m",
+                "30s"
+              ]
+            },
+            "label": {
+              "description": "The signature label used in Signature and Signature-Input.",
+              "type": "string",
+              "default": "sig"
+            },
+            "max_body_size": {
+              "description": "Maximum request body size that can be read while signing components such as content-digest.",
+              "type": "string",
+              "pattern": "^\\d+(\\.\\d+)?\\s*(b|B|kb|kB|Kb|KB|mb|mB|Mb|MB|gb|gB|Gb|GB|tb|tB|Tb|TB|pb|pB|Pb|PB)$",
+              "default": "1MB"
             }
           }
         }
@@ -2557,6 +2748,13 @@
                   "properties": { "type": { "const": "basic_auth" } }
                 },
                 "then": { "$ref": "#/definitions/authenticatorBasicAuth" }
+              },
+              {
+                "if": {
+                  "required": ["type"],
+                  "properties": { "type": { "const": "http_message_signatures" } }
+                },
+                "then": { "$ref": "#/definitions/authenticatorHTTPMessageSignatures" }
               }
             ],
             "properties": {
@@ -2567,7 +2765,8 @@
                   "generic",
                   "oauth2_introspection",
                   "jwt",
-                  "basic_auth"
+                  "basic_auth",
+                  "http_message_signatures"
                 ]
               }
             }
@@ -2659,7 +2858,7 @@
             "required": ["type"],
             "properties": {
               "type": {
-                "enum": ["noop", "jwt", "header", "cookie", "oauth2_client_credentials"]
+                "enum": ["noop", "jwt", "header", "cookie", "oauth2_client_credentials", "http_message_signatures"]
               }
             },
             "allOf": [
@@ -2697,6 +2896,13 @@
                   "properties": { "type": { "const": "oauth2_client_credentials" } }
                 },
                 "then": { "$ref": "#/definitions/finalizerClientCredentials" }
+              },
+              {
+                "if": {
+                  "required": ["type"],
+                  "properties": { "type": { "const": "http_message_signatures" } }
+                },
+                "then": { "$ref": "#/definitions/finalizerHTTPMessageSignatures" }
               }
             ]
           }

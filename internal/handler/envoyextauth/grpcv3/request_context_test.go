@@ -18,8 +18,8 @@ package grpcv3
 
 import (
 	"context"
+	"io"
 	"net/http"
-	"strings"
 	"testing"
 
 	corev3 "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -161,6 +161,82 @@ func TestNewRequestContextXForwardedForMixedValues(t *testing.T) {
 	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1", "10.0.0.2"}, ctx.Request().ClientIPAddresses)
 }
 
+func TestRequestContextHTTPMessage(t *testing.T) {
+	t.Parallel()
+
+	rawBody := []byte(`{"message":"hello"}`)
+	checkReq := &envoy_auth.CheckRequest{
+		Attributes: &envoy_auth.AttributeContext{
+			Request: &envoy_auth.AttributeContext_Request{
+				Http: &envoy_auth.AttributeContext_HttpRequest{
+					Method:  http.MethodPost,
+					Scheme:  "https",
+					Host:    "api.example.test",
+					Path:    "/foo?bar=baz",
+					RawBody: rawBody,
+					Headers: map[string]string{
+						"content-type":   "application/json",
+						"content-length": "19",
+					},
+				},
+			},
+		},
+	}
+
+	cf := newContextFactory()
+
+	ctx := cf.Create(t.Context(), checkReq)
+	defer cf.Destroy(ctx)
+
+	msg, err := ctx.HTTPMessage()
+
+	require.NoError(t, err)
+	require.NotNil(t, msg)
+	assert.Equal(t, http.MethodPost, msg.Method)
+	assert.Equal(t, "https://api.example.test/foo?bar=baz", msg.URL.String())
+	assert.Equal(t, "api.example.test", msg.Authority)
+	assert.Equal(t, "application/json", msg.Header.Get("Content-Type"))
+	assert.Equal(t, "19", msg.Header.Get("Content-Length"))
+
+	bodyReader, err := msg.Body()
+	require.NoError(t, err)
+
+	body, err := io.ReadAll(bodyReader)
+	require.NoError(t, err)
+	assert.Equal(t, rawBody, body)
+}
+
+func TestRequestContextHTTPMessageRejectsBodyOverMaxBodySize(t *testing.T) {
+	t.Parallel()
+
+	checkReq := &envoy_auth.CheckRequest{
+		Attributes: &envoy_auth.AttributeContext{
+			Request: &envoy_auth.AttributeContext_Request{
+				Http: &envoy_auth.AttributeContext_HttpRequest{
+					Method:  http.MethodPost,
+					Scheme:  "https",
+					Host:    "api.example.test",
+					Path:    "/foo",
+					RawBody: []byte(`{"message":"hello"}`),
+				},
+			},
+		},
+	}
+
+	cf := newContextFactory()
+
+	ctx := cf.Create(t.Context(), checkReq)
+	defer cf.Destroy(ctx)
+
+	msg, err := ctx.HTTPMessage(pipeline.WithMaxHTTPMessageBodySize(4))
+	require.NoError(t, err)
+
+	bodyReader, err := msg.Body()
+
+	require.ErrorIs(t, err, pipeline.ErrHTTPMessageBodyTooLarge)
+	assert.Nil(t, bodyReader)
+}
+
 func TestRequestContextFinalize(t *testing.T) {
 	t.Parallel()
 
@@ -255,10 +331,11 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				require.Len(t, okResponse.GetHeaders(), 1)
 				assert.Equal(t, "Cookie", okResponse.GetHeaders()[0].GetHeader().GetKey())
-				values := strings.Split(okResponse.GetHeaders()[0].GetHeader().GetValue(), ";")
-				assert.Len(t, values, 2)
-				assert.Contains(t, okResponse.GetHeaders()[0].GetHeader().GetValue(), "some-cookie=value-1")
-				assert.Contains(t, okResponse.GetHeaders()[0].GetHeader().GetValue(), "some-other-cookie=value-2")
+				assert.Equal(
+					t,
+					"some-cookie=value-1; some-other-cookie=value-2",
+					okResponse.GetHeaders()[0].GetHeader().GetValue(),
+				)
 			},
 		},
 		"successful with multiple header and cookie": {

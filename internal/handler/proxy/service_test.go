@@ -17,6 +17,7 @@
 package proxy
 
 import (
+	"bytes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -36,6 +37,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/inhies/go-bytesize"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -48,6 +50,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/handler/testsupport/hmstest"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	mocks2 "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/secrets"
@@ -1078,6 +1081,277 @@ func TestProxyService(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestProxyServiceHTTPMessageSignaturesAuthenticator(t *testing.T) {
+	t.Parallel()
+
+	port, err := testsupport.GetFreePort()
+	require.NoError(t, err)
+
+	body := []byte(`{"message":"hello"}`)
+	upstreamCalled := false
+
+	upstreamSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		upstreamCalled = true
+
+		receivedBody, err := io.ReadAll(req.Body)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		assert.Equal(t, body, receivedBody)
+
+		rw.WriteHeader(http.StatusNoContent)
+	}))
+	defer upstreamSrv.Close()
+
+	upstreamURL, err := url.Parse(upstreamSrv.URL)
+	require.NoError(t, err)
+
+	privateKey := hmstest.NewEd25519PrivateKey(t)
+	authenticator := hmstest.NewHTTPMessageSignaturesAuthenticatorStep(
+		t,
+		privateKey,
+		hmstest.RequestWithDigestComponents(),
+	)
+
+	exec := mocks2.NewExecutorMock(t)
+	exec.EXPECT().Execute(mock.Anything).RunAndReturn(func(ctx pipeline.Context) (pipeline.Backend, error) {
+		sub := make(pipeline.Subject)
+		if err := authenticator.Execute(ctx, sub); err != nil {
+			return nil, err
+		}
+
+		return hmstest.Backend{Target: upstreamURL, ForwardHost: false}, nil
+	})
+
+	conf := &config.Configuration{
+		Serve: config.ServeConfig{
+			Timeout: config.Timeout{
+				Read:  time.Second,
+				Write: time.Second,
+				Idle:  time.Second,
+			},
+			Host: "127.0.0.1",
+			Port: port,
+		},
+	}
+
+	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+	defer proxy.Shutdown(t.Context())
+
+	factory, err := listener.NewFactory(conf.Serve.Address(), conf.Serve.TLS, nil)
+	require.NoError(t, err)
+
+	lstnr, err := factory.Create(t.Context())
+	require.NoError(t, err)
+
+	go func() {
+		_ = proxy.Serve(lstnr)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		fmt.Sprintf("http://%s/foo", conf.Serve.Address()),
+		bytes.NewReader(body),
+	)
+	require.NoError(t, err)
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Length", strconv.Itoa(len(body)))
+	hmstest.SignRequest(t, req, privateKey, hmstest.RequestWithDigestComponents())
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	defer resp.Body.Close()
+
+	assert.True(t, upstreamCalled)
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
+func TestProxyServiceHTTPMessageSignaturesFinalizer(t *testing.T) {
+	t.Parallel()
+
+	port, err := testsupport.GetFreePort()
+	require.NoError(t, err)
+
+	body := []byte(`{"message":"hello"}`)
+	privateKey := hmstest.NewEd25519PrivateKey(t)
+	upstreamCalled := false
+
+	upstreamSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		upstreamCalled = true
+
+		assert.Equal(t, http.MethodPost, req.Method)
+		assert.Equal(t, "/signed", req.URL.Path)
+		assert.Empty(t, req.URL.Host)
+		assert.NotEmpty(t, req.Header.Get("Signature"))
+		assert.NotEmpty(t, req.Header.Get("Signature-Input"))
+		assert.NotEmpty(t, req.Header.Get("Content-Digest"))
+
+		hmstest.VerifyRequest(t, req, privateKey, hmstest.RequestWithDigestComponents())
+
+		receivedBody, err := io.ReadAll(req.Body)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		assert.Equal(t, body, receivedBody)
+
+		rw.WriteHeader(http.StatusNoContent)
+	}))
+	defer upstreamSrv.Close()
+
+	upstreamURL, err := url.Parse(upstreamSrv.URL + "/signed")
+	require.NoError(t, err)
+
+	finalizer := hmstest.NewHTTPMessageSignaturesFinalizerStep(
+		t,
+		privateKey,
+		hmstest.RequestWithDigestComponents(),
+	)
+
+	exec := mocks2.NewExecutorMock(t)
+	exec.EXPECT().Execute(mock.Anything).RunAndReturn(func(ctx pipeline.Context) (pipeline.Backend, error) {
+		if err := finalizer.Execute(ctx, make(pipeline.Subject)); err != nil {
+			return nil, err
+		}
+
+		return hmstest.Backend{Target: upstreamURL, ForwardHost: false}, nil
+	})
+
+	conf := &config.Configuration{
+		Serve: config.ServeConfig{
+			Timeout: config.Timeout{
+				Read:  time.Second,
+				Write: time.Second,
+				Idle:  time.Second,
+			},
+			Host: "127.0.0.1",
+			Port: port,
+		},
+	}
+
+	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+	defer proxy.Shutdown(t.Context())
+
+	factory, err := listener.NewFactory(conf.Serve.Address(), conf.Serve.TLS, nil)
+	require.NoError(t, err)
+
+	lstnr, err := factory.Create(t.Context())
+	require.NoError(t, err)
+
+	go func() {
+		_ = proxy.Serve(lstnr)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		fmt.Sprintf("http://%s/original", conf.Serve.Address()),
+		bytes.NewReader(body),
+	)
+	require.NoError(t, err)
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Length", strconv.Itoa(len(body)))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	defer resp.Body.Close()
+
+	assert.True(t, upstreamCalled)
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
+func TestProxyServiceHTTPMessageSignaturesFinalizerRejectsOversizedBody(t *testing.T) {
+	t.Parallel()
+
+	port, err := testsupport.GetFreePort()
+	require.NoError(t, err)
+
+	privateKey := hmstest.NewEd25519PrivateKey(t)
+	upstreamCalled := false
+
+	upstreamSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		upstreamCalled = true
+
+		rw.WriteHeader(http.StatusNoContent)
+	}))
+	defer upstreamSrv.Close()
+
+	upstreamURL, err := url.Parse(upstreamSrv.URL + "/signed")
+	require.NoError(t, err)
+
+	finalizer := hmstest.NewHTTPMessageSignaturesFinalizerStep(
+		t,
+		privateKey,
+		hmstest.RequestWithDigestComponents(),
+		4*bytesize.B,
+	)
+
+	exec := mocks2.NewExecutorMock(t)
+	exec.EXPECT().Execute(mock.Anything).RunAndReturn(func(ctx pipeline.Context) (pipeline.Backend, error) {
+		if err := finalizer.Execute(ctx, make(pipeline.Subject)); err != nil {
+			return nil, err
+		}
+
+		return hmstest.Backend{Target: upstreamURL, ForwardHost: false}, nil
+	})
+
+	conf := &config.Configuration{
+		Serve: config.ServeConfig{
+			Timeout: config.Timeout{
+				Read:  time.Second,
+				Write: time.Second,
+				Idle:  time.Second,
+			},
+			Host: "127.0.0.1",
+			Port: port,
+		},
+	}
+
+	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+	defer proxy.Shutdown(t.Context())
+
+	factory, err := listener.NewFactory(conf.Serve.Address(), conf.Serve.TLS, nil)
+	require.NoError(t, err)
+
+	lstnr, err := factory.Create(t.Context())
+	require.NoError(t, err)
+
+	go func() {
+		_ = proxy.Serve(lstnr)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		fmt.Sprintf("http://%s/original", conf.Serve.Address()),
+		strings.NewReader("too large"),
+	)
+	require.NoError(t, err)
+
+	req.Header.Set("Content-Type", "text/plain")
+	req.Header.Set("Content-Length", "9")
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	defer resp.Body.Close()
+
+	assert.False(t, upstreamCalled)
+	assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 }
 
 func TestWebSocketSupport(t *testing.T) {

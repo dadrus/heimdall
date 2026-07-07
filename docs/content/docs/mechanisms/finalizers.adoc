@@ -156,6 +156,57 @@ In a rule that references the `jwt_finalizer`, additional claims can be dynamica
 ----
 ====
 
+== HTTP Message Signatures
+
+This finalizer signs the HTTP request that will be forwarded to the upstream service according to https://www.rfc-editor.org/rfc/rfc9421[RFC 9421]. In decision mode, heimdall returns the generated `Signature`, `Signature-Input`, and `Content-Digest` headers so the integrating proxy can add them to the protected request. In proxy mode, heimdall signs after the `forward_to` target, upstream headers, cookies, forwarded headers, and final upstream host have been applied.
+
+To enable this finalizer, set the `type` property to `http_message_signatures`.
+
+Configuration using the `config` property is mandatory. The following properties are available:
+
+* *`signer`*: _link:{{< relref "/docs/configuration/types.adoc#_signer" >}}[Signer]_ (mandatory, not overridable)
++
+Defines the key material used to sign the upstream HTTP message. The `name` property is used as the HTTP Message Signatures `tag` parameter. If omitted, it defaults to `heimdall`.
+
+* *`components`*: _string array_ (mandatory, overridable)
++
+The HTTP message components that must be covered by the signature. Use `@authority` for request authority coverage. The literal `host` field is rejected because it does not consistently represent authority across HTTP versions.
+
+* *`ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
++
+Defines the signature validity period. Defaults to `1m`.
+
+* *`label`*: _string_ (optional, overridable)
++
+The signature label used in the `Signature` and `Signature-Input` headers. Defaults to `sig`.
+
+* *`max_body_size`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional, overridable)
++
+Maximum request body size that can be read while signing components such as `content-digest`. Defaults to `1MB`.
+
+.HTTP Message Signatures finalizer configuration
+====
+[source, yaml]
+----
+id: upstream_hms
+type: http_message_signatures
+config:
+  signer:
+    name: heimdall
+    secret:
+      source: key_store
+      selector: upstream_hms_key
+  components:
+    - "@method"
+    - "@authority"
+    - "@path"
+    - "content-digest"
+    - "content-type"
+    - "content-length"
+  ttl: 1m
+----
+====
+
 == OAuth2 Client Credentials
 
 This finalizer drives the https://www.rfc-editor.org/rfc/rfc6749#section-4.4[OAuth2 Client Credentials Grant] flow to obtain a token, which should be used for communication with the upstream service. By default, as long as not otherwise configured (see the options below), the obtained token is made available to your upstream service in the HTTP `Authorization` header with `Bearer` scheme set. Unlike the other finalizers, it does not have access to any objects created by the rule execution pipeline.

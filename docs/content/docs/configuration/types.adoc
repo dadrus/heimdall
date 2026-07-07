@@ -468,6 +468,82 @@ config:
 ----
 ====
 
+== HTTP Message Signatures Authenticator
+
+This authenticator verifies inbound HTTP message signatures according to https://datatracker.ietf.org/doc/html/rfc9421[RFC 9421].
+
+`type` must be set to `http_message_signatures`. `config` supports the following properties:
+
+* *`key_store`*: _link:{{< relref "/docs/operations/secret_management.adoc#_secret_references" >}}[Secret Reference]_ (mandatory)
++
+Reference to the secret set containing the keys accepted for request signature verification.
+
+* *`required_components`*: _string array_ (mandatory)
++
+The HTTP message components that must be covered by the signature. Use `@authority` for request authority coverage. The literal `host` field is rejected for this authenticator because it does not consistently represent authority across HTTP versions.
+
+* *`tag`*: _string_ (optional)
++
+The required HTTP Message Signatures `tag` parameter. If `validate_all_signatures` is set to `false`, `tag` is mandatory.
+
+* *`max_age`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+Maximum accepted age of the signature. Defaults to `30s`.
+
+* *`allowed_time_skew`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional)
++
+Allowed clock skew for `created` and `expires` signature parameters. Defaults to `0s`.
+
+* *`max_body_size`*: _link:{{< relref "#_bytesize" >}}[ByteSize]_ (optional)
++
+Maximum request body size that can be read while verifying signature components such as `content-digest`. Defaults to `1MB`.
+
+* *`created_timestamp_required`*: _boolean_ (optional)
++
+Whether the `created` signature parameter is required. Defaults to `true`.
+
+* *`expires_timestamp_required`*: _boolean_ (optional)
++
+Whether the `expires` signature parameter is required. Defaults to `true`.
+
+* *`validate_all_signatures`*: _boolean_ (optional)
++
+Whether all request signatures should be validated when no `tag` is configured. Defaults to `true`.
+
+* *`principal`*: _link:{{< relref "#_principal" >}}[Principal]_ (optional)
++
+Where to extract the principal information from the verified key data. The default principal id expression is `key_id`.
+
+* *`error_signaling`*: _HTTP Message Signatures Error Signaling_ (optional)
++
+Configures whether missing or non-applicable signatures should be signaled using the `Accept-Signature` response header. Signature negotiation is only available for tagged HMS profiles, so `tag` must be configured for heimdall to emit this header.
+
+== HTTP Message Signatures Finalizer
+
+This finalizer signs the upstream HTTP request according to https://datatracker.ietf.org/doc/html/rfc9421[RFC 9421].
+
+`type` must be set to `http_message_signatures`. `config` supports the following properties:
+
+* *`signer`*: _link:{{< relref "/docs/configuration/types.adoc#_signer" >}}[Signer]_ (mandatory, not overridable)
++
+Defines the key material used for signing. `name` is used as the HTTP Message Signatures `tag` parameter and defaults to `heimdall`.
+
+* *`components`*: _string array_ (mandatory, overridable)
++
+The HTTP message components to cover with the signature. Use `@authority` for request authority coverage. The literal `host` field is rejected because it does not consistently represent authority across HTTP versions.
+
+* *`ttl`*: _link:{{< relref "#_duration" >}}[Duration]_ (optional, overridable)
++
+Signature validity duration. Defaults to `1m`.
+
+* *`label`*: _string_ (optional, overridable)
++
+The signature label used in `Signature` and `Signature-Input`. Defaults to `sig`.
+
+* *`max_body_size`*: _link:{{< relref "#_bytesize" >}}[ByteSize]_ (optional, overridable)
++
+Maximum request body size that can be read while signing components such as `content-digest`. Defaults to `1MB`.
+
 == Authorization Expression
 
 Authorization expressions define, as the name implies expressions for authorization purposes and have the following properties:

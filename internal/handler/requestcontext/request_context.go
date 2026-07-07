@@ -20,9 +20,11 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"math"
 	"net/http"
 	"net/textproto"
 	"net/url"
+	"sort"
 	"strings"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
@@ -33,6 +35,7 @@ import (
 type RequestContext struct {
 	upstreamHeaders http.Header
 	upstreamCookies map[string]string
+	upstreamHMFs    []pipeline.HTTPMessageFinalizer
 	hmdlReq         *pipeline.Request
 	req             *http.Request
 	ctx             context.Context //nolint: containedctx
@@ -74,6 +77,7 @@ func (r *RequestContext) Reset() {
 	r.err = nil
 	r.req = nil
 	r.ctx = nil
+	r.upstreamHMFs = r.upstreamHMFs[:0]
 
 	clear(r.outputs)
 	clear(r.headers)
@@ -153,20 +157,116 @@ func (r *RequestContext) Body() any {
 	return r.savedBody
 }
 
+func (r *RequestContext) HTTPMessage(options ...pipeline.HTTPMessageOption) (*pipeline.HTTPMessage, error) {
+	var (
+		getBody      func() (io.ReadCloser, error)
+		bodySnapshot []byte
+	)
+
+	opts := pipeline.NewHTTPMessageOptions(options...)
+
+	switch {
+	case r.req.GetBody != nil:
+		getBody = r.req.GetBody
+	case r.req.Body == nil || r.req.Body == http.NoBody:
+		getBody = func() (io.ReadCloser, error) { return http.NoBody, nil }
+	default:
+		getBody = func() (io.ReadCloser, error) {
+			if len(bodySnapshot) != 0 {
+				return io.NopCloser(bytes.NewReader(bodySnapshot)), nil
+			}
+
+			body, err := readRequestBody(r.req.Body, opts.MaxBodySize)
+			if err != nil {
+				_ = r.req.Body.Close()
+
+				return nil, err
+			}
+
+			if err := r.req.Body.Close(); err != nil {
+				return nil, err
+			}
+
+			bodySnapshot = body
+			r.req.Body = io.NopCloser(bytes.NewReader(bodySnapshot))
+
+			return io.NopCloser(bytes.NewReader(bodySnapshot)), nil
+		}
+	}
+
+	return &pipeline.HTTPMessage{
+		Context:   r.ctx,
+		Method:    r.hmdlReq.Method,
+		Authority: r.hmdlReq.URL.Host,
+		URL:       new(r.hmdlReq.URL.URL),
+		Header:    r.req.Header.Clone(),
+		Body:      getBody,
+	}, nil
+}
+
+func readRequestBody(body io.Reader, maxBodySize int64) ([]byte, error) {
+	var (
+		buf    bytes.Buffer
+		reader = body
+	)
+
+	if maxBodySize > 0 && maxBodySize < math.MaxInt64 {
+		reader = io.LimitReader(body, maxBodySize+1)
+	}
+
+	if _, err := buf.ReadFrom(reader); err != nil {
+		return nil, err
+	}
+
+	if maxBodySize > 0 && int64(buf.Len()) > maxBodySize {
+		return nil, pipeline.ErrHTTPMessageBodyTooLarge
+	}
+
+	return buf.Bytes(), nil
+}
+
 func (r *RequestContext) Request() *pipeline.Request              { return r.hmdlReq }
 func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
 func (r *RequestContext) UpstreamHeaders() http.Header            { return r.upstreamHeaders }
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
 func (r *RequestContext) UpstreamCookies() map[string]string      { return r.upstreamCookies }
-func (r *RequestContext) Context() context.Context                { return r.ctx }
-func (r *RequestContext) SetError(err error)                      { r.err = err }
-func (r *RequestContext) Error() error                            { return r.err }
-func (r *RequestContext) Outputs() map[string]any                 { return r.outputs }
+func (r *RequestContext) AddHTTPMessageFinalizerForUpstream(finalizer pipeline.HTTPMessageFinalizer) {
+	r.upstreamHMFs = append(r.upstreamHMFs, finalizer)
+}
+
+func (r *RequestContext) HTTPMessageFinalizersForUpstream() []pipeline.HTTPMessageFinalizer {
+	return r.upstreamHMFs
+}
+
+func (r *RequestContext) Context() context.Context { return r.ctx }
+func (r *RequestContext) SetError(err error)       { r.err = err }
+func (r *RequestContext) Error() error             { return r.err }
+func (r *RequestContext) Outputs() map[string]any  { return r.outputs }
 
 func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
 	r.ctx = ctx
 
 	return r
+}
+
+func CookieHeader(cookies map[string]string) string {
+	if len(cookies) == 0 {
+		return ""
+	}
+
+	names := make([]string, 0, len(cookies))
+	for name := range cookies {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	req := http.Request{Header: make(http.Header, 1)}
+	for _, name := range names {
+		req.AddCookie(&http.Cookie{Name: name, Value: cookies[name]})
+	}
+
+	return req.Header.Get("Cookie")
 }
 
 func requestClientIPs(ips []string, req *http.Request) []string {

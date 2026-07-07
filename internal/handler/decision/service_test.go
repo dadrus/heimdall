@@ -17,9 +17,11 @@
 package decision
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"testing"
 	"time"
 
@@ -31,6 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/listener"
+	"github.com/dadrus/heimdall/internal/handler/testsupport/hmstest"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	mocks2 "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
@@ -578,4 +581,156 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			tc.assertResponse(t, err, resp)
 		})
 	}
+}
+
+func TestDecisionServiceHTTPMessageSignaturesAuthenticator(t *testing.T) {
+	t.Parallel()
+
+	port, err := testsupport.GetFreePort()
+	require.NoError(t, err)
+
+	privateKey := hmstest.NewEd25519PrivateKey(t)
+	authenticator := hmstest.NewHTTPMessageSignaturesAuthenticatorStep(
+		t,
+		privateKey,
+		hmstest.RequestWithDigestComponents(),
+	)
+
+	exec := mocks2.NewExecutorMock(t)
+	exec.EXPECT().Execute(mock.Anything).RunAndReturn(func(ctx pipeline.Context) (pipeline.Backend, error) {
+		sub := make(pipeline.Subject)
+
+		return nil, authenticator.Execute(ctx, sub)
+	})
+
+	conf := &config.Configuration{
+		Serve: config.ServeConfig{
+			Timeout: config.Timeout{
+				Read:  time.Second,
+				Write: time.Second,
+				Idle:  time.Second,
+			},
+			Host: "127.0.0.1",
+			Port: port,
+		},
+	}
+
+	decision := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+	defer decision.Shutdown(t.Context())
+
+	factory, err := listener.NewFactory(conf.Serve.Address(), conf.Serve.TLS, nil)
+	require.NoError(t, err)
+
+	lstnr, err := factory.Create(t.Context())
+	require.NoError(t, err)
+
+	go func() {
+		_ = decision.Serve(lstnr)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	body := []byte(`{"message":"hello"}`)
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		fmt.Sprintf("http://%s/foo", conf.Serve.Address()),
+		bytes.NewReader(body),
+	)
+	require.NoError(t, err)
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Length", strconv.Itoa(len(body)))
+	hmstest.SignRequest(t, req, privateKey, hmstest.RequestWithDigestComponents())
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestDecisionServiceHTTPMessageSignaturesFinalizer(t *testing.T) {
+	t.Parallel()
+
+	port, err := testsupport.GetFreePort()
+	require.NoError(t, err)
+
+	privateKey := hmstest.NewEd25519PrivateKey(t)
+	finalizer := hmstest.NewHTTPMessageSignaturesFinalizerStep(
+		t,
+		privateKey,
+		hmstest.RequestWithDigestComponents(),
+	)
+
+	exec := mocks2.NewExecutorMock(t)
+	exec.EXPECT().Execute(mock.Anything).RunAndReturn(func(ctx pipeline.Context) (pipeline.Backend, error) {
+		return nil, finalizer.Execute(ctx, make(pipeline.Subject))
+	})
+
+	conf := &config.Configuration{
+		Serve: config.ServeConfig{
+			Timeout: config.Timeout{
+				Read:  time.Second,
+				Write: time.Second,
+				Idle:  time.Second,
+			},
+			Host: "127.0.0.1",
+			Port: port,
+		},
+	}
+
+	decision := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+	defer decision.Shutdown(t.Context())
+
+	factory, err := listener.NewFactory(conf.Serve.Address(), conf.Serve.TLS, nil)
+	require.NoError(t, err)
+
+	lstnr, err := factory.Create(t.Context())
+	require.NoError(t, err)
+
+	go func() {
+		_ = decision.Serve(lstnr)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	body := []byte(`{"message":"hello"}`)
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		fmt.Sprintf("http://%s/foo", conf.Serve.Address()),
+		bytes.NewReader(body),
+	)
+	require.NoError(t, err)
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Length", strconv.Itoa(len(body)))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.NotEmpty(t, resp.Header.Get("Signature"))
+	assert.NotEmpty(t, resp.Header.Get("Signature-Input"))
+	assert.NotEmpty(t, resp.Header.Get("Content-Digest"))
+
+	signedReq, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		fmt.Sprintf("http://%s/foo", conf.Serve.Address()),
+		bytes.NewReader(body),
+	)
+	require.NoError(t, err)
+
+	signedReq.Header.Set("Content-Type", "application/json")
+	signedReq.Header.Set("Content-Length", strconv.Itoa(len(body)))
+	signedReq.Header.Set("Signature", resp.Header.Get("Signature"))
+	signedReq.Header.Set("Signature-Input", resp.Header.Get("Signature-Input"))
+	signedReq.Header.Set("Content-Digest", resp.Header.Get("Content-Digest"))
+
+	hmstest.VerifyRequest(t, signedReq, privateKey, hmstest.RequestWithDigestComponents())
 }

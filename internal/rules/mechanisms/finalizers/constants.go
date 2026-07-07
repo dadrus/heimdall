@@ -22,4 +22,5 @@ const (
 	FinalizerHeader                  = "header"
 	FinalizerCookie                  = "cookie"
 	FinalizerOAuth2ClientCredentials = "oauth2_client_credentials" // nolint: gosec
+	FinalizerHTTPMessageSignatures   = "http_message_signatures"
 )
