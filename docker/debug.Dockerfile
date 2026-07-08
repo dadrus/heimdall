@@ -1,4 +1,4 @@
-FROM golang:1.26.5-trixie@sha256:eb37f58646a901dc7727cf448cae36daaefaba79de33b5058dab79aa4c04aefb
+FROM golang:1.26.5-trixie@sha256:8d5bf3ef8fd204fea2ea0dea4b46d4ecdabceb88b9b4cb86d2b323425add49c7
 ENV CGO_ENABLED 1
 
 RUN apt-get update && apt-get install -y --no-install-recommends inotify-tools=3.14-7 psmisc=23.2-1+deb10u1 \
