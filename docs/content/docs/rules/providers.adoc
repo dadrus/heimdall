@@ -49,11 +49,12 @@ name: my-rule-set
 rules:
 - id: rule:1
   match:
-    routes:
-      - path: /**
-    hosts:
-      - my-service1.local
-    methods: [ "GET" ]
+    http:
+      routes:
+        - path: /**
+      hosts:
+        - my-service1.local
+      methods: [ "GET" ]
   forward_to:
     host: ${UPSTREAM_HOST:="default-backend:8080"}
   execute:

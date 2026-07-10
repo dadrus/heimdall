@@ -23,11 +23,12 @@ spec:
   rules:
     - id: my_api_rule
       match:
-        routes:
-          - path: /api/**
-        scheme: http
-        hosts:
-          - 127.0.0.1:9090
+        http:
+          routes:
+            - path: /api/**
+          scheme: http
+          hosts:
+            - 127.0.0.1:9090
       execute:
         - authenticator: keycloak
         - authorizer: opa

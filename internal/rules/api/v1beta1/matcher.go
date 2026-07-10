@@ -18,7 +18,14 @@ package v1beta1
 
 import "slices"
 
+// Matcher contains protocol-specific bindings for rule matching.
+// Currently only HTTP is supported.
 type Matcher struct {
+	HTTP *HTTPMatcher `json:"http" yaml:"http" validate:"required"` //nolint:tagalign
+}
+
+// HTTPMatcher contains all HTTP-specific matching criteria.
+type HTTPMatcher struct {
 	Routes  []Route  `json:"routes"            yaml:"routes"            validate:"required,dive"`              //nolint:lll,tagalign
 	Scheme  string   `json:"scheme,omitempty"  yaml:"scheme,omitempty"  validate:"omitempty,oneof=http https"` //nolint:lll,tagalign
 	Methods []string `json:"methods,omitempty" yaml:"methods,omitempty" validate:"omitempty,dive,required"`    //nolint:lll,tagalign
@@ -42,12 +49,14 @@ type ParameterMatcher struct {
 	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact glob regex"` //nolint:tagalign
 }
 
-type HostMatcher struct {
-	Value string `json:"value" yaml:"value" validate:"required"`                      //nolint:tagalign
-	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact wildcard"` //nolint:tagalign
+func (m *Matcher) DeepCopyInto(out *Matcher) {
+	if m.HTTP != nil {
+		out.HTTP = new(HTTPMatcher)
+		m.HTTP.DeepCopyInto(out.HTTP)
+	}
 }
 
-func (m *Matcher) DeepCopyInto(out *Matcher) {
+func (m *HTTPMatcher) DeepCopyInto(out *HTTPMatcher) {
 	out.Scheme = m.Scheme
 	out.Methods = slices.Clone(m.Methods)
 	out.Hosts = slices.Clone(m.Hosts)

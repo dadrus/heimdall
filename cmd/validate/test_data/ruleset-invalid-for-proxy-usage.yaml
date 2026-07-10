@@ -3,12 +3,13 @@ name: test-rule-set
 rules:
 - id: rule:foo
   match:
-    routes:
-      - path: /**
-    scheme: http
-    hosts:
-      - foo.bar
-    methods: [ GET, POST ]
+    http:
+      routes:
+        - path: /**
+      scheme: http
+      hosts:
+        - foo.bar
+      methods: [ GET, POST ]
   execute:
     - authenticator: unauthorized_authenticator
     - authenticator: jwt_authenticator1

@@ -272,9 +272,10 @@ version: "1beta1"
 rules:
 - id: access_document  # <1>
   match:
-    routes:
-      - path: /document/:id # <2>
-    methods: [ GET, POST, DELETE ]
+    http:
+      routes:
+        - path: /document/:id # <2>
+      methods: [ GET, POST, DELETE ]
   forward_to: # <3>
     host: upstream:8081
   execute:
@@ -296,9 +297,10 @@ rules:
 
 - id: list_documents  # <11>
   match:
-    routes:
-      - path: /documents # <12>
-    methods: [ GET ] # <14>
+    http:
+      routes:
+        - path: /documents # <12>
+      methods: [ GET ] # <14>
   forward_to: # <13>
     host: upstream:8081
   execute: # <15>

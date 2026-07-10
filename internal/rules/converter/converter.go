@@ -117,7 +117,9 @@ func (c *converter) convertV1Beta1ToV1Alpha4(sourceRs *v1beta1.RuleSet) (*v1alph
 	convertedRules := make([]v1alpha4.Rule, len(sourceRs.Rules))
 
 	for idx, rul := range sourceRs.Rules {
-		routes, err := convertObject[[]v1beta1.Route, []v1alpha4.Route](rul.Matcher.Routes)
+		http := rul.Matcher.HTTP
+
+		routes, err := convertObject[[]v1beta1.Route, []v1alpha4.Route](http.Routes)
 		if err != nil {
 			return nil, errorchain.NewWithMessagef(ErrConversion,
 				"failed converting matcher routes for rule %s", rul.ID).CausedBy(err)
@@ -129,8 +131,8 @@ func (c *converter) convertV1Beta1ToV1Alpha4(sourceRs *v1beta1.RuleSet) (*v1alph
 				"failed converting forward_to for rule %s", rul.ID).CausedBy(err)
 		}
 
-		hosts := make([]v1alpha4.HostMatcher, len(rul.Matcher.Hosts))
-		for idx, host := range rul.Matcher.Hosts {
+		hosts := make([]v1alpha4.HostMatcher, len(http.Hosts))
+		for idx, host := range http.Hosts {
 			hosts[idx] = v1alpha4.HostMatcher{Value: host, Type: "wildcard"}
 		}
 
@@ -151,8 +153,8 @@ func (c *converter) convertV1Beta1ToV1Alpha4(sourceRs *v1beta1.RuleSet) (*v1alph
 			EncodedSlashesHandling: v1alpha4.EncodedSlashesHandling(rul.EncodedSlashesHandling),
 			Matcher: v1alpha4.Matcher{
 				Routes:  routes,
-				Scheme:  rul.Matcher.Scheme,
-				Methods: rul.Matcher.Methods,
+				Scheme:  http.Scheme,
+				Methods: http.Methods,
 				Hosts:   hosts,
 			},
 			Backend:      &backend,
@@ -205,10 +207,12 @@ func (c *converter) convertV1Alpha4ToV1Beta1(sourceRs *v1alpha4.RuleSet) (*v1bet
 			ID:                     rul.ID,
 			EncodedSlashesHandling: v1beta1.EncodedSlashesHandling(rul.EncodedSlashesHandling),
 			Matcher: v1beta1.Matcher{
-				Routes:  routes,
-				Scheme:  rul.Matcher.Scheme,
-				Methods: rul.Matcher.Methods,
-				Hosts:   hosts,
+				HTTP: &v1beta1.HTTPMatcher{
+					Routes:  routes,
+					Scheme:  rul.Matcher.Scheme,
+					Methods: rul.Matcher.Methods,
+					Hosts:   hosts,
+				},
 			},
 			Backend:      &backend,
 			Execute:      executePipeline,

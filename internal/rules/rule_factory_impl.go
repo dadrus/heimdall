@@ -172,19 +172,21 @@ func (f *ruleFactory) addRoutes(
 	matcher v1beta1.Matcher,
 	slashesHandling v1beta1.EncodedSlashesHandling,
 ) error {
-	mm, err := createMethodMatcher(matcher.Methods)
+	http := matcher.HTTP
+
+	mm, err := createMethodMatcher(http.Methods)
 	if err != nil {
 		return err
 	}
 
-	sm := schemeMatcher(matcher.Scheme)
+	sm := schemeMatcher(http.Scheme)
 
-	hosts := matcher.Hosts
+	hosts := http.Hosts
 	if len(hosts) == 0 {
 		hosts = []string{"*"}
 	}
 
-	for _, rc := range matcher.Routes {
+	for _, rc := range http.Routes {
 		ppm, err := createPathParamsMatcher(rc.PathParams, slashesHandling)
 		if err != nil {
 			return errorchain.NewWithMessagef(

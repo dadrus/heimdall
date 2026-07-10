@@ -251,8 +251,9 @@ name: test
 rules:
 - id: foo
   match:
-    routes:
-      - path: /foo
+    http:
+      routes:
+        - path: /foo
   execute:
     - authenticator: test
 `
@@ -301,8 +302,9 @@ name: test
 rules:
 - id: foo
   match:
-    routes:
-      - path: /foo
+    http:
+      routes:
+        - path: /foo
   execute:
     - authenticator: test
 `
@@ -356,8 +358,9 @@ name: test
 rules:
 - id: foo
   match:
-    routes:
-      - path: /foo
+    http:
+      routes:
+        - path: /foo
   execute:
     - authenticator: test
 `
@@ -375,8 +378,9 @@ name: test
 rules:
 - id: bar
   match:
-    routes:
-      - path: /bar
+    http:
+      routes:
+        - path: /bar
   execute:
     - authenticator: test
 `
@@ -454,8 +458,9 @@ name: test
 rules:
 - id: foo
   match:
-    routes:
-      - path: /foo
+    http:
+      routes:
+        - path: /foo
   execute:
     - authenticator: test
 `
@@ -470,8 +475,9 @@ name: test
 rules:
 - id: bar
   match:
-    routes:
-      - path: /bar
+    http:
+      routes:
+        - path: /bar
   execute:
     - authenticator: test
 `
@@ -486,8 +492,9 @@ name: test
 rules:
 - id: baz
   match:
-    routes:
-      - path: /baz
+    http:
+      routes:
+        - path: /baz
   execute:
     - authenticator: test
 `

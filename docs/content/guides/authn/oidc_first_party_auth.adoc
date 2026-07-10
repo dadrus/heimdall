@@ -158,9 +158,10 @@ version: "1beta1"
 rules:
 - id: upstream:public  # <1>
   match:
-    routes:
-      - path: /
-      - path: /favicon.ico
+    http:
+      routes:
+        - path: /
+        - path: /favicon.ico
   forward_to:
     host: upstream:8081
   execute:
@@ -169,9 +170,10 @@ rules:
 
 - id: upstream:protected  # <2>
   match:
-    routes:
-      - path: /user
-      - path: /admin
+    http:
+      routes:
+        - path: /user
+        - path: /admin
   forward_to:
     host: upstream:8081
   execute:
@@ -205,9 +207,10 @@ version: "1beta1"
 rules:
 - id: oauth2-proxy:public
   match:
-    routes:
-      - path: /oauth2/start
-      - path: /oauth2/callback
+    http:
+      routes:
+        - path: /oauth2/start
+        - path: /oauth2/callback
   forward_to:
     host: oauth2-proxy:4180
   execute:

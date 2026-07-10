@@ -312,15 +312,17 @@ func TestRulSetConverterHandle(t *testing.T) {
 							ID:                     "public-access",
 							EncodedSlashesHandling: cfgv1beta1.EncodedSlashesOn,
 							Matcher: cfgv1beta1.Matcher{
-								Routes: []cfgv1beta1.Route{
-									{
-										Path:       "/pub/*baz",
-										PathParams: []cfgv1beta1.ParameterMatcher{{Name: "baz", Value: "*foo*", Type: "glob"}},
+								HTTP: &cfgv1beta1.HTTPMatcher{
+									Routes: []cfgv1beta1.Route{
+										{
+											Path:       "/pub/*baz",
+											PathParams: []cfgv1beta1.ParameterMatcher{{Name: "baz", Value: "*foo*", Type: "glob"}},
+										},
 									},
+									Scheme:  "https",
+									Methods: []string{"GET", "POST"},
+									Hosts:   []string{"foo.bar", "*.foo"},
 								},
-								Scheme:  "https",
-								Methods: []string{"GET", "POST"},
-								Hosts:   []string{"foo.bar", "*.foo"},
 							},
 							Backend: &cfgv1beta1.Backend{
 								Host: "foo-app.local:8080",
@@ -348,17 +350,19 @@ func TestRulSetConverterHandle(t *testing.T) {
         "id": "public-access",
         "allow_encoded_slashes": "on",
         "match": {
-          "routes": [
-            { 
-              "path": "/pub/*baz",
-              "path_params": [
-                { "name": "baz", "value": "*foo*", "type": "glob" }
-              ]
-            }
-          ],
-          "methods": ["GET", "POST"],
-          "hosts": [ "foo.bar", "*.foo" ],
-          "scheme": "https"
+          "http": {
+            "routes": [
+              {
+                "path": "/pub/*baz",
+                "path_params": [
+                  { "name": "baz", "value": "*foo*", "type": "glob" }
+                ]
+              }
+            ],
+            "methods": ["GET", "POST"],
+            "hosts": [ "foo.bar", "*.foo" ],
+            "scheme": "https"
+          }
         },
         "forward_to": {
           "host": "foo-app.local:8080"

@@ -26,36 +26,43 @@ func TestMatcherDeepCopyInto(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]*Matcher{
+		"nil http binding": {},
 		"single route defining only a path": {
-			Routes: []Route{{Path: "/foo/bar"}},
+			HTTP: &HTTPMatcher{
+				Routes: []Route{{Path: "/foo/bar"}},
+			},
 		},
 		"single route defining path and some path parameters": {
-			Routes: []Route{
-				{
-					Path: "/:foo/:bar",
-					PathParams: []ParameterMatcher{
-						{Name: "foo", Value: "bar", Type: "glob"},
-						{Name: "bar", Value: "baz", Type: "regex"},
+			HTTP: &HTTPMatcher{
+				Routes: []Route{
+					{
+						Path: "/:foo/:bar",
+						PathParams: []ParameterMatcher{
+							{Name: "foo", Value: "bar", Type: "glob"},
+							{Name: "bar", Value: "baz", Type: "regex"},
+						},
 					},
 				},
 			},
 		},
 		"multiple routes and additional constraints": {
-			Routes: []Route{
-				{
-					Path: "/:foo/:bar",
-					PathParams: []ParameterMatcher{
-						{Name: "foo", Value: "bar", Type: "glob"},
-						{Name: "bar", Value: "baz", Type: "regex"},
+			HTTP: &HTTPMatcher{
+				Routes: []Route{
+					{
+						Path: "/:foo/:bar",
+						PathParams: []ParameterMatcher{
+							{Name: "foo", Value: "bar", Type: "glob"},
+							{Name: "bar", Value: "baz", Type: "regex"},
+						},
+					},
+					{
+						Path: "/some/static/path",
 					},
 				},
-				{
-					Path: "/some/static/path",
-				},
+				Scheme:  "https",
+				Hosts:   []string{"*.example.com"},
+				Methods: []string{"GET", "POST"},
 			},
-			Scheme:  "https",
-			Hosts:   []string{"*.example.com"},
-			Methods: []string{"GET", "POST"},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {

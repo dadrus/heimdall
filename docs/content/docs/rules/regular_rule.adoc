@@ -145,16 +145,17 @@ Specifies error handling mechanisms if the pipeline defined by the `execute` pro
 ----
 id: rule:foo:bar
 match:
-  routes:
-    - path: /some/:identifier/followed/by/**
-      path_params:
-        - name: identifier
-          type: glob
-          value: "[a-z]"
-  scheme: https
-  hosts:
-    - my-service.local
-  methods:
+  http:
+    routes:
+      - path: /some/:identifier/followed/by/**
+        path_params:
+          - name: identifier
+            type: glob
+            value: "[a-z]"
+    scheme: https
+    hosts:
+      - my-service.local
+    methods:
       - GET
       - POST
 forward_to:
@@ -210,10 +211,11 @@ Here is an example demonstrating the usage of a single named wildcard:
 ----
 id: rule:1
 match:
-  routes:
-    - path: /files/:uuid/delete
-  hosts:
-    - hosty.mchostface
+  http:
+    routes:
+      - path: /files/:uuid/delete
+    hosts:
+      - hosty.mchostface
   execute:
     - authorizer: openfga_check
       config:
@@ -249,19 +251,21 @@ Consider a rule set with the following rules
 ----
 - id: rule1
   match:
-    routes:
-      - path: /files/**
+    http:
+      routes:
+        - path: /files/**
   execute:
     - <pipeline definition>
 
 - id: rule2
   match:
-    routes:
-      - path: /files/:team/:name
-        path_params:
-          - name: team
-            type: regex
-            value: "(team1|team2)"
+    http:
+      routes:
+        - path: /files/:team/:name
+          path_params:
+            - name: team
+              type: regex
+              value: "(team1|team2)"
     methods:
       - GET
   execute:
@@ -269,19 +273,21 @@ Consider a rule set with the following rules
 
 - id: rule3
   match:
-    routes:
-      - path: /files/:team/:name
-        path_params:
-          - name: team
-            type: regex
-            value: "(team1|team2)"
+    http:
+      routes:
+        - path: /files/:team/:name
+          path_params:
+            - name: team
+              type: regex
+              value: "(team1|team2)"
   execute:
     - <pipeline definition>
 
 - id: rule4
   match:
-    routes:
-      - path: /files/team3/:name
+    http:
+      routes:
+        - path: /files/team3/:name
   execute:
     - <pipeline definition>
 ----
@@ -303,15 +309,17 @@ Here’s another example:
 ----
 - id: rule1
   match:
-    routes:
-      - path: /foo/**
+    http:
+      routes:
+        - path: /foo/**
   execute:
     - <pipeline definition>
 
 - id: rule2
   match:
-    routes:
-      - path: /foo/bar/:name
+    http:
+      routes:
+        - path: /foo/bar/:name
   execute:
     - <pipeline definition>
 ----

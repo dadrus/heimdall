@@ -76,14 +76,15 @@ name: test-rule-set
 rules:
 - id: rule:foo
   match:
-    routes:
-      - path: /**
-    backtracking_enabled: true
-    scheme: http
-    hosts:
-      - type: glob
-        value: foo.bar
-    methods: [GET, POST]
+    http:
+      routes:
+        - path: /**
+      backtracking_enabled: true
+      scheme: http
+      hosts:
+        - type: glob
+          value: foo.bar
+      methods: [GET, POST]
   forward_to:
     host: bar.foo
     rewrite:
@@ -180,14 +181,15 @@ name: test-rule-set
 rules:
 - id: rule:foo
   match:
-    routes:
-      - path: /**
-    backtracking_enabled: true
-    scheme: http
-    hosts:
-      - type: glob
-        value: foo.bar
-    methods: [GET, POST]
+    http:
+      routes:
+        - path: /**
+      backtracking_enabled: true
+      scheme: http
+      hosts:
+        - type: glob
+          value: foo.bar
+      methods: [GET, POST]
   forward_to:
     host: bar.foo
     rewrite:
@@ -244,14 +246,15 @@ name: test-rule-set
 rules:
 - id: rule:foo
   match:
-    routes:
-      - path: /**
-    backtracking_enabled: true
-    scheme: http
-    hosts:
-      - type: glob
-        value: foo.bar
-    methods: [GET, POST]
+    http:
+      routes:
+        - path: /**
+      backtracking_enabled: true
+      scheme: http
+      hosts:
+        - type: glob
+          value: foo.bar
+      methods: [GET, POST]
   forward_to:
     host: bar.foo
     rewrite:
@@ -291,14 +294,15 @@ name: test-rule-set
 rules:
 - id: rule:foo
   match:
-    routes:
-      - path: /**
-    backtracking_enabled: true
-    scheme: http
-    hosts:
-      - type: glob
-        value: foo.bar
-    methods: [GET, POST]
+    http:
+      routes:
+        - path: /**
+      backtracking_enabled: true
+      scheme: http
+      hosts:
+        - type: glob
+          value: foo.bar
+      methods: [GET, POST]
   forward_to:
     host: bar.foo
     rewrite:

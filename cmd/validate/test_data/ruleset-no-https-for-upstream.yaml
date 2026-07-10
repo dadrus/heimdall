@@ -3,12 +3,13 @@ name: test-rule-set
 rules:
 - id: rule:foo
   match:
-    routes:
-      - path: /**
-    scheme: http
-    hosts:
-      - "*.foo.bar"
-    methods: [ GET, POST ]
+    http:
+      routes:
+        - path: /**
+      scheme: http
+      hosts:
+        - "*.foo.bar"
+      methods: [ GET, POST ]
   forward_to:
     host: bar.foo
     rewrite:

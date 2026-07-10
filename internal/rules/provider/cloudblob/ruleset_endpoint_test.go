@@ -183,12 +183,14 @@ func TestFetchRuleSets(t *testing.T) {
 	"rules": [{
 		"id": "foobar",
         "match": {
-          "routes": [
-            { "path": "/foo/bar/api1" }
-          ],
-          "scheme": "http",
-          "hosts": [ "*.example.com" ],
-          "methods": ["GET", "POST"]
+          "http": {
+            "routes": [
+              { "path": "/foo/bar/api1" }
+            ],
+            "scheme": "http",
+            "hosts": [ "*.example.com" ],
+            "methods": ["GET", "POST"]
+          }
         },
 		"execute": [
 			{ "authenticator": "foobar" }
@@ -202,14 +204,15 @@ name: test2
 rules:
 - id: barfoo
   match:
-    routes:
-      - path: /foo/bar/api2
-    scheme: http
-    hosts:
-      - "*.example.com"
-    methods: 
-      - GET
-      - POST
+    http:
+      routes:
+        - path: /foo/bar/api2
+      scheme: http
+      hosts:
+        - "*.example.com"
+      methods:
+        - GET
+        - POST
   execute:
   - authenticator: barfoo
 `
@@ -259,12 +262,14 @@ rules:
 				"rules": [{
 					"id": "foobar",
                     "match": {
-                      "routes": [
-                         { "path": "/foo/bar/api1" }
-                      ],
-                      "scheme": "http",
-                      "hosts": ["example.com"],
-                      "methods": ["GET", "POST"]
+                      "http": {
+                        "routes": [
+                           { "path": "/foo/bar/api1" }
+                        ],
+                        "scheme": "http",
+                        "hosts": ["example.com"],
+                        "methods": ["GET", "POST"]
+                      }
                     },
 					"execute": [
 						{ "authenticator": "foobar" }
@@ -277,12 +282,14 @@ rules:
 				"rules": [{
 					"id": "barfoo",
                     "match": {
-                      "routes": [
-                        { "path": "/foo/bar/api2" }
-                      ],
-                      "scheme": "http",
-                      "hosts": [{ "type": "wildcard", "value": "*"}],
-                      "methods": ["GET", "POST"]
+                      "http": {
+                        "routes": [
+                          { "path": "/foo/bar/api2" }
+                        ],
+                        "scheme": "http",
+                        "hosts": ["*"],
+                        "methods": ["GET", "POST"]
+                      }
                     },
 					"execute": [
 						{ "authenticator": "barfoo" }
@@ -374,12 +381,14 @@ rules:
 				"rules": [{
 					"id": "foobar",
                     "match": {
-                      "routes": [
-                        { "path": "/foo/bar/api1" }
-                      ],
-                      "scheme": "http",
-                      "hosts": ["example.com"],
-                      "methods": ["GET", "POST"]
+                      "http": {
+                        "routes": [
+                          { "path": "/foo/bar/api1" }
+                        ],
+                        "scheme": "http",
+                        "hosts": ["example.com"],
+                        "methods": ["GET", "POST"]
+                      }
                     },
 					"execute": [
 						{ "authenticator": "foobar" }

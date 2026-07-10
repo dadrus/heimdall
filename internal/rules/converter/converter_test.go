@@ -96,7 +96,7 @@ version: 1alpha4
 rules:
   - id: public-access
     allow_encoded_slashes: on
-    match: 
+    match:
       routes:
         - path: /pub/*baz
           path_params:
@@ -128,18 +128,19 @@ version: 1beta1
 rules:
   - id: public-access
     allow_encoded_slashes: on
-    match: 
-      routes:
-        - path: /pub/*baz
-          path_params:
-            - name: baz
-              value: "*foo*"
-              type: glob
-      methods: [GET, POST]
-      hosts:
-        - foo.bar
-        - "*.foo"
-      scheme: https
+    match:
+      http:
+        routes:
+          - path: /pub/*baz
+            path_params:
+              - name: baz
+                value: "*foo*"
+                type: glob
+        methods: [GET, POST]
+        hosts:
+          - foo.bar
+          - "*.foo"
+        scheme: https
     forward_to:
       host: foo-app.local:8080
     execute:
@@ -155,18 +156,19 @@ version: 1beta1
 rules:
   - id: public-access
     allow_encoded_slashes: on
-    match: 
-      routes:
-        - path: /pub/*baz
-          path_params:
-            - name: baz
-              value: "*foo*"
-              type: glob
-      methods: [GET, POST]
-      hosts:
-        - foo.bar
-        - "*.foo"
-      scheme: https
+    match:
+      http:
+        routes:
+          - path: /pub/*baz
+            path_params:
+              - name: baz
+                value: "*foo*"
+                type: glob
+        methods: [GET, POST]
+        hosts:
+          - foo.bar
+          - "*.foo"
+        scheme: https
     forward_to:
       host: foo-app.local:8080
     execute:
@@ -185,7 +187,7 @@ version: 1alpha4
 rules:
   - id: public-access
     allow_encoded_slashes: on
-    match: 
+    match:
       routes:
         - path: /pub/*baz
           path_params:

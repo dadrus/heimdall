@@ -201,13 +201,14 @@ name: test
 rules:
 - id: foo
   match:
-    routes:
-      - path: /foo/:bar
-        path_params:
-          - name: bar
-            type: glob
-            value: "*baz"
-    methods: [ GET ]
+    http:
+      routes:
+        - path: /foo/:bar
+          path_params:
+            - name: bar
+              type: glob
+              value: "*baz"
+      methods: [ GET ]
   execute:
    - authenticator: test
 `)
@@ -235,13 +236,13 @@ rules:
 				assert.Equal(t, "file_system", ruleSet.Provider)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
-				require.Len(t, ruleSet.Rules[0].Matcher.Routes, 1)
-				assert.Equal(t, "/foo/:bar", ruleSet.Rules[0].Matcher.Routes[0].Path)
-				require.Len(t, ruleSet.Rules[0].Matcher.Routes[0].PathParams, 1)
-				assert.Equal(t, "bar", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Name)
-				assert.Equal(t, "glob", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Type)
-				assert.Equal(t, "*baz", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Value)
-				assert.Equal(t, []string{"GET"}, ruleSet.Rules[0].Matcher.Methods)
+				require.Len(t, ruleSet.Rules[0].Matcher.HTTP.Routes, 1)
+				assert.Equal(t, "/foo/:bar", ruleSet.Rules[0].Matcher.HTTP.Routes[0].Path)
+				require.Len(t, ruleSet.Rules[0].Matcher.HTTP.Routes[0].PathParams, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].Matcher.HTTP.Routes[0].PathParams[0].Name)
+				assert.Equal(t, "glob", ruleSet.Rules[0].Matcher.HTTP.Routes[0].PathParams[0].Type)
+				assert.Equal(t, "*baz", ruleSet.Rules[0].Matcher.HTTP.Routes[0].PathParams[0].Value)
+				assert.Equal(t, []string{"GET"}, ruleSet.Rules[0].Matcher.HTTP.Methods)
 				assert.NotEmpty(t, ruleSet.Hash)
 			},
 		},
@@ -269,8 +270,9 @@ version: "2"
 rules:
 - id: foo
   match:
-    routes:
-      - path: /foo/bar
+    http:
+      routes:
+        - path: /foo/bar
   execute:
     - authenticator: test
 `)
@@ -313,8 +315,9 @@ version: "1"
 rules:
 - id: foo
   match:
-    routes:
-      - path: /foo/bar
+    http:
+      routes:
+        - path: /foo/bar
   execute:
     - authenticator: test
 `)
@@ -349,8 +352,9 @@ version: "1"
 rules:
 - id: foo
   match:
-    routes:
-      - path: /foo/bar
+    http:
+      routes:
+        - path: /foo/bar
   execute:
     - authenticator: test
 `)
@@ -401,8 +405,9 @@ version: "1"
 rules:
 - id: foo
   match:
-    routes:
-      - path: /foo
+    http:
+      routes:
+        - path: /foo
   execute:
     - authenticator: test
 `)
@@ -418,8 +423,9 @@ version: "1"
 rules:
 - id: foo
   match:
-    routes:
-      - path: /foo
+    http:
+      routes:
+        - path: /foo
   execute:
     - authenticator: test
 `)
@@ -435,8 +441,9 @@ version: "2"
 rules:
 - id: bar
   match:
-    routes:
-      - path: /bar
+    http:
+      routes:
+        - path: /bar
   execute:
     - authenticator: test
 `)
