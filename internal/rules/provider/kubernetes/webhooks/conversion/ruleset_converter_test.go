@@ -315,8 +315,8 @@ func TestRulSetConverterHandle(t *testing.T) {
 								HTTP: &cfgv1beta1.HTTPMatcher{
 									Paths: []cfgv1beta1.Path{
 										{
-											Path:       "/pub/*baz",
-											PathParams: []cfgv1beta1.ParameterMatcher{{Name: "baz", Value: "*foo*", Type: "glob"}},
+											Path:     "/pub/*baz",
+											Captures: []cfgv1beta1.CaptureMatcher{{Name: "baz", Value: "*foo*", Type: "glob"}},
 										},
 									},
 									Scheme:  "https",
@@ -354,7 +354,7 @@ func TestRulSetConverterHandle(t *testing.T) {
             "paths": [
               {
                 "path": "/pub/*baz",
-                "path_params": [
+                "captures": [
                   { "name": "baz", "value": "*foo*", "type": "glob" }
                 ]
               }

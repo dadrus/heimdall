@@ -34,7 +34,7 @@ Specifies route conditions for matching the rule to incoming HTTP requests with 
 +
 The link:{{< relref "#_path_expression" >}}[Path Expression] describing the request path this rule should match. It supports both simple and free (named) wildcards.
 
-*** *`path_params`*: _PathParameterConditions_ (optional)
+*** *`captures`*: _CaptureConditions_ (optional)
 +
 Additional conditions which must be met for the values captured by named wildcards in the path expression. All defined conditions must succeed for the request path to be considered a match. Each entry supports the following properties:
 
@@ -148,7 +148,7 @@ match:
   http:
     paths:
       - path: /some/:identifier/followed/by/**
-        path_params:
+        captures:
           - name: identifier
             type: glob
             value: "[a-z]"
@@ -262,7 +262,7 @@ Consider a rule set with the following rules
     http:
       paths:
         - path: /files/:team/:name
-          path_params:
+          captures:
             - name: team
               type: regex
               value: "(team1|team2)"
@@ -276,7 +276,7 @@ Consider a rule set with the following rules
     http:
       paths:
         - path: /files/:team/:name
-          path_params:
+          captures:
             - name: team
               type: regex
               value: "(team1|team2)"
@@ -300,7 +300,7 @@ An HTTP POST request to `/files/team1/document.pdf` will be matched by `rule3`, 
 
 An HTTP GET request to `/files/team3/document.pdf` will be matched by `rule4`, which is more specific than all other rules. Its pipeline is executed.
 
-However, even though a request to `/files/team4/document.pdf` matches the path expression defined in `rule2`, respectively `rule3`, the regular expression `(team1|team2)` used in the `path_params` for the `team` parameter will not match. Backtracking occurs, and the request falls back to `rule1`, which does match. Thus, the pipeline of `rule1` is executed.
+However, even though a request to `/files/team4/document.pdf` matches the path expression defined in `rule2`, respectively `rule3`, the regular expression `(team1|team2)` used in the `captures` for the `team` parameter will not match. Backtracking occurs, and the request falls back to `rule1`, which does match. Thus, the pipeline of `rule1` is executed.
 
 
 Here’s another example:

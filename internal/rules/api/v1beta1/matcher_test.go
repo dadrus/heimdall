@@ -37,7 +37,7 @@ func TestMatcherDeepCopyInto(t *testing.T) {
 				Paths: []Path{
 					{
 						Path: "/:foo/:bar",
-						PathParams: []ParameterMatcher{
+						Captures: []CaptureMatcher{
 							{Name: "foo", Value: "bar", Type: "glob"},
 							{Name: "bar", Value: "baz", Type: "regex"},
 						},
@@ -50,7 +50,7 @@ func TestMatcherDeepCopyInto(t *testing.T) {
 				Paths: []Path{
 					{
 						Path: "/:foo/:bar",
-						PathParams: []ParameterMatcher{
+						Captures: []CaptureMatcher{
 							{Name: "foo", Value: "bar", Type: "glob"},
 							{Name: "bar", Value: "baz", Type: "regex"},
 						},

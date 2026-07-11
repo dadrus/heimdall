@@ -33,17 +33,17 @@ type HTTPMatcher struct {
 }
 
 type Path struct {
-	Path       string             `json:"path"                  yaml:"path"                  validate:"required"`                //nolint:lll,tagalign
-	PathParams []ParameterMatcher `json:"path_params,omitempty" yaml:"path_params,omitempty" validate:"omitempty,dive,required"` //nolint:lll,tagalign
+	Path     string           `json:"path"               yaml:"path"               validate:"required"`                //nolint:lll,tagalign
+	Captures []CaptureMatcher `json:"captures,omitempty" yaml:"captures,omitempty" validate:"omitempty,dive,required"` //nolint:lll,tagalign
 }
 
 func (r *Path) DeepCopyInto(out *Path) {
 	*out = *r
 
-	out.PathParams = slices.Clone(r.PathParams)
+	out.Captures = slices.Clone(r.Captures)
 }
 
-type ParameterMatcher struct {
+type CaptureMatcher struct {
 	Name  string `json:"name"  yaml:"name"  validate:"required,ne=*"`                   //nolint:tagalign
 	Value string `json:"value" yaml:"value" validate:"required"`                        //nolint:tagalign
 	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact glob regex"` //nolint:tagalign

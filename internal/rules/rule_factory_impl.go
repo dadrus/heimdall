@@ -187,7 +187,7 @@ func (f *ruleFactory) addRoutes(
 	}
 
 	for _, rc := range http.Paths {
-		ppm, err := createPathParamsMatcher(rc.PathParams, slashesHandling)
+		ppm, err := createPathParamsMatcher(rc.Captures, slashesHandling)
 		if err != nil {
 			return errorchain.NewWithMessagef(
 				pipeline.ErrConfiguration,

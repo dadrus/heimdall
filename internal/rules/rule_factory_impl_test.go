@@ -751,8 +751,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{
 					Paths: []v1beta1.Path{
 						{
-							Path:       "/foo/:bar",
-							PathParams: []v1beta1.ParameterMatcher{{Name: "bar", Type: "foo", Value: "baz"}},
+							Path:     "/foo/:bar",
+							Captures: []v1beta1.CaptureMatcher{{Name: "bar", Type: "foo", Value: "baz"}},
 						},
 					},
 				}},
@@ -1089,12 +1089,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{
 					Paths: []v1beta1.Path{
 						{
-							Path:       "/foo/:resource",
-							PathParams: []v1beta1.ParameterMatcher{{Name: "resource", Type: "regex", Value: "(bar|baz)"}},
+							Path:     "/foo/:resource",
+							Captures: []v1beta1.CaptureMatcher{{Name: "resource", Type: "regex", Value: "(bar|baz)"}},
 						},
 						{
-							Path:       "/bar/:resource",
-							PathParams: []v1beta1.ParameterMatcher{{Name: "resource", Type: "glob", Value: "{a,b}"}},
+							Path:     "/bar/:resource",
+							Captures: []v1beta1.CaptureMatcher{{Name: "resource", Type: "glob", Value: "{a,b}"}},
 						},
 					},
 					Scheme:  "https",
@@ -1203,12 +1203,12 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{
 					Paths: []v1beta1.Path{
 						{
-							Path:       "/foo/:resource",
-							PathParams: []v1beta1.ParameterMatcher{{Name: "resource", Type: "regex", Value: "(bar|baz)"}},
+							Path:     "/foo/:resource",
+							Captures: []v1beta1.CaptureMatcher{{Name: "resource", Type: "regex", Value: "(bar|baz)"}},
 						},
 						{
-							Path:       "/bar/:resource",
-							PathParams: []v1beta1.ParameterMatcher{{Name: "resource", Type: "glob", Value: "{a,b}"}},
+							Path:     "/bar/:resource",
+							Captures: []v1beta1.CaptureMatcher{{Name: "resource", Type: "glob", Value: "{a,b}"}},
 						},
 					},
 					Scheme:  "https",

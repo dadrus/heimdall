@@ -132,7 +132,7 @@ rules:
       http:
         paths:
           - path: /pub/*baz
-            path_params:
+            captures:
               - name: baz
                 value: "*foo*"
                 type: glob
@@ -160,7 +160,7 @@ rules:
       http:
         paths:
           - path: /pub/*baz
-            path_params:
+            captures:
               - name: baz
                 value: "*foo*"
                 type: glob

@@ -6,7 +6,7 @@ rules:
     http:
       paths:
         - path: /foo/:bar/**
-          path_params:
+          captures:
             - name: bar
               type: glob
               value: "*baz"

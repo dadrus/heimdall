@@ -60,7 +60,7 @@ const response = `{
                 "paths": [
                   {
                     "path": "/foobar/*foo",
-                    "path_params": [{ "name": "foo", "type": "glob", "value": "foos*" }]
+                    "captures": [{ "name": "foo", "type": "glob", "value": "foos*" }]
                   },
                   {
                     "path": "/foobar/baz"
@@ -149,10 +149,10 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 	assert.Equal(t, "test:rule", rule.ID)
 	assert.Len(t, rule.Matcher.HTTP.Paths, 2)
 	assert.Equal(t, "/foobar/*foo", rule.Matcher.HTTP.Paths[0].Path)
-	assert.Len(t, rule.Matcher.HTTP.Paths[0].PathParams, 1)
-	assert.Equal(t, "foo", rule.Matcher.HTTP.Paths[0].PathParams[0].Name)
-	assert.Equal(t, "glob", rule.Matcher.HTTP.Paths[0].PathParams[0].Type)
-	assert.Equal(t, "foos*", rule.Matcher.HTTP.Paths[0].PathParams[0].Value)
+	assert.Len(t, rule.Matcher.HTTP.Paths[0].Captures, 1)
+	assert.Equal(t, "foo", rule.Matcher.HTTP.Paths[0].Captures[0].Name)
+	assert.Equal(t, "glob", rule.Matcher.HTTP.Paths[0].Captures[0].Type)
+	assert.Equal(t, "foos*", rule.Matcher.HTTP.Paths[0].Captures[0].Value)
 	assert.Equal(t, "/foobar/baz", rule.Matcher.HTTP.Paths[1].Path)
 	assert.Equal(t, "http", rule.Matcher.HTTP.Scheme)
 	assert.Len(t, rule.Matcher.HTTP.Hosts, 1)

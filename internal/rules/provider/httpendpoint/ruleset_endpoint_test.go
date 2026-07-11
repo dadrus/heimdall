@@ -184,7 +184,7 @@ rules:
     http:
       paths:
         - path: /foo/:bar
-          path_params:
+          captures:
             - name: bar
               type: glob
               value: "*baz"
@@ -205,10 +205,10 @@ rules:
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
 				require.Len(t, ruleSet.Rules[0].Matcher.HTTP.Paths, 1)
 				assert.Equal(t, "/foo/:bar", ruleSet.Rules[0].Matcher.HTTP.Paths[0].Path)
-				require.Len(t, ruleSet.Rules[0].Matcher.HTTP.Paths[0].PathParams, 1)
-				assert.Equal(t, "bar", ruleSet.Rules[0].Matcher.HTTP.Paths[0].PathParams[0].Name)
-				assert.Equal(t, "glob", ruleSet.Rules[0].Matcher.HTTP.Paths[0].PathParams[0].Type)
-				assert.Equal(t, "*baz", ruleSet.Rules[0].Matcher.HTTP.Paths[0].PathParams[0].Value)
+				require.Len(t, ruleSet.Rules[0].Matcher.HTTP.Paths[0].Captures, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].Matcher.HTTP.Paths[0].Captures[0].Name)
+				assert.Equal(t, "glob", ruleSet.Rules[0].Matcher.HTTP.Paths[0].Captures[0].Type)
+				assert.Equal(t, "*baz", ruleSet.Rules[0].Matcher.HTTP.Paths[0].Captures[0].Value)
 				assert.Equal(t, []string{"GET"}, ruleSet.Rules[0].Matcher.HTTP.Methods)
 				assert.NotEmpty(t, ruleSet.Hash)
 			},
@@ -269,7 +269,7 @@ rules:
         "match": {
           "http": {
             "paths": [
-              { "path": "/foo/bar/:baz", "path_params": [{ "name": "baz", "type":"glob", "value":"{*.ico,*.js}" }] }
+              { "path": "/foo/bar/:baz", "captures": [{ "name": "baz", "type":"glob", "value":"{*.ico,*.js}" }] }
             ],
             "methods": [ "GET" ],
             "hosts": [ "moobar.local:9090" ]

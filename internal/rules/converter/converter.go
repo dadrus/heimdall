@@ -121,8 +121,8 @@ func (c *converter) convertV1Beta1ToV1Alpha4(sourceRs *v1beta1.RuleSet) (*v1alph
 
 		routes := make([]v1alpha4.Route, len(http.Paths))
 		for idx, path := range http.Paths {
-			params := make([]v1alpha4.ParameterMatcher, len(path.PathParams))
-			for idx, param := range path.PathParams {
+			params := make([]v1alpha4.ParameterMatcher, len(path.Captures))
+			for idx, param := range path.Captures {
 				params[idx] = v1alpha4.ParameterMatcher{
 					Name:  param.Name,
 					Type:  param.Type,
@@ -187,9 +187,9 @@ func (c *converter) convertV1Alpha4ToV1Beta1(sourceRs *v1alpha4.RuleSet) (*v1bet
 	for idx, rul := range sourceRs.Rules {
 		paths := make([]v1beta1.Path, len(rul.Matcher.Routes))
 		for idx, path := range rul.Matcher.Routes {
-			params := make([]v1beta1.ParameterMatcher, len(path.PathParams))
+			params := make([]v1beta1.CaptureMatcher, len(path.PathParams))
 			for idx, param := range path.PathParams {
-				params[idx] = v1beta1.ParameterMatcher{
+				params[idx] = v1beta1.CaptureMatcher{
 					Name:  param.Name,
 					Type:  param.Type,
 					Value: param.Value,
@@ -197,8 +197,8 @@ func (c *converter) convertV1Alpha4ToV1Beta1(sourceRs *v1alpha4.RuleSet) (*v1bet
 			}
 
 			paths[idx] = v1beta1.Path{
-				Path:       path.Path,
-				PathParams: params,
+				Path:     path.Path,
+				Captures: params,
 			}
 		}
 

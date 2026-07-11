@@ -17,7 +17,7 @@ rules:
     http:
       paths:
         - path: /:user
-          path_params:
+          captures:
             - type: regex
               name: user
               value: (user|admin)

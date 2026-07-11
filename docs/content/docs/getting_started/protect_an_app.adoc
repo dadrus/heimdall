@@ -161,7 +161,7 @@ rules:
     http:
       paths:
         - path: /:user
-          path_params:
+          captures:
             - name: user
               type: glob
               value: "{user,admin}"

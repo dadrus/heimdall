@@ -155,7 +155,7 @@ func createMethodMatcher(methods []string) (methodMatcher, error) {
 }
 
 func createPathParamsMatcher(
-	params []v1beta1.ParameterMatcher,
+	params []v1beta1.CaptureMatcher,
 	esh v1beta1.EncodedSlashesHandling,
 ) (RouteMatcher, error) {
 	matchers := make(andMatcher, len(params))

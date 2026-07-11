@@ -131,7 +131,7 @@ spec:
                                       description: The path to match
                                       type: string
                                       maxLength: 512
-                                    path_params:
+                                    captures:
                                       description: Optional matching definitions for the captured wildcard
                                       type: array
                                       items:

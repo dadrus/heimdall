@@ -36,7 +36,7 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 				Paths: []Path{
 					{
 						Path: "/:foo/*something",
-						PathParams: []ParameterMatcher{
+						Captures: []CaptureMatcher{
 							{Name: "foo", Value: "bar", Type: "glob"},
 							{Name: "something", Value: ".*\\.css", Type: "regex"},
 						},
@@ -101,7 +101,7 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 				Paths: []Path{
 					{
 						Path: "/:foo/*something",
-						PathParams: []ParameterMatcher{
+						Captures: []CaptureMatcher{
 							{Name: "foo", Value: "bar", Type: "glob"},
 							{Name: "something", Value: ".*\\.css", Type: "regex"},
 						},

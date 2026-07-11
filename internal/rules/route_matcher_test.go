@@ -87,7 +87,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		conf   []v1beta1.ParameterMatcher
+		conf   []v1beta1.CaptureMatcher
 		assert func(t *testing.T, matcher RouteMatcher, err error)
 	}{
 		"empty configuration": {
@@ -100,7 +100,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 			},
 		},
 		"valid glob expression": {
-			conf: []v1beta1.ParameterMatcher{{Name: "foo", Value: "/**", Type: "glob"}},
+			conf: []v1beta1.CaptureMatcher{{Name: "foo", Value: "/**", Type: "glob"}},
 			assert: func(t *testing.T, matcher RouteMatcher, err error) {
 				t.Helper()
 
@@ -114,7 +114,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 			},
 		},
 		"invalid glob expression": {
-			conf: []v1beta1.ParameterMatcher{{Name: "foo", Value: "!*][)(*", Type: "glob"}},
+			conf: []v1beta1.CaptureMatcher{{Name: "foo", Value: "!*][)(*", Type: "glob"}},
 			assert: func(t *testing.T, _ RouteMatcher, err error) {
 				t.Helper()
 
@@ -124,7 +124,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 			},
 		},
 		"valid regex expression": {
-			conf: []v1beta1.ParameterMatcher{{Name: "foo", Value: ".*", Type: "regex"}},
+			conf: []v1beta1.CaptureMatcher{{Name: "foo", Value: ".*", Type: "regex"}},
 			assert: func(t *testing.T, matcher RouteMatcher, err error) {
 				t.Helper()
 
@@ -138,7 +138,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 			},
 		},
 		"invalid regex expression": {
-			conf: []v1beta1.ParameterMatcher{{Name: "foo", Value: "?>?<*??", Type: "regex"}},
+			conf: []v1beta1.CaptureMatcher{{Name: "foo", Value: "?>?<*??", Type: "regex"}},
 			assert: func(t *testing.T, _ RouteMatcher, err error) {
 				t.Helper()
 
@@ -148,7 +148,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 			},
 		},
 		"exact expression": {
-			conf: []v1beta1.ParameterMatcher{{Name: "foo", Value: "?>?<*??", Type: "exact"}},
+			conf: []v1beta1.CaptureMatcher{{Name: "foo", Value: "?>?<*??", Type: "exact"}},
 			assert: func(t *testing.T, matcher RouteMatcher, err error) {
 				t.Helper()
 
@@ -162,7 +162,7 @@ func TestCreatePathParamsMatcher(t *testing.T) {
 			},
 		},
 		"unsupported type": {
-			conf: []v1beta1.ParameterMatcher{{Name: "foo", Value: "foo", Type: "bar"}},
+			conf: []v1beta1.CaptureMatcher{{Name: "foo", Value: "foo", Type: "bar"}},
 			assert: func(t *testing.T, _ RouteMatcher, err error) {
 				t.Helper()
 
@@ -238,7 +238,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		conf          []v1beta1.ParameterMatcher
+		conf          []v1beta1.CaptureMatcher
 		slashHandling v1beta1.EncodedSlashesHandling
 		toMatch       string
 		keys          []string
@@ -246,14 +246,14 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 		matches       bool
 	}{
 		"parameter not present in keys": {
-			conf: []v1beta1.ParameterMatcher{
+			conf: []v1beta1.CaptureMatcher{
 				{Name: "foo", Type: "exact", Value: "bar"},
 			},
 			keys:   []string{"bar"},
 			values: []string{"baz"},
 		},
 		"encoded slashes are not allowed": {
-			conf: []v1beta1.ParameterMatcher{
+			conf: []v1beta1.CaptureMatcher{
 				{Name: "foo", Type: "exact", Value: "bar%2Fbaz"},
 			},
 			slashHandling: v1beta1.EncodedSlashesOff,
@@ -262,7 +262,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			toMatch:       "http://example.com/bar%2Fbaz",
 		},
 		"lowercase encoded slashes are not allowed": {
-			conf: []v1beta1.ParameterMatcher{
+			conf: []v1beta1.CaptureMatcher{
 				{Name: "foo", Type: "exact", Value: "bar%2fbaz"},
 			},
 			slashHandling: v1beta1.EncodedSlashesOff,
@@ -271,7 +271,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			toMatch:       "http://example.com/bar%2fbaz",
 		},
 		"matches with path having allowed but not decoded encoded slashes": {
-			conf: []v1beta1.ParameterMatcher{
+			conf: []v1beta1.CaptureMatcher{
 				{Name: "foo", Type: "exact", Value: "bar%2Fbaz[id]"},
 			},
 			slashHandling: v1beta1.EncodedSlashesOnNoDecode,
@@ -281,7 +281,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			matches:       true,
 		},
 		"matches with path having allowed but not decoded lowercase encoded slashes": {
-			conf: []v1beta1.ParameterMatcher{
+			conf: []v1beta1.CaptureMatcher{
 				{Name: "foo", Type: "exact", Value: "bar%2fbaz[id]"},
 			},
 			slashHandling: v1beta1.EncodedSlashesOnNoDecode,
@@ -291,7 +291,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			matches:       true,
 		},
 		"matches with path having allowed decoded slashes": {
-			conf: []v1beta1.ParameterMatcher{
+			conf: []v1beta1.CaptureMatcher{
 				{Name: "foo", Type: "exact", Value: "bar/baz[id]"},
 			},
 			slashHandling: v1beta1.EncodedSlashesOn,
@@ -301,7 +301,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			matches:       true,
 		},
 		"matches with path having allowed decoded lowercase encoded slashes": {
-			conf: []v1beta1.ParameterMatcher{
+			conf: []v1beta1.CaptureMatcher{
 				{Name: "foo", Type: "exact", Value: "bar/baz[id]"},
 			},
 			slashHandling: v1beta1.EncodedSlashesOn,
@@ -311,7 +311,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			matches:       true,
 		},
 		"does not match the request path if appropriate matcher is not defined as first element": {
-			conf: []v1beta1.ParameterMatcher{
+			conf: []v1beta1.CaptureMatcher{
 				{Name: "foo", Type: "exact", Value: "bar/foo"},
 				{Name: "foo", Type: "exact", Value: "bar/bar"},
 			},
@@ -322,7 +322,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			matches:       false,
 		},
 		"doesn't match": {
-			conf: []v1beta1.ParameterMatcher{
+			conf: []v1beta1.CaptureMatcher{
 				{Name: "foo", Type: "exact", Value: "bar"},
 			},
 			slashHandling: v1beta1.EncodedSlashesOn,
