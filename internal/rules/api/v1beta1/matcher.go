@@ -26,18 +26,18 @@ type Matcher struct {
 
 // HTTPMatcher contains all HTTP-specific matching criteria.
 type HTTPMatcher struct {
-	Routes  []Route  `json:"routes"            yaml:"routes"            validate:"required,dive"`              //nolint:lll,tagalign
+	Paths   []Path   `json:"paths"             yaml:"paths"             validate:"required,dive"`              //nolint:lll,tagalign
 	Scheme  string   `json:"scheme,omitempty"  yaml:"scheme,omitempty"  validate:"omitempty,oneof=http https"` //nolint:lll,tagalign
 	Methods []string `json:"methods,omitempty" yaml:"methods,omitempty" validate:"omitempty,dive,required"`    //nolint:lll,tagalign
 	Hosts   []string `json:"hosts,omitempty"   yaml:"hosts,omitempty"   validate:"omitempty,required"`         //nolint:lll,tagalign
 }
 
-type Route struct {
+type Path struct {
 	Path       string             `json:"path"                  yaml:"path"                  validate:"required"`                //nolint:lll,tagalign
 	PathParams []ParameterMatcher `json:"path_params,omitempty" yaml:"path_params,omitempty" validate:"omitempty,dive,required"` //nolint:lll,tagalign
 }
 
-func (r *Route) DeepCopyInto(out *Route) {
+func (r *Path) DeepCopyInto(out *Path) {
 	*out = *r
 
 	out.PathParams = slices.Clone(r.PathParams)
@@ -61,8 +61,8 @@ func (m *HTTPMatcher) DeepCopyInto(out *HTTPMatcher) {
 	out.Methods = slices.Clone(m.Methods)
 	out.Hosts = slices.Clone(m.Hosts)
 
-	out.Routes = make([]Route, len(m.Routes))
-	for i, route := range m.Routes {
-		route.DeepCopyInto(&out.Routes[i])
+	out.Paths = make([]Path, len(m.Paths))
+	for i, route := range m.Paths {
+		route.DeepCopyInto(&out.Paths[i])
 	}
 }

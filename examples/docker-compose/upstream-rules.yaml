@@ -3,7 +3,7 @@ rules:
 - id: demo:public
   match:
     http:
-      routes:
+      paths:
         - path: /public
       methods: [ GET, POST ]
   forward_to:
@@ -15,7 +15,7 @@ rules:
 - id: demo:protected
   match:
     http:
-      routes:
+      paths:
         - path: /:user
           path_params:
             - type: regex

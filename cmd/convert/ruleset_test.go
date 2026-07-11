@@ -77,7 +77,7 @@ rules:
 - id: rule:foo
   match:
     http:
-      routes:
+      paths:
         - path: /**
       backtracking_enabled: true
       scheme: http
@@ -182,7 +182,7 @@ rules:
 - id: rule:foo
   match:
     http:
-      routes:
+      paths:
         - path: /**
       backtracking_enabled: true
       scheme: http
@@ -247,7 +247,7 @@ rules:
 - id: rule:foo
   match:
     http:
-      routes:
+      paths:
         - path: /**
       backtracking_enabled: true
       scheme: http
@@ -295,7 +295,7 @@ rules:
 - id: rule:foo
   match:
     http:
-      routes:
+      paths:
         - path: /**
       backtracking_enabled: true
       scheme: http

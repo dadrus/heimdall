@@ -313,7 +313,7 @@ func TestRulSetConverterHandle(t *testing.T) {
 							EncodedSlashesHandling: cfgv1beta1.EncodedSlashesOn,
 							Matcher: cfgv1beta1.Matcher{
 								HTTP: &cfgv1beta1.HTTPMatcher{
-									Routes: []cfgv1beta1.Route{
+									Paths: []cfgv1beta1.Path{
 										{
 											Path:       "/pub/*baz",
 											PathParams: []cfgv1beta1.ParameterMatcher{{Name: "baz", Value: "*foo*", Type: "glob"}},
@@ -351,7 +351,7 @@ func TestRulSetConverterHandle(t *testing.T) {
         "allow_encoded_slashes": "on",
         "match": {
           "http": {
-            "routes": [
+            "paths": [
               {
                 "path": "/pub/*baz",
                 "path_params": [

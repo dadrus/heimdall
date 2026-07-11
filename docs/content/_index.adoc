@@ -24,7 +24,7 @@ spec:
     - id: my_api_rule
       match:
         http:
-          routes:
+          paths:
             - path: /api/**
           scheme: http
           hosts:

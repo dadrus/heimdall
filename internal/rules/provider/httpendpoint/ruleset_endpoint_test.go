@@ -133,7 +133,7 @@ rules:
 - id: bar
   match:
     http:
-      routes: 
+      paths: 
         - path: /bar
 `))
 				require.NoError(t, err)
@@ -182,7 +182,7 @@ rules:
 - id: foo
   match:
     http:
-      routes:
+      paths:
         - path: /foo/:bar
           path_params:
             - name: bar
@@ -203,12 +203,12 @@ rules:
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
-				require.Len(t, ruleSet.Rules[0].Matcher.HTTP.Routes, 1)
-				assert.Equal(t, "/foo/:bar", ruleSet.Rules[0].Matcher.HTTP.Routes[0].Path)
-				require.Len(t, ruleSet.Rules[0].Matcher.HTTP.Routes[0].PathParams, 1)
-				assert.Equal(t, "bar", ruleSet.Rules[0].Matcher.HTTP.Routes[0].PathParams[0].Name)
-				assert.Equal(t, "glob", ruleSet.Rules[0].Matcher.HTTP.Routes[0].PathParams[0].Type)
-				assert.Equal(t, "*baz", ruleSet.Rules[0].Matcher.HTTP.Routes[0].PathParams[0].Value)
+				require.Len(t, ruleSet.Rules[0].Matcher.HTTP.Paths, 1)
+				assert.Equal(t, "/foo/:bar", ruleSet.Rules[0].Matcher.HTTP.Paths[0].Path)
+				require.Len(t, ruleSet.Rules[0].Matcher.HTTP.Paths[0].PathParams, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].Matcher.HTTP.Paths[0].PathParams[0].Name)
+				assert.Equal(t, "glob", ruleSet.Rules[0].Matcher.HTTP.Paths[0].PathParams[0].Type)
+				assert.Equal(t, "*baz", ruleSet.Rules[0].Matcher.HTTP.Paths[0].PathParams[0].Value)
 				assert.Equal(t, []string{"GET"}, ruleSet.Rules[0].Matcher.HTTP.Methods)
 				assert.NotEmpty(t, ruleSet.Hash)
 			},
@@ -231,7 +231,7 @@ rules:
           "id": "foo",
           "match": {
             "http": {
-              "routes": [{"path": "/foo"}],
+              "paths": [{"path": "/foo"}],
               "methods" : ["GET"]
             }
           },
@@ -268,7 +268,7 @@ rules:
 	    "id": "foo",
         "match": {
           "http": {
-            "routes": [
+            "paths": [
               { "path": "/foo/bar/:baz", "path_params": [{ "name": "baz", "type":"glob", "value":"{*.ico,*.js}" }] }
             ],
             "methods": [ "GET" ],

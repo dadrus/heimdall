@@ -273,7 +273,7 @@ rules:
 - id: access_document  # <1>
   match:
     http:
-      routes:
+      paths:
         - path: /document/:id # <2>
       methods: [ GET, POST, DELETE ]
   forward_to: # <3>
@@ -298,7 +298,7 @@ rules:
 - id: list_documents  # <11>
   match:
     http:
-      routes:
+      paths:
         - path: /documents # <12>
       methods: [ GET ] # <14>
   forward_to: # <13>

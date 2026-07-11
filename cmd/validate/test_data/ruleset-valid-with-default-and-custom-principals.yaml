@@ -4,7 +4,7 @@ rules:
 - id: rule:foo
   match:
     http:
-      routes:
+      paths:
         - path: /**
       scheme: http
       hosts:

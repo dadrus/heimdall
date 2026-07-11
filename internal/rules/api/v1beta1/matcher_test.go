@@ -29,12 +29,12 @@ func TestMatcherDeepCopyInto(t *testing.T) {
 		"nil http binding": {},
 		"single route defining only a path": {
 			HTTP: &HTTPMatcher{
-				Routes: []Route{{Path: "/foo/bar"}},
+				Paths: []Path{{Path: "/foo/bar"}},
 			},
 		},
 		"single route defining path and some path parameters": {
 			HTTP: &HTTPMatcher{
-				Routes: []Route{
+				Paths: []Path{
 					{
 						Path: "/:foo/:bar",
 						PathParams: []ParameterMatcher{
@@ -47,7 +47,7 @@ func TestMatcherDeepCopyInto(t *testing.T) {
 		},
 		"multiple routes and additional constraints": {
 			HTTP: &HTTPMatcher{
-				Routes: []Route{
+				Paths: []Path{
 					{
 						Path: "/:foo/:bar",
 						PathParams: []ParameterMatcher{

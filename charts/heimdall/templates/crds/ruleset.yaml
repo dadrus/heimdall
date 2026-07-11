@@ -115,10 +115,10 @@ spec:
                             description: HTTP-specific matching criteria
                             type: object
                             required:
-                              - routes
+                              - paths
                             properties:
-                              routes:
-                                description: Routes to match
+                              paths:
+                                description: Paths to match
                                 type: array
                                 minItems: 1
                                 items:

@@ -119,10 +119,21 @@ func (c *converter) convertV1Beta1ToV1Alpha4(sourceRs *v1beta1.RuleSet) (*v1alph
 	for idx, rul := range sourceRs.Rules {
 		http := rul.Matcher.HTTP
 
-		routes, err := convertObject[[]v1beta1.Route, []v1alpha4.Route](http.Routes)
-		if err != nil {
-			return nil, errorchain.NewWithMessagef(ErrConversion,
-				"failed converting matcher routes for rule %s", rul.ID).CausedBy(err)
+		routes := make([]v1alpha4.Route, len(http.Paths))
+		for idx, path := range http.Paths {
+			params := make([]v1alpha4.ParameterMatcher, len(path.PathParams))
+			for idx, param := range path.PathParams {
+				params[idx] = v1alpha4.ParameterMatcher{
+					Name:  param.Name,
+					Type:  param.Type,
+					Value: param.Value,
+				}
+			}
+
+			routes[idx] = v1alpha4.Route{
+				Path:       path.Path,
+				PathParams: params,
+			}
 		}
 
 		backend, err := convertObject[v1beta1.Backend, v1alpha4.Backend](*rul.Backend)
@@ -174,10 +185,21 @@ func (c *converter) convertV1Alpha4ToV1Beta1(sourceRs *v1alpha4.RuleSet) (*v1bet
 	convertedRules := make([]v1beta1.Rule, len(sourceRs.Rules))
 
 	for idx, rul := range sourceRs.Rules {
-		routes, err := convertObject[[]v1alpha4.Route, []v1beta1.Route](rul.Matcher.Routes)
-		if err != nil {
-			return nil, errorchain.NewWithMessagef(ErrConversion,
-				"failed converting matcher routes for rule %s", rul.ID).CausedBy(err)
+		paths := make([]v1beta1.Path, len(rul.Matcher.Routes))
+		for idx, path := range rul.Matcher.Routes {
+			params := make([]v1beta1.ParameterMatcher, len(path.PathParams))
+			for idx, param := range path.PathParams {
+				params[idx] = v1beta1.ParameterMatcher{
+					Name:  param.Name,
+					Type:  param.Type,
+					Value: param.Value,
+				}
+			}
+
+			paths[idx] = v1beta1.Path{
+				Path:       path.Path,
+				PathParams: params,
+			}
 		}
 
 		backend, err := convertObject[v1alpha4.Backend, v1beta1.Backend](*rul.Backend)
@@ -208,7 +230,7 @@ func (c *converter) convertV1Alpha4ToV1Beta1(sourceRs *v1alpha4.RuleSet) (*v1bet
 			EncodedSlashesHandling: v1beta1.EncodedSlashesHandling(rul.EncodedSlashesHandling),
 			Matcher: v1beta1.Matcher{
 				HTTP: &v1beta1.HTTPMatcher{
-					Routes:  routes,
+					Paths:   paths,
 					Scheme:  rul.Matcher.Scheme,
 					Methods: rul.Matcher.Methods,
 					Hosts:   hosts,

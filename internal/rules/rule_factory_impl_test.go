@@ -696,7 +696,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			opMode: config.ProxyMode,
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
@@ -710,7 +710,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: v1beta1.Rule{
 				ID: "foobar",
 				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{
-					Routes:  []v1beta1.Route{{Path: "/foo/bar"}},
+					Paths:   []v1beta1.Path{{Path: "/foo/bar"}},
 					Methods: []string{""},
 				}},
 				Execute: []v1beta1.Step{
@@ -749,7 +749,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: v1beta1.Rule{
 				ID: "foobar",
 				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{
-					Routes: []v1beta1.Route{
+					Paths: []v1beta1.Path{
 						{
 							Path:       "/foo/:bar",
 							PathParams: []v1beta1.ParameterMatcher{{Name: "bar", Type: "foo", Value: "baz"}},
@@ -791,7 +791,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"error while creating the execute pipeline": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{{AuthenticatorRef: "foo"}},
 			},
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
@@ -814,7 +814,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"error while creating on_error pipeline": {
 			config: v1beta1.Rule{
 				ID:           "foobar",
-				Matcher:      v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher:      v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				ErrorHandler: []v1beta1.Step{{ErrorHandlerRef: "foo", ID: "bar"}},
 			},
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
@@ -837,7 +837,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"without default rule and without any execute configuration": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 			},
 			assert: func(t *testing.T, err error, _ *ruleImpl) {
 				t.Helper()
@@ -850,7 +850,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"without default rule and with malformed execute configuration": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: ""},
 				},
@@ -866,7 +866,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"without default rule and with malformed on_error configuration": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
 				},
@@ -897,7 +897,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"without default rule and minimum required configuration in decision mode": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
 				},
@@ -947,8 +947,8 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: v1beta1.Rule{
 				ID: "foobar",
 				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{
-					Routes: []v1beta1.Route{{Path: "/foo/bar"}},
-					Hosts:  []string{"FoO.ExAmPlE.cOm", "*.ExAmPlE.cOm"},
+					Paths: []v1beta1.Path{{Path: "/foo/bar"}},
+					Hosts: []string{"FoO.ExAmPlE.cOm", "*.ExAmPlE.cOm"},
 				}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
@@ -989,7 +989,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: v1beta1.Rule{
 				ID:      "foobar",
 				Backend: &v1beta1.Backend{Host: "foo.bar"},
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{{AuthenticatorRef: "foo"}},
 			},
 			configureMocks: func(t *testing.T, repo *mocks1.RepositoryMock, resolver *secretsmocks.ResolverMock) {
@@ -1037,7 +1037,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"with default rule and regular rule with id and a single route only": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 			},
 			defaultRule: &ruleImpl{
 				p: rulePipelineImpl{
@@ -1087,7 +1087,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: v1beta1.Rule{
 				ID: "foobar",
 				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{
-					Routes: []v1beta1.Route{
+					Paths: []v1beta1.Path{
 						{
 							Path:       "/foo/:resource",
 							PathParams: []v1beta1.ParameterMatcher{{Name: "resource", Type: "regex", Value: "(bar|baz)"}},
@@ -1201,7 +1201,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			config: v1beta1.Rule{
 				ID: "foobar",
 				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{
-					Routes: []v1beta1.Route{
+					Paths: []v1beta1.Path{
 						{
 							Path:       "/foo/:resource",
 							PathParams: []v1beta1.ParameterMatcher{{Name: "resource", Type: "regex", Value: "(bar|baz)"}},
@@ -1329,7 +1329,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"malformed conditional configuration in the execute pipeline": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
 					{FinalizerRef: "bar", Condition: new("")},
@@ -1366,7 +1366,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"duplicate step ids in the execute pipeline": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo", ID: "1"},
 					{FinalizerRef: "bar", ID: "1"},
@@ -1403,7 +1403,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"conditional execution of some mechanisms in the execute pipeline": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
 					{AuthorizerRef: "bar", Condition: new("false")},
@@ -1493,7 +1493,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"conditional execution of error handler": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
 					{AuthorizerRef: "bar"},
@@ -1581,7 +1581,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"duplicate ids in the error pipeline": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
 				},
@@ -1628,7 +1628,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"error while getting the referenced mechanism": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
 				},
@@ -1649,7 +1649,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"fallback of authenticators for the default principal": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
 					{AuthenticatorRef: "bar"},
@@ -1698,7 +1698,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"single authenticator for the default principal and fallback authenticators for custom named principal": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
 					{AuthenticatorRef: "bar", Principal: new("custom")},
@@ -1769,7 +1769,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 		"no authenticator for the default principal configured": {
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "bar", Principal: new("a")},
 					{AuthenticatorRef: "baz", Principal: new("b")},
@@ -1823,7 +1823,7 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 			tracer: trace2.NewTracerProvider().Tracer("test"),
 			config: v1beta1.Rule{
 				ID:      "foobar",
-				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Routes: []v1beta1.Route{{Path: "/foo/bar"}}}},
+				Matcher: v1beta1.Matcher{HTTP: &v1beta1.HTTPMatcher{Paths: []v1beta1.Path{{Path: "/foo/bar"}}}},
 				Execute: []v1beta1.Step{
 					{AuthenticatorRef: "foo"},
 				},

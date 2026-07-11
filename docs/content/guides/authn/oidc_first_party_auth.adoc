@@ -159,7 +159,7 @@ rules:
 - id: upstream:public  # <1>
   match:
     http:
-      routes:
+      paths:
         - path: /
         - path: /favicon.ico
   forward_to:
@@ -171,7 +171,7 @@ rules:
 - id: upstream:protected  # <2>
   match:
     http:
-      routes:
+      paths:
         - path: /user
         - path: /admin
   forward_to:
@@ -208,7 +208,7 @@ rules:
 - id: oauth2-proxy:public
   match:
     http:
-      routes:
+      paths:
         - path: /oauth2/start
         - path: /oauth2/callback
   forward_to:

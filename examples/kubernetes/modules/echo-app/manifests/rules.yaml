@@ -10,7 +10,7 @@ spec:
     - id: public-access
       match:
         http:
-          routes:
+          paths:
             - path: /pub/**
       forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
@@ -19,7 +19,7 @@ spec:
     - id: anonymous-access
       match:
         http:
-          routes:
+          paths:
             - path: /anon/**
       forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080
@@ -29,7 +29,7 @@ spec:
     - id: redirect
       match:
         http:
-          routes:
+          paths:
             - path: /redir/**
       forward_to: # only required for proxy operation mode
         host: echo-app.quickstarts.svc.cluster.local:8080

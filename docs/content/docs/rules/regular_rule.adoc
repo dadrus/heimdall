@@ -146,7 +146,7 @@ Specifies error handling mechanisms if the pipeline defined by the `execute` pro
 id: rule:foo:bar
 match:
   http:
-    routes:
+    paths:
       - path: /some/:identifier/followed/by/**
         path_params:
           - name: identifier
@@ -212,7 +212,7 @@ Here is an example demonstrating the usage of a single named wildcard:
 id: rule:1
 match:
   http:
-    routes:
+    paths:
       - path: /files/:uuid/delete
     hosts:
       - hosty.mchostface
@@ -252,7 +252,7 @@ Consider a rule set with the following rules
 - id: rule1
   match:
     http:
-      routes:
+      paths:
         - path: /files/**
   execute:
     - <pipeline definition>
@@ -260,7 +260,7 @@ Consider a rule set with the following rules
 - id: rule2
   match:
     http:
-      routes:
+      paths:
         - path: /files/:team/:name
           path_params:
             - name: team
@@ -274,7 +274,7 @@ Consider a rule set with the following rules
 - id: rule3
   match:
     http:
-      routes:
+      paths:
         - path: /files/:team/:name
           path_params:
             - name: team
@@ -286,7 +286,7 @@ Consider a rule set with the following rules
 - id: rule4
   match:
     http:
-      routes:
+      paths:
         - path: /files/team3/:name
   execute:
     - <pipeline definition>
@@ -310,7 +310,7 @@ Here’s another example:
 - id: rule1
   match:
     http:
-      routes:
+      paths:
         - path: /foo/**
   execute:
     - <pipeline definition>
@@ -318,7 +318,7 @@ Here’s another example:
 - id: rule2
   match:
     http:
-      routes:
+      paths:
         - path: /foo/bar/:name
   execute:
     - <pipeline definition>

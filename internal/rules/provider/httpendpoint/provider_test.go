@@ -287,7 +287,7 @@ rules:
 - id: foo
   match:
     http:
-      routes:
+      paths:
         - path: /foo
       methods: [ "GET" ]
   execute:
@@ -336,7 +336,7 @@ rules:
 - id: bar
   match:
     http:
-      routes:
+      paths:
         - path: /bar
       methods: [ "GET" ]
   execute:
@@ -390,7 +390,7 @@ rules:
 - id: foo
   match:
     http:
-      routes:
+      paths:
         - path: /foo
       methods: [ GET ]
   execute:
@@ -408,7 +408,7 @@ rules:
 - id: bar
   match:
     http:
-      routes:
+      paths:
         - path: /bar
       methods: [ GET ]
   execute:
@@ -482,7 +482,7 @@ rules:
 - id: bar
   match:
     http:
-      routes:
+      paths:
         - path: /bar
   execute:
     - authenticator: test
@@ -497,7 +497,7 @@ rules:
 - id: baz
   match:
     http:
-      routes: 
+      paths: 
         - path: /baz
   execute:
     - authenticator: test
@@ -512,7 +512,7 @@ rules:
 - id: foo
   match:
     http:
-      routes:
+      paths:
         - path: /foo
   execute:
     - authenticator: test
@@ -527,7 +527,7 @@ rules:
 - id: foz
   match:
     http:
-      routes:
+      paths:
         - path: /foz
   execute:
     - authenticator: test
@@ -606,7 +606,7 @@ rules:
 - id: bar
   match:
     http:
-      routes:
+      paths:
         - path: /bar
   execute:
     - authenticator: test
@@ -657,7 +657,7 @@ rules:
 - id: bar
   match:
     http:
-      routes:
+      paths:
         - path: /bar
   execute:
     - authenticator: test
@@ -706,7 +706,7 @@ rules:
 - id: foo
   match:
     http:
-      routes:
+      paths:
         - path: /foo
   execute:
     - authenticator: test
@@ -748,7 +748,7 @@ rules:
 - id: bar
   match:
     http:
-      routes:
+      paths:
         - path: /bar
   execute:
     - authenticator: test
@@ -763,7 +763,7 @@ rules:
 - id: baz
   match:
     http:
-      routes:
+      paths:
         - path: /baz
   execute:
     - authenticator: test
@@ -810,7 +810,7 @@ rules:
 - id: bar
   match:
     http:
-      routes:
+      paths:
         - path: /bar
   execute:
     - authenticator: test

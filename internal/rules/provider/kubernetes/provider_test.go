@@ -236,7 +236,7 @@ func (h *RuleSetResourceHandler) writeListResponse(t *testing.T, w http.Response
 					ID: "test",
 					Matcher: cfgv1beta1.Matcher{
 						HTTP: &cfgv1beta1.HTTPMatcher{
-							Routes:  []cfgv1beta1.Route{{Path: "/"}},
+							Paths:   []cfgv1beta1.Path{{Path: "/"}},
 							Scheme:  "http",
 							Methods: []string{http.MethodGet},
 							Hosts:   []string{"foo.bar"},
@@ -406,8 +406,8 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "http", rule.Matcher.HTTP.Scheme)
 				assert.Len(t, rule.Matcher.HTTP.Hosts, 1)
 				assert.Equal(t, "foo.bar", rule.Matcher.HTTP.Hosts[0])
-				assert.Len(t, rule.Matcher.HTTP.Routes, 1)
-				assert.Equal(t, "/", rule.Matcher.HTTP.Routes[0].Path)
+				assert.Len(t, rule.Matcher.HTTP.Paths, 1)
+				assert.Equal(t, "/", rule.Matcher.HTTP.Paths[0].Path)
 				assert.Len(t, rule.Matcher.HTTP.Methods, 1)
 				assert.Contains(t, rule.Matcher.HTTP.Methods, http.MethodGet)
 				assert.Equal(t, "baz", rule.Backend.Host)
@@ -576,8 +576,8 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "http", createdRule.Matcher.HTTP.Scheme)
 				assert.Len(t, createdRule.Matcher.HTTP.Hosts, 1)
 				assert.Equal(t, "foo.bar", createdRule.Matcher.HTTP.Hosts[0])
-				assert.Len(t, createdRule.Matcher.HTTP.Routes, 1)
-				assert.Equal(t, "/", createdRule.Matcher.HTTP.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.HTTP.Paths, 1)
+				assert.Equal(t, "/", createdRule.Matcher.HTTP.Paths[0].Path)
 				assert.Len(t, createdRule.Matcher.HTTP.Methods, 1)
 				assert.Contains(t, createdRule.Matcher.HTTP.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
@@ -652,8 +652,8 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "http", createdRule.Matcher.HTTP.Scheme)
 				assert.Len(t, createdRule.Matcher.HTTP.Hosts, 1)
 				assert.Equal(t, "foo.bar", createdRule.Matcher.HTTP.Hosts[0])
-				assert.Len(t, createdRule.Matcher.HTTP.Routes, 1)
-				assert.Equal(t, "/", createdRule.Matcher.HTTP.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.HTTP.Paths, 1)
+				assert.Equal(t, "/", createdRule.Matcher.HTTP.Paths[0].Path)
 				assert.Len(t, createdRule.Matcher.HTTP.Methods, 1)
 				assert.Contains(t, createdRule.Matcher.HTTP.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
@@ -725,8 +725,8 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "http", createdRule.Matcher.HTTP.Scheme)
 				assert.Len(t, createdRule.Matcher.HTTP.Hosts, 1)
 				assert.Equal(t, "foo.bar", createdRule.Matcher.HTTP.Hosts[0])
-				assert.Len(t, createdRule.Matcher.HTTP.Routes, 1)
-				assert.Equal(t, "/", createdRule.Matcher.HTTP.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.HTTP.Paths, 1)
+				assert.Equal(t, "/", createdRule.Matcher.HTTP.Paths[0].Path)
 				assert.Len(t, createdRule.Matcher.HTTP.Methods, 1)
 				assert.Contains(t, createdRule.Matcher.HTTP.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
@@ -810,7 +810,7 @@ func TestProviderLifecycle(t *testing.T) {
 								ID: "test",
 								Matcher: cfgv1beta1.Matcher{
 									HTTP: &cfgv1beta1.HTTPMatcher{
-										Routes:  []cfgv1beta1.Route{{Path: "/"}},
+										Paths:   []cfgv1beta1.Path{{Path: "/"}},
 										Scheme:  "http",
 										Methods: []string{http.MethodGet},
 										Hosts:   []string{"foo.bar"},
@@ -877,8 +877,8 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "http", createdRule.Matcher.HTTP.Scheme)
 				assert.Len(t, createdRule.Matcher.HTTP.Hosts, 1)
 				assert.Equal(t, "foo.bar", createdRule.Matcher.HTTP.Hosts[0])
-				assert.Len(t, createdRule.Matcher.HTTP.Routes, 1)
-				assert.Equal(t, "/", createdRule.Matcher.HTTP.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.HTTP.Paths, 1)
+				assert.Equal(t, "/", createdRule.Matcher.HTTP.Paths[0].Path)
 				assert.Len(t, createdRule.Matcher.HTTP.Methods, 1)
 				assert.Contains(t, createdRule.Matcher.HTTP.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
@@ -908,8 +908,8 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "http", createdRule.Matcher.HTTP.Scheme)
 				assert.Len(t, createdRule.Matcher.HTTP.Hosts, 1)
 				assert.Equal(t, "foo.bar", createdRule.Matcher.HTTP.Hosts[0])
-				assert.Len(t, createdRule.Matcher.HTTP.Routes, 1)
-				assert.Equal(t, "/", createdRule.Matcher.HTTP.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.HTTP.Paths, 1)
+				assert.Equal(t, "/", createdRule.Matcher.HTTP.Paths[0].Path)
 				assert.Len(t, createdRule.Matcher.HTTP.Methods, 1)
 				assert.Contains(t, createdRule.Matcher.HTTP.Methods, http.MethodGet)
 				assert.Equal(t, "bar", updatedRule.Backend.Host)
@@ -991,8 +991,8 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "http", createdRule.Matcher.HTTP.Scheme)
 				assert.Len(t, createdRule.Matcher.HTTP.Hosts, 1)
 				assert.Equal(t, "foo.bar", createdRule.Matcher.HTTP.Hosts[0])
-				assert.Len(t, createdRule.Matcher.HTTP.Routes, 1)
-				assert.Equal(t, "/", createdRule.Matcher.HTTP.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.HTTP.Paths, 1)
+				assert.Equal(t, "/", createdRule.Matcher.HTTP.Paths[0].Path)
 				assert.Len(t, createdRule.Matcher.HTTP.Methods, 1)
 				assert.Contains(t, createdRule.Matcher.HTTP.Methods, http.MethodGet)
 				assert.Equal(t, "baz", createdRule.Backend.Host)
@@ -1022,8 +1022,8 @@ func TestProviderLifecycle(t *testing.T) {
 				assert.Equal(t, "http", createdRule.Matcher.HTTP.Scheme)
 				assert.Len(t, createdRule.Matcher.HTTP.Hosts, 1)
 				assert.Equal(t, "foo.bar", createdRule.Matcher.HTTP.Hosts[0])
-				assert.Len(t, createdRule.Matcher.HTTP.Routes, 1)
-				assert.Equal(t, "/", createdRule.Matcher.HTTP.Routes[0].Path)
+				assert.Len(t, createdRule.Matcher.HTTP.Paths, 1)
+				assert.Equal(t, "/", createdRule.Matcher.HTTP.Paths[0].Path)
 				assert.Len(t, createdRule.Matcher.HTTP.Methods, 1)
 				assert.Contains(t, createdRule.Matcher.HTTP.Methods, http.MethodGet)
 				assert.Equal(t, "baz", deleteRule.Backend.Host)
@@ -1068,7 +1068,7 @@ func TestProviderLifecycle(t *testing.T) {
 								ID: "test",
 								Matcher: cfgv1beta1.Matcher{
 									HTTP: &cfgv1beta1.HTTPMatcher{
-										Routes:  []cfgv1beta1.Route{{Path: "/"}},
+										Paths:   []cfgv1beta1.Path{{Path: "/"}},
 										Scheme:  "http",
 										Methods: []string{http.MethodGet},
 										Hosts:   []string{"foo.bar"},

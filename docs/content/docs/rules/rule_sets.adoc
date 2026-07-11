@@ -50,7 +50,7 @@ rules:
 - id: rule:1
   match:
     http:
-      routes:
+      paths:
         - path: /**
       methods: [ "GET" ]
       scheme: https
@@ -61,7 +61,7 @@ rules:
 - id: rule:2
   match:
     http:
-      routes:
+      paths:
         - path: /**
       scheme: https
       hosts:
@@ -121,7 +121,7 @@ spec:
     - id: "<identifier of a rule 1>"
       match:
         http:
-          routes:
+          paths:
             - path: /foo/**
           scheme: https
           hosts:

@@ -186,7 +186,7 @@ func (f *ruleFactory) addRoutes(
 		hosts = []string{"*"}
 	}
 
-	for _, rc := range http.Routes {
+	for _, rc := range http.Paths {
 		ppm, err := createPathParamsMatcher(rc.PathParams, slashesHandling)
 		if err != nil {
 			return errorchain.NewWithMessagef(

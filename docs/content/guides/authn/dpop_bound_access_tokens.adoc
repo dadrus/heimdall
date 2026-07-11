@@ -179,7 +179,7 @@ rules:
   - id: upstream:api
     match:
       http:
-        routes:
+        paths:
           - path: /api
           - path: /api/<**>
     forward_to:

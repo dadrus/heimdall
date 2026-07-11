@@ -33,7 +33,7 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 		ID: "foo",
 		Matcher: Matcher{
 			HTTP: &HTTPMatcher{
-				Routes: []Route{
+				Paths: []Path{
 					{
 						Path: "/:foo/*something",
 						PathParams: []ParameterMatcher{
@@ -98,7 +98,7 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 		ID: "foo",
 		Matcher: Matcher{
 			HTTP: &HTTPMatcher{
-				Routes: []Route{
+				Paths: []Path{
 					{
 						Path: "/:foo/*something",
 						PathParams: []ParameterMatcher{

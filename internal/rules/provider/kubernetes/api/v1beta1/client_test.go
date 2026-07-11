@@ -57,7 +57,7 @@ const response = `{
             "id": "test:rule",
             "match": {
               "http": {
-                "routes": [
+                "paths": [
                   {
                     "path": "/foobar/*foo",
                     "path_params": [{ "name": "foo", "type": "glob", "value": "foos*" }]
@@ -147,13 +147,13 @@ func verifyRuleSetList(t *testing.T, rls *RuleSetList) {
 
 	rule := ruleSet.Spec.Rules[0]
 	assert.Equal(t, "test:rule", rule.ID)
-	assert.Len(t, rule.Matcher.HTTP.Routes, 2)
-	assert.Equal(t, "/foobar/*foo", rule.Matcher.HTTP.Routes[0].Path)
-	assert.Len(t, rule.Matcher.HTTP.Routes[0].PathParams, 1)
-	assert.Equal(t, "foo", rule.Matcher.HTTP.Routes[0].PathParams[0].Name)
-	assert.Equal(t, "glob", rule.Matcher.HTTP.Routes[0].PathParams[0].Type)
-	assert.Equal(t, "foos*", rule.Matcher.HTTP.Routes[0].PathParams[0].Value)
-	assert.Equal(t, "/foobar/baz", rule.Matcher.HTTP.Routes[1].Path)
+	assert.Len(t, rule.Matcher.HTTP.Paths, 2)
+	assert.Equal(t, "/foobar/*foo", rule.Matcher.HTTP.Paths[0].Path)
+	assert.Len(t, rule.Matcher.HTTP.Paths[0].PathParams, 1)
+	assert.Equal(t, "foo", rule.Matcher.HTTP.Paths[0].PathParams[0].Name)
+	assert.Equal(t, "glob", rule.Matcher.HTTP.Paths[0].PathParams[0].Type)
+	assert.Equal(t, "foos*", rule.Matcher.HTTP.Paths[0].PathParams[0].Value)
+	assert.Equal(t, "/foobar/baz", rule.Matcher.HTTP.Paths[1].Path)
 	assert.Equal(t, "http", rule.Matcher.HTTP.Scheme)
 	assert.Len(t, rule.Matcher.HTTP.Hosts, 1)
 	assert.Equal(t, "127.0.0.1", rule.Matcher.HTTP.Hosts[0])

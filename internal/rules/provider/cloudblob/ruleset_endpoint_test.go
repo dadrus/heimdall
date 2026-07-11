@@ -184,7 +184,7 @@ func TestFetchRuleSets(t *testing.T) {
 		"id": "foobar",
         "match": {
           "http": {
-            "routes": [
+            "paths": [
               { "path": "/foo/bar/api1" }
             ],
             "scheme": "http",
@@ -205,7 +205,7 @@ rules:
 - id: barfoo
   match:
     http:
-      routes:
+      paths:
         - path: /foo/bar/api2
       scheme: http
       hosts:
@@ -263,7 +263,7 @@ rules:
 					"id": "foobar",
                     "match": {
                       "http": {
-                        "routes": [
+                        "paths": [
                            { "path": "/foo/bar/api1" }
                         ],
                         "scheme": "http",
@@ -283,7 +283,7 @@ rules:
 					"id": "barfoo",
                     "match": {
                       "http": {
-                        "routes": [
+                        "paths": [
                           { "path": "/foo/bar/api2" }
                         ],
                         "scheme": "http",
@@ -382,7 +382,7 @@ rules:
 					"id": "foobar",
                     "match": {
                       "http": {
-                        "routes": [
+                        "paths": [
                           { "path": "/foo/bar/api1" }
                         ],
                         "scheme": "http",

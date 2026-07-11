@@ -148,7 +148,7 @@ rules:
 - id: demo:public  # <1>
   match:
     http:
-      routes:
+      paths:
         - path: /public
   forward_to:
     host: upstream:8081
@@ -159,7 +159,7 @@ rules:
 - id: demo:protected  # <2>
   match:
     http:
-      routes:
+      paths:
         - path: /:user
           path_params:
             - name: user

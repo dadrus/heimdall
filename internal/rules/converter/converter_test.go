@@ -130,7 +130,7 @@ rules:
     allow_encoded_slashes: on
     match:
       http:
-        routes:
+        paths:
           - path: /pub/*baz
             path_params:
               - name: baz
@@ -158,7 +158,7 @@ rules:
     allow_encoded_slashes: on
     match:
       http:
-        routes:
+        paths:
           - path: /pub/*baz
             path_params:
               - name: baz
