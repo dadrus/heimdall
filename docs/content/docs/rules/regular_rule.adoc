@@ -151,7 +151,7 @@ The name of the wildcard.
 The type of expression used to match the captured wildcard's value. The supported types are:
 
 **** `glob`: to use a https://github.com/gobwas/glob[glob expression] to match the captured value (`/` is used as a delimiter, so `*` matches anything until the next `/`).
-**** `regex` to use a regular expression to match the captured value.
+**** `regex`: to use a regular expression to match the captured value.
 
 *** *`value`*: _string_ (mandatory)
 +
@@ -301,8 +301,8 @@ Consider a rule set with the following rules
             - name: team
               type: regex
               value: "(team1|team2)"
-    methods:
-      - GET
+      methods:
+        - GET
   execute:
     - <pipeline definition>
 
