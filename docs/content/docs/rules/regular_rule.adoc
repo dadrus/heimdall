@@ -122,11 +122,11 @@ on_error:
 ----
 ====
 
-== Request Matching
+=== Request Matching
 
 A rule is matched against an incoming request using the protocol matcher configured in its `match` property. Exactly one protocol matcher must be configured. Each matcher defines its own, protocol-specific set of matching criteria, described in the following sections.
 
-=== HTTP Matcher
+==== HTTP Matcher
 
 The `http` matcher evaluates matching criteria against HTTP requests. It supports the following properties:
 
@@ -251,15 +251,15 @@ match:
       - path: /files/:uuid/delete
     hosts:
       - hosty.mchostface
-  execute:
-    - authorizer: openfga_check
-      config:
-        payload: |
-          {
-            "user": "{{ .Subject.ID }}",
-            "relation": "can_delete",
-            "object": "file:{{ .Request.URL.Captures.uuid }}"
-          }
+execute:
+  - authorizer: openfga_check
+    config:
+      payload: |
+        {
+          "user": "{{ .Subject.ID }}",
+          "relation": "can_delete",
+          "object": "file:{{ .Request.URL.Captures.uuid }}"
+        }
 ----
 
 == Rule Matching Specificity & Backtracking
@@ -478,7 +478,7 @@ This example uses
 
 == Error Pipeline
 
-Compared to the link:{{< relref "#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipeline], the error pipeline is pretty simple. It is also a list of mechanism references, but all referenced types are link:{{< relref "/docs/mechanisms/error_handlers.adoc" >}}[error handler types]. Thus, each entry in this list must have `error_handler` as key, followed by the `ìd` of the required error handler previously defined in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanism catalogue].
+Compared to the link:{{< relref "#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipeline], the error pipeline is pretty simple. It is also a list of mechanism references, but all referenced types are link:{{< relref "/docs/mechanisms/error_handlers.adoc" >}}[error handler types]. Thus, each entry in this list must have `error_handler` as key, followed by the `id` of the required error handler previously defined in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanism catalogue].
 
 Execution of the error handlers should happen conditionally by making use of a https://github.com/google/cel-spec[CEL] expression in an `if` clause, which has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_error" >}}[`Error`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects. Otherwise, the first error handler will be executed and the error pipeline will exit.
 
