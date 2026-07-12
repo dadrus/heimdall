@@ -40,12 +40,14 @@ type (
 
 	converter struct {
 		toVersion string
+		validator encoding.Validator
 	}
 )
 
-func New(desiredVersion string) Converter {
+func New(desiredVersion string, validator encoding.Validator) Converter {
 	return &converter{
 		toVersion: desiredVersion,
+		validator: validator,
 	}
 }
 
@@ -56,10 +58,11 @@ func (c *converter) Convert(rawObj []byte, format string) ([]byte, error) { // n
 		converted any
 	)
 
-	dec := encoding.NewDecoder(encoding.WithSourceContentType(format))
+	rawDec := encoding.NewDecoder(encoding.WithSourceContentType(format))
+	typedDec := encoding.NewDecoder(encoding.WithValidator(c.validator))
 	enc := encoding.NewEncoder(encoding.WithTargetContentType(format))
 
-	if err = dec.Decode(&urs, bytes.NewBuffer(rawObj)); err != nil {
+	if err = rawDec.Decode(&urs, bytes.NewBuffer(rawObj)); err != nil {
 		return nil, errorchain.NewWithMessage(ErrConversion,
 			"failed to decode ruleset").CausedBy(err)
 	}
@@ -79,8 +82,12 @@ func (c *converter) Convert(rawObj []byte, format string) ([]byte, error) { // n
 
 		var sourceRs v1alpha4.RuleSet
 
-		// decoding will always succeed, as it was already successful above
-		_ = dec.DecodeMap(&sourceRs, urs)
+		if err = typedDec.DecodeMap(&sourceRs, urs); err != nil {
+			return nil, errorchain.NewWithMessage(
+				ErrConversion,
+				"failed to decode 1alpha4 ruleset",
+			).CausedBy(err)
+		}
 
 		converted, err = c.convertV1Alpha4ToV1Beta1(&sourceRs)
 	case v1beta1.Version:
@@ -91,8 +98,12 @@ func (c *converter) Convert(rawObj []byte, format string) ([]byte, error) { // n
 
 		var sourceRs v1beta1.RuleSet
 
-		// decoding will always succeed, as it was already successful above
-		_ = dec.DecodeMap(&sourceRs, urs)
+		if err = typedDec.DecodeMap(&sourceRs, urs); err != nil {
+			return nil, errorchain.NewWithMessage(
+				ErrConversion,
+				"failed to decode 1beta1 ruleset",
+			).CausedBy(err)
+		}
 
 		converted, err = c.convertV1Beta1ToV1Alpha4(&sourceRs)
 	default:
@@ -136,10 +147,16 @@ func (c *converter) convertV1Beta1ToV1Alpha4(sourceRs *v1beta1.RuleSet) (*v1alph
 			}
 		}
 
-		backend, err := convertObject[v1beta1.Backend, v1alpha4.Backend](*rul.Backend)
-		if err != nil {
-			return nil, errorchain.NewWithMessagef(ErrConversion,
-				"failed converting forward_to for rule %s", rul.ID).CausedBy(err)
+		var backend *v1alpha4.Backend
+
+		if rul.Backend != nil {
+			be, err := convertObject[v1beta1.Backend, v1alpha4.Backend](*rul.Backend)
+			if err != nil {
+				return nil, errorchain.NewWithMessagef(ErrConversion,
+					"failed converting forward_to for rule %s", rul.ID).CausedBy(err)
+			}
+
+			backend = &be
 		}
 
 		hosts := make([]v1alpha4.HostMatcher, len(http.Hosts))
@@ -168,7 +185,7 @@ func (c *converter) convertV1Beta1ToV1Alpha4(sourceRs *v1beta1.RuleSet) (*v1alph
 				Methods: http.Methods,
 				Hosts:   hosts,
 			},
-			Backend:      &backend,
+			Backend:      backend,
 			Execute:      executePipeline,
 			ErrorHandler: errorPipeline,
 		}
@@ -202,10 +219,16 @@ func (c *converter) convertV1Alpha4ToV1Beta1(sourceRs *v1alpha4.RuleSet) (*v1bet
 			}
 		}
 
-		backend, err := convertObject[v1alpha4.Backend, v1beta1.Backend](*rul.Backend)
-		if err != nil {
-			return nil, errorchain.NewWithMessagef(ErrConversion,
-				"failed converting forward_to for rule %s", rul.ID).CausedBy(err)
+		var backend *v1beta1.Backend
+
+		if rul.Backend != nil {
+			be, err := convertObject[v1alpha4.Backend, v1beta1.Backend](*rul.Backend)
+			if err != nil {
+				return nil, errorchain.NewWithMessagef(ErrConversion,
+					"failed converting forward_to for rule %s", rul.ID).CausedBy(err)
+			}
+
+			backend = &be
 		}
 
 		hosts := make([]string, len(rul.Matcher.Hosts))
@@ -236,7 +259,7 @@ func (c *converter) convertV1Alpha4ToV1Beta1(sourceRs *v1alpha4.RuleSet) (*v1bet
 					Hosts:   hosts,
 				},
 			},
-			Backend:      &backend,
+			Backend:      backend,
 			Execute:      executePipeline,
 			ErrorHandler: errorPipeline,
 		}

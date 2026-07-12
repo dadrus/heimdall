@@ -21,6 +21,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/encoding"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 func TestConverterConvert(t *testing.T) {
@@ -213,7 +216,10 @@ rules:
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			conv := New(tc.desiredVersion)
+			validator, err := validation.NewValidator()
+			require.NoError(t, err)
+
+			conv := New(tc.desiredVersion, encoding.ValidatorFunc(validator.ValidateStruct))
 
 			// WHEN
 			res, err := conv.Convert(tc.date, tc.format)

@@ -19,10 +19,11 @@ package v1alpha4
 import "slices"
 
 type Matcher struct {
-	Routes  []Route       `json:"routes"            yaml:"routes"            validate:"required,dive"`              //nolint:lll,tagalign
-	Scheme  string        `json:"scheme,omitempty"  yaml:"scheme,omitempty"  validate:"omitempty,oneof=http https"` //nolint:lll,tagalign
-	Methods []string      `json:"methods,omitempty" yaml:"methods,omitempty" validate:"omitempty,dive,required"`    //nolint:lll,tagalign
-	Hosts   []HostMatcher `json:"hosts,omitempty"   yaml:"hosts,omitempty"   validate:"omitempty,dive,required"`    //nolint:lll,tagalign
+	Routes              []Route       `json:"routes"                         yaml:"routes"                         validate:"required,dive"`              //nolint:lll,tagalign
+	BacktrackingEnabled *bool         `json:"backtracking_enabled,omitempty" yaml:"backtracking_enabled,omitempty"`                                       //nolint:lll,tagalign
+	Scheme              string        `json:"scheme,omitempty"               yaml:"scheme,omitempty"               validate:"omitempty,oneof=http https"` //nolint:lll,tagalign
+	Methods             []string      `json:"methods,omitempty"              yaml:"methods,omitempty"              validate:"omitempty,dive,required"`    //nolint:lll,tagalign
+	Hosts               []HostMatcher `json:"hosts,omitempty"                yaml:"hosts,omitempty"                validate:"omitempty,dive,required"`    //nolint:lll,tagalign
 }
 
 type Route struct {
@@ -48,7 +49,15 @@ type HostMatcher struct {
 }
 
 func (m *Matcher) DeepCopyInto(out *Matcher) {
+	var withBacktracking *bool
+
+	if m.BacktrackingEnabled != nil {
+		value := *m.BacktrackingEnabled
+		withBacktracking = &value
+	}
+
 	out.Scheme = m.Scheme
+	out.BacktrackingEnabled = withBacktracking
 	out.Methods = slices.Clone(m.Methods)
 	out.Hosts = slices.Clone(m.Hosts)
 

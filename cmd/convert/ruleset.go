@@ -7,7 +7,10 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/rules/converter"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -42,13 +45,23 @@ $ cat ruleset.yaml | heimdall convert ruleset --desired-version 1beta1 > convert
 }
 
 func convertRuleSet(cmd *cobra.Command, args []string) error {
+	es := config.EnforcementSettings{}
+
+	validator, err := validation.NewValidator(
+		validation.WithTagValidator(es),
+		validation.WithErrorTranslator(es),
+	)
+	if err != nil {
+		return err
+	}
+
 	inputFileName := x.IfThenElseExec(len(args) != 0,
 		func() string { return args[0] },
 		func() string { return "" },
 	)
 	outputFileName, _ := cmd.Flags().GetString(convertRuleSetFlagOutputFile)
 	targetVersion, _ := cmd.Flags().GetString(convertRuleSetFlagDesiredVersion)
-	conv := converter.New(targetVersion)
+	conv := converter.New(targetVersion, encoding.ValidatorFunc(validator.ValidateStruct))
 
 	var in io.Reader
 	if len(inputFileName) == 0 {

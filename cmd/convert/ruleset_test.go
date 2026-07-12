@@ -81,7 +81,7 @@ rules:
     backtracking_enabled: true
     scheme: http
     hosts:
-      - type: glob
+      - type: exact
         value: foo.bar
     methods: [GET, POST]
   forward_to:
@@ -129,7 +129,7 @@ rules:
       "backtracking_enabled": true,
       "scheme": "http",
       "hosts": [
-        { "type": "glob", "value": "foo.bar" } 
+        { "type": "exact", "value": "foo.bar" } 
       ],
       "methods": ["GET", "POST"]
     },
@@ -185,7 +185,7 @@ rules:
     backtracking_enabled: true
     scheme: http
     hosts:
-      - type: glob
+      - type: exact
         value: foo.bar
     methods: [GET, POST]
   forward_to:
@@ -253,7 +253,7 @@ rules:
     backtracking_enabled: true
     scheme: http
     hosts:
-      - type: glob
+      - type: exact
         value: foo.bar
     methods: [GET, POST]
   forward_to:
@@ -300,7 +300,7 @@ rules:
     backtracking_enabled: true
     scheme: http
     hosts:
-      - type: glob
+      - type: exact
         value: foo.bar
     methods: [GET, POST]
   forward_to:

@@ -29,8 +29,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/rules/converter"
 	"github.com/dadrus/heimdall/internal/rules/provider/kubernetes/api/v1beta1"
+	"github.com/dadrus/heimdall/internal/validation"
 )
 
 type rulesetConverter struct{}
@@ -136,6 +139,16 @@ func (rc *rulesetConverter) Handle(ctx context.Context, req *request) *response 
 func (rc *rulesetConverter) convertSpec(
 	rs map[string]any, fromVersion, toVersion schema.GroupVersion,
 ) (map[string]any, error) {
+	es := config.EnforcementSettings{}
+
+	validator, err := validation.NewValidator(
+		validation.WithTagValidator(es),
+		validation.WithErrorTranslator(es),
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	// since conversion is delegated to a converter, which expects
 	// the ruleset in a format used for not kubernetes based providers
 	// there is a need to tune some fields, like adding the version, and
@@ -148,7 +161,7 @@ func (rc *rulesetConverter) convertSpec(
 	}
 
 	result, err := converter.
-		New(strings.TrimPrefix(toVersion.Version, "v")).
+		New(strings.TrimPrefix(toVersion.Version, "v"), encoding.ValidatorFunc(validator.ValidateStruct)).
 		Convert(data, "application/json")
 	if err != nil {
 		return nil, err
