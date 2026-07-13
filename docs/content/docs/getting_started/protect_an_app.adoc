@@ -147,8 +147,9 @@ version: "1beta1"
 rules:
 - id: demo:public  # <1>
   match:
-    routes:
-      - path: /public
+    http:
+      paths:
+        - path: /public
   forward_to:
     host: upstream:8081
   execute:
@@ -157,12 +158,13 @@ rules:
 
 - id: demo:protected  # <2>
   match:
-    routes:
-      - path: /:user
-        path_params:
-          - name: user
-            type: glob
-            value: "{user,admin}"
+    http:
+      paths:
+        - path: /:user
+          captures:
+            - name: user
+              type: glob
+              value: "{user,admin}"
   forward_to:
     host: upstream:8081
   execute:

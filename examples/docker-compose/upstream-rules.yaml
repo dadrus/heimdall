@@ -2,9 +2,10 @@ version: "1beta1"
 rules:
 - id: demo:public
   match:
-    routes:
-      - path: /public
-    methods: [ GET, POST ]
+    http:
+      paths:
+        - path: /public
+      methods: [ GET, POST ]
   forward_to:
     host: upstream:8081
   execute:
@@ -13,13 +14,14 @@ rules:
 
 - id: demo:protected
   match:
-    routes:
-      - path: /:user
-        path_params:
-          - type: regex
-            name: user
-            value: (user|admin)
-    methods: [ GET, POST ]
+    http:
+      paths:
+        - path: /:user
+          captures:
+            - type: regex
+              name: user
+              value: (user|admin)
+      methods: [ GET, POST ]
   forward_to:
     host: upstream:8081
   execute:

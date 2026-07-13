@@ -2,12 +2,16 @@ package convert
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 
 	"github.com/spf13/cobra"
 
+	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/rules/converter"
+	"github.com/dadrus/heimdall/internal/validation"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -15,6 +19,8 @@ const (
 	convertRuleSetFlagDesiredVersion = "desired-version"
 	convertRuleSetFlagOutputFile     = "out"
 )
+
+var ErrEmptyRuleset = errors.New("ruleset must not be empty")
 
 // NewConvertRulesCommand represents the "convert rules" command.
 func NewConvertRulesCommand() *cobra.Command {
@@ -42,13 +48,23 @@ $ cat ruleset.yaml | heimdall convert ruleset --desired-version 1beta1 > convert
 }
 
 func convertRuleSet(cmd *cobra.Command, args []string) error {
+	es := config.EnforcementSettings{}
+
+	validator, err := validation.NewValidator(
+		validation.WithTagValidator(es),
+		validation.WithErrorTranslator(es),
+	)
+	if err != nil {
+		return err
+	}
+
 	inputFileName := x.IfThenElseExec(len(args) != 0,
 		func() string { return args[0] },
 		func() string { return "" },
 	)
 	outputFileName, _ := cmd.Flags().GetString(convertRuleSetFlagOutputFile)
 	targetVersion, _ := cmd.Flags().GetString(convertRuleSetFlagDesiredVersion)
-	conv := converter.New(targetVersion)
+	conv := converter.New(targetVersion, encoding.ValidatorFunc(validator.ValidateStruct))
 
 	var in io.Reader
 	if len(inputFileName) == 0 {
@@ -70,11 +86,16 @@ func convertRuleSet(cmd *cobra.Command, args []string) error {
 	}
 
 	contents = bytes.TrimSpace(contents)
+	if len(contents) == 0 {
+		return ErrEmptyRuleset
+	}
 
-	result, err := conv.Convert(
-		contents,
-		x.IfThenElse(contents[0] == '{', "application/json", "application/yaml"),
-	)
+	contentType := "application/yaml"
+	if len(contents) != 0 && contents[0] == '{' {
+		contentType = "application/json"
+	}
+
+	result, err := conv.Convert(contents, contentType)
 	if err != nil {
 		return err
 	}

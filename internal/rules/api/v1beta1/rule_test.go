@@ -32,21 +32,23 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 	in := Rule{
 		ID: "foo",
 		Matcher: Matcher{
-			Routes: []Route{
-				{
-					Path: "/:foo/*something",
-					PathParams: []ParameterMatcher{
-						{Name: "foo", Value: "bar", Type: "glob"},
-						{Name: "something", Value: ".*\\.css", Type: "regex"},
+			HTTP: &HTTPMatcher{
+				Paths: []Path{
+					{
+						Path: "/:foo/*something",
+						Captures: []CaptureMatcher{
+							{Name: "foo", Value: "bar", Type: "glob"},
+							{Name: "something", Value: ".*\\.css", Type: "regex"},
+						},
+					},
+					{
+						Path: "/some/static/path",
 					},
 				},
-				{
-					Path: "/some/static/path",
-				},
+				Scheme:  "https",
+				Hosts:   []string{"*.example.com"},
+				Methods: []string{"GET", "PATCH"},
 			},
-			Scheme:  "https",
-			Hosts:   []string{"*.example.com"},
-			Methods: []string{"GET", "PATCH"},
 		},
 		Backend: &Backend{
 			Host: "baz",
@@ -95,21 +97,23 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 	in := &Rule{
 		ID: "foo",
 		Matcher: Matcher{
-			Routes: []Route{
-				{
-					Path: "/:foo/*something",
-					PathParams: []ParameterMatcher{
-						{Name: "foo", Value: "bar", Type: "glob"},
-						{Name: "something", Value: ".*\\.css", Type: "regex"},
+			HTTP: &HTTPMatcher{
+				Paths: []Path{
+					{
+						Path: "/:foo/*something",
+						Captures: []CaptureMatcher{
+							{Name: "foo", Value: "bar", Type: "glob"},
+							{Name: "something", Value: ".*\\.css", Type: "regex"},
+						},
+					},
+					{
+						Path: "/some/static/path",
 					},
 				},
-				{
-					Path: "/some/static/path",
-				},
+				Scheme:  "https",
+				Hosts:   []string{"*.example.com"},
+				Methods: []string{"GET", "PATCH"},
 			},
-			Scheme:  "https",
-			Hosts:   []string{"*.example.com"},
-			Methods: []string{"GET", "PATCH"},
 		},
 		Backend: &Backend{
 			Host: "baz",

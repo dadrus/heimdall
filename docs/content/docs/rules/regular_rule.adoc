@@ -24,64 +24,11 @@ The unique identifier of the rule. It must be unique across all rules loaded by 
 
 * *`match`*: _RuleMatcher_ (mandatory)
 +
-Defines the matching criteria for a rule, with the following properties:
+Defines the protocol-specific criteria used to match an incoming request against the rule. Exactly one protocol matcher must be configured. The following protocol matchers are supported:
 
-** *`routes`*: _RouteMatcher array_ (mandatory)
+** *`http`*: link:{{< relref "#_http_matcher" >}}[_HTTP Matcher_] (mandatory)
 +
-Specifies route conditions for matching the rule to incoming HTTP requests with each entry having the following properties:
-
-*** *`path`*: _string_ (mandatory)
-+
-The link:{{< relref "#_path_expression" >}}[Path Expression] describing the request path this rule should match. It supports both simple and free (named) wildcards.
-
-*** *`path_params`*: _PathParameterConditions_ (optional)
-+
-Additional conditions which must be met for the values captured by named wildcards in the path expression. All defined conditions must succeed for the request path to be considered a match. Each entry supports the following properties:
-
-**** *`name`*: _string_ (mandatory)
-+
-The name of the wildcard.
-
-**** *`type`*: _string_ (mandatory)
-+
-The type of expression used to match the captured wildcard's value. The supported types are:
-
-***** `glob`: to use a https://github.com/gobwas/glob[glob expression] to match the captured value (`/` is used as a delimiter, so `*` matches anything until the next `/`).
-***** `regex` to use a regular expression to match the captured value.
-
-**** *`value`*: _string_ (mandatory)
-+
-The actual expression based on the given `type`.
-
-** *`hosts`*: _string array_ (optional)
-+
-Defines a set of hosts to match against the HTTP `Host` header. These conditions are "OR" conditions, meaning that at least one must match for a successful match. If not defined, any host will be matched. Each entry can define an exact host, or be a wildcard expression (e.g., `\*.example.com` matches all subdomains under `example.com`). The `*` can only appear once at the start of the expression, and `*` alone matches any host.
-+
-NOTE: As required by https://www.rfc-editor.org/rfc/rfc3986#section-3.2.2[RFC 3986, Section 3.2.2], the host matching happens case-insensitive.
-
-** *`scheme`*: _string_ (optional)
-+
-The expected HTTP scheme. If not specified, both http and https are accepted.
-
-** *`methods`*: _string array_ (optional)
-+
-Specifies the allowed HTTP methods (`GET`, `POST`, `PATCH`, etc). If not specified, all methods are allowed. To allow all methods except specific ones, use `ALL` and prefix the methods to exclude with `!`. For example:
-+
-[source, yaml]
-----
-# Methods list which effectively expands to all HTTP methods
-methods:
-  - ALL
-----
-+
-[source, yaml]
-----
-# Methods list consisting of all HTTP methods without `TRACE` and `OPTIONS`
-methods:
-  - ALL
-  - "!TRACE"
-  - "!OPTIONS"
-----
+Defines matching criteria for HTTP requests.
 
 * *`allow_encoded_slashes`*: _string_ (optional)
 +
@@ -106,7 +53,7 @@ Specifies the host (and port) to which the request should be forwarded. If no `r
 +
 Controls whether the `Host` header is forwarded to the upstream. Defaults to `true`.
 +
-**Note:** If a link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header finalizer] sets the `Host` header in the `execute` pipeline, its value takes precedence over this setting.
+NOTE: If a link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header finalizer] sets the `Host` header in the `execute` pipeline, its value takes precedence over this setting.
 
 ** *`rewrite`*: _OriginalURLRewriter_ (optional)
 +
@@ -121,7 +68,7 @@ NOTE: Unless heimdall is started with the `--insecure-skip-upstream-tls-enforcem
 
 *** *`strip_path_prefix`*: _string_ (optional)
 +
-This middleware strips the specified prefix from the original URL path before forwarding. E.g. if the path of the original url is `/api/v1/something` and the value of this property is set to `/api/v1`, the request to the upstream will have the url path set to `/something`.
+This middleware strips the specified prefix from the original URL path before forwarding. E.g. if the path of the original URL is `/api/v1/something` and the value of this property is set to `/api/v1`, the request to the upstream will have the URL path set to `/something`.
 
 *** *`add_path_prefix`*: _string_ (optional)
 +
@@ -129,7 +76,7 @@ This middleware is applied after the execution of the `strip_path_prefix` middle
 
 *** *`strip_query_parameters`*: _string array_ (optional)
 +
-Removes specified query parameters from the original URL before forwarding. E.g. if the query parameters part of the original URL is `foo=bar&bar=baz` and the value of this property is set to `["foo"]`, the query part of the request to the upstream will be set to `bar=baz`
+Removes specified query parameters from the original URL before forwarding. E.g. if the query parameters part of the original URL is `foo=bar&bar=baz` and the value of this property is set to `["foo"]`, the query part of the request to the upstream will be set to `bar=baz`.
 
 * *`execute`*: _link:{{< relref "#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipeline]_ (mandatory)
 +
@@ -145,16 +92,17 @@ Specifies error handling mechanisms if the pipeline defined by the `execute` pro
 ----
 id: rule:foo:bar
 match:
-  routes:
-    - path: /some/:identifier/followed/by/**
-      path_params:
-        - name: identifier
-          type: glob
-          value: "[a-z]"
-  scheme: https
-  hosts:
-    - my-service.local
-  methods:
+  http:
+    paths:
+      - path: /some/:identifier/followed/by/**
+        captures:
+          - name: identifier
+            type: glob
+            value: "[a-z]"
+    scheme: https
+    hosts:
+      - my-service.local
+    methods:
       - GET
       - POST
 forward_to:
@@ -174,55 +122,144 @@ on_error:
 ----
 ====
 
-== Path Expression
+=== Request Matching
 
-Path expressions are used to match the incoming requests. When specifying these, you can make use of two types of wildcards:
+A rule is matched against an incoming request using the protocol matcher configured in its `match` property. Exactly one protocol matcher must be configured. Each matcher defines its own, protocol-specific set of matching criteria, described in the following sections.
+
+==== HTTP Matcher
+
+The `http` matcher evaluates matching criteria against HTTP requests. It supports the following properties:
+
+* *`paths`*: _PathMatcher array_ (mandatory)
++
+Specifies path conditions for matching the rule to incoming HTTP requests with each entry having the following properties:
+
+** *`path`*: _string_ (mandatory)
++
+The link:{{< relref "#_capture_expressions" >}}[Capture Expression] describing the request path this rule should match. It supports both single and free (named) wildcards.
+
+** *`captures`*: _CaptureCondition array_ (optional)
++
+Additional conditions that must be met for the values captured by named wildcards in the path expression. All defined conditions must succeed for the request path to be considered a match. Each entry supports the following properties:
+
+*** *`name`*: _string_ (mandatory)
++
+The name of the wildcard.
+
+*** *`type`*: _string_ (mandatory)
++
+The type of expression used to match the captured wildcard's value. The supported types are:
+
+**** `glob`: to use a https://github.com/gobwas/glob[glob expression] to match the captured value (`/` is used as a delimiter, so `*` matches anything until the next `/`).
+**** `regex`: to use a regular expression to match the captured value.
+
+*** *`value`*: _string_ (mandatory)
++
+The actual expression based on the given `type`.
+
+* *`hosts`*: _string array_ (optional)
++
+Defines a set of hosts to match against the HTTP `Host` header. These conditions are "OR" conditions, meaning that at least one must match for a successful match. If not defined, any host will be matched. Each entry can define an exact host, or be a wildcard expression (e.g., `\*.example.com` matches all subdomains under `example.com`). The `*` can only appear once at the start of the expression, and `*` alone matches any host.
++
+NOTE: As required by https://www.rfc-editor.org/rfc/rfc3986#section-3.2.2[RFC 3986, Section 3.2.2], the host matching happens case-insensitive.
+
+* *`scheme`*: _string_ (optional)
++
+The expected HTTP scheme. If not specified, both http and https are accepted.
+
+* *`methods`*: _string array_ (optional)
++
+Specifies the allowed HTTP methods (`GET`, `POST`, `PATCH`, etc). If not specified, all methods are allowed. To allow all methods except specific ones, use `ALL` and prefix the methods to exclude with `!`. For example:
++
+[source, yaml]
+----
+# Methods list which effectively expands to all HTTP methods
+methods:
+  - ALL
+----
++
+[source, yaml]
+----
+# Methods list consisting of all HTTP methods without `TRACE` and `OPTIONS`
+methods:
+  - ALL
+  - "!TRACE"
+  - "!OPTIONS"
+----
+
+.An example HTTP matcher
+====
+[source, yaml]
+----
+match:
+  http:
+    paths:
+      - path: /some/:identifier/followed/by/**
+        captures:
+          - name: identifier
+            type: glob
+            value: "[a-z]"
+    scheme: https
+    hosts:
+      - my-service.local
+    methods:
+      - GET
+      - POST
+----
+====
+
+== Capture Expressions
+
+Capture expressions define the wildcard syntax used by protocol matchers to match parts of an incoming request — e.g. the request path in the HTTP matcher's `path` property — and, if named, make the matched values available for use in a rule's pipeline.
+
+When specifying these, you can make use of two types of wildcards:
 
 * free wildcard, which can be defined using `*` and
 * single wildcard, which can be defined using `:`
 
-Both can be named and unnamed, with named wildcards allowing accessing of the matched segments in the pipeline of the rule using the defined name as a key on the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_url_captures" >}}[`Request.URL.Captures`] object. Unnamed free wildcard is defined as `\**` and unnamed single wildcard is defined as `:*`. A named wildcard uses some identifier instead of the `*`, so like `*name` for free wildcard and `:name` for single wildcard.
+Both can be named and unnamed, with named wildcards allowing access to the matched segments in the pipeline of the rule using the defined name as a key on the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_url_captures" >}}[`Request.URL.Captures`] object. An unnamed free wildcard is defined as `\**` and an unnamed single wildcard is defined as `:*`. A named wildcard uses some identifier instead of the `*`, such as `*name` for free wildcard and `:name` for single wildcard.
 
-The value of the path segment, respectively path segments available via the wildcard name is decoded. E.g. if you define the to be matched path in a rule as `/file/:name`, and the actual path of the request is `/file/%5Bid%5D`, you'll get `[id]` when accessing the captured path segment via the `name` key. Not every path encoded value is decoded though. Decoding of encoded slashes happens only if `allow_encoded_slashes` was set to `on`.
+The value of the matched segment, respectively segments available via the wildcard name is decoded. E.g. if you define the expression to be matched in a rule as `/file/:name`, and the actual request path is `/file/%5Bid%5D`, you'll get `[id]` when accessing the captured segment via the `name` key. Not every encoded value is decoded though. Decoding of encoded slashes happens only if `allow_encoded_slashes` was set to `on`.
 
 There are some simple rules, which must be followed while using wildcards:
 
-- One can use as many single wildcards, as needed in any segment
-- A segment must start with `:` or `*` to define a wildcard
-- No segments are allowed after a free (named) wildcard
+- One can use as many single wildcards, as needed in any segment.
+- A segment must start with `:` or `*` to define a wildcard.
+- No segments are allowed after a free (named) wildcard.
 - If a regular segment must start with `:` or `*`, but should not be considered as a wildcard, it must be escaped with `\`.
 
-Here some path examples:
+Here some examples:
 
-- `/apples/and/bananas` - Matches exactly the given path
-- `/apples/and/:something` - Matches `/apples/and/bananas`, `/apples/and/oranges` and alike, but not `/apples/and/bananas/andmore` or `/apples/or/bananas`. Since a named single wildcard is used, the actual value of the path segment matched by `:something` can be accessed in the rule pipeline using `something` as a key.
+- `/apples/and/bananas` - Matches exactly the given path.
+- `/apples/and/:something` - Matches `/apples/and/bananas`, `/apples/and/oranges` and alike, but not `/apples/and/bananas/andmore` or `/apples/or/bananas`. Since a named single wildcard is used, the actual value of the segment matched by `:something` can be accessed in the rule pipeline using `something` as a key.
 - `/apples/:junction/:something` - Similar to above. But will also match `/apples/or/bananas` in addition to `/apples/and/bananas` and `/apples/and/oranges`.
-- `/apples/and/some:thing` - Matches exactly `/apples/and/some:thing`
-- `/apples/and/some*\*` -  Matches exactly `/apples/and/some**`
-- `/apples/**` - Matches any path starting with `/apples/`, like `/apples/and/bananas` but not `/apples/`.
-- `/apples/*remainingpath` - Same as above, but uses a named free wildcard
-- `/apples/**/bananas` - Is invalid, as there is a path segment after a free wildcard
-- `/apples/\*remainingpath` - Matches exactly `/apples/*remainingpath`
+- `/apples/and/some:thing` - Matches exactly `/apples/and/some:thing`.
+- `/apples/and/some*\*` - Matches exactly `/apples/and/some**`.
+- `/apples/**` - Matches any expression starting with `/apples/`, like `/apples/and/bananas` but not `/apples/`.
+- `/apples/*remainingpath` - Same as above, but uses a named free wildcard.
+- `/apples/**/bananas` - Is invalid, as there is a segment after a free wildcard.
+- `/apples/\*remainingpath` - Matches exactly `/apples/*remainingpath`.
 
-Here is an example demonstrating the usage of a single named wildcard:
+Here is an example demonstrating the usage of a single named wildcard within the HTTP matcher's `path` property:
 
 [source, yaml]
 ----
 id: rule:1
 match:
-  routes:
-    - path: /files/:uuid/delete
-  hosts:
-    - hosty.mchostface
-  execute:
-    - authorizer: openfga_check
-      config:
-        payload: |
-          {
-            "user": "{{ .Subject.ID }}",
-            "relation": "can_delete",
-            "object": "file:{{ .Request.URL.Captures.uuid }}"
-          }
+  http:
+    paths:
+      - path: /files/:uuid/delete
+    hosts:
+      - hosty.mchostface
+execute:
+  - authorizer: openfga_check
+    config:
+      payload: |
+        {
+          "user": "{{ .Subject.ID }}",
+          "relation": "can_delete",
+          "object": "file:{{ .Request.URL.Captures.uuid }}"
+        }
 ----
 
 == Rule Matching Specificity & Backtracking
@@ -241,47 +278,51 @@ If a rule matches on host and path but fails due to unmet conditions, the proces
 * a less specific rule fails and
 * no further candidate rules remain in the given rule set
 
-The following examples illustrate these principles:
+The following examples illustrate these principles.
 
-Consider a rule set with the following rules
+Consider a rule set with the following rules:
 
 [source, yaml]
 ----
 - id: rule1
   match:
-    routes:
-      - path: /files/**
+    http:
+      paths:
+        - path: /files/**
   execute:
     - <pipeline definition>
 
 - id: rule2
   match:
-    routes:
-      - path: /files/:team/:name
-        path_params:
-          - name: team
-            type: regex
-            value: "(team1|team2)"
-    methods:
-      - GET
+    http:
+      paths:
+        - path: /files/:team/:name
+          captures:
+            - name: team
+              type: regex
+              value: "(team1|team2)"
+      methods:
+        - GET
   execute:
     - <pipeline definition>
 
 - id: rule3
   match:
-    routes:
-      - path: /files/:team/:name
-        path_params:
-          - name: team
-            type: regex
-            value: "(team1|team2)"
+    http:
+      paths:
+        - path: /files/:team/:name
+          captures:
+            - name: team
+              type: regex
+              value: "(team1|team2)"
   execute:
     - <pipeline definition>
 
 - id: rule4
   match:
-    routes:
-      - path: /files/team3/:name
+    http:
+      paths:
+        - path: /files/team3/:name
   execute:
     - <pipeline definition>
 ----
@@ -290,11 +331,11 @@ An HTTP GET request to `/files/team1/document.pdf` will be matched by `rule2`, a
 
 NOTE: If `rule2` had appeared after `rule3` in the rule set, `rule3` would have matched and taken precedence — highlighting the importance of rule order when specificity and match conditions are equal.
 
-An HTTP POST request to `/files/team1/document.pdf` will be matched by `rule3`, as it is more specific than `rule1` and the `methods` constraints in the `rule2` failed. So its pipeline is executed.
+An HTTP POST request to `/files/team1/document.pdf` will be matched by `rule3`, as it is more specific than `rule1` and the `methods` constraints in `rule2` failed. So its pipeline is executed.
 
 An HTTP GET request to `/files/team3/document.pdf` will be matched by `rule4`, which is more specific than all other rules. Its pipeline is executed.
 
-However, even though a request to `/files/team4/document.pdf` matches the path expression defined in `rule2`, respectively `rule3`, the regular expression `(team1|team2)` used in the `path_params` for the `team` parameter will not match. Backtracking occurs, and the request falls back to `rule1`, which does match. Thus, the pipeline of `rule1` is executed.
+However, even though a request to `/files/team4/document.pdf` matches the path expression defined in `rule2` or `rule3`, the regular expression `(team1|team2)` used in the `captures` for the `team` parameter will not match. Backtracking occurs, and the request falls back to `rule1`, which does match. Thus, the pipeline of `rule1` is executed.
 
 
 Here’s another example:
@@ -303,15 +344,17 @@ Here’s another example:
 ----
 - id: rule1
   match:
-    routes:
-      - path: /foo/**
+    http:
+      paths:
+        - path: /foo/**
   execute:
     - <pipeline definition>
 
 - id: rule2
   match:
-    routes:
-      - path: /foo/bar/:name
+    http:
+      paths:
+        - path: /foo/bar/:name
   execute:
     - <pipeline definition>
 ----
@@ -334,7 +377,7 @@ To express which principal an authenticator step should create, the `principal` 
 +
 [NOTE]
 ====
-Some authenticators rely on the same sources to obtain the subject authentication object. For example, both the `jwt` and `oauth2_introspection` authenticators retrieve tokens from the `Authorization` header by default. When such authenticators are used in the same fallback chain, it's best to configure the more specific ones before the more general ones to optimize performance. In this case, the `jwt` authenticator is more specific since it only processes tokens in JWT format. In contrast, the `oauth2_introspection` authenticator is more general - it doesn’t depend on the token format and will attempt to handle any request containing a bearer token.
+Some authenticators rely on the same sources to obtain the subject authentication object. For example, both the `jwt` and `oauth2_introspection` authenticators retrieve tokens from the `Authorization` header by default. When such authenticators are used in the same fallback chain, it's best to configure the more specific ones before the more general ones to optimize performance. In this case, the `jwt` authenticator is more specific since it only processes tokens in JWT format. In contrast, the `oauth2_introspection` authenticator is more general — it doesn’t depend on the token format and will attempt to handle any request containing a bearer token.
 ====
 ** The overall evaluation follows a conjunctive (CNF-like) composition model (see also examples below).
 +
@@ -375,12 +418,12 @@ Both steps establish the `default` principal, with `B` acting as fallback if `A`
 ====
 
 
-* **Authorization Stage:** List of link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[contextualizer] and link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[authorizer] references in any order (optional). Can also be mixed. As with authenticators, the list definition happens using either `contextualizer` or `authorizer` as key, followed by the required `id`. All mechanism steps in this list are executed in the order, they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is optional.
+* **Authorization Stage:** List of link:{{< relref "/docs/mechanisms/contextualizers.adoc" >}}[contextualizer] and link:{{< relref "/docs/mechanisms/authorizers.adoc" >}}[authorizer] references in any order (optional). Can also be mixed. As with authenticators, the list definition happens using either `contextualizer` or `authorizer` as key, followed by the required `id`. All mechanism steps in this list are executed in the order they are defined. If any of these fails, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is optional.
 * **Finalization Stage:** List of link:{{< relref "/docs/mechanisms/finalizers.adoc" >}}[finalizer] references using `finalizers` as key, followed by the required finalizer `id`. All finalizer steps in this list are executed in the order they are defined. If any of these fail, the entire pipeline fails, which leads to the execution of the link:{{< relref "#_error_pipeline" >}}[error pipeline]. This list is optional. If a link:{{< relref "default_rule.adoc" >}}[default rule] is configured, and no `finalizers` are configured on a specific rule level, the `finalizers` from the default rule are used. If the default rule does not have any `finalizers` configured either, no finalization will take place.
 
-In all cases, the mechanisms used in each step can be partially reconfigured if supported by the corresponding type. Configuration goes into the `config` properties. These reconfigurations are always local to the given rule. With other words, you can adjust your rule specific pipeline as you want without any side effects.
+In all cases, the mechanisms used in each step can be partially reconfigured if supported by the corresponding type. Configuration goes into the `config` properties. These reconfigurations are always local to the given rule. In other words, you can adjust your rule-specific pipeline as you want without any side effects.
 
-Execution of an `contextualizer`, `authorizer`, or `finalizer` mechanisms can optionally happen conditionally by making use of a https://github.com/google/cel-spec[CEL] expression in an `if` clause, which has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects. If the `if` clause is not present, the corresponding mechanism is always executed.
+Execution of a `contextualizer`, `authorizer`, or `finalizer` mechanism can optionally happen conditionally by making use of a https://github.com/google/cel-spec[CEL] expression in an `if` clause, which has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects. If the `if` clause is not present, the corresponding mechanism is always executed.
 
 All steps can optionally define a step `id`. If not configured, its value is set to the `id` of the used mechanism.
 
@@ -426,16 +469,16 @@ All steps can optionally define a step `id`. If not configured, its value is set
 
 This example uses
 
-* two authenticators, with authenticator named `bar` being the fallback for the authenticator named `foo`.
-* multiple contextualizers and authorizers, with first contextualizer having its cache disabled (`cache_ttl` set to 0s) and the last authorizer being of type link:{{< relref "/docs/mechanisms/authorizers.adoc#_local_cel" >}}[cel] as it reconfigures the referenced prototype to use a different authorization expression.
-* two finalizers, with the second one being obviously of type link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header], as it defines a `X-User-ID` header set to the value of the subject id and an `X-Some-Data` header, set to the result of the contextualizer step with the id `second`, both to be forwarded to the upstream service.
-* step referring the `bar` contextualizer with the `id` set to `first` is only executed if the authenticated subject is not anonymous.
+* two authenticators, with the authenticator named `bar` being the fallback for the authenticator named `foo`.
+* multiple contextualizers and authorizers, with the first contextualizer having its cache disabled (`cache_ttl` set to 0s) and the last authorizer being of type link:{{< relref "/docs/mechanisms/authorizers.adoc#_local_cel" >}}[cel] as it reconfigures the referenced prototype to use a different authorization expression.
+* two finalizers, with the second one being obviously of type link:{{< relref "/docs/mechanisms/finalizers.adoc#_header" >}}[header], as it defines an `X-User-ID` header set to the value of the subject id and an `X-Some-Data` header, set to the result of the contextualizer step with the id `second`, both to be forwarded to the upstream service.
+* the step referring to the `bar` contextualizer with the `id` set to `first` is only executed if the authenticated subject is not anonymous.
 * authorizer `foo` is only executed if the request method is HTTP POST.
 ====
 
 == Error Pipeline
 
-Compared to the link:{{< relref "#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipeline], the error pipeline is pretty simple. It is also a list of mechanism references, but all referenced types are link:{{< relref "/docs/mechanisms/error_handlers.adoc" >}}[error handler types]. Thus, each entry in this list must have `error_handler` as key, followed by the `ìd` of the required error handler previously defined in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanism catalogue].
+Compared to the link:{{< relref "#_authentication_authorization_pipeline" >}}[Authentication & Authorization Pipeline], the error pipeline is pretty simple. It is also a list of mechanism references, but all referenced types are link:{{< relref "/docs/mechanisms/error_handlers.adoc" >}}[error handler types]. Thus, each entry in this list must have `error_handler` as key, followed by the `id` of the required error handler previously defined in the link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[mechanism catalogue].
 
 Execution of the error handlers should happen conditionally by making use of a https://github.com/google/cel-spec[CEL] expression in an `if` clause, which has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_error" >}}[`Error`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects. Otherwise, the first error handler will be executed and the error pipeline will exit.
 

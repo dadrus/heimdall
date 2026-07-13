@@ -49,22 +49,24 @@ name: my-rule-set
 rules:
 - id: rule:1
   match:
-    routes:
-      - path: /**
-    methods: [ "GET" ]
-    scheme: https
-    hosts:
-      - my-service1.local
+    http:
+      paths:
+        - path: /**
+      methods: [ "GET" ]
+      scheme: https
+      hosts:
+        - my-service1.local
   execute:
     - authorizer: foobar
 - id: rule:2
   match:
-    routes:
-      - path: /**
-    scheme: https
-    hosts:
-      - my-service2.local
-    methods: [ "GET" ]
+    http:
+      paths:
+        - path: /**
+      scheme: https
+      hosts:
+        - my-service2.local
+      methods: [ "GET" ]
   execute:
     - authorizer: barfoo
 ----
@@ -118,11 +120,12 @@ spec:
   rules:
     - id: "<identifier of a rule 1>"
       match:
-        routes:
-          - path: /foo/**
-        scheme: https
-        hosts:
-          - 127.0.0.1:9090
+        http:
+          paths:
+            - path: /foo/**
+          scheme: https
+          hosts:
+            - 127.0.0.1:9090
       execute:
         - authenticator: foo
         - authorizer: bar

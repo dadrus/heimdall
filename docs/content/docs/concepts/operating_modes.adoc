@@ -76,13 +76,14 @@ And there is a rule, which allows anonymous requests and sets a `X-User-ID` head
 ----
 id: rule:my-service:anonymous-api-access
 match:
-  routes:
-    - path: /my-service/api
-  scheme: http
-  hosts:
-    - my-backend-service
-  methods:
-    - GET
+  http:
+    paths:
+      - path: /my-service/api
+    scheme: http
+    hosts:
+      - my-backend-service
+    methods:
+      - GET
 execute:
   - authenticator: anonymous-authn
   - finalizer: id-header
@@ -148,10 +149,11 @@ And there is a rule, which allows anonymous requests and sets a `X-User-ID` head
 ----
 id: rule:my-service:anonymous-api-access
 match:
-  routes:
-    - path: /my-service/api
-  methods:
-    - GET
+  http:
+    paths:
+      - path: /my-service/api
+    methods:
+      - GET
 forward_to:
   host: my-backend-service:8888
 execute:

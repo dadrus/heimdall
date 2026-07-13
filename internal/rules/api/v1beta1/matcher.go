@@ -18,42 +18,51 @@ package v1beta1
 
 import "slices"
 
+// Matcher contains protocol-specific bindings for rule matching.
+// Currently only HTTP is supported.
 type Matcher struct {
-	Routes  []Route  `json:"routes"            yaml:"routes"            validate:"required,dive"`              //nolint:lll,tagalign
+	HTTP *HTTPMatcher `json:"http" yaml:"http" validate:"required"` //nolint:tagalign
+}
+
+// HTTPMatcher contains all HTTP-specific matching criteria.
+type HTTPMatcher struct {
+	Paths   []Path   `json:"paths"             yaml:"paths"             validate:"required,dive"`              //nolint:lll,tagalign
 	Scheme  string   `json:"scheme,omitempty"  yaml:"scheme,omitempty"  validate:"omitempty,oneof=http https"` //nolint:lll,tagalign
 	Methods []string `json:"methods,omitempty" yaml:"methods,omitempty" validate:"omitempty,dive,required"`    //nolint:lll,tagalign
 	Hosts   []string `json:"hosts,omitempty"   yaml:"hosts,omitempty"   validate:"omitempty,required"`         //nolint:lll,tagalign
 }
 
-type Route struct {
-	Path       string             `json:"path"                  yaml:"path"                  validate:"required"`                //nolint:lll,tagalign
-	PathParams []ParameterMatcher `json:"path_params,omitempty" yaml:"path_params,omitempty" validate:"omitempty,dive,required"` //nolint:lll,tagalign
+type Path struct {
+	Path     string           `json:"path"               yaml:"path"               validate:"required"`                //nolint:lll,tagalign
+	Captures []CaptureMatcher `json:"captures,omitempty" yaml:"captures,omitempty" validate:"omitempty,dive,required"` //nolint:lll,tagalign
 }
 
-func (r *Route) DeepCopyInto(out *Route) {
+func (r *Path) DeepCopyInto(out *Path) {
 	*out = *r
 
-	out.PathParams = slices.Clone(r.PathParams)
+	out.Captures = slices.Clone(r.Captures)
 }
 
-type ParameterMatcher struct {
+type CaptureMatcher struct {
 	Name  string `json:"name"  yaml:"name"  validate:"required,ne=*"`                   //nolint:tagalign
 	Value string `json:"value" yaml:"value" validate:"required"`                        //nolint:tagalign
 	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact glob regex"` //nolint:tagalign
 }
 
-type HostMatcher struct {
-	Value string `json:"value" yaml:"value" validate:"required"`                      //nolint:tagalign
-	Type  string `json:"type"  yaml:"type"  validate:"required,oneof=exact wildcard"` //nolint:tagalign
+func (m *Matcher) DeepCopyInto(out *Matcher) {
+	if m.HTTP != nil {
+		out.HTTP = new(HTTPMatcher)
+		m.HTTP.DeepCopyInto(out.HTTP)
+	}
 }
 
-func (m *Matcher) DeepCopyInto(out *Matcher) {
+func (m *HTTPMatcher) DeepCopyInto(out *HTTPMatcher) {
 	out.Scheme = m.Scheme
 	out.Methods = slices.Clone(m.Methods)
 	out.Hosts = slices.Clone(m.Hosts)
 
-	out.Routes = make([]Route, len(m.Routes))
-	for i, route := range m.Routes {
-		route.DeepCopyInto(&out.Routes[i])
+	out.Paths = make([]Path, len(m.Paths))
+	for i, route := range m.Paths {
+		route.DeepCopyInto(&out.Paths[i])
 	}
 }

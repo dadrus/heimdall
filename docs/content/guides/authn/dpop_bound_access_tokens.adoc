@@ -178,9 +178,10 @@ version: "1beta1"
 rules:
   - id: upstream:api
     match:
-      routes:
-        - path: /api
-        - path: /api/<**>
+      http:
+        paths:
+          - path: /api
+          - path: /api/<**>
     forward_to:
       host: upstream:8081
     execute:

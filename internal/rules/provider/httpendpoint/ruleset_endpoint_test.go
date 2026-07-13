@@ -132,8 +132,9 @@ name: test
 rules:
 - id: bar
   match:
-    routes: 
-      - path: /bar
+    http:
+      paths: 
+        - path: /bar
 `))
 				require.NoError(t, err)
 			},
@@ -180,13 +181,14 @@ name: test
 rules:
 - id: foo
   match:
-    routes:
-      - path: /foo/:bar
-        path_params:
-          - name: bar
-            type: glob
-            value: "*baz"
-    methods: [ GET ]
+    http:
+      paths:
+        - path: /foo/:bar
+          captures:
+            - name: bar
+              type: glob
+              value: "*baz"
+      methods: [ GET ]
   execute:
    - authenticator: test
 `))
@@ -201,13 +203,13 @@ rules:
 				assert.Equal(t, "1", ruleSet.Version)
 				assert.Len(t, ruleSet.Rules, 1)
 				assert.Equal(t, "foo", ruleSet.Rules[0].ID)
-				require.Len(t, ruleSet.Rules[0].Matcher.Routes, 1)
-				assert.Equal(t, "/foo/:bar", ruleSet.Rules[0].Matcher.Routes[0].Path)
-				require.Len(t, ruleSet.Rules[0].Matcher.Routes[0].PathParams, 1)
-				assert.Equal(t, "bar", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Name)
-				assert.Equal(t, "glob", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Type)
-				assert.Equal(t, "*baz", ruleSet.Rules[0].Matcher.Routes[0].PathParams[0].Value)
-				assert.Equal(t, []string{"GET"}, ruleSet.Rules[0].Matcher.Methods)
+				require.Len(t, ruleSet.Rules[0].Matcher.HTTP.Paths, 1)
+				assert.Equal(t, "/foo/:bar", ruleSet.Rules[0].Matcher.HTTP.Paths[0].Path)
+				require.Len(t, ruleSet.Rules[0].Matcher.HTTP.Paths[0].Captures, 1)
+				assert.Equal(t, "bar", ruleSet.Rules[0].Matcher.HTTP.Paths[0].Captures[0].Name)
+				assert.Equal(t, "glob", ruleSet.Rules[0].Matcher.HTTP.Paths[0].Captures[0].Type)
+				assert.Equal(t, "*baz", ruleSet.Rules[0].Matcher.HTTP.Paths[0].Captures[0].Value)
+				assert.Equal(t, []string{"GET"}, ruleSet.Rules[0].Matcher.HTTP.Methods)
 				assert.NotEmpty(t, ruleSet.Hash)
 			},
 		},
@@ -221,15 +223,17 @@ rules:
 				t.Helper()
 
 				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write([]byte(`{ 
+				_, err := w.Write([]byte(`{
 	"version": "1",
 	"name": "test",
 	"rules": [
-		{ 
+		{
           "id": "foo",
-          "match": { 
-            "routes": [{"path": "/foo"}],
-            "methods" : ["GET"]
+          "match": {
+            "http": {
+              "paths": [{"path": "/foo"}],
+              "methods" : ["GET"]
+            }
           },
           "execute": [{ "authenticator": "test"}] }
 	]
@@ -256,19 +260,21 @@ rules:
 				t.Helper()
 
 				w.Header().Set("Content-Type", "application/json")
-				_, err := w.Write([]byte(`{ 
+				_, err := w.Write([]byte(`{
 	"version": "1",
 	"name": "test",
 	"rules": [
-      { 
+      {
 	    "id": "foo",
         "match": {
-          "routes": [
-            { "path": "/foo/bar/:baz", "path_params": [{ "name": "baz", "type":"glob", "value":"{*.ico,*.js}" }] }
-          ],
-          "methods": [ "GET" ],
-          "hosts": [ "moobar.local:9090" ],
-	    },
+          "http": {
+            "paths": [
+              { "path": "/foo/bar/:baz", "captures": [{ "name": "baz", "type":"glob", "value":"{*.ico,*.js}" }] }
+            ],
+            "methods": [ "GET" ],
+            "hosts": [ "moobar.local:9090" ]
+          }
+        },
         "execute": [{ "authenticator": "test"}]
 	  }
 	]

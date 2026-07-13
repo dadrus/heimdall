@@ -81,7 +81,7 @@ rules:
     backtracking_enabled: true
     scheme: http
     hosts:
-      - type: glob
+      - type: exact
         value: foo.bar
     methods: [GET, POST]
   forward_to:
@@ -129,7 +129,7 @@ rules:
       "backtracking_enabled": true,
       "scheme": "http",
       "hosts": [
-        { "type": "glob", "value": "foo.bar" } 
+        { "type": "exact", "value": "foo.bar" } 
       ],
       "methods": ["GET", "POST"]
     },
@@ -185,7 +185,7 @@ rules:
     backtracking_enabled: true
     scheme: http
     hosts:
-      - type: glob
+      - type: exact
         value: foo.bar
     methods: [GET, POST]
   forward_to:
@@ -245,11 +245,15 @@ rules:
 - id: rule:foo
   match:
     routes:
-      - path: /**
+      - path: /*foo
+        path_params:
+          - name: foo
+            type: glob
+            value: "{bar,baz}"
     backtracking_enabled: true
     scheme: http
     hosts:
-      - type: glob
+      - type: exact
         value: foo.bar
     methods: [GET, POST]
   forward_to:
@@ -296,7 +300,7 @@ rules:
     backtracking_enabled: true
     scheme: http
     hosts:
-      - type: glob
+      - type: exact
         value: foo.bar
     methods: [GET, POST]
   forward_to:
@@ -325,6 +329,27 @@ rules:
 				require.NoError(t, err)
 
 				assert.Contains(t, result, "version: 1beta1")
+			},
+		},
+		"conversion of an empty ruleset": {
+			args: func(t *testing.T, _ io.Writer) []string {
+				t.Helper()
+
+				rulesetFile := filepath.Join(t.TempDir(), "ruleset.yaml")
+				err := os.WriteFile(rulesetFile, []byte(" \n\t"), 0o600)
+				require.NoError(t, err)
+
+				return []string{
+					"--" + convertRuleSetFlagDesiredVersion,
+					"1beta1",
+					rulesetFile,
+				}
+			},
+			assert: func(t *testing.T, err error, _ string) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrEmptyRuleset)
 			},
 		},
 	} {
