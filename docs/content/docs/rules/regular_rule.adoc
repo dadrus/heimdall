@@ -136,11 +136,11 @@ Specifies path conditions for matching the rule to incoming HTTP requests with e
 
 ** *`path`*: _string_ (mandatory)
 +
-The link:{{< relref "#_capture_expressions" >}}[Capture Expression] describing the request path this rule should match. It supports both simple and free (named) wildcards.
+The link:{{< relref "#_capture_expressions" >}}[Capture Expression] describing the request path this rule should match. It supports both single and free (named) wildcards.
 
 ** *`captures`*: _CaptureConditions_ (optional)
 +
-Additional conditions which must be met for the values captured by named wildcards in the path expression. All defined conditions must succeed for the request path to be considered a match. Each entry supports the following properties:
+Additional conditions that must be met for the values captured by named wildcards in the path expression. All defined conditions must succeed for the request path to be considered a match. Each entry supports the following properties:
 
 *** *`name`*: _string_ (mandatory)
 +
@@ -217,7 +217,7 @@ When specifying these, you can make use of two types of wildcards:
 * free wildcard, which can be defined using `*` and
 * single wildcard, which can be defined using `:`
 
-Both can be named and unnamed, with named wildcards allowing accessing of the matched segments in the pipeline of the rule using the defined name as a key on the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_url_captures" >}}[`Request.URL.Captures`] object. Unnamed free wildcard is defined as `\**` and unnamed single wildcard is defined as `:*`. A named wildcard uses some identifier instead of the `*`, so like `*name` for free wildcard and `:name` for single wildcard.
+Both can be named and unnamed, with named wildcards allowing accessing of the matched segments in the pipeline of the rule using the defined name as a key on the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_url_captures" >}}[`Request.URL.Captures`] object. An unnamed free wildcard is defined as `\**` and unnamed single wildcard is defined as `:*`. A named wildcard uses some identifier instead of the `*`, so like `*name` for free wildcard and `:name` for single wildcard.
 
 The value of the matched segment, respectively segments available via the wildcard name is decoded. E.g. if you define the to be matched expression in a rule as `/file/:name`, and the actual request path is `/file/%5Bid%5D`, you'll get `[id]` when accessing the captured segment via the `name` key. Not every encoded value is decoded though. Decoding of encoded slashes happens only if `allow_encoded_slashes` was set to `on`.
 
