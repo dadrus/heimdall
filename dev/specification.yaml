@@ -458,7 +458,7 @@ paths:
                   "kind": "RuleSet",
                   "metadata": {
                     "annotations": {
-                      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"heimdall.dadrus.github.com/v1beta1\",\"kind\":\"RuleSet\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"echo-app\"},\"name\":\"echo-app-rules\",\"namespace\":\"quickstarts\"},\"spec\":{\"rules\":[{\"execute\":[{\"authorizer\":\"allow_all_requests\"},{\"finalizer\":\"noop_finalizer\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"public-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/pub/\\u003c**\\u003e\"}},{\"execute\":[{\"authorizer\":\"allow_all_requests\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"anonymous-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/anon/\\u003c**\\u003e\"}},{\"execute\":[{\"authenticator\":\"deny_authenticator\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"redirect\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/redir/\\u003c**\\u003e\"}}]}}\n"
+                      "kubectl.kubernetes.io/last-applied-configuration": "..."
                     },
                     "creationTimestamp": "2025-08-12T09:15:29Z",
                     "generation": 1,
@@ -512,9 +512,11 @@ paths:
                         },
                         "id": "public-access",
                         "match": {
-                          "routes": [
-                            { "path": "/pub/**" }
-                          ]
+                          "http": {
+                            "paths": [
+                              { "path": "/pub/**" }
+                            ]
+                          }
                         }
                       },
                       {
@@ -528,9 +530,11 @@ paths:
                         },
                         "id": "anonymous-access",
                         "match": {
-                          "routes": [
-                            { "path": "/anon/**" }
-                          ]
+                          "http": {
+                            "paths": [
+                              { "path": "/anon/**" }
+                            ]
+                          }
                         }
                       },
                       {
@@ -626,7 +630,7 @@ paths:
                     "kind": "RuleSet",
                     "metadata": {
                       "annotations": {
-                        "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"heimdall.dadrus.github.com/v1beta1\",\"kind\":\"RuleSet\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"echo-app\"},\"name\":\"echo-app-rules\",\"namespace\":\"quickstarts\"},\"spec\":{\"rules\":[{\"execute\":[{\"authorizer\":\"allow_all_requests\"},{\"finalizer\":\"noop_finalizer\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"public-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/pub/\\u003c**\\u003e\"}},{\"execute\":[{\"authorizer\":\"allow_all_requests\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"anonymous-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/anon/\\u003c**\\u003e\"}},{\"execute\":[{\"authenticator\":\"deny_authenticator\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"redirect\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/redir/\\u003c**\\u003e\"}}]}}\n"
+                        "kubectl.kubernetes.io/last-applied-configuration": "..."
                       },
                       "creationTimestamp": "2025-08-12T09:15:29Z",
                       "generation": 1,
@@ -677,9 +681,11 @@ paths:
                           ],
                           "id": "public-access",
                           "match": {
-                            "routes": [
-                              { "path": "/public" }
-                            ]
+                            "http": {
+                              "paths": [
+                                { "path": "/public" }
+                              ]
+                            }
                           }
                         },
                         {
@@ -690,9 +696,11 @@ paths:
                           ],
                           "id": "anonymous-access",
                           "match": {
-                            "routes": [
-                              { "path": "/anon/**" }
-                            ]
+                            "http": {
+                              "paths": [
+                                { "path": "/anon/**" }
+                              ]
+                            }
                           }
                         },
                         {
@@ -706,9 +714,11 @@ paths:
                           },
                           "id": "redirect",
                           "match": {
-                            "routes": [
-                              { "path": "/redir/**" }
-                            ]
+                            "http": {
+                              "paths": [
+                                { "path": "/redir/**" }
+                              ]
+                            }
                           }
                         }
                       ]
@@ -739,7 +749,7 @@ paths:
                       "kind": "RuleSet",
                       "metadata": {
                         "annotations": {
-                          "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"heimdall.dadrus.github.com/v1beta1\",\"kind\":\"RuleSet\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"echo-app\"},\"name\":\"echo-app-rules\",\"namespace\":\"quickstarts\"},\"spec\":{\"rules\":[{\"execute\":[{\"authorizer\":\"allow_all_requests\"},{\"finalizer\":\"noop_finalizer\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"public-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/pub/\\u003c**\\u003e\"}},{\"execute\":[{\"authorizer\":\"allow_all_requests\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"anonymous-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/anon/\\u003c**\\u003e\"}},{\"execute\":[{\"authenticator\":\"deny_authenticator\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"redirect\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/redir/\\u003c**\\u003e\"}}]}}\n"
+                          "kubectl.kubernetes.io/last-applied-configuration": "..."
                         },
                         "creationTimestamp": "2025-08-12T09:15:29Z",
                         "generation": 1,
@@ -790,9 +800,11 @@ paths:
                             ],
                             "id": "public-access",
                             "match": {
-                              "routes": [
-                                { "path": "/public" }
-                              ]
+                              "http": {
+                                "paths": [
+                                  { "path": "/public" }
+                                ]
+                              }
                             }
                           },
                           {
@@ -803,9 +815,11 @@ paths:
                             ],
                             "id": "anonymous-access",
                             "match": {
-                              "routes": [
-                                { "path": "/anon/**" }
-                              ]
+                              "http": {
+                                "paths": [
+                                  { "path": "/anon/**" }
+                                ]
+                              }
                             }
                           },
                           {
@@ -819,9 +833,11 @@ paths:
                             },
                             "id": "redirect",
                             "match": {
-                              "routes": [
-                                { "path": "/redir/**" }
-                              ]
+                              "http": {
+                                "paths": [
+                                  { "path": "/redir/**" }
+                                ]
+                              }
                             }
                           }
                         ]

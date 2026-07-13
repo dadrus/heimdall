@@ -94,9 +94,10 @@ On this page
 <span class=na>rules</span><span class=pi>:</span>
 <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>upstream:public</span>  <i class=conum data-value=1></i><b>(1)</b>
   <span class=na>match</span><span class=pi>:</span>
-    <span class=na>routes</span><span class=pi>:</span>
-      <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/</span>
-      <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/favicon.ico</span>
+    <span class=na>http</span><span class=pi>:</span>
+      <span class=na>paths</span><span class=pi>:</span>
+        <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/</span>
+        <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/favicon.ico</span>
   <span class=na>forward_to</span><span class=pi>:</span>
     <span class=na>host</span><span class=pi>:</span> <span class=s>upstream:8081</span>
   <span class=na>execute</span><span class=pi>:</span>
@@ -105,9 +106,10 @@ On this page
 
 <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>upstream:protected</span>  <i class=conum data-value=2></i><b>(2)</b>
   <span class=na>match</span><span class=pi>:</span>
-    <span class=na>routes</span><span class=pi>:</span>
-      <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/user</span>
-      <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/admin</span>
+    <span class=na>http</span><span class=pi>:</span>
+      <span class=na>paths</span><span class=pi>:</span>
+        <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/user</span>
+        <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/admin</span>
   <span class=na>forward_to</span><span class=pi>:</span>
     <span class=na>host</span><span class=pi>:</span> <span class=s>upstream:8081</span>
   <span class=na>execute</span><span class=pi>:</span>
@@ -132,9 +134,10 @@ On this page
 <span class=na>rules</span><span class=pi>:</span>
 <span class=pi>-</span> <span class=na>id</span><span class=pi>:</span> <span class=s>oauth2-proxy:public</span>
   <span class=na>match</span><span class=pi>:</span>
-    <span class=na>routes</span><span class=pi>:</span>
-      <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/oauth2/start</span>
-      <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/oauth2/callback</span>
+    <span class=na>http</span><span class=pi>:</span>
+      <span class=na>paths</span><span class=pi>:</span>
+        <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/oauth2/start</span>
+        <span class=pi>-</span> <span class=na>path</span><span class=pi>:</span> <span class=s>/oauth2/callback</span>
   <span class=na>forward_to</span><span class=pi>:</span>
     <span class=na>host</span><span class=pi>:</span> <span class=s>oauth2-proxy:4180</span>
   <span class=na>execute</span><span class=pi>:</span>
@@ -260,7 +263,7 @@ Sec-Fetch-Mode: navigate
 Sec-Fetch-Site: none
 Sec-Fetch-User: ?1
 Upgrade-Insecure-Requests: 1
-X-Trp-Catalog: de</code></pre></div></div></li><li><p>Try accessing the <code>http://127.0.0.1:9090/admin</code> endpoint with both a user not in the <code>admin</code> group and a user from the <code>admin</code> group. The user not in the <code>admin</code> group should see the "access denied" page, while the user from the <code>admin</code> group should be able to access the endpoint and see the echoed response from our upstream service.</p><div class="admonitionblock note"><table><tbody><tr><td class=icon><i class="fa icon-note" title=Note></i></td><td class=content>To "logout" the user, just delete the cookies for <code>http://127.0.0.1:9090</code> using the Web-Developer Tools of your browser.</td></tr></tbody></table></div></li><li><p>Attempts to access any not exposed endpoints, like <code>http://127.0.0.1:9090/foo</code> will always result in the "access denied" page.</p></li></ol></div></div></div><div class=sect1><h2 id=_cleanup>Cleanup</h2><div class=sectionbody><div class=paragraph><p>Just stop the environment with <code>CTRL-C</code> and delete the created files. If you started docker compose in the background, tear the environment down with <code>docker compose down</code>.</p></div></div></div></linkable-headline-area></div><p class="text-end fst-italic fs-7 pb-3">Last updated on <span class=fw-bold>Jun 3, 2026</span></p><hr><div class="d-flex justify-content-between py-3"><a href=../../../guides/authz/openfga/ class="fs-6 fw-bold text-dark link-secondary link-underline-opacity-0"><svg width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.354 1.646a.5.5.0 010 .708L5.707 8l5.647 5.646a.5.5.0 01-.708.708l-6-6a.5.5.0 010-.708l6-6a.5.5.0 01.708.0z"/></svg>
+X-Trp-Catalog: de</code></pre></div></div></li><li><p>Try accessing the <code>http://127.0.0.1:9090/admin</code> endpoint with both a user not in the <code>admin</code> group and a user from the <code>admin</code> group. The user not in the <code>admin</code> group should see the "access denied" page, while the user from the <code>admin</code> group should be able to access the endpoint and see the echoed response from our upstream service.</p><div class="admonitionblock note"><table><tbody><tr><td class=icon><i class="fa icon-note" title=Note></i></td><td class=content>To "logout" the user, just delete the cookies for <code>http://127.0.0.1:9090</code> using the Web-Developer Tools of your browser.</td></tr></tbody></table></div></li><li><p>Attempts to access any not exposed endpoints, like <code>http://127.0.0.1:9090/foo</code> will always result in the "access denied" page.</p></li></ol></div></div></div><div class=sect1><h2 id=_cleanup>Cleanup</h2><div class=sectionbody><div class=paragraph><p>Just stop the environment with <code>CTRL-C</code> and delete the created files. If you started docker compose in the background, tear the environment down with <code>docker compose down</code>.</p></div></div></div></linkable-headline-area></div><p class="text-end fst-italic fs-7 pb-3">Last updated on <span class=fw-bold>Jul 13, 2026</span></p><hr><div class="d-flex justify-content-between py-3"><a href=../../../guides/authz/openfga/ class="fs-6 fw-bold text-dark link-secondary link-underline-opacity-0"><svg width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M11.354 1.646a.5.5.0 010 .708L5.707 8l5.647 5.646a.5.5.0 01-.708.708l-6-6a.5.5.0 010-.708l6-6a.5.5.0 01.708.0z"/></svg>
 Integration with OpenFGA
 </a><a class="ms-auto fs-6 fw-bold text-dark link-secondary link-underline-opacity-0" href=../../../guides/authn/dpop_bound_access_tokens/>Protect APIs with DPoP-bound Access Tokens
 <svg width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M4.646 1.646a.5.5.0 01.708.0l6 6a.5.5.0 010 .708l-6 6a.5.5.0 01-.708-.708L10.293 8 4.646 2.354a.5.5.0 010-.708z"/></svg></a></div></div></main></div><footer class="footer py-4 py-md-5 px-4 px-md-3 mt-3"><div class=container><div class=row><div class="col-lg-3 mb-3"><p class=fs-5>Heimdall</p><ul class="list-unstyled small text-muted"><li class=mb-2>2022-2024 © Heimdall Project Authors. All rights reserved.</li><li class=mb-2><a href=https://github.com/dadrus/heimdall/blob/master/LICENSE>Apache 2.0 licensed</a></li></ul></div><div class="col-6 col-lg-2 offset-lg-1 mb-3"><h5>Links</h5><ul class=list-unstyled><li class=mb-2><a href=../../../>Home</a></li><li class=mb-2><a href=../../../docs/getting_started/discover_heimdall>Docs</a></li><li class=mb-2><a href=../../../guides/>Guides</a></li><li class=mb-2><a href=../../../openapi/>API</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Guides</h5><ul class=list-unstyled><li class=mb-2><a href=../../../guides/proxies/>API Gateways & Proxies</a></li><li class=mb-2><a href=../../../guides/authz/>Authorization Services</a></li><li class=mb-2><a href=../../../guides/authn/>Authentication Protocols & Services</a></li></ul></div><div class="col-6 col-lg-2 mb-2"><h5>Community</h5><ul class=list-unstyled><li class=mb-2><a href=https://github.com/dadrus/heimdall>Github</a></li><li class=mb-2><a href=https://discord.gg/qQgg8xKuyb>Discord</a></li></ul></div></div></div></footer><script src=../../../js/main.js defer></script></body></html>
