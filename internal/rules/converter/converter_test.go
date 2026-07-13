@@ -112,6 +112,58 @@ rules:
 				require.ErrorContains(t, err, "failed to decode 1beta1 ruleset")
 			},
 		},
+		"v1alpha4 ruleset with glob host matcher cannot be converted": {
+			data: []byte(`
+version: 1alpha4
+rules:
+  - id: public-access
+    match:
+      routes:
+        - path: /pub/**
+      hosts:
+        - value: "*.foo"
+          type: glob
+    execute:
+      - authorizer: allow_all_requests
+`),
+			format:         "application/yaml",
+			desiredVersion: "1beta1",
+			assert: func(t *testing.T, err error, _ []byte) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrConversion)
+				require.ErrorContains(t, err, `host matcher of type "glob"`)
+				require.ErrorContains(t, err, `rule "public-access"`)
+				require.ErrorContains(t, err, "cannot be converted automatically")
+			},
+		},
+		"v1alpha4 ruleset with regex host matcher cannot be converted": {
+			data: []byte(`
+version: 1alpha4
+rules:
+  - id: public-access
+    match:
+      routes:
+        - path: /pub/**
+      hosts:
+        - value: "^api[0-9]+[.]example[.]com$"
+          type: regex
+    execute:
+      - authorizer: allow_all_requests
+`),
+			format:         "application/yaml",
+			desiredVersion: "1beta1",
+			assert: func(t *testing.T, err error, _ []byte) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrConversion)
+				require.ErrorContains(t, err, `host matcher of type "regex"`)
+				require.ErrorContains(t, err, `rule "public-access"`)
+				require.ErrorContains(t, err, "cannot be converted automatically")
+			},
+		},
 		"successful conversion from v1alpha4 to v1beta1": {
 			data: []byte(`
 version: 1alpha4

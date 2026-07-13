@@ -198,6 +198,7 @@ func (c *converter) convertV1Beta1ToV1Alpha4(sourceRs *v1beta1.RuleSet) (*v1alph
 	}, nil
 }
 
+//nolint:funlen
 func (c *converter) convertV1Alpha4ToV1Beta1(sourceRs *v1alpha4.RuleSet) (*v1beta1.RuleSet, error) {
 	convertedRules := make([]v1beta1.Rule, len(sourceRs.Rules))
 
@@ -231,9 +232,20 @@ func (c *converter) convertV1Alpha4ToV1Beta1(sourceRs *v1alpha4.RuleSet) (*v1bet
 			backend = &be
 		}
 
-		hosts := make([]string, len(rul.Matcher.Hosts))
-		for idx, host := range rul.Matcher.Hosts {
-			hosts[idx] = host.Value
+		hosts := make([]string, 0, len(rul.Matcher.Hosts))
+		for _, host := range rul.Matcher.Hosts {
+			switch host.Type {
+			case "exact", "wildcard":
+				hosts = append(hosts, host.Value)
+
+			case "glob", "regex":
+				return nil, errorchain.NewWithMessagef(
+					ErrConversion,
+					"host matcher of type %q in rule %q cannot be converted automatically; replace it with an exact or wildcard matcher", //nolint:lll
+					host.Type,
+					rul.ID,
+				)
+			}
 		}
 
 		executePipeline, err := convertObject[[]config.MechanismConfig, []v1beta1.Step](rul.Execute)
