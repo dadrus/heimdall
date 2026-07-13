@@ -138,7 +138,7 @@ Specifies path conditions for matching the rule to incoming HTTP requests with e
 +
 The link:{{< relref "#_capture_expressions" >}}[Capture Expression] describing the request path this rule should match. It supports both single and free (named) wildcards.
 
-** *`captures`*: _CaptureConditions_ (optional)
+** *`captures`*: _CaptureCondition array_ (optional)
 +
 Additional conditions that must be met for the values captured by named wildcards in the path expression. All defined conditions must succeed for the request path to be considered a match. Each entry supports the following properties:
 
