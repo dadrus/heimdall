@@ -25,6 +25,13 @@ Starting with v0.18.0, this issue is addressed through:
 * A new `convert` CLI command that allows conversion of existing `RuleSet` definitions.
 * A conversion controller for Kubernetes, registered with the API server through the `RuleSet` CRD.
 
+[CAUTION]
+====
+Automatic conversion covers structural changes to the `RuleSet` schema, such as renamed, moved, or restructured properties. It cannot, however, migrate settings that were deprecated and later removed without a well-defined, unambiguous mapping to their replacement. Such settings must be adjusted manually before conversion is attempted.
+
+For example, v0.17.0 deprecated the `regex` and `glob` `hosts[].type` values in favor of `exact` and `wildcard`, and v0.18.0 removed support for `regex` and `glob` entirely, while also simplifying the host matcher configuration itself. Conversion therefore migrates `exact` and `wildcard` entries automatically, but fails with an error if a `RuleSet` still uses `regex` or `glob` host types, rather than silently dropping or misconverting them. Such `RuleSets` must be migrated manually first — as described in the release notes of the version that removed the deprecated value — before conversion can succeed.
+====
+
 The following sections describe both the legacy and the new automated upgrade and migration procedures for heimdall releases introducing breaking changes to existing `RuleSets`, for installations inside and outside Kubernetes.
 
 NOTE: The following upgrade and migration steps are described in an imperative way for the sake of clarity and to remain product-neutral. However, all steps can be easily adapted to declarative, GitOps-based workflows using tools such as Flux, ArgoCD, or similar.
