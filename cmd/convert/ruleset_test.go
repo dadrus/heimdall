@@ -331,6 +331,27 @@ rules:
 				assert.Contains(t, result, "version: 1beta1")
 			},
 		},
+		"conversion of an empty ruleset": {
+			args: func(t *testing.T, _ io.Writer) []string {
+				t.Helper()
+
+				rulesetFile := filepath.Join(t.TempDir(), "ruleset.yaml")
+				err := os.WriteFile(rulesetFile, []byte(" \n\t"), 0o600)
+				require.NoError(t, err)
+
+				return []string{
+					"--" + convertRuleSetFlagDesiredVersion,
+					"1beta1",
+					rulesetFile,
+				}
+			},
+			assert: func(t *testing.T, err error, _ string) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, ErrEmptyRuleset)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN

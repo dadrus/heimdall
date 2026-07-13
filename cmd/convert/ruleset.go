@@ -2,6 +2,7 @@ package convert
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 
@@ -18,6 +19,8 @@ const (
 	convertRuleSetFlagDesiredVersion = "desired-version"
 	convertRuleSetFlagOutputFile     = "out"
 )
+
+var ErrEmptyRuleset = errors.New("ruleset must not be empty")
 
 // NewConvertRulesCommand represents the "convert rules" command.
 func NewConvertRulesCommand() *cobra.Command {
@@ -83,11 +86,16 @@ func convertRuleSet(cmd *cobra.Command, args []string) error {
 	}
 
 	contents = bytes.TrimSpace(contents)
+	if len(contents) == 0 {
+		return ErrEmptyRuleset
+	}
 
-	result, err := conv.Convert(
-		contents,
-		x.IfThenElse(contents[0] == '{', "application/json", "application/yaml"),
-	)
+	contentType := "application/yaml"
+	if len(contents) != 0 && contents[0] == '{' {
+		contentType = "application/json"
+	}
+
+	result, err := conv.Convert(contents, contentType)
 	if err != nil {
 		return err
 	}
