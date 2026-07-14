@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.17.18](https://github.com/dadrus/heimdall/compare/v0.17.17...v0.17.18) (2026-07-14)
+
+
+### Dependencies
+
+* update golang to v1.26.5 ([#3351](https://github.com/dadrus/heimdall/issues/3351)) ([f9066c0](https://github.com/dadrus/heimdall/commit/f9066c09d7b2ddc4d5bca4b5c651ce8c95c2ca11))
+* update google.golang.org/genproto/googleapis/rpc digest to f5fc221 ([#3358](https://github.com/dadrus/heimdall/issues/3358)) ([9dd8fc4](https://github.com/dadrus/heimdall/commit/9dd8fc49aa29d48f7708a1d0b79848d99002de03))
+* update module github.com/go-co-op/gocron/v2 to v2.22.0 ([#3355](https://github.com/dadrus/heimdall/issues/3355)) ([8c38af6](https://github.com/dadrus/heimdall/commit/8c38af6d42314d634fc175953fcc9821eeec91d3))
+* update module github.com/google/cel-go to v0.29.2 ([#3352](https://github.com/dadrus/heimdall/issues/3352)) ([abf0a4c](https://github.com/dadrus/heimdall/commit/abf0a4c6efaf38720dcc5644d69fbd7acdb90ddb))
+* update module github.com/jellydator/ttlcache/v3 to v3.4.1 ([#3328](https://github.com/dadrus/heimdall/issues/3328)) ([0bc131e](https://github.com/dadrus/heimdall/commit/0bc131eb1540e551726474db8855f5303dca12d2))
+* update module github.com/redis/rueidis to v1.0.76 ([#3323](https://github.com/dadrus/heimdall/issues/3323)) ([263de18](https://github.com/dadrus/heimdall/commit/263de180076279ddad6355a59fbd6ed5a3fc39cd))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.76 ([#3323](https://github.com/dadrus/heimdall/issues/3323)) ([263de18](https://github.com/dadrus/heimdall/commit/263de180076279ddad6355a59fbd6ed5a3fc39cd))
+* update module google.golang.org/grpc to v1.82.0 ([#3336](https://github.com/dadrus/heimdall/issues/3336)) ([d22713f](https://github.com/dadrus/heimdall/commit/d22713f67934386c2c11e0a99684cddfba592ab5))
+
 ## [0.17.17](https://github.com/dadrus/heimdall/compare/v0.17.16...v0.17.17) (2026-06-15)
 
 
