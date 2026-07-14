@@ -491,24 +491,6 @@ mechanisms:
                   selector: bar_foo_key
         values:
           some-key: some-value
-    - id: contextualizer_with_http_sig_usage
-      type: generic
-      config:
-        endpoint:
-          url: http://profile/{{ .Subject.ID }}
-          headers:
-            foo: bar
-          auth:
-            type: http_message_signatures
-            config:
-              components: ["@method", "content-digest", "@authority", "@target-uri", "@scheme"]
-              signer:
-                name: heimdall
-                key_store:
-                  path: /opt/heimdall/keystore.pem
-                  password: VeryInsecure!
-        values:
-          some-key: some-value
   finalizers:
     - id: jwt
       type: jwt
