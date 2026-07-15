@@ -229,6 +229,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.S
 		vals, err := f.v.Render(map[string]any{
 			"Subject": sub,
 			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
 		})
 		if err != nil {
 			return "", errorchain.NewWithMessage(heimdall.ErrInternal,
@@ -240,6 +241,7 @@ func (f *jwtFinalizer) generateToken(ctx heimdall.RequestContext, sub *subject.S
 		claims, err := f.claims.Render(map[string]any{
 			"Subject": sub,
 			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
 			"Values":  vals,
 		})
 		if err != nil {

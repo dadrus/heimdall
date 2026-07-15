@@ -41,6 +41,7 @@ type RequestContext struct {
 	savedBody any
 	headers   map[string]string
 	outputs   map[string]any
+	results   map[string]any
 }
 
 func New() *RequestContext {
@@ -48,6 +49,7 @@ func New() *RequestContext {
 		upstreamHeaders: make(http.Header, 6),
 		upstreamCookies: make(map[string]string, 4),
 		outputs:         make(map[string]any, 10),
+		results:         make(map[string]any, 10),
 		headers:         make(map[string]string, 10),
 	}
 
@@ -73,6 +75,7 @@ func (r *RequestContext) Reset() {
 	r.req = nil
 
 	clear(r.outputs)
+	clear(r.results)
 	clear(r.headers)
 	clear(r.upstreamCookies)
 	clear(r.upstreamHeaders)
@@ -159,6 +162,7 @@ func (r *RequestContext) Context() context.Context                { return r.req
 func (r *RequestContext) SetPipelineError(err error)              { r.err = err }
 func (r *RequestContext) PipelineError() error                    { return r.err }
 func (r *RequestContext) Outputs() map[string]any                 { return r.outputs }
+func (r *RequestContext) Results() map[string]any                 { return r.results }
 
 func requestClientIPs(ips []string, req *http.Request) []string {
 	res, _ := httpx.IPsFromForwarded(ips, req.Header.Values("Forwarded"))

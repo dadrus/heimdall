@@ -393,6 +393,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 			ctx := heimdallmocks.NewRequestContextMock(t)
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
+			ctx.EXPECT().Results().Return(map[string]any{"Payload": map[string]any{"foo": "bar"}}).Maybe()
 			ctx.EXPECT().Context().Return(t.Context())
 
 			configureContext(t, ctx)

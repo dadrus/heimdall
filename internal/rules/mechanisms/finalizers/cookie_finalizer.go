@@ -88,6 +88,7 @@ func (f *cookieFinalizer) Execute(ctx heimdall.RequestContext, sub *subject.Subj
 			"Request": ctx.Request(),
 			"Subject": sub,
 			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
 		})
 		if err != nil {
 			return errorchain.

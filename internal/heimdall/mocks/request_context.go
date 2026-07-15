@@ -157,6 +157,26 @@ func (_m *RequestContextMock) Outputs() map[string]interface{} {
 	return r0
 }
 
+// Results provides a mock function with given fields:
+func (_m *RequestContextMock) Results() map[string]interface{} {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Results")
+	}
+
+	var r0 map[string]interface{}
+	if rf, ok := ret.Get(0).(func() map[string]interface{}); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]interface{})
+		}
+	}
+
+	return r0
+}
+
 // RequestContextMock_Outputs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Outputs'
 type RequestContextMock_Outputs_Call struct {
 	*mock.Call
@@ -180,6 +200,33 @@ func (_c *RequestContextMock_Outputs_Call) Return(_a0 map[string]interface{}) *R
 }
 
 func (_c *RequestContextMock_Outputs_Call) RunAndReturn(run func() map[string]interface{}) *RequestContextMock_Outputs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// RequestContextMock_Results_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Results'
+type RequestContextMock_Results_Call struct {
+	*mock.Call
+}
+
+// Outputs is a helper method to define mock.On call
+func (_e *RequestContextMock_Expecter) Results() *RequestContextMock_Results_Call {
+	return &RequestContextMock_Results_Call{Call: _e.mock.On("Results")}
+}
+
+func (_c *RequestContextMock_Results_Call) Run(run func()) *RequestContextMock_Results_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *RequestContextMock_Results_Call) Return(_a0 map[string]interface{}) *RequestContextMock_Results_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *RequestContextMock_Results_Call) RunAndReturn(run func() map[string]interface{}) *RequestContextMock_Results_Call {
 	_c.Call.Return(run)
 	return _c
 }

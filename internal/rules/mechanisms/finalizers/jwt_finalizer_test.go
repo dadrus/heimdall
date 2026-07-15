@@ -871,6 +871,7 @@ claims: '{
 				ctx.EXPECT().AddHeaderForUpstream("X-Token",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bar ") }))
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
+				ctx.EXPECT().Results().Return(map[string]any{"Payload": map[string]any{"foo": "bar"}})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, defaultJWTTTL-defaultCacheLeeway).Return(nil)
@@ -900,6 +901,7 @@ values:
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
 				ctx.EXPECT().Outputs().Return(map[string]any{"bar": "baz"})
+				ctx.EXPECT().Results().Return(map[string]any{"Payload": map[string]any{"foo": "bar"}})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, defaultJWTTTL-defaultCacheLeeway).Return(nil)
@@ -924,6 +926,7 @@ claims: "foo: bar"
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
+				ctx.EXPECT().Results().Return(map[string]any{"Payload": map[string]any{}})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
@@ -953,6 +956,7 @@ claims: "{{ len .foobar }}"
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
+				ctx.EXPECT().Results().Return(map[string]any{"Payload": map[string]any{}})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},
@@ -984,6 +988,7 @@ values:
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
+				ctx.EXPECT().Results().Return(map[string]any{"Payload": map[string]any{}})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 			},

@@ -74,6 +74,7 @@ type RequestContext struct {
 	// the following properties are created lazy and cached
 	savedBody any
 	outputs   map[string]any
+	results   map[string]any
 }
 
 func newRequestContext() *RequestContext {
@@ -81,6 +82,7 @@ func newRequestContext() *RequestContext {
 		upstreamHeaders: make(http.Header, 6),
 		upstreamCookies: make(map[string]string, 4),
 		outputs:         make(map[string]any, 10),
+		results:         make(map[string]any, 10),
 	}
 
 	rc.hmdlReq = &heimdall.Request{
@@ -140,6 +142,7 @@ func (r *RequestContext) Reset() {
 	clear(r.upstreamHeaders)
 	clear(r.upstreamCookies)
 	clear(r.outputs)
+	clear(r.results)
 
 	clear(r.hmdlReq.URL.Captures)
 	r.hmdlReq.URL.URL = url.URL{}
@@ -203,6 +206,7 @@ func (r *RequestContext) SetPipelineError(err error)              { r.err = err 
 func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
 func (r *RequestContext) Outputs() map[string]any                 { return r.outputs }
+func (r *RequestContext) Results() map[string]any                 { return r.results }
 
 func (r *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 	if r.err != nil {

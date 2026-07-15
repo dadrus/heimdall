@@ -1282,6 +1282,10 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			ctx := heimdallmocks.NewRequestContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
+			ctx.EXPECT().Results().Return(map[string]any{
+				"Headers": map[string]any{},
+				"Results": map[string]any{"foo": "bar"},
+			}).Maybe()
 
 			configureContext(t, ctx)
 			configureCache(t, cch, tc.authorizer, tc.subject)
