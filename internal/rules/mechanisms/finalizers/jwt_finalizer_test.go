@@ -812,6 +812,7 @@ signer:
 
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer TestToken")
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
+				ctx.EXPECT().Results().Return(map[string]any{"Payload": map[string]any{"foo": "bar"}})
 
 				cacheKey := fin.calculateCacheKey(ctx, sub)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return([]byte("TestToken"), nil)
@@ -838,6 +839,7 @@ ttl: 1m
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
 				ctx.EXPECT().Outputs().Return(map[string]any{})
+				ctx.EXPECT().Results().Return(map[string]any{"Payload": map[string]any{}})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, configuredTTL-defaultCacheLeeway).Return(nil)

@@ -193,10 +193,11 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 
 	if response.Payload != nil {
 		ctx.Outputs()[c.id] = response.Payload
-		ctx.Results()[c.id] = map[string]any{
-			"Headers": response.Headers,
-			"Payload": response.Payload,
-		}
+	}
+
+	ctx.Results()[c.id] = map[string]any{
+		"Headers": response.Headers,
+		"Payload": response.Payload,
 	}
 
 	return nil

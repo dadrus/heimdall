@@ -146,7 +146,7 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 			Str("_type", AuthorizerRemote).
 			Str("_name", name).
 			Msg("Usage of forward_response_headers_to_upstream is deprecated. " +
-				"Please use .Results object in header finalizer instead")
+				"Please use Results object in a header finalizer instead")
 	}
 
 	return &remoteAuthorizer{
@@ -241,6 +241,15 @@ func (a *remoteAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (
 	if err := decodeConfig(a.app, rawConfig, &conf); err != nil {
 		return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration,
 			"failed decoding config for remote authorizer '%s'", a.name).CausedBy(err)
+	}
+
+	if len(conf.ResponseHeadersToForward) > 0 {
+		logger := a.app.Logger()
+		logger.Warn().
+			Str("_type", AuthorizerRemote).
+			Str("_name", a.name).
+			Msg("Usage of forward_response_headers_to_upstream is deprecated. " +
+				"Please use Results object in a header finalizer instead")
 	}
 
 	expressions, err := compileExpressions(conf.Expressions, a.celEnv)

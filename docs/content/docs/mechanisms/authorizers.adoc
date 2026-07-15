@@ -212,7 +212,7 @@ config:
       message: User does not have required permissions
 ----
 
-In this case, since an OPA response could look like `{ "result": true }` or `{ "result": false }`, heimdall makes the response also available under `Outputs["opa"]`, with `"opa"` being the id of the authorizer in this example. The same value is also available in structured form under `Results["opa"].Payload`; new configurations should reference `Results.opa.Payload` (e.g. `{{ quote .Results.opa.Payload }}` in the `payload` template above) instead of `Outputs.whatever`, in line with the migration note further above.
+In this case, since an OPA response could look like `{ "result": true }` or `{ "result": false }`, heimdall makes the response also available under `Outputs["opa"]`, with `"opa"` being the id of the authorizer in this example. The same value is also available in structured form under `Results["opa"].Payload`.
 
 A specific rule could then use this authorizer in the following ways:
 
