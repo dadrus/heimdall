@@ -16,7 +16,9 @@ Some of the contextualizers may support or require additional configuration. The
 
 == Generic
 
-This mechanism allows you to communicate to any API you want to fetch further information about the subject. Typical scenario is getting specific attributes for later authorization purposes which are not known to the authentication system and thus were not made available in link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject's`] `Attributes` property. If the API responses with a 2xx HTTP response code, the payload is made available in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] object, otherwise, if not overridden, an error is thrown and the execution of the authentication & authorization pipeline stops. To avoid overwriting of existing key value pairs, this object is however not available on the top level, but under a key named by the `id` of the contextualizer (See also the example below). If the `Content-Type` of the response is either ending with `json` or is `application/x-www-form-urlencoded`, the payload is decoded, otherwise it is treated as string, but, as written above, is made available as well.
+This mechanism allows you to communicate to any API you want to fetch further information about the subject. Typical scenario is getting specific attributes for later authorization purposes which are not known to the authentication system and thus were not made available in link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject's`] `Attributes` property. If the API responses with a 2xx HTTP response code, the payload is made available in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] object, otherwise, if not overridden, an error is thrown and the execution of the authentication & authorization pipeline stops. To avoid overwriting of existing key value pairs, this object is however not available on the top level, but under a key named by the `id` of the contextualizer (See also the example below). In addition, the complete endpoint response is available through the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] property under the same key. Its `Payload` property contains the same prepared value as the corresponding `Outputs` entry, while its `Headers` property contains the response headers returned by the endpoint. A `Results` entry is also available if the response does not contain a payload. If the `Content-Type` of the response is either ending with `json` or is `application/x-www-form-urlencoded`, the payload is decoded, otherwise it is treated as string, but, as written above, is made available as well.
+
+NOTE: References to `Outputs` should be migrated to `Results`. See also the corresponding migration note in the description of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] evaluation object.
 
 To enable the usage of this contextualizer, you have to set the `type` property to `generic`.
 
@@ -24,7 +26,7 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`endpoint`*: _link:{{< relref "/docs/configuration/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
-The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] object, as well as the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] (see also below) objects available to it. By default, this contextualizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of the system, this contextualizer should communicate to, you might need to configure further properties, like headers, etc.
+The API of the service providing additional attributes about the authenticated user. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] object, the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] object, as well as the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] (see also below) objects available to it. By default, this contextualizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of the system, this contextualizer should communicate to, you might need to configure further properties, like headers, etc.
 
 * *`forward_headers`*: _string array_ (optional, overridable)
 +
@@ -36,7 +38,7 @@ If the API requires any cookies from the request to heimdall, you can forward th
 
 * *`payload`*: _string_ (optional, overridable)
 +
-Your link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[template] with definitions required to communicate to the endpoint. The template can make use of link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
+Your link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[template] with definitions required to communicate to the endpoint. The template can make use of link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`], and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -48,7 +50,7 @@ If set to `true`, allows the pipeline to continue with the execution of the next
 
 * *`values`* _map of strings_ (optional, overridable)
 +
-A key value map, which is made accessible to the template rendering engine as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] object to render parts of the URL and/or the payload. The actual values in that map can be templated as well with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] object to render parts of the URL and/or the payload. The actual values in that map can be templated as well with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] (consider the migration note above), and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
 
 .Contextualizer configuration without payload
 ====
@@ -84,7 +86,7 @@ config:
   payload: |
     {
       "user_id": {{ quote .Values.user_id }}
-      "whatever": {{ quote .Outputs.whatever }}
+      "whatever": {{ quote .Results.whatever.Payload }}
     }
 ----
 
@@ -114,11 +116,13 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`items`*: _map of strings_ (mandatory, not overridable)
 +
-Every entry in the items map is a map of templates. Every key will be present in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] object.
+Every entry in the items map is a map of templates. Every key will be present in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] object. The same key is available in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] object, with the corresponding value stored in its `Payload` property.
++
+NOTE: References to `Outputs` should be migrated to `Results`; see the corresponding migration note in the description of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] evaluation object.
 
 * *`values`* _map of strings_ (optional, overridable)
 +
-A key value map, which is made accessible to the template rendering engine as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] object to render parts of the URL and/or the payload. The actual values in that map can be templated as well with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] object to render parts of the URL and/or the payload. The actual values in that map can be templated as well with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`], and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
 
 .Simple contextualizer configuration
 ====
@@ -156,11 +160,11 @@ Since the `values` property is not defined but used in items, it must be specifi
 - id: rule1
   # other rule properties
   execute:
-  - # other mechanisms
+  - # some other steps
   - contextualizer: foo
     config: # overriding with rule specifics
       values:
         user_id: "{{ .Subject.ID }}"
-  - # other mechanisms
+  - # some further steps
 ----
 ====

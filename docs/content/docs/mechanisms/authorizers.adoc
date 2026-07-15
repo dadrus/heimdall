@@ -16,7 +16,7 @@ Some of the authorizers may support or require additional configuration. The cor
 
 == Allow
 
-As the name implies, this authorizer allows any request passing through. This authorizer type also doesn't have any configuration options.
+As the name implies, this authorizer allows any request to pass through. This authorizer type also doesn't have any configuration options.
 
 To enable the usage of this authorizer, you have to set the `type` property to `allow`.
 
@@ -31,7 +31,7 @@ type: allow
 
 == Deny
 
-As the name implies, this authorizer denies any request (on HTTP response code level this is then mapped to `403 Forbidden`). It basically stops the successful execution of the pipeline resulting in the execution of the error handler mechanisms. This authorizer type doesn't have any configuration options.
+As the name implies, this authorizer denies any request (on HTTP response code level this is then mapped to `403 Forbidden`). It basically stops the successful execution of the pipeline, resulting in the execution of the error handler mechanisms. This authorizer type doesn't have any configuration options.
 
 To enable the usage of this authorizer, you have to set the `type` property to `deny`.
 
@@ -46,7 +46,7 @@ type: deny
 
 == Local (CEL)
 
-This authorizer allows definition of authorization requirements based on information available about the authenticated subject, the existing pipeline results, as well as the actual request by using https://github.com/google/cel-spec[CEL] based authorization expressions. Each expression is expected to return `true` to signal success. Otherwise, the authorization fails, resulting in the execution of the error handler mechanisms.
+This authorizer allows the definition of authorization requirements based on information available about the authenticated subject, the existing pipeline results, as well as the actual request, by using https://github.com/google/cel-spec[CEL] based authorization expressions. Each expression is expected to return `true` to signal success. Otherwise, the authorization fails, resulting in the execution of the error handler mechanisms.
 
 To enable the usage of this authorizer, you have to set the `type` property to `cel`.
 
@@ -54,16 +54,18 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`expressions`*: _link:{{< relref "/docs/configuration/types.adoc#_authorization_expression">}}[Authorization Expression] array_ (mandatory, overridable)
 +
-List of authorization expressions, which define the actual authorization logic. Each expression has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] objects.
+List of authorization expressions, which define the actual authorization logic. Each expression has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] objects.
++
+NOTE: References to `Outputs` should be migrated to `Results`; see the corresponding migration note in the description of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] evaluation object.
 
 * *`values`* _map of strings_ (optional, overridable)
 +
-A key value map, which is made accessible to the CEL engine as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] object, to support "templating" of expressions (see also examples below). The actual values in that map can be templated as well with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
+A key value map, which is made accessible to the CEL engine as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] object, to support "templating" of expressions (see also examples below). The actual values in that map can be templated as well with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] (migrate to link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`], see note above), and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
 
 .Authorization based on subject properties
 ====
 
-In this example the subject is checked to be member of the "admin" group.
+In this example, the subject is checked to be a member of the "admin" group.
 
 [source, yaml]
 ----
@@ -77,16 +79,16 @@ config:
       message: User is not admin
 ----
 
-The first line of the expressions verifies that the property group exists. The second line checks, whether `groups` contains an entry named `admin`.
+The first line of the expression verifies that the `groups` property exists. The second line checks whether `groups` contains an entry named `admin`.
 
-This example specifies also a message, which is logged, if the expression fails.
+This example also specifies a message, which is logged if the expression fails.
 
 ====
 
 .Authorization based on subject and request properties
 ====
 
-In this example the authorizer is configured to ensure anonymous access to a resource is possible for read requests only.
+In this example, the authorizer is configured to ensure anonymous access to a resource is possible for read requests only.
 
 [source, yaml]
 ----
@@ -140,9 +142,11 @@ execute:
 
 == Remote
 
-This authorizer allows communication with other systems, like https://www.openpolicyagent.org/[Open Policy Agent], https://www.ory.sh/docs/keto/[Ory Keto], etc. for the actual authorization purpose. If the used endpoint answers with a not 2xx HTTP response code, this authorizer assumes, the authorization has failed, resulting in the execution of the error handler mechanisms. Otherwise, if no expressions for the verification of the response are defined, the authorizer assumes, the request has been authorized. If expressions are defined and do not fail, the authorization succeeds.
+This authorizer allows communication with other systems, like https://www.openpolicyagent.org/[Open Policy Agent], https://www.ory.sh/docs/keto/[Ory Keto], etc., for the actual authorization purpose. If the used endpoint answers with a non-2xx HTTP response code, this authorizer assumes that the authorization has failed, resulting in the execution of the error handler mechanisms. Otherwise, if no expressions for the verification of the response are defined, the authorizer assumes that the request has been authorized. If expressions are defined and do not fail, the authorization succeeds.
 
-If your authorization system provides a payload in the response, heimdall inspects the `Content-Type` header to prepare the payload for further usage, e.g. for payload verification expressions, or for a link:{{< relref "#_local_cel" >}}[Local (CEL)] authorizer. If the content type does either end with `json` or is `application/x-www-form-urlencoded`, the payload is decoded, otherwise it is made available as a simple string. In all cases this value is available for the authorization expressions, as well as in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] property under a key named by the `id` of the authorizer (See also the example below).
+If your authorization system provides a payload in the response, heimdall inspects the `Content-Type` header to prepare the payload for further usage, e.g. in payload verification expressions or by a link:{{< relref "#_local_cel" >}}[Local (CEL)] authorizer. If the content type either ends with `json` or is `application/x-www-form-urlencoded`, the payload is decoded; otherwise, it is made available as a simple string. This value is available to the authorization expressions and, after successful authorization, through the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] property under a key matching the authorizer's `id` (see also the example below). In addition, the complete endpoint response is available through the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] property under the same key. Its `Payload` property contains the same prepared value as the corresponding `Outputs` entry, while its `Headers` property contains the response headers returned by the authorization endpoint. A `Results` entry is also available if the response does not contain a payload.
+
+NOTE: References to `Outputs` should be migrated to `Results`; see the corresponding migration note in the description of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] evaluation object.
 
 To enable the usage of this authorizer, you have to set the `type` property to `remote`.
 
@@ -150,11 +154,11 @@ Configuration using the `config` property is mandatory. Following properties are
 
 * *`endpoint`*: _link:{{< relref "/docs/configuration/types.adoc#_endpoint">}}[Endpoint]_ (mandatory, not overridable)
 +
-The API endpoint of your authorization system. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] object, the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] object, as well as the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] (see also below) objects available to it. By default, this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of your authorization system, you might need to configure further properties, like headers, etc.
+The API endpoint of your authorization system. At least the `url` must be configured. This mechanism allows templating of the url and makes the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] object, the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] object, the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] object, as well as the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] (see also below) objects available to it. By default, this authorizer will use HTTP `POST` to send the rendered payload to this endpoint. You can override this behavior by configuring `method` as well. Depending on the API requirements of your authorization system, you might need to configure further properties, like headers, etc.
 
 * *`payload`*: _string_ (optional, overridable)
 +
-Your link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[template] with definitions required to communicate to the authorization endpoint. The template can make use of link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
+Your link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[template] with definitions required to communicate to the authorization endpoint. The template can make use of link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
 
 * *`expressions`*: _link:{{< relref "/docs/configuration/types.adoc#_authorization_expression">}}[Authorization Expression] array_ (optional, overridable)
 +
@@ -165,6 +169,8 @@ Each expression has access to the link:{{< relref "/docs/mechanisms/evaluation_o
 * *`forward_response_headers_to_upstream`*: _string array_ (optional, overridable)
 +
 Enables forwarding of any headers from the authorization endpoint response to the upstream service.
++
+NOTE: This setting is deprecated and will be removed in the 0.18.0 release. Use the response available through the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] evaluation object together with a `header` finalizer instead.
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -172,11 +178,11 @@ Allows caching of the authorization endpoint responses. Defaults to 0s, which me
 
 * *`values`* _map of strings_ (optional, overridable)
 +
-A key value map, which is made accessible to the template rendering engine as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] object, to render parts of the URL and/or the payload. The actual values in that map can be templated as well with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
+A key value map, which is made accessible to the template rendering engine as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] object, to render parts of the URL and/or the payload. The actual values in that map can be templated as well with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] (migrate to link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`], see note above), and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] objects.
 
 .Configuration of Remote authorizer to communicate with https://www.openpolicyagent.org/[Open Policy Agent] (OPA)
 ====
-Here the remote authorizer is configured to communicate with OPA. Since OPA expects the query to be formatted as JSON, the corresponding `Content-Type` header is set. Since the responses are JSON objects as well, the `Accept` header is also provided. In addition, this examples uses the `basic_auth` auth type to authenticate against the endpoint.
+Here the remote authorizer is configured to communicate with OPA. Since OPA expects the query to be formatted as JSON, the corresponding `Content-Type` header is set. Since the responses are JSON objects as well, the `Accept` header is also provided. In addition, this example uses the `basic_auth` auth type to authenticate against the endpoint.
 
 [source, yaml]
 ----
@@ -206,7 +212,7 @@ config:
       message: User does not have required permissions
 ----
 
-In this case, since an OPA response could look like `{ "result": true }` or `{ "result": false }`, heimdall makes the response also available under `Outputs["opa"]`, with `"opa"` being the id of the authorizer in this example.
+In this case, since an OPA response could look like `{ "result": true }` or `{ "result": false }`, heimdall makes the response also available under `Outputs["opa"]`, with `"opa"` being the id of the authorizer in this example. The same value is also available in structured form under `Results["opa"].Payload`; new configurations should reference `Results.opa.Payload` (e.g. `{{ quote .Results.opa.Payload }}` in the `payload` template above) instead of `Outputs.whatever`, in line with the migration note further above.
 
 A specific rule could then use this authorizer in the following ways:
 

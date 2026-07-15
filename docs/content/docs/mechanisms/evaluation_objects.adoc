@@ -181,7 +181,7 @@ Request = {
 
 === Outputs
 
-This object represents a pipeline execution specific key value map. It is used by pipeline steps to store or read results of particular step executions. Step id is used as a key and the value is the corresponding result.
+This object represents a pipeline-execution-specific key-value map. It is used by pipeline steps to store or read results of particular step executions. Step id is used as a key and the value is the corresponding result.
 
 Example:
 
@@ -190,6 +190,29 @@ Example:
 Outputs = {
     "id_1": ["a", "b"],
     "id_2": { "foo": "bar", "baz": false }
+}
+----
+
+NOTE: Before upgrading to v0.18.0 (to be released soon), migrate references to `Outputs` to the `Results` object described below. In v0.18.0, `Outputs` will adopt the same structure as `Results`, which would otherwise introduce a breaking change that cannot be migrated automatically. After all heimdall instances have been upgraded to v0.18.0, references to `Results` can be changed back to `Outputs`. v0.18.0 will deprecate the `Results` object.
+
+
+=== Results
+
+This object is similar to the `Outputs` object and represents a pipeline-execution-specific key value map. It is used by pipeline steps to store or read results of particular step executions. The step id is used as a key and the value is the corresponding result.
+
+Unlike the `Outputs` object, each result is stored in a structured form containing at least a `Payload` property. For pipeline steps receiving their results from remote systems, the result additionally contains a `Headers` property preserving the response headers.
+
+Example:
+
+[source, javascript]
+----
+Results = {
+  "id_1": { "Payload": ["a", "b"] },
+  "id_2": { "Payload": { "foo": "bar", "baz": false }},
+  "id_3": {
+    "Headers": { "X-Some-Header": ["value"] },
+    "Payload": { "foo": "bar", "baz": false }
+  }
 }
 ----
 
