@@ -297,7 +297,7 @@ func (f *jwtFinalizer) calculateCacheKey(ctx heimdall.RequestContext, sub *subje
 	}
 
 	if outputs := ctx.Results(); len(outputs) != 0 {
-		rawOut, _ := json.Marshal(ctx.Outputs())
+		rawOut, _ := json.Marshal(ctx.Results())
 
 		hash.Write(rawOut)
 	}
