@@ -1,0 +1,293 @@
+---
+title: "OpenID Connect with OAuth2-Proxy and NGINX"
+date: 2026-06-13T00:00:00+02:00
+draft: false
+weight: 32
+menu:
+  guides:
+    parent: "Authentication Protocols & Services"
+description: This guide explains how to combine OpenID Connect, OAuth2-Proxy, NGINX, and heimdall decision mode.
+---
+
+:toc:
+
+This guide explains an OpenID Connect setup where https://nginx.org/[NGINX] is the public reverse proxy, https://oauth2-proxy.github.io/oauth2-proxy/[OAuth2-Proxy] handles the browser login and session cookie, and heimdall runs in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode].
+
+Use this pattern if NGINX should stay in front of the upstream service, OAuth2-Proxy should own the Authorization Code flow with the identity provider, and heimdall should make the final access-control decision for each request.
+Unlike the general NGINX guide and the first-party OIDC guide, this page focuses on the settings that have to change when these components are combined in decision mode.
+
+== Request Flow
+
+. The browser sends a request to NGINX.
+. NGINX calls heimdall through the `auth_request` module.
+. heimdall validates the OAuth2-Proxy session cookie by calling OAuth2-Proxy's `/oauth2/userinfo` endpoint.
+. If heimdall accepts the request, NGINX forwards it to the upstream service.
+. If heimdall returns `401 Unauthorized`, NGINX redirects the browser to OAuth2-Proxy's `/oauth2/start` endpoint.
+
+NGINX owns the browser redirect because its `auth_request` module only treats `2xx`, `401`, and `403` as meaningful authorization responses. A redirect returned by heimdall would be treated as an error by NGINX. The link:{{< relref "/guides/proxies/nginx.adoc#_limitations" >}}[NGINX guide] describes that limitation in more detail.
+
+== Prerequisites
+
+This guide assumes you are adapting the Docker Compose setup from the link:{{< relref "/guides/authn/oidc_first_party_auth.adoc" >}}[First-Party Authentication with OpenID Connect] guide:
+
+* Keycloak still runs on `\http://127.0.0.1:8080`.
+* OAuth2-Proxy is reachable by the browser on `\http://127.0.0.1:4180`.
+* NGINX exposes the protected upstream on `\http://127.0.0.1:8888`.
+* heimdall runs in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode].
+
+Keep the Keycloak database, realm, users, groups, `signer.pem`, and `initdb.sh` from the first-party OIDC guide. Replace the proxy-mode specific parts with the sections below.
+
+== Configure Keycloak
+
+In the `test` realm, create the OAuth2-Proxy client as described in the first-party OIDC guide, but use OAuth2-Proxy's public callback URL instead of heimdall's proxy URL:
+
+* *Valid Redirect URI*: `\http://127.0.0.1:4180/oauth2/callback`
+* *Home URL*: `\http://127.0.0.1:8888/`
+* *Valid post logout redirect URI*: `\http://127.0.0.1:8888/`
+
+OAuth2-Proxy receives the login callback directly in this topology. NGINX remains the public entry point for the protected upstream after login.
+
+== Configure OAuth2-Proxy
+
+Expose OAuth2-Proxy directly to the browser and let it use the Keycloak client created above:
+
+[source, yaml]
+----
+oauth2-proxy:
+  depends_on:
+    - keycloak
+  image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0-amd64
+  command:
+    - --http-address
+    - 0.0.0.0:4180
+  ports:
+    - "4180:4180"
+  environment:
+    OAUTH2_PROXY_CLIENT_ID: placeholder
+    OAUTH2_PROXY_CLIENT_SECRET: placeholder
+    OAUTH2_PROXY_REDIRECT_URL: http://127.0.0.1:4180/oauth2/callback
+    OAUTH2_PROXY_PROVIDER: keycloak-oidc
+    OAUTH2_PROXY_SKIP_PROVIDER_BUTTON: true
+    OAUTH2_PROXY_COOKIE_SECRET: VerySecure!!!!!!
+    OAUTH2_PROXY_COOKIE_NAME: SESSION
+    OAUTH2_PROXY_WHITELIST_DOMAINS: 127.0.0.1:8888
+    OAUTH2_PROXY_OIDC_ISSUER_URL: http://keycloak:8080/realms/test
+    OAUTH2_PROXY_INSECURE_OIDC_ALLOW_UNVERIFIED_EMAIL: true
+    OAUTH2_PROXY_EMAIL_DOMAINS: '*'
+    OAUTH2_PROXY_OIDC_EXTRA_AUDIENCES: account
+    OAUTH2_PROXY_LOGIN_URL: http://127.0.0.1:8080/realms/test/protocol/openid-connect/auth
+    OAUTH2_PROXY_OIDC_JWKS_URL: http://keycloak:8080/realms/test/protocol/openid-connect/certs
+    OAUTH2_PROXY_REDEEM_URL: http://keycloak:8080/realms/test/protocol/openid-connect/token
+    OAUTH2_PROXY_INSECURE_OIDC_SKIP_ISSUER_VERIFICATION: true
+    OAUTH2_PROXY_SKIP_OIDC_DISCOVERY: true
+    OAUTH2_PROXY_SESSION_COOKIE_MINIMAL: true
+----
+
+Replace `OAUTH2_PROXY_CLIENT_ID` and `OAUTH2_PROXY_CLIENT_SECRET` with the values from Keycloak.
+
+`OAUTH2_PROXY_SESSION_COOKIE_MINIMAL` keeps the browser session cookie small enough for this simple guide. If your deployment stores larger sessions, prefer OAuth2-Proxy server-side session storage instead of relying on split cookies, because heimdall's `generic` authenticator forwards the configured cookie names explicitly.
+
+== Configure NGINX
+
+The example below combines the `X-Forwarded-*` integration style from the link:{{< relref "/guides/proxies/nginx.adoc#_second_option" >}}[NGINX guide] with an OAuth2-Proxy login redirect.
+
+[source, nginx]
+----
+# nginx.conf
+events {
+  worker_connections 4096;
+}
+
+http {
+  upstream heimdall {
+    server heimdall:4456;
+  }
+
+  upstream upstream {
+    server upstream:8081;
+  }
+
+  server {
+    listen 8080;
+
+    location / {
+      auth_request             /_auth;  <1>
+      auth_request_set         $auth_cookie $upstream_http_set_cookie;
+      add_header               Set-Cookie $auth_cookie;
+      auth_request_set         $auth_header $upstream_http_authorization;
+      proxy_set_header         Authorization $auth_header;
+      proxy_set_header         Proxy "";
+      error_page               401 = @oauth2_proxy_start;  <2>
+      proxy_pass               http://upstream;
+    }
+
+    location @oauth2_proxy_start {
+      return 302 http://127.0.0.1:4180/oauth2/start?rd=$scheme://$http_host$request_uri;  <3>
+    }
+
+    location = /_auth {
+      internal;
+      proxy_pass               http://heimdall;
+      proxy_pass_request_body  off;
+      proxy_set_header         Content-Length         "";
+      proxy_set_header         X-Forwarded-Method     $request_method;
+      proxy_set_header         X-Forwarded-Proto      $scheme;
+      proxy_set_header         X-Forwarded-Host       $http_host;
+      proxy_set_header         X-Forwarded-Uri        $request_uri;
+      proxy_set_header         X-Forwarded-For        $remote_addr;
+      proxy_set_header         Cookie                 $http_cookie;  <4>
+    }
+  }
+}
+----
+<1> NGINX asks heimdall whether the original request may be forwarded.
+<2> Missing or invalid browser sessions stay a `401` response from heimdall's point of view, while NGINX owns the browser redirect.
+<3> The `rd` parameter sends the user back to the originally requested NGINX URL after login.
+<4> Forwarding the browser cookies lets heimdall validate the OAuth2-Proxy `SESSION` cookie with the link:{{< relref "/docs/mechanisms/authenticators.adoc#_generic" >}}[generic authenticator].
+
+Add the NGINX service to your Compose file:
+
+[source, yaml]
+----
+proxy:
+  image: nginx:latest
+  ports:
+    - "8888:8080"
+  volumes:
+    - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  depends_on:
+    - heimdall
+    - upstream
+----
+
+== Configure heimdall
+
+Run heimdall in decision mode and configure it to trust the NGINX container as a proxy, because this example relies on `X-Forwarded-*` headers:
+
+[source, yaml]
+----
+heimdall:
+  image: dadrus/heimdall:dev
+  command: serve decision --c /etc/heimdall/config.yaml --insecure
+  volumes:
+    - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
+    - ./rules:/etc/heimdall/rules:ro
+    - ./signer.pem:/etc/heimdall/signer.pem:ro
+----
+
+Use the same `signer.pem` from the first-party OIDC guide and create `heimdall-config.yaml` with these decision-mode mechanisms:
+
+[source, yaml]
+----
+log:
+  level: debug
+
+tracing:
+  enabled: false
+
+metrics:
+  enabled: false
+
+serve:
+  trusted_proxies:
+    - 172.16.0.0/12
+
+secret_management:
+  jwt_key_store:
+    type: pem
+    config:
+      path: /etc/heimdall/signer.pem
+
+mechanisms:
+  authenticators:
+  - id: deny_all
+    type: unauthorized
+  - id: anon
+    type: anonymous
+  - id: auth
+    type: generic
+    config:
+      identity_info_endpoint: http://oauth2-proxy:4180/oauth2/userinfo
+      authentication_data_source:
+        - cookie: SESSION
+      forward_cookies:
+        - SESSION
+      principal:
+        id: "user"
+
+  authorizers:
+    - id: cel
+      type: cel
+      config:
+        expressions:
+          - expression: "true == false"
+
+  finalizers:
+  - id: create_jwt
+    type: jwt
+    config:
+      signer:
+        secret:
+          source: jwt_key_store
+      claims: |
+        {{- dict "attrs" .Subject.Attributes | toJson -}}
+  - id: noop
+    type: noop
+
+default_rule:
+  execute:
+    - authenticator: deny_all
+    - finalizer: create_jwt
+
+providers:
+  file_system:
+    src: /etc/heimdall/rules
+    watch: true
+----
+
+Create `rules/upstream-rules.yaml` with the routes NGINX asks heimdall to evaluate. In decision mode, the rules do not use `forward_to`; NGINX forwards the request to the upstream service after heimdall returns a successful authorization response.
+
+[source, yaml]
+----
+version: "1beta1"
+rules:
+- id: upstream:public
+  match:
+    routes:
+      - path: /
+      - path: /favicon.ico
+  execute:
+  - authenticator: anon
+  - finalizer: noop
+
+- id: upstream:protected
+  match:
+    routes:
+      - path: /user
+      - path: /admin
+  execute:
+    - authenticator: auth
+    - authorizer: cel
+      if: Request.URL.Path == '/admin'
+      config:
+        expressions:
+          - expression: |
+              has(Subject.Attributes.groups) &&
+              "role:admin" in Subject.Attributes.groups
+            message: User is not admin
+    - finalizer: create_jwt
+----
+
+== Use the Setup
+
+. Start the environment with `docker compose up`.
+. Open `\http://127.0.0.1:8888/`. The public route should be served by the upstream service without a login.
+. Open `\http://127.0.0.1:8888/user`. NGINX should receive `401 Unauthorized` from heimdall, redirect the browser to OAuth2-Proxy, and OAuth2-Proxy should start the Keycloak login flow.
+. After login, OAuth2-Proxy redirects back to the original NGINX URL and NGINX forwards the authorized request to the upstream service.
+. Open `\http://127.0.0.1:8888/admin` with a user outside and inside the `admin` group to verify the role-based rule.
+
+== Caveats
+
+* NGINX owns the browser redirect. Keep heimdall authentication failures as `401 Unauthorized` for this flow and map that response to OAuth2-Proxy in NGINX.
+* The `trusted_proxies` range above is suitable for this local Docker Compose setup. Narrow it to your actual NGINX proxy addresses in production.
+* This topology validates the OAuth2-Proxy browser session through `/oauth2/userinfo`. If you need heimdall to validate the access token state directly at the identity provider, use OAuth2-Proxy in front of heimdall as described in the link:{{< relref "/guides/authn/oidc_first_party_auth.adoc#_alternative_put_oauth2_proxy_in_front_of_heimdall" >}}[first-party OIDC guide].
