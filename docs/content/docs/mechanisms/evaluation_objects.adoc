@@ -195,7 +195,6 @@ Outputs = {
 
 NOTE: Before upgrading to v0.18.0 (to be released soon), migrate references to `Outputs` to the `Results` object described below. In v0.18.0, `Outputs` will adopt the same structure as `Results`, which would otherwise introduce a breaking change that cannot be migrated automatically. After all heimdall instances have been upgraded to v0.18.0, references to `Results` can be changed back to `Outputs`. v0.18.0 will deprecate the `Results` object.
 
-
 === Results
 
 This object is similar to the `Outputs` object and represents a pipeline-execution-specific key value map. It is used by pipeline steps to store or read results of particular step executions. The step id is used as a key and the value is the corresponding result.
