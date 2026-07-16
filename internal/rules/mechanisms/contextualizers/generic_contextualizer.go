@@ -405,6 +405,7 @@ func (c *genericContextualizer) calculateCacheKey(
 	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(c.ttl))
 
 	hash := sha256.New()
+	hash.Write(stringx.ToBytes("generic-contextualizer:v2"))
 	hash.Write(c.e.Hash())
 	hash.Write(stringx.ToBytes(c.id))
 	hash.Write(stringx.ToBytes(strings.Join(c.fwdHeaders, ",")))
