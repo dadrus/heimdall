@@ -824,8 +824,27 @@ Scopes matcher is a configuration type allowing configuration of different strat
 
 Regardless of the strategy, each matcher can explicitly be configured and supports the following configuration properties:
 
-* `matching_strategy` - the type of the mathing strategy.
-* `values` - the list of scope patterns
+* `matching_strategy` - the type of the matching strategy. Defaults to `exact`.
+* `match` - whether all configured scope values must match, or any one configured scope value is sufficient. Supported values are `all` and `any`. Defaults to `all`.
+* `pattern_source` - when `matching_strategy` is set to `wildcard`, controls which side may contain wildcard patterns. Supported values are `granted` and `required`. Defaults to `granted`.
+* `values` - the list of required scope values
+
+The `matching_strategy` property controls how a configured scope value is compared with scopes granted to the token. The `match` property controls how the configured list is evaluated. With the default `all` value, every configured entry must match. With `any`, one matching entry is sufficient.
+
+.Matching any required scope
+====
+
+[source, yaml]
+----
+matching_strategy: exact
+match: any
+values:
+  - documents.read
+  - reports.read
+----
+
+This configuration is satisfied if the token has either the `documents.read` or the `reports.read` scope.
+====
 
 === Exact
 
@@ -845,6 +864,7 @@ However, as written in the link:{{< relref "#_scopes_matcher">}}[Scopes Matcher]
 [source, yaml]
 ----
 matching_strategy: exact
+match: all
 values:
   - foo
   - bar
@@ -908,7 +928,36 @@ would not match.
 
 This matcher enables matching scopes using wildcards. It goes beyond the link:{{< relref "#_hierarchic">}}[Hierarchic] scope matcher by enabling usage of wildcards.
 
-This matcher can only be used by explicitly setting the `matching_strategy` to `wildcard` and defining the required patterns in the `values` property.
+This matcher can only be used by explicitly setting the `matching_strategy` to `wildcard` and defining the required values in the `values` property.
+
+.Matching granted wildcard scopes
+====
+
+[source, yaml]
+----
+matching_strategy: wildcard
+values:
+  - documents.read
+----
+
+With the default `pattern_source: granted`, wildcard patterns are expected in the scopes granted to the token. A token with the scope `documents.*` satisfies the configured required scope `documents.read`.
+====
+
+.Matching required wildcard scopes
+====
+
+[source, yaml]
+----
+matching_strategy: wildcard
+pattern_source: required
+match: any
+values:
+  - documents.*
+  - reports.*
+----
+
+With `pattern_source: required`, wildcard patterns are expected in the configured required scopes. A token with the concrete scope `documents.read` satisfies the configured required scope `documents.*`.
+====
 
 
 == Session Lifespan
