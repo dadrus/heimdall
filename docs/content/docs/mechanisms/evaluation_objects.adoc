@@ -274,7 +274,7 @@ Values = {
 
 == Templating
 
-Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
+Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_results" >}}[Results], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
 
 To ease the usage, all https://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
 
@@ -302,7 +302,7 @@ Imagine, we have a `POST` request for the URL `\https://foobar.baz/zab?foo=bar`,
   "foo_value": {{ index .Request.URL.Query.foo 0 | quote }}
   "request_method": {{ quote .Request.Method }},
   "x_foo_value": {{ .Request.Header "X-Foo" | quote }},
-  "whatever": {{ .Outputs.whatever | quote }}
+  "whatever": {{ .Results.whatever.Payload | quote }}
 }
 ----
 
