@@ -168,7 +168,7 @@ Each expression has access to the link:{{< relref "/docs/mechanisms/evaluation_o
 
 * *`forward_response_headers_to_upstream`*: _string array_ (optional, overridable)
 +
-Enables forwarding of any headers from the authorization endpoint response to the upstream service.
+Enables forwarding of selected response headers returned by the authorization endpoint to the upstream service.
 +
 NOTE: This setting is deprecated and will be removed in the 0.18.0 release. Use the response available through the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] evaluation object together with a `header` finalizer instead.
 
