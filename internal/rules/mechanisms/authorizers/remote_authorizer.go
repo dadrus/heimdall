@@ -94,6 +94,11 @@ func (ai *authorizationInformation) addResultsTo(key string, ctx heimdall.Reques
 	if ai.Payload != nil {
 		ctx.Outputs()[key] = ai.Payload
 	}
+
+	ctx.Results()[key] = map[string]any{
+		"Headers": ai.Headers,
+		"Payload": ai.Payload,
+	}
 }
 
 func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any) (*remoteAuthorizer, error) {
@@ -134,6 +139,14 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 			Str("_type", AuthorizerRemote).
 			Str("_name", name).
 			Msg("No TLS configured for the endpoint used in authorizer")
+	}
+
+	if len(conf.ResponseHeadersToForward) > 0 {
+		logger.Warn().
+			Str("_type", AuthorizerRemote).
+			Str("_name", name).
+			Msg("Usage of forward_response_headers_to_upstream is deprecated. " +
+				"Please use Results object in a header finalizer instead")
 	}
 
 	return &remoteAuthorizer{
@@ -230,6 +243,15 @@ func (a *remoteAuthorizer) WithConfig(stepID string, rawConfig map[string]any) (
 			"failed decoding config for remote authorizer '%s'", a.name).CausedBy(err)
 	}
 
+	if len(conf.ResponseHeadersToForward) > 0 {
+		logger := a.app.Logger()
+		logger.Warn().
+			Str("_type", AuthorizerRemote).
+			Str("_name", a.name).
+			Msg("Usage of forward_response_headers_to_upstream is deprecated. " +
+				"Please use Results object in a header finalizer instead")
+	}
+
 	expressions, err := compileExpressions(conf.Expressions, a.celEnv)
 	if err != nil {
 		return nil, err
@@ -277,6 +299,7 @@ func (a *remoteAuthorizer) doAuthorize(
 			"Subject": sub,
 			"Values":  values,
 			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
 		})
 	})
 
@@ -404,6 +427,7 @@ func (a *remoteAuthorizer) renderTemplates(
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
+		"Results": ctx.Results(),
 	})
 	if err != nil {
 		return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
@@ -418,6 +442,7 @@ func (a *remoteAuthorizer) renderTemplates(
 			"Subject": sub,
 			"Values":  vals,
 			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
 				"failed to render payload for the authorization endpoint").

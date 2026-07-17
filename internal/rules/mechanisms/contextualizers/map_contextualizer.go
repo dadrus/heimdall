@@ -88,6 +88,10 @@ func (c *mapContextualizer) Execute(ctx heimdall.RequestContext, sub *subject.Su
 		ctx.Outputs()[c.id] = resp
 	}
 
+	ctx.Results()[c.id] = map[string]any{
+		"Payload": resp,
+	}
+
 	return nil
 }
 
@@ -136,6 +140,7 @@ func (c *mapContextualizer) renderTemplates(
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
+		"Results": ctx.Results(),
 	})
 	if err != nil {
 		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
@@ -152,6 +157,7 @@ func (c *mapContextualizer) renderTemplates(
 			"Subject": sub,
 			"Values":  vals,
 			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
 		}); err != nil {
 			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
 				fmt.Sprintf("failed to render item %s for the map contextualizer", key)).

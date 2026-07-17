@@ -393,6 +393,7 @@ expressions:
 
 				ctx.EXPECT().Request().Return(nil)
 				ctx.EXPECT().Outputs().Return(nil)
+				ctx.EXPECT().Results().Return(map[string]any{"Payload": nil})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -419,6 +420,7 @@ expressions:
 
 				ctx.EXPECT().Request().Return(nil)
 				ctx.EXPECT().Outputs().Return(nil)
+				ctx.EXPECT().Results().Return(map[string]any{"Payload": nil})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -489,6 +491,7 @@ expressions:
 				})
 
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
+				ctx.EXPECT().Results().Return(map[string]any{"Payload": map[string]any{"foo": "bar"}})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
