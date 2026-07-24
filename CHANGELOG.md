@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.17.19](https://github.com/dadrus/heimdall/compare/v0.17.18...v0.17.19) (2026-07-24)
+
+
+### Dependencies
+
+* update kubernetes monorepo to v0.36.3 ([#3380](https://github.com/dadrus/heimdall/issues/3380)) ([25834d7](https://github.com/dadrus/heimdall/commit/25834d7bf370b45904668fc133857043abcac982))
+* update module github.com/prometheus/client_golang to v1.24.1 ([#3379](https://github.com/dadrus/heimdall/issues/3379)) ([ab9a87f](https://github.com/dadrus/heimdall/commit/ab9a87fe6832919a9f329322f07805f78a6c608a))
+* update module google.golang.org/grpc to v1.82.1 ([#3370](https://github.com/dadrus/heimdall/issues/3370)) ([73375aa](https://github.com/dadrus/heimdall/commit/73375aa8ee9a21612f38f741b3bf32eab4085849))
+
 ## [0.17.18](https://github.com/dadrus/heimdall/compare/v0.17.17...v0.17.18) (2026-07-14)
 
 
