@@ -63,6 +63,7 @@ The link:{{< relref "/guides/proxies/_index.adoc" >}}[API Gateways & Proxies Gui
 To mitigate path traversal attacks and interpretation conflicts between heimdall and upstream components, the following measures are implemented:
 
 * Request paths are normalized before rule evaluation. Dot segments (`.` and `..`) delimited by literal path separators (`/`) are removed, and adjacent literal slashes are merged. For example, `/user/../admin` is normalized to `/admin`, and `/api//admin` is normalized to `/api/admin`. A trailing slash is preserved.
+* Percent-encoded https://datatracker.ietf.org/doc/html/rfc3986#section-2.3[RFC 3986] unreserved characters (`ALPHA`, `DIGIT`, `-`, `.`, `_`, and `~`) are decoded. For example, `/api/%61dmin` is evaluated as `/api/admin`.
 * Requests are rejected with `400 Bad Request` if the evaluated request path contains ambiguous or encoded dot segment patterns that cannot be safely normalized. This includes URL-encoded variants (case-insensitive), e.g. `%2e`, as well as combinations with encoded or alternative separators such as `%2f` and `%5c`.
 * Additionally, URL-encoded slash handling can be configured via `allow_encoded_slashes` in link:{{< relref "/docs/rules/regular_rule.adoc" >}}[regular rules]. The default value `off` rejects encoded slashes, while less strict settings can increase the risk of interpretation conflicts depending on your proxy and upstream setup, but may be required for specific use cases where encoded slashes are part of the path semantics (e.g., object keys).
 

@@ -16,7 +16,10 @@
 
 package urlx
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func BenchmarkPathHasDotSegments(b *testing.B) {
 	b.ReportAllocs()
@@ -55,35 +58,104 @@ func BenchmarkContainsEncodedSlash(b *testing.B) {
 	}
 }
 
-func BenchmarkUnescapeDecodeSlash(b *testing.B) {
-	for uc, value := range map[string]string{
-		"clean":              "api/v1/resource",
-		"encoded_upper":      "api%2Fv1%5Bid%5D",
-		"encoded_lower":      "api%2fv1%5Bid%5D",
-		"encoded_long_mixed": "very%2Flong%2Fpath%2Fwith%2Fmany%2Fparts%5Bid%5D%2Ftail",
-	} {
-		b.Run(uc, func(b *testing.B) {
-			b.ReportAllocs()
+func BenchmarkPathUnescape(b *testing.B) {
+	longPlainPath := "/" + strings.Repeat("segment/", 32) + "resource"
+	longEncodedPath := "/api/" + strings.Repeat("%61dmin/", 32) + "users"
 
-			for b.Loop() {
-				_ = Unescape(value, true)
-			}
-		})
+	modes := []struct {
+		name string
+		opts UnescapeOptions
+	}{
+		{
+			name: "all",
+			opts: UnescapeOptions{Mode: UnescapeAll},
+		},
+		{
+			name: "all_except_slash",
+			opts: UnescapeOptions{Mode: UnescapeAllExceptSlash},
+		},
+		{
+			name: "unreserved",
+			opts: UnescapeOptions{Mode: UnescapeUnreserved},
+		},
 	}
-}
 
-func BenchmarkUnescapePreserveEncodedSlash(b *testing.B) {
-	for uc, value := range map[string]string{
-		"clean":              "api/v1/resource",
-		"encoded_upper":      "api%2Fv1%5Bid%5D",
-		"encoded_lower":      "api%2fv1%5Bid%5D",
-		"encoded_long_mixed": "very%2Flong%2Fpath%2Fwith%2Fmany%2Fparts%5Bid%5D%2Ftail",
+	for _, tc := range []struct {
+		name  string
+		value string
+	}{
+		{
+			name:  "no_escape_short",
+			value: "/api/v1/resource",
+		},
+		{
+			name:  "no_escape_long",
+			value: longPlainPath,
+		},
+		{
+			name:  "encoded_slash_upper",
+			value: "api%2Fv1",
+		},
+		{
+			name:  "encoded_slash_lower",
+			value: "api%2fv1",
+		},
+		{
+			name:  "encoded_non_slash",
+			value: "foo%5Bid%5D",
+		},
+		{
+			name:  "encoded_mixed",
+			value: "api%2Fv1%5Bid%5D",
+		},
+		{
+			name: "encoded_long_mixed",
+			value: "very%2Flong%2Fpath%2Fwith%2Fmany%2F" +
+				"parts%5Bid%5D%2Ftail",
+		},
+		{
+			name:  "unreserved_single",
+			value: "/api/%61dmin/users",
+		},
+		{
+			name: "unreserved_multiple",
+			value: "/%68%74%74%70%73/service/" +
+				"%76%31/%75sers/%31%32%33",
+		},
+		{
+			name: "reserved_only_embedded_url",
+			value: "/proxy/" +
+				"https%3A%2F%2Fexample.com%2Fcallback%3Fcode%3Dabc",
+		},
+		{
+			name: "mixed_embedded_url",
+			value: "/proxy/" +
+				"%68%74%74%70%73%3A%2F%2Fexample.com%2F" +
+				"%63allback%3Fcode%3Dabc",
+		},
+		{
+			name:  "double_encoded",
+			value: "/api/%252F/%2561/resource",
+		},
+		{
+			name:  "malformed",
+			value: "/api/%ZZ/%2/%/resource",
+		},
+		{
+			name:  "unreserved_long",
+			value: longEncodedPath,
+		},
 	} {
-		b.Run(uc, func(b *testing.B) {
-			b.ReportAllocs()
+		b.Run(tc.name, func(b *testing.B) {
+			for _, mode := range modes {
+				b.Run(mode.name, func(b *testing.B) {
+					b.ReportAllocs()
+					b.SetBytes(int64(len(tc.value)))
 
-			for b.Loop() {
-				_ = Unescape(value, false)
+					for b.Loop() {
+						_ = PathUnescape(tc.value, mode.opts)
+					}
+				})
 			}
 		})
 	}

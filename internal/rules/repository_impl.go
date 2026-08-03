@@ -27,6 +27,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/radixtrie"
 	"github.com/dadrus/heimdall/internal/x/slicex"
+	"github.com/dadrus/heimdall/internal/x/urlx"
 )
 
 type repository struct {
@@ -56,12 +57,20 @@ func newRepository(ruleFactory rule.Factory) rule.Repository {
 func (r *repository) FindRule(ctx heimdall.RequestContext) (rule.Rule, error) {
 	request := ctx.Request()
 
+	lookupPath := request.URL.Path
+	if request.URL.RawPath != "" {
+		lookupPath = urlx.PathUnescape(
+			request.URL.RawPath,
+			urlx.UnescapeOptions{Mode: urlx.UnescapeUnreserved},
+		)
+	}
+
 	r.rulesTrieMutex.RLock()
 	defer r.rulesTrieMutex.RUnlock()
 
 	entry, err := r.index.FindEntry(
 		request.URL.Host,
-		x.IfThenElse(len(request.URL.RawPath) != 0, request.URL.RawPath, request.URL.Path),
+		lookupPath,
 		radixtrie.LookupMatcherFunc[rule.Route](func(route rule.Route, keys, values []string) bool {
 			return route.Matches(ctx, keys, values)
 		}),

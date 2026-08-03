@@ -17,6 +17,7 @@
 package urlx
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -155,54 +156,215 @@ func TestNormalizePath(t *testing.T) {
 	}
 }
 
-func TestUnescape(t *testing.T) {
+func TestPathUnescape(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		value              string
-		decodeEncodedSlash bool
-		expected           string
+		value    string
+		opts     UnescapeOptions
+		expected string
 	}{
-		"decode slash on": {
-			value:              "api%2Fv1",
-			decodeEncodedSlash: true,
-			expected:           "api/v1",
+		"zero options decode all": {
+			value:    "api%2Fv1%5Bid%5D",
+			expected: "api/v1[id]",
 		},
-		"decode slash off uppercase": {
+		"all decodes uppercase slash": {
 			value:    "api%2Fv1",
-			expected: "api%2Fv1",
+			opts:     UnescapeOptions{Mode: UnescapeAll},
+			expected: "api/v1",
 		},
-		"decode slash off lowercase": {
+		"all decodes lowercase slash": {
 			value:    "api%2fv1",
-			expected: "api%2fv1",
+			opts:     UnescapeOptions{Mode: UnescapeAll},
+			expected: "api/v1",
 		},
-		"decode non slash escapes": {
+		"all decodes non slash escapes": {
 			value:    "foo%5Bid%5D",
+			opts:     UnescapeOptions{Mode: UnescapeAll},
 			expected: "foo[id]",
 		},
-		"decode mixed preserve slash": {
+		"all decodes mixed escapes": {
 			value:    "api%2Fv1%5Bid%5D",
+			opts:     UnescapeOptions{Mode: UnescapeAll},
+			expected: "api/v1[id]",
+		},
+		"all performs single pass": {
+			value:    "%2561",
+			opts:     UnescapeOptions{Mode: UnescapeAll},
+			expected: "%61",
+		},
+		"all decodes separately encoded percent sequence once": {
+			value:    "%25%36%31",
+			opts:     UnescapeOptions{Mode: UnescapeAll},
+			expected: "%61",
+		},
+		"all except slash preserves uppercase slash": {
+			value:    "api%2Fv1",
+			opts:     UnescapeOptions{Mode: UnescapeAllExceptSlash},
+			expected: "api%2Fv1",
+		},
+		"all except slash preserves lowercase slash": {
+			value:    "api%2fv1",
+			opts:     UnescapeOptions{Mode: UnescapeAllExceptSlash},
+			expected: "api%2fv1",
+		},
+		"all except slash decodes non slash escapes": {
+			value:    "foo%5Bid%5D",
+			opts:     UnescapeOptions{Mode: UnescapeAllExceptSlash},
+			expected: "foo[id]",
+		},
+		"all except slash decodes mixed escapes": {
+			value:    "api%2Fv1%5Bid%5D",
+			opts:     UnescapeOptions{Mode: UnescapeAllExceptSlash},
 			expected: "api%2Fv1[id]",
 		},
-		"decode mixed preserve slash lowercase": {
+		"all except slash decodes mixed escapes with lowercase slash": {
 			value:    "api%2fv1%5Bid%5D",
+			opts:     UnescapeOptions{Mode: UnescapeAllExceptSlash},
 			expected: "api%2fv1[id]",
+		},
+		"all except slash performs single pass": {
+			value:    "%2561",
+			opts:     UnescapeOptions{Mode: UnescapeAllExceptSlash},
+			expected: "%61",
+		},
+		"unreserved leaves unencoded content unchanged": {
+			value:    "/api/admin",
+			opts:     UnescapeOptions{Mode: UnescapeUnreserved},
+			expected: "/api/admin",
+		},
+		"unreserved decodes lowercase letter": {
+			value:    "/api/%61dmin",
+			opts:     UnescapeOptions{Mode: UnescapeUnreserved},
+			expected: "/api/admin",
+		},
+		"unreserved decodes uppercase hex": {
+			value:    "/api/%41DMIN",
+			opts:     UnescapeOptions{Mode: UnescapeUnreserved},
+			expected: "/api/ADMIN",
+		},
+		"unreserved decodes digits": {
+			value:    "/v%31/users",
+			opts:     UnescapeOptions{Mode: UnescapeUnreserved},
+			expected: "/v1/users",
+		},
+		"unreserved decodes punctuation": {
+			value:    "/%2D%2E%5F%7E",
+			opts:     UnescapeOptions{Mode: UnescapeUnreserved},
+			expected: "/-._~",
+		},
+		"unreserved preserves uppercase encoded slash": {
+			value:    "/foo%2Fbar",
+			opts:     UnescapeOptions{Mode: UnescapeUnreserved},
+			expected: "/foo%2Fbar",
+		},
+		"unreserved preserves lowercase encoded slash": {
+			value:    "/foo%2fbar",
+			opts:     UnescapeOptions{Mode: UnescapeUnreserved},
+			expected: "/foo%2fbar",
+		},
+		"unreserved decodes URL characters without decoding reserved delimiters": {
+			value:    "/%68%74%74%70%73%3A%2F%2Fexample.com%3Fx%3D%31",
+			opts:     UnescapeOptions{Mode: UnescapeUnreserved},
+			expected: "/https%3A%2F%2Fexample.com%3Fx%3D1",
+		},
+		"unreserved preserves brackets": {
+			value:    "/foo%5Bbar%5D",
+			opts:     UnescapeOptions{Mode: UnescapeUnreserved},
+			expected: "/foo%5Bbar%5D",
+		},
+		"unreserved preserves encoded percent": {
+			value:    "/foo%2561",
+			opts:     UnescapeOptions{Mode: UnescapeUnreserved},
+			expected: "/foo%2561",
+		},
+		"unreserved decodes characters following separately encoded percent": {
+			value:    "%25%36%31",
+			opts:     UnescapeOptions{Mode: UnescapeUnreserved},
+			expected: "%2561",
+		},
+		"unreserved decodes only eligible characters in mixed value": {
+			value:    "/foo%2F%62ar%3Fx%3D%31",
+			opts:     UnescapeOptions{Mode: UnescapeUnreserved},
+			expected: "/foo%2Fbar%3Fx%3D1",
 		},
 		"no escapes": {
 			value:    "api/v1/resource",
+			opts:     UnescapeOptions{Mode: UnescapeAll},
 			expected: "api/v1/resource",
 		},
 		"incomplete escape": {
 			value:    "api%2",
+			opts:     UnescapeOptions{Mode: UnescapeAll},
 			expected: "api%2",
 		},
 		"invalid escape": {
 			value:    "api%ZZv1",
+			opts:     UnescapeOptions{Mode: UnescapeAll},
 			expected: "api%ZZv1",
+		},
+		"malformed sequences remain after valid escape": {
+			value:    "api%61%ZZ%2",
+			opts:     UnescapeOptions{Mode: UnescapeAll},
+			expected: "apia%ZZ%2",
+		},
+		"unknown mode preserves escapes": {
+			value:    "api%2Fv1%5Bid%5D",
+			opts:     UnescapeOptions{Mode: UnescapeMode(255)},
+			expected: "api%2Fv1%5Bid%5D",
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			assert.Equal(t, tc.expected, Unescape(tc.value, tc.decodeEncodedSlash))
+			result := PathUnescape(tc.value, tc.opts)
+
+			assert.Equal(t, tc.expected, result)
 		})
+	}
+}
+
+func TestPathUnescapeSinglePass(t *testing.T) {
+	t.Parallel()
+
+	for value := range 256 {
+		for _, format := range []string{"%%%02X", "%%%02x"} {
+			escaped := fmt.Sprintf(format, value)
+			doubleEncoded := "%25" + escaped[1:]
+
+			assert.Equal(
+				t,
+				escaped,
+				PathUnescape(
+					doubleEncoded,
+					UnescapeOptions{Mode: UnescapeAll},
+				),
+				"value=%02X format=%s",
+				value,
+				format,
+			)
+
+			assert.Equal(
+				t,
+				escaped,
+				PathUnescape(
+					doubleEncoded,
+					UnescapeOptions{Mode: UnescapeAllExceptSlash},
+				),
+				"value=%02X format=%s",
+				value,
+				format,
+			)
+
+			assert.Equal(
+				t,
+				doubleEncoded,
+				PathUnescape(
+					doubleEncoded,
+					UnescapeOptions{Mode: UnescapeUnreserved},
+				),
+				"value=%02X format=%s",
+				value,
+				format,
+			)
+		}
 	}
 }
