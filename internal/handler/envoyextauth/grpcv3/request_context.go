@@ -34,6 +34,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
+	"github.com/dadrus/heimdall/internal/x/urlx"
 )
 
 type contextFactory struct {
@@ -104,6 +105,9 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 	parsed, err := url.ParseRequestURI(httpReq.GetPath())
 	if err != nil {
 		parsed = &url.URL{}
+	} else {
+		parsed.RawPath = urlx.NormalizePath(parsed.EscapedPath())
+		parsed.Path, _ = url.PathUnescape(parsed.RawPath)
 	}
 
 	r.ctx = ctx
