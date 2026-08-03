@@ -56,12 +56,7 @@
     "path": "/heimdall/v0.16.8"
   },
   {
-<<<<<<< HEAD
-    "version": "v0.17.17",
-    "path": "/heimdall/v0.17.17"
-=======
-    "version": "v0.17.18",
-    "path": "/heimdall/v0.17.18"
->>>>>>> release
+    "version": "v0.17.19",
+    "path": "/heimdall/v0.17.19"
   }
 ]
