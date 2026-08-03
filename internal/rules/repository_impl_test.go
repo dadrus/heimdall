@@ -1386,6 +1386,230 @@ func TestRepositoryFindRule(t *testing.T) {
 				require.Equal(t, "1", impl.source.ID)
 			},
 		},
+		"encoded unreserved character selects specific rule": {
+			requestURL: &url.URL{
+				Scheme:  "http",
+				Host:    "example.com",
+				Path:    "/api/admin/users",
+				RawPath: "/api/%61dmin/users",
+			},
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
+				t.Helper()
+
+				factory.EXPECT().HasDefaultRule().Return(false)
+			},
+			addRules: func(t *testing.T, repo rule.Repository) {
+				t.Helper()
+
+				source := rule.RuleSet{ID: "1"}
+
+				protected := &ruleImpl{
+					id:     "protected",
+					source: source,
+					hash:   []byte{1},
+				}
+				protected.routes = append(protected.routes, &routeImpl{
+					rule:    protected,
+					host:    "example.com",
+					path:    "/api/admin/**",
+					matcher: andMatcher{},
+				})
+
+				public := &ruleImpl{
+					id:     "public",
+					source: source,
+					hash:   []byte{2},
+				}
+				public.routes = append(public.routes, &routeImpl{
+					rule:    public,
+					host:    "example.com",
+					path:    "/api/**",
+					matcher: andMatcher{},
+				})
+
+				require.NoError(t, repo.AddRuleSet(
+					t.Context(),
+					source,
+					[]rule.Rule{protected, public},
+				))
+			},
+			assert: func(t *testing.T, err error, rul rule.Rule) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "protected", rul.ID())
+			},
+		},
+		"fully encoded unreserved segment selects specific rule": {
+			requestURL: &url.URL{
+				Scheme:  "http",
+				Host:    "example.com",
+				Path:    "/api/admin/users",
+				RawPath: "/api/%61%64%6D%69%6E/users",
+			},
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
+				t.Helper()
+
+				factory.EXPECT().HasDefaultRule().Return(false)
+			},
+			addRules: func(t *testing.T, repo rule.Repository) {
+				t.Helper()
+
+				source := rule.RuleSet{ID: "1"}
+
+				protected := &ruleImpl{
+					id:     "protected",
+					source: source,
+					hash:   []byte{1},
+				}
+				protected.routes = append(protected.routes, &routeImpl{
+					rule:    protected,
+					host:    "example.com",
+					path:    "/api/admin/**",
+					matcher: andMatcher{},
+				})
+
+				public := &ruleImpl{
+					id:     "public",
+					source: source,
+					hash:   []byte{2},
+				}
+				public.routes = append(public.routes, &routeImpl{
+					rule:    public,
+					host:    "example.com",
+					path:    "/api/**",
+					matcher: andMatcher{},
+				})
+
+				require.NoError(t, repo.AddRuleSet(
+					t.Context(),
+					source,
+					[]rule.Rule{protected, public},
+				))
+			},
+			assert: func(t *testing.T, err error, rul rule.Rule) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "protected", rul.ID())
+			},
+		},
+		"reserved encoded slash remains part of capture": {
+			requestURL: &url.URL{
+				Scheme:  "http",
+				Host:    "example.com",
+				Path:    "/files/admin/users",
+				RawPath: "/files/admin%2Fusers",
+			},
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
+				t.Helper()
+
+				factory.EXPECT().HasDefaultRule().Return(false)
+			},
+			addRules: func(t *testing.T, repo rule.Repository) {
+				t.Helper()
+
+				source := rule.RuleSet{ID: "1"}
+
+				protected := &ruleImpl{
+					id:     "protected",
+					source: source,
+					hash:   []byte{1},
+				}
+				protected.routes = append(protected.routes, &routeImpl{
+					rule:    protected,
+					host:    "example.com",
+					path:    "/files/admin/users",
+					matcher: andMatcher{},
+				})
+
+				public := &ruleImpl{
+					id:     "public",
+					source: source,
+					hash:   []byte{2},
+				}
+				public.routes = append(public.routes, &routeImpl{
+					rule: public,
+					host: "example.com",
+					path: "/files/:value",
+					matcher: &pathParamMatcher{
+						newExactMatcher("admin%2Fusers"),
+						"value",
+						v1beta1.EncodedSlashesOnNoDecode,
+					},
+				})
+
+				require.NoError(t, repo.AddRuleSet(
+					t.Context(),
+					source,
+					[]rule.Rule{protected, public},
+				))
+			},
+			assert: func(t *testing.T, err error, rul rule.Rule) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "public", rul.ID())
+			},
+		},
+		"does not decode percent encoding twice": {
+			requestURL: &url.URL{
+				Scheme:  "http",
+				Host:    "example.com",
+				Path:    "/api/%61",
+				RawPath: "/api/%2561",
+			},
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
+				t.Helper()
+
+				factory.EXPECT().HasDefaultRule().Return(false)
+			},
+			addRules: func(t *testing.T, repo rule.Repository) {
+				t.Helper()
+
+				source := rule.RuleSet{ID: "1"}
+
+				protected := &ruleImpl{
+					id:     "protected",
+					source: source,
+					hash:   []byte{1},
+				}
+				protected.routes = append(protected.routes, &routeImpl{
+					rule:    protected,
+					host:    "example.com",
+					path:    "/api/a",
+					matcher: andMatcher{},
+				})
+
+				public := &ruleImpl{
+					id:     "public",
+					source: source,
+					hash:   []byte{2},
+				}
+				public.routes = append(public.routes, &routeImpl{
+					rule: public,
+					host: "example.com",
+					path: "/api/:value",
+					matcher: &pathParamMatcher{
+						newExactMatcher("%61"),
+						"value",
+						v1beta1.EncodedSlashesOnNoDecode,
+					},
+				})
+
+				require.NoError(t, repo.AddRuleSet(
+					t.Context(),
+					source,
+					[]rule.Rule{protected, public},
+				))
+			},
+			assert: func(t *testing.T, err error, rul rule.Rule) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "public", rul.ID())
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN

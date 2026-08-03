@@ -62,7 +62,8 @@ The link:{{< relref "/guides/proxies/_index.adoc" >}}[API Gateways & Proxies Gui
 
 To mitigate path traversal attacks and interpretation conflicts between heimdall and upstream components, the following measures are implemented:
 
-* Request paths are normalized before rule evaluation by removing dot segments (`.` and `..`) when they appear with actual path separators (`/`). For example, `/user/../admin` is normalized to `/admin`.
+* Request paths are normalized before rule evaluation. Dot segments (`.` and `..`) delimited by literal path separators (`/`) are removed, and adjacent literal slashes are merged. For example, `/user/../admin` is normalized to `/admin`, and `/api//admin` is normalized to `/api/admin`. A trailing slash is preserved.
+* Percent-encoded https://datatracker.ietf.org/doc/html/rfc3986#section-2.3[RFC 3986] unreserved characters (`ALPHA`, `DIGIT`, `-`, `.`, `_`, and `~`) are decoded. For example, `/api/%61dmin` is evaluated as `/api/admin`.
 * Requests are rejected with `400 Bad Request` if the evaluated request path contains ambiguous or encoded dot segment patterns that cannot be safely normalized. This includes URL-encoded variants (case-insensitive), e.g. `%2e`, as well as combinations with encoded or alternative separators such as `%2f` and `%5c`.
 * Additionally, URL-encoded slash handling can be configured via `allow_encoded_slashes` in link:{{< relref "/docs/rules/regular_rule.adoc" >}}[regular rules]. The default value `off` rejects encoded slashes, while less strict settings can increase the risk of interpretation conflicts depending on your proxy and upstream setup, but may be required for specific use cases where encoded slashes are part of the path semantics (e.g., object keys).
 
@@ -163,7 +164,7 @@ On success, Cosign outputs JSON (similar to the example below) and exits with `0
       "1.3.6.1.4.1.57264.1.3": "04379639dc5f3fbfc260e883ee4938a35076d63e",
       "1.3.6.1.4.1.57264.1.4": "release",
       "1.3.6.1.4.1.57264.1.5": "dadrus/heimdall",
-      "1.3.6.1.4.1.57264.1.6": "refs/tags/v0.17.18",
+      "1.3.6.1.4.1.57264.1.6": "refs/tags/v0.17.19",
       "Bundle": {
         "SignedEntryTimestamp": "MEUCIFIvxs30zysroG6...tQ3U/2yx8Jqu8H75g6sihIcpg=",
         "Payload": {
@@ -174,9 +175,9 @@ On success, Cosign outputs JSON (similar to the example below) and exits with `0
         }
       },
       "Issuer": "https://token.actions.githubusercontent.com",
-      "Subject": "https://github.com/dadrus/heimdall/.github/workflows/release.yaml@refs/tags/v0.17.18",
+      "Subject": "https://github.com/dadrus/heimdall/.github/workflows/release.yaml@refs/tags/v0.17.19",
       "githubWorkflowName": "release",
-      "githubWorkflowRef": "refs/tags/v0.17.18",
+      "githubWorkflowRef": "refs/tags/v0.17.19",
       "githubWorkflowRepository": "dadrus/heimdall",
       "githubWorkflowSha": "04379639dc5f3fbfc260e883ee4938a35076d63e",
       "githubWorkflowTrigger": "push"
@@ -223,7 +224,7 @@ cosign verify ghcr.io/dadrus/heimdall/chart/heimdall:<tag> \
   --certificate-oidc-issuer=https://token.actions.githubusercontent.com | jq
 ----
 
-Replace `<tag>` with the chart version (e.g., `0.16.18`). On success, Cosign outputs JSON similar to the container image example and exits with `0`.
+Replace `<tag>` with the chart version (e.g., `0.16.19`). On success, Cosign outputs JSON similar to the container image example and exits with `0`.
 
 ==== Provenance Verification with slsa-verifier
 
@@ -244,7 +245,7 @@ slsa-verifier verify-image "${IMAGE}@${DIGEST}" \
   --source-tag <heimdall release version>
 ----
 
-Replace `<tag>` with the chart version (e.g., `0.16.18`), and use `--source-tag` matching the GitHub release. Please note that the `<tag>` of the chart image does not correspond to the heimdall release version. On success, `slsa-verifier` prints a success message and exits with `0`.
+Replace `<tag>` with the chart version (e.g., `0.16.19`), and use `--source-tag` matching the GitHub release. Please note that the `<tag>` of the chart image does not correspond to the heimdall release version. On success, `slsa-verifier` prints a success message and exits with `0`.
 
 === Release Binary Verification
 
@@ -274,7 +275,7 @@ slsa-verifier verify-artifact \
   /path/to/the/downloaded/<archive>
 ----
 
-Replace `<release version>` with the specific version tag of the release (e.g., `v0.17.18`) that corresponds to the archive.
+Replace `<release version>` with the specific version tag of the release (e.g., `v0.17.19`) that corresponds to the archive.
 
 On success, `slsa-verifier` prints a success message and exits with `0`.
 
