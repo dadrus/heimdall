@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.17.19](https://github.com/dadrus/heimdall/compare/v0.17.18...v0.17.19) (2026-08-03)
+
+
+### Bug Fixes
+
+* duplicate-slashes normalizated for Envoy gRPC based integrations ([dc5cd9f](https://github.com/dadrus/heimdall/commit/dc5cd9f98261f36bae3fb55bbe016d0305350127))
+* Percent-encoded unreserved path characters are normalized according to RFC 3986 before rule matching ([4d1705b](https://github.com/dadrus/heimdall/commit/4d1705b47f8d47cd7d01b33f50389ba4b0db8cb4))
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 8efbd57 ([#3369](https://github.com/dadrus/heimdall/issues/3369)) ([f759700](https://github.com/dadrus/heimdall/commit/f759700734284119fe366ad4b76aa0c4f5d19205))
+* update kubernetes monorepo to v0.36.3 ([#3380](https://github.com/dadrus/heimdall/issues/3380)) ([25834d7](https://github.com/dadrus/heimdall/commit/25834d7bf370b45904668fc133857043abcac982))
+* update module github.com/google/cel-go to v0.30.0 ([#3384](https://github.com/dadrus/heimdall/issues/3384)) ([a0eed70](https://github.com/dadrus/heimdall/commit/a0eed701d9f474ceae7c2d045453fc73e62dbbc5))
+* update module github.com/prometheus/client_golang to v1.24.1 ([#3379](https://github.com/dadrus/heimdall/issues/3379)) ([ab9a87f](https://github.com/dadrus/heimdall/commit/ab9a87fe6832919a9f329322f07805f78a6c608a))
+* update module google.golang.org/grpc to v1.83.0 ([#3387](https://github.com/dadrus/heimdall/issues/3387)) ([a61d9fd](https://github.com/dadrus/heimdall/commit/a61d9fd6ac52134d42530cdcfb17c0ebf884eea2))
+
 ## [0.17.18](https://github.com/dadrus/heimdall/compare/v0.17.17...v0.17.18) (2026-07-14)
 
 
