@@ -113,7 +113,12 @@ func (m *pathParamMatcher) Matches(request *pipeline.Request, keys, values []str
 					"request path contains encoded slashes which are not allowed")
 			}
 		default:
-			value = urlx.Unescape(value, m.slashHandling == v1beta1.EncodedSlashesOn)
+			decodingMode := urlx.UnescapeAllExceptSlash
+			if m.slashHandling == v1beta1.EncodedSlashesOn {
+				decodingMode = urlx.UnescapeAll
+			}
+
+			value = urlx.PathUnescape(value, urlx.UnescapeOptions{Mode: decodingMode})
 		}
 	}
 

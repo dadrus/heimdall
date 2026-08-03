@@ -17,7 +17,6 @@
 package urlx
 
 import (
-	"net/url"
 	pathpkg "path"
 	"strings"
 )
@@ -141,72 +140,22 @@ func ContainsEncodedSlash(path string) bool {
 	return false
 }
 
-// Unescape decodes URL-escaped path value.
-// If decodeEncodedSlash is false, encoded slashes (%2F / %2f) are preserved.
-func Unescape(value string, decodeEncodedSlash bool) string { //nolint:cyclop
-	start := strings.IndexByte(value, '%')
-	if start == -1 {
-		return value
-	}
-
-	if decodeEncodedSlash {
-		unescaped, _ := url.PathUnescape(value)
-
-		return unescaped
-	}
-
-	var builder strings.Builder
-	builder.Grow(len(value))
-	builder.WriteString(value[:start])
-
-	for i := start; i < len(value); {
-		j := i
-		for j < len(value) && value[j] != '%' {
-			j++
-		}
-
-		if j > i {
-			builder.WriteString(value[i:j])
-			i = j
-		}
-
-		if i >= len(value) {
-			break
-		}
-
-		if i+2 >= len(value) {
-			builder.WriteByte(value[i])
-			i++
-
-			continue
-		}
-
-		hi := hexValue(value[i+1])
-		lo := hexValue(value[i+2])
-
-		if hi == 0xFF || lo == 0xFF { //nolint:mnd
-			builder.WriteByte(value[i])
-			i++
-
-			continue
-		}
-
-		decoded := (hi << 4) | lo //nolint:mnd
-		if decoded == '/' {
-			builder.WriteByte(value[i])
-			builder.WriteByte(value[i+1])
-			builder.WriteByte(value[i+2])
-			i += 3
-
-			continue
-		}
-
-		builder.WriteByte(decoded)
-
-		i += 3
-	}
-
-	return builder.String()
+// isUnreserved reports whether ch is an RFC 3986 unreserved character.
+// See also https://datatracker.ietf.org/doc/html/rfc3986#section-2.3.
+//
+// UnescapeUnreserved depends on this set excluding '%'. Rule lookup decodes with
+// that mode, and captures are decoded again later with UnescapeAllExceptSlash or
+// UnescapeAll. Since decoding an unreserved octet can never yield a '%', the first
+// pass cannot manufacture a percent-sequence for the second one to consume. Adding
+// '%' here would make that double decode observable.
+func isUnreserved(ch byte) bool {
+	return ch >= 'a' && ch <= 'z' ||
+		ch >= 'A' && ch <= 'Z' ||
+		ch >= '0' && ch <= '9' ||
+		ch == '-' ||
+		ch == '.' ||
+		ch == '_' ||
+		ch == '~'
 }
 
 func hexValue(ch byte) byte {
@@ -220,4 +169,85 @@ func hexValue(ch byte) byte {
 	default:
 		return 0xFF //nolint:mnd
 	}
+}
+
+type UnescapeMode uint8
+
+const (
+	UnescapeAll UnescapeMode = iota
+	UnescapeAllExceptSlash
+	UnescapeUnreserved
+)
+
+type UnescapeOptions struct {
+	Mode UnescapeMode
+}
+
+func (opts UnescapeOptions) shouldUnescape(ch byte) bool {
+	switch opts.Mode {
+	case UnescapeUnreserved:
+		return isUnreserved(ch)
+	case UnescapeAllExceptSlash:
+		return ch != '/'
+	case UnescapeAll:
+		return true
+	default:
+		return false
+	}
+}
+
+// PathUnescape decodes percent-encoded octets according to opts.
+// Malformed percent-encoded sequences are preserved unchanged.
+// Decoding is performed in a single pass.
+func PathUnescape(value string, opts UnescapeOptions) string {
+	start := strings.IndexByte(value, '%')
+	if start == -1 {
+		return value
+	}
+
+	var (
+		builder strings.Builder
+		last    int
+		changed bool
+	)
+
+	for idx := start; idx+2 < len(value); idx++ {
+		if value[idx] != '%' {
+			continue
+		}
+
+		high := hexValue(value[idx+1])
+		low := hexValue(value[idx+2])
+
+		if high == 0xFF || low == 0xFF { //nolint:mnd
+			continue
+		}
+
+		decoded := high<<4 | low //nolint:mnd
+		if !opts.shouldUnescape(decoded) {
+			idx += 2
+
+			continue
+		}
+
+		if !changed {
+			builder.Grow(len(value))
+
+			changed = true
+		}
+
+		builder.WriteString(value[last:idx])
+		builder.WriteByte(decoded)
+
+		idx += 2
+		last = idx + 1
+	}
+
+	if !changed {
+		return value
+	}
+
+	builder.WriteString(value[last:])
+
+	return builder.String()
 }
