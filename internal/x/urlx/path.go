@@ -218,6 +218,7 @@ func PathUnescape(value string, opts UnescapeOptions) string {
 
 		high := hexValue(value[idx+1])
 		low := hexValue(value[idx+2])
+
 		if high == 0xFF || low == 0xFF { //nolint:mnd
 			continue
 		}
@@ -231,6 +232,7 @@ func PathUnescape(value string, opts UnescapeOptions) string {
 
 		if !changed {
 			builder.Grow(len(value))
+
 			changed = true
 		}
 
