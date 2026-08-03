@@ -67,8 +67,13 @@ func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 
 	// unescape captures
 	captures := request.URL.Captures
-	for k, v := range captures {
-		captures[k] = urlx.Unescape(v, r.slashesHandling == config.EncodedSlashesOn)
+	for key, value := range captures {
+		decodingMode := urlx.UnescapeAllExceptSlash
+		if r.slashesHandling == config.EncodedSlashesOn {
+			decodingMode = urlx.UnescapeAll
+		}
+
+		captures[key] = urlx.PathUnescape(value, urlx.UnescapeOptions{Mode: decodingMode})
 	}
 
 	// authenticators

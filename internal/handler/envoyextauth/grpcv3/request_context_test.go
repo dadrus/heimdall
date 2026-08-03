@@ -160,6 +160,82 @@ func TestNewRequestContextXForwardedForMixedValues(t *testing.T) {
 	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1", "10.0.0.2"}, ctx.Request().ClientIPAddresses)
 }
 
+func TestRequestContextURL(t *testing.T) {
+	t.Parallel()
+
+	cf := newContextFactory()
+
+	for uc, tc := range map[string]struct {
+		requestPath string
+		path        string
+		rawPath     string
+		rawQuery    string
+	}{
+		"regular path": {
+			requestPath: "/test/baz?bar=moo#foobar",
+			path:        "/test/baz",
+			rawPath:     "/test/baz",
+			rawQuery:    "bar=moo#foobar",
+		},
+		"escaped characters": {
+			requestPath: "/test%2Ffoo/bar/%5Bval%5D?foo=bar",
+			path:        "/test/foo/bar/[val]",
+			rawPath:     "/test%2Ffoo/bar/%5Bval%5D",
+			rawQuery:    "foo=bar",
+		},
+		"dot segments": {
+			requestPath: "/bar/../test/foo/%5Bval%5D?bar=foo",
+			path:        "/test/foo/[val]",
+			rawPath:     "/test/foo/%5Bval%5D",
+			rawQuery:    "bar=foo",
+		},
+		"encoded dot segments": {
+			requestPath: "/bar/%2e.%2ftest/foo/%5Bval%5D?bar=foo",
+			path:        "/bar/../test/foo/[val]",
+			rawPath:     "/bar/%2e.%2ftest/foo/%5Bval%5D",
+			rawQuery:    "bar=foo",
+		},
+		"trailing slash": {
+			requestPath: "/bar/baz/",
+			path:        "/bar/baz/",
+			rawPath:     "/bar/baz/",
+		},
+		"root path": {
+			requestPath: "/",
+			path:        "/",
+			rawPath:     "/",
+		},
+		"adjacent slashes": {
+			requestPath: "/api//admin",
+			path:        "/api/admin",
+			rawPath:     "/api/admin",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := cf.Create(
+				t.Context(),
+				&envoy_auth.CheckRequest{
+					Attributes: &envoy_auth.AttributeContext{
+						Request: &envoy_auth.AttributeContext_Request{
+							Http: &envoy_auth.AttributeContext_HttpRequest{
+								Path: tc.requestPath,
+							},
+						},
+					},
+				},
+			)
+
+			defer cf.Destroy(ctx)
+
+			assert.Equal(t, tc.path, ctx.Request().URL.Path)
+			assert.Equal(t, tc.rawPath, ctx.Request().URL.RawPath)
+			assert.Equal(t, tc.rawQuery, ctx.Request().URL.RawQuery)
+		})
+	}
+}
+
 func TestRequestContextFinalize(t *testing.T) {
 	t.Parallel()
 
