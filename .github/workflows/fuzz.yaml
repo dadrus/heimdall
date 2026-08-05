@@ -134,7 +134,7 @@ jobs:
           sed 's/^/  /' "$RUNNER_TEMP/fuzz-targets.tsv"
 
       - name: Restore generated fuzz corpus
-        uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ${{ steps.fuzz-cache.outputs.path }}
           key: fuzz-${{ runner.os }}-go-${{ steps.fuzz-cache.outputs.go-version }}-${{ steps.fuzz-cache.outputs.schema }}-${{ steps.fuzz-cache.outputs.scope }}-${{ github.run_id }}
@@ -192,7 +192,7 @@ jobs:
       # runs advance the persistent generated corpus.
       - name: Save generated fuzz corpus
         if: success() && github.event_name != 'pull_request'
-        uses: actions/cache/save@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ${{ steps.fuzz-cache.outputs.path }}
           key: fuzz-${{ runner.os }}-go-${{ steps.fuzz-cache.outputs.go-version }}-${{ steps.fuzz-cache.outputs.schema }}-${{ steps.fuzz-cache.outputs.scope }}-${{ github.run_id }}
