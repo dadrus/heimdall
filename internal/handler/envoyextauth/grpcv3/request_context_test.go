@@ -195,6 +195,16 @@ func TestRequestContextURL(t *testing.T) {
 			rawPath:     "/bar/%2e.%2ftest/foo/%5Bval%5D",
 			rawQuery:    "bar=foo",
 		},
+		"encoded dot segments are retained if another byte requires escaping": {
+			requestPath: "/admin/%2e%2e%2fpublic/x|",
+			path:        "/admin/../public/x|",
+			rawPath:     "/admin/%2e%2e%2fpublic/x%7C",
+		},
+		"encoded slash is retained if another byte requires escaping": {
+			requestPath: "/files/a%2Fb|",
+			path:        "/files/a/b|",
+			rawPath:     "/files/a%2Fb%7C",
+		},
 		"trailing slash": {
 			requestPath: "/bar/baz/",
 			path:        "/bar/baz/",
@@ -231,6 +241,7 @@ func TestRequestContextURL(t *testing.T) {
 
 			assert.Equal(t, tc.path, ctx.Request().URL.Path)
 			assert.Equal(t, tc.rawPath, ctx.Request().URL.RawPath)
+			assert.Equal(t, tc.rawPath, ctx.Request().URL.EscapedPath())
 			assert.Equal(t, tc.rawQuery, ctx.Request().URL.RawQuery)
 		})
 	}
