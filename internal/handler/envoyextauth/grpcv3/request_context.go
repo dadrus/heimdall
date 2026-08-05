@@ -106,7 +106,7 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 	if err != nil {
 		parsed = &url.URL{}
 	} else {
-		parsed.RawPath = urlx.NormalizePath(parsed.EscapedPath())
+		parsed.RawPath = urlx.NormalizePath(urlx.EscapedPath(parsed))
 		parsed.Path, _ = url.PathUnescape(parsed.RawPath)
 	}
 
