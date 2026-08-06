@@ -411,6 +411,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 					func() map[string]ResolvedEndpointSettings { return tc.resolvedEPSettings },
 				),
 			}
+			ep.Init()
 
 			// WHEN
 			sm, err := ep.Get(t.Context(), tc.args)

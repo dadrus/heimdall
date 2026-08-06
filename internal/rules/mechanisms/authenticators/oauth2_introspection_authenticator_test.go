@@ -1983,6 +1983,10 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			ctx := heimdallmocks.NewRequestContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 
+			if metadataEndpoint, ok := tc.authenticator.r.(*oauth2.MetadataEndpoint); ok {
+				metadataEndpoint.Init()
+			}
+
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)
 
