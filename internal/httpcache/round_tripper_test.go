@@ -608,7 +608,7 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 				Transport: &RoundTripper{
 					Transport:              http.DefaultTransport,
 					Cache:                  cch,
-					FallbackCacheTTL:       tc.fallbackCacheTTL,
+					DefaultCacheTTL:        tc.fallbackCacheTTL,
 					UncacheableVaryHeaders: tc.uncacheableVaryHeaders,
 				},
 			}

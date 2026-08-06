@@ -57,10 +57,10 @@ type RoundTripper struct {
 	// configured and honor the TTL supplied to Set.
 	Cache Cache
 
-	// FallbackCacheTTL defines how long an otherwise cacheable response is
+	// DefaultCacheTTL defines how long an otherwise cacheable response is
 	// considered fresh when no expiration time can be derived from its HTTP
 	// headers. A non-positive value prevents storing such responses.
-	FallbackCacheTTL time.Duration
+	DefaultCacheTTL time.Duration
 
 	// UncacheableVaryHeaders lists request field names for which a response must
 	// not be stored when the origin names one of them in Vary. The fields are not
@@ -316,11 +316,11 @@ func (rt *RoundTripper) responseExpiration(
 		return expires, true
 	}
 
-	if rt.FallbackCacheTTL <= 0 {
+	if rt.DefaultCacheTTL <= 0 {
 		return time.Time{}, false
 	}
 
-	return now.Add(rt.FallbackCacheTTL), true
+	return now.Add(rt.DefaultCacheTTL), true
 }
 
 func (rt *RoundTripper) supportsVary(
