@@ -18,8 +18,4 @@ package httpcache
 
 import "errors"
 
-var (
-	ErrNoCacheEntry       = errors.New("httpcache: no cache entry")
-	ErrCacheNotConfigured = errors.New("httpcache: cache is not configured")
-)
-
+var ErrNoCacheEntry = errors.New("httpcache: no cache entry")

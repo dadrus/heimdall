@@ -33,6 +33,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/cache"
+	cachemocks "github.com/dadrus/heimdall/internal/cache/mocks"
 )
 
 func TestRoundTripperRoundTrip(t *testing.T) {
@@ -607,13 +610,13 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 			client := &http.Client{
 				Transport: &RoundTripper{
 					Transport:              http.DefaultTransport,
-					Cache:                  cch,
 					DefaultCacheTTL:        tc.fallbackCacheTTL,
 					UncacheableVaryHeaders: tc.uncacheableVaryHeaders,
 				},
 			}
 
 			actualBodies := make([]string, 0, len(tc.requests))
+			ctx := cache.WithContext(t.Context(), cch)
 
 			for _, request := range tc.requests {
 				var body io.Reader
@@ -622,7 +625,7 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 				}
 
 				req, err := http.NewRequestWithContext(
-					t.Context(),
+					ctx,
 					request.method,
 					srv.URL+request.path,
 					body,
@@ -649,15 +652,53 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 	}
 }
 
+func TestRoundTripperRoundTripWithoutCacheInContext(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	var originHits atomic.Int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hit := originHits.Add(1)
+		w.Header().Set("Cache-Control", "max-age=60")
+		_, _ = fmt.Fprintf(w, "origin-hit-%d", hit)
+	}))
+	t.Cleanup(srv.Close)
+
+	client := &http.Client{Transport: &RoundTripper{
+		Transport: http.DefaultTransport,
+	}}
+
+	var bodies []string
+
+	// WHEN
+	for range 2 {
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, nil)
+		require.NoError(t, err)
+
+		resp, err := client.Do(req)
+		require.NoError(t, err)
+
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+
+		bodies = append(bodies, string(body))
+	}
+
+	// THEN
+	assert.Equal(t, int32(2), originHits.Load())
+	assert.Equal(t, []string{"origin-hit-1", "origin-hit-2"}, bodies)
+}
+
 type cachedValue struct {
 	value     []byte
 	expiresAt time.Time
 }
 
-func newStatefulCacheMock(t *testing.T) *MockCache {
+func newStatefulCacheMock(t *testing.T) *cachemocks.CacheMock {
 	t.Helper()
 
-	cch := NewMockCache(t)
+	cch := cachemocks.NewCacheMock(t)
 	entries := make(map[string]cachedValue)
 	var mutex sync.Mutex
 
@@ -709,7 +750,7 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 
 		// GIVEN
 		var originHits atomic.Int32
-		cch := NewMockCache(t)
+		cch := cachemocks.NewCacheMock(t)
 		cch.EXPECT().Get(mock.Anything, mock.AnythingOfType("string")).
 			Return(nil, ErrNoCacheEntry).
 			Once()
@@ -723,10 +764,14 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 
 		client := &http.Client{Transport: &RoundTripper{
 			Transport: http.DefaultTransport,
-			Cache:     cch,
 		}}
 
-		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, nil)
+		req, err := http.NewRequestWithContext(
+			cache.WithContext(t.Context(), cch),
+			http.MethodGet,
+			srv.URL,
+			nil,
+		)
 		require.NoError(t, err)
 
 		// WHEN
@@ -747,7 +792,7 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 
 		// GIVEN
 		var originHits atomic.Int32
-		cch := NewMockCache(t)
+		cch := cachemocks.NewCacheMock(t)
 		cch.EXPECT().Get(mock.Anything, mock.AnythingOfType("string")).
 			Return(nil, backendErr).
 			Once()
@@ -761,10 +806,14 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 
 		client := &http.Client{Transport: &RoundTripper{
 			Transport: http.DefaultTransport,
-			Cache:     cch,
 		}}
 
-		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, nil)
+		req, err := http.NewRequestWithContext(
+			cache.WithContext(t.Context(), cch),
+			http.MethodGet,
+			srv.URL,
+			nil,
+		)
 		require.NoError(t, err)
 
 		// WHEN
@@ -784,7 +833,7 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 		t.Parallel()
 
 		// GIVEN
-		cch := NewMockCache(t)
+		cch := cachemocks.NewCacheMock(t)
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Cache-Control", "max-age=60")
@@ -792,7 +841,12 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 		}))
 		t.Cleanup(srv.Close)
 
-		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, nil)
+		req, err := http.NewRequestWithContext(
+			cache.WithContext(t.Context(), cch),
+			http.MethodGet,
+			srv.URL,
+			nil,
+		)
 		require.NoError(t, err)
 
 		cacheReq := newCacheableRequest(req)
@@ -813,7 +867,6 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 
 		client := &http.Client{Transport: &RoundTripper{
 			Transport: http.DefaultTransport,
-			Cache:     cch,
 		}}
 
 		// WHEN
@@ -832,7 +885,7 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 		t.Parallel()
 
 		// GIVEN
-		cch := NewMockCache(t)
+		cch := cachemocks.NewCacheMock(t)
 
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Cache-Control", "max-age=60")
@@ -840,7 +893,12 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 		}))
 		t.Cleanup(srv.Close)
 
-		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, nil)
+		req, err := http.NewRequestWithContext(
+			cache.WithContext(t.Context(), cch),
+			http.MethodGet,
+			srv.URL,
+			nil,
+		)
 		require.NoError(t, err)
 
 		cacheReq := newCacheableRequest(req)
@@ -869,7 +927,6 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 
 		client := &http.Client{Transport: &RoundTripper{
 			Transport: http.DefaultTransport,
-			Cache:     cch,
 		}}
 
 		// WHEN
@@ -883,19 +940,4 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "origin", string(body))
 	})
-}
-
-func TestRoundTripperRoundTripFailsWithoutConfiguredCache(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	req := httptest.NewRequest(http.MethodGet, "https://example.com/resource", nil)
-	sut := &RoundTripper{}
-
-	// WHEN
-	resp, err := sut.RoundTrip(req)
-
-	// THEN
-	require.ErrorIs(t, err, ErrCacheNotConfigured)
-	assert.Nil(t, resp)
 }

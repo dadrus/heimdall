@@ -28,6 +28,8 @@ import (
 	"time"
 
 	"github.com/pquerna/cachecontrol/cacheobject"
+
+	"github.com/dadrus/heimdall/internal/cache"
 )
 
 const (
@@ -53,10 +55,6 @@ type RoundTripper struct {
 	// is used.
 	Transport http.RoundTripper
 
-	// Cache stores variant indexes and serialized HTTP responses. It must be
-	// configured and honor the TTL supplied to Set.
-	Cache Cache
-
 	// DefaultCacheTTL defines how long an otherwise cacheable response is
 	// considered fresh when no expiration time can be derived from its HTTP
 	// headers. A non-positive value prevents storing such responses.
@@ -74,10 +72,6 @@ func (rt *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	transport := rt.Transport
 	if transport == nil {
 		transport = http.DefaultTransport
-	}
-
-	if rt.Cache == nil {
-		return nil, ErrCacheNotConfigured
 	}
 
 	// pquerna/cachecontrol can classify explicitly fresh POST responses as
@@ -111,7 +105,9 @@ func (rt *RoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 
 func (rt *RoundTripper) lookupCachedResponse(req cacheableRequest) (*http.Response, error) {
 	ctx := req.request.Context()
-	indexDump, err := rt.Cache.Get(ctx, req.indexKey)
+	cch := cache.Ctx(ctx)
+
+	indexDump, err := cch.Get(ctx, req.indexKey)
 	if err != nil {
 		return nil, ErrNoCacheEntry
 	}
@@ -155,7 +151,8 @@ func (rt *RoundTripper) lookupCachedResponse(req cacheableRequest) (*http.Respon
 		matchingGroups = matchingGroups[:last]
 
 		responseKey := storedResponseKey(req.targetID, group.Vary, candidate.Selector)
-		respDump, err := rt.Cache.Get(ctx, responseKey)
+
+		respDump, err := cch.Get(ctx, responseKey)
 		if err != nil {
 			continue
 		}
@@ -196,15 +193,16 @@ func (rt *RoundTripper) storeResponse(req cacheableRequest, resp *http.Response)
 	selector := req.selector(metadata.Vary)
 	responseKey := storedResponseKey(req.targetID, metadata.Vary, selector)
 	ctx := req.request.Context()
+	cch := cache.Ctx(ctx)
 
 	// Publish the response before its index entry. A concurrent lookup can at
 	// worst miss the new variant, but never select an entry whose response has
 	// not yet been stored.
-	if err = rt.Cache.Set(ctx, responseKey, respDump, ttl); err != nil {
+	if err = cch.Set(ctx, responseKey, respDump, ttl); err != nil {
 		return
 	}
 
-	rt.updateVariantIndex(ctx, req.indexKey, metadata.Vary, variant{
+	rt.updateVariantIndex(ctx, cch, req.indexKey, metadata.Vary, variant{
 		Selector:     selector,
 		ExpiresAt:    metadata.ExpiresAt.UnixNano(),
 		ResponseDate: responseDate(resp, now).UnixNano(),
@@ -214,12 +212,14 @@ func (rt *RoundTripper) storeResponse(req cacheableRequest, resp *http.Response)
 
 func (rt *RoundTripper) updateVariantIndex(
 	ctx context.Context,
+	cch cache.Cache,
 	indexKey string,
 	vary []string,
 	stored variant,
 ) {
-	index := rt.loadVariantIndex(ctx, indexKey)
 	now := time.Now()
+
+	index := rt.loadVariantIndex(ctx, cch, indexKey)
 	index.merge(vary, stored, now.UnixNano())
 
 	indexDump, err := json.Marshal(index)
@@ -232,13 +232,17 @@ func (rt *RoundTripper) updateVariantIndex(
 		return
 	}
 
-	_ = rt.Cache.Set(ctx, indexKey, indexDump, ttl)
+	_ = cch.Set(ctx, indexKey, indexDump, ttl)
 }
 
-func (rt *RoundTripper) loadVariantIndex(ctx context.Context, indexKey string) variantIndex {
+func (rt *RoundTripper) loadVariantIndex(
+	ctx context.Context,
+	cch cache.Cache,
+	indexKey string,
+) variantIndex {
 	empty := variantIndex{Version: variantIndexFormatVersion}
 
-	data, err := rt.Cache.Get(ctx, indexKey)
+	data, err := cch.Get(ctx, indexKey)
 	if err != nil {
 		return empty
 	}
@@ -492,4 +496,3 @@ func mostRecentVariantGroup(groups []variantGroup) int {
 
 	return mostRecent
 }
-
