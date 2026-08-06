@@ -19,11 +19,13 @@ package httpcache
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -338,7 +340,7 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 			expectedOriginHits: 2,
 			expectedBodies:     []string{"origin-hit-1", "origin-hit-2"},
 		},
-		"should reuse explicitly public authenticated response without vary authorization": {
+		"should separate explicitly public authenticated responses without vary authorization": {
 			responseHeaders: http.Header{
 				"Cache-Control": {"public, max-age=60"},
 			},
@@ -358,9 +360,26 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 						"Authorization": {"Bearer bob"},
 					},
 				},
+				{
+					method: http.MethodGet,
+					headers: http.Header{
+						"Authorization": {"Bearer alice"},
+					},
+				},
+				{
+					method: http.MethodGet,
+					headers: http.Header{
+						"Authorization": {"Bearer bob"},
+					},
+				},
 			},
-			expectedOriginHits: 1,
-			expectedBodies:     []string{"Bearer alice", "Bearer alice"},
+			expectedOriginHits: 2,
+			expectedBodies: []string{
+				"Bearer alice",
+				"Bearer bob",
+				"Bearer alice",
+				"Bearer bob",
+			},
 		},
 		"should separate public authenticated responses when varying by authorization": {
 			responseHeaders: http.Header{
@@ -740,6 +759,148 @@ func newStatefulCacheMock(t *testing.T) *cachemocks.CacheMock {
 	return cch
 }
 
+func TestRoundTripperStoreResponsePublishesImmutableResponseEntries(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	cch := cachemocks.NewCacheMock(t)
+	req, err := http.NewRequestWithContext(
+		cache.WithContext(t.Context(), cch),
+		http.MethodGet,
+		"https://example.com/resource",
+		nil,
+	)
+	require.NoError(t, err)
+
+	cacheReq := newCacheableRequest(req)
+	selector := cacheReq.selector(nil)
+	var responseKeys []string
+	var indexDumps [][]byte
+
+	cch.EXPECT().Get(mock.Anything, cacheReq.indexKey).
+		Return(nil, ErrNoCacheEntry).
+		Twice()
+	cch.EXPECT().Set(
+		mock.Anything,
+		mock.AnythingOfType("string"),
+		mock.Anything,
+		mock.MatchedBy(func(ttl time.Duration) bool { return ttl > 0 }),
+	).
+		RunAndReturn(func(_ context.Context, key string, value []byte, _ time.Duration) error {
+			if key == cacheReq.indexKey {
+				indexDumps = append(indexDumps, bytes.Clone(value))
+			} else {
+				responseKeys = append(responseKeys, key)
+			}
+
+			return nil
+		}).
+		Times(4)
+
+	newResponse := func(body string) *http.Response {
+		return &http.Response{
+			Status:     "200 OK",
+			StatusCode: http.StatusOK,
+			Header: http.Header{
+				"Cache-Control": {"max-age=60"},
+			},
+			Body:    io.NopCloser(strings.NewReader(body)),
+			Request: req,
+		}
+	}
+
+	rt := &RoundTripper{}
+
+	// WHEN
+	rt.storeResponse(cacheReq, newResponse("response-a"))
+	rt.storeResponse(cacheReq, newResponse("response-b"))
+
+	// THEN
+	require.Len(t, responseKeys, 2)
+	require.Len(t, indexDumps, 2)
+	assert.NotEqual(t, responseKeys[0], responseKeys[1])
+
+	responseIDs := make([]string, 0, len(indexDumps))
+	for index, indexDump := range indexDumps {
+		decoded, err := decodeVariantIndex(indexDump)
+		require.NoError(t, err)
+		require.Len(t, decoded.Groups, 1)
+		require.Len(t, decoded.Groups[0].Entries, 1)
+
+		entry := decoded.Groups[0].Entries[0]
+		assert.NotEmpty(t, entry.ResponseID)
+		assert.Equal(
+			t,
+			storedResponseKey(cacheReq.targetID, nil, selector, entry.ResponseID),
+			responseKeys[index],
+		)
+		responseIDs = append(responseIDs, entry.ResponseID)
+	}
+
+	assert.NotEqual(t, responseIDs[0], responseIDs[1])
+}
+
+func TestRoundTripperLookupCachedResponseUsesIndexedResponseID(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	cch := cachemocks.NewCacheMock(t)
+	req, err := http.NewRequestWithContext(
+		cache.WithContext(t.Context(), cch),
+		http.MethodGet,
+		"https://example.com/resource",
+		nil,
+	)
+	require.NoError(t, err)
+
+	cacheReq := newCacheableRequest(req)
+	selector := cacheReq.selector(nil)
+	responseID := "response-a"
+	entry := variant{
+		Selector:     selector,
+		ResponseID:   responseID,
+		ExpiresAt:    time.Now().Add(time.Minute).UnixNano(),
+		ResponseDate: time.Now().UnixNano(),
+		StoredAt:     time.Now().UnixNano(),
+	}
+	indexDump, err := json.Marshal(variantIndex{
+		Version: variantIndexFormatVersion,
+		Groups: []variantGroup{
+			{Entries: []variant{entry}},
+		},
+	})
+	require.NoError(t, err)
+
+	cachedResponse := &http.Response{
+		Status:        "200 OK",
+		StatusCode:    http.StatusOK,
+		Header:        make(http.Header),
+		Body:          io.NopCloser(strings.NewReader("response-a")),
+		ContentLength: int64(len("response-a")),
+	}
+	responseDump, err := httputil.DumpResponse(cachedResponse, true)
+	require.NoError(t, err)
+
+	responseKey := storedResponseKey(cacheReq.targetID, nil, selector, responseID)
+	cch.EXPECT().Get(mock.Anything, cacheReq.indexKey).
+		Return(indexDump, nil).
+		Once()
+	cch.EXPECT().Get(mock.Anything, responseKey).
+		Return(responseDump, nil).
+		Once()
+
+	// WHEN
+	resp, err := (&RoundTripper{}).lookupCachedResponse(cacheReq)
+
+	// THEN
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, "response-a", string(body))
+}
+
 func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 	t.Parallel()
 
@@ -850,15 +1011,13 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 		require.NoError(t, err)
 
 		cacheReq := newCacheableRequest(req)
-		selector := cacheReq.selector(nil)
-		responseKey := storedResponseKey(cacheReq.targetID, nil, selector)
 
 		cch.EXPECT().Get(mock.Anything, cacheReq.indexKey).
 			Return(nil, ErrNoCacheEntry).
 			Once()
 		cch.EXPECT().Set(
 			mock.Anything,
-			responseKey,
+			mock.MatchedBy(func(key string) bool { return key != cacheReq.indexKey }),
 			mock.Anything,
 			mock.MatchedBy(func(ttl time.Duration) bool { return ttl > 0 }),
 		).
@@ -902,15 +1061,13 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 		require.NoError(t, err)
 
 		cacheReq := newCacheableRequest(req)
-		selector := cacheReq.selector(nil)
-		responseKey := storedResponseKey(cacheReq.targetID, nil, selector)
 
 		cch.EXPECT().Get(mock.Anything, cacheReq.indexKey).
 			Return(nil, ErrNoCacheEntry).
 			Twice()
 		cch.EXPECT().Set(
 			mock.Anything,
-			responseKey,
+			mock.MatchedBy(func(key string) bool { return key != cacheReq.indexKey }),
 			mock.Anything,
 			mock.MatchedBy(func(ttl time.Duration) bool { return ttl > 0 }),
 		).

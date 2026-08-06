@@ -183,22 +183,22 @@ func TestVariantIndexMerge(t *testing.T) {
 					{
 						Vary: []string{"Accept-Language"},
 						Entries: []variant{
-							{Selector: "de", ExpiresAt: now + 10, StoredAt: 10},
-							{Selector: "en", ExpiresAt: now + 20, StoredAt: 20},
+							{Selector: "de", ResponseID: "response-old-de", ExpiresAt: now + 10, StoredAt: 10},
+							{Selector: "en", ResponseID: "response-en", ExpiresAt: now + 20, StoredAt: 20},
 						},
 					},
 				},
 			},
 			vary:   []string{"Accept-Language"},
-			stored: variant{Selector: "de", ExpiresAt: now + 30, StoredAt: 30},
+			stored: variant{Selector: "de", ResponseID: "response-new-de", ExpiresAt: now + 30, StoredAt: 30},
 			expected: variantIndex{
 				Version: variantIndexFormatVersion,
 				Groups: []variantGroup{
 					{
 						Vary: []string{"Accept-Language"},
 						Entries: []variant{
-							{Selector: "en", ExpiresAt: now + 20, StoredAt: 20},
-							{Selector: "de", ExpiresAt: now + 30, StoredAt: 30},
+							{Selector: "en", ResponseID: "response-en", ExpiresAt: now + 20, StoredAt: 20},
+							{Selector: "de", ResponseID: "response-new-de", ExpiresAt: now + 30, StoredAt: 30},
 						},
 					},
 				},
@@ -465,7 +465,7 @@ func TestDecodeVariantIndex(t *testing.T) {
 			{
 				Vary: []string{"Accept-Language"},
 				Entries: []variant{
-					{Selector: "de", ExpiresAt: 10, ResponseDate: 5, StoredAt: 5},
+					{Selector: "de", ResponseID: "response-de", ExpiresAt: 10, ResponseDate: 5, StoredAt: 5},
 				},
 			},
 		},

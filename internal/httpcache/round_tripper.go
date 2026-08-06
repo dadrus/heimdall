@@ -20,6 +20,8 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"net/http"
 	"net/http/httputil"
@@ -30,18 +32,6 @@ import (
 	"github.com/pquerna/cachecontrol/cacheobject"
 
 	"github.com/dadrus/heimdall/internal/cache"
-)
-
-const (
-	// Bump the namespace whenever the request-target identity, variant selector,
-	// cache-key derivation or variant-index format changes. v6 groups variants
-	// by their normalized Vary field set so selectors are calculated once per
-	// group during lookup.
-	cacheKeyNamespace = "heimdall-http-cache:v6"
-
-	variantIndexFormatVersion  = 2
-	maxVariantIndexSize        = 1 << 20
-	maxVariantEntriesPerTarget = 128
 )
 
 type responseCacheMetadata struct {
@@ -150,7 +140,12 @@ func (rt *RoundTripper) lookupCachedResponse(req cacheableRequest) (*http.Respon
 		matchingGroups[groupIndex] = matchingGroups[last]
 		matchingGroups = matchingGroups[:last]
 
-		responseKey := storedResponseKey(req.targetID, group.Vary, candidate.Selector)
+		responseKey := storedResponseKey(
+			req.targetID,
+			group.Vary,
+			candidate.Selector,
+			candidate.ResponseID,
+		)
 
 		respDump, err := cch.Get(ctx, responseKey)
 		if err != nil {
@@ -191,19 +186,25 @@ func (rt *RoundTripper) storeResponse(req cacheableRequest, resp *http.Response)
 	}
 
 	selector := req.selector(metadata.Vary)
-	responseKey := storedResponseKey(req.targetID, metadata.Vary, selector)
+	responseID, err := newResponseID()
+	if err != nil {
+		return
+	}
+
+	responseKey := storedResponseKey(req.targetID, metadata.Vary, selector, responseID)
 	ctx := req.request.Context()
 	cch := cache.Ctx(ctx)
 
-	// Publish the response before its index entry. A concurrent lookup can at
-	// worst miss the new variant, but never select an entry whose response has
-	// not yet been stored.
+	// Publish the immutable response before its index entry. Concurrent index
+	// updates can still lose a variant, but an index entry always references the
+	// exact response bytes written by the same storage operation.
 	if err = cch.Set(ctx, responseKey, respDump, ttl); err != nil {
 		return
 	}
 
 	rt.updateVariantIndex(ctx, cch, req.indexKey, metadata.Vary, variant{
 		Selector:     selector,
+		ResponseID:   responseID,
 		ExpiresAt:    metadata.ExpiresAt.UnixNano(),
 		ResponseDate: responseDate(resp, now).UnixNano(),
 		StoredAt:     now.UnixNano(),
@@ -495,4 +496,13 @@ func mostRecentVariantGroup(groups []variantGroup) int {
 	}
 
 	return mostRecent
+}
+
+func newResponseID() (string, error) {
+	var id [16]byte
+	if _, err := rand.Read(id[:]); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(id[:]), nil
 }

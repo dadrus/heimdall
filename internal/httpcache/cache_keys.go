@@ -56,6 +56,15 @@ func requestTargetID(req *http.Request) string {
 
 	key.writeString(req.URL.RequestURI())
 
+	// Keep the value of the Authorization header as an additional local partitioning
+	// dimension even when an origin forgets to emit Vary: Authorization for an explicitly
+	// shared response.
+	authorization := strings.TrimSpace(req.Header.Get("Authorization"))
+	key.writeBool(authorization != "")
+	if authorization != "" {
+		key.writeString(authorization)
+	}
+
 	return key.sum()
 }
 
@@ -75,10 +84,11 @@ func requestVariantSelector(req *http.Request, vary []string) string {
 	return key.sum()
 }
 
-func storedResponseKey(targetID string, vary []string, selector string) string {
+func storedResponseKey(targetID string, vary []string, selector, responseID string) string {
 	key := newKeyHash("stored-response")
 	key.writeString(targetID)
 	key.writeString(selector)
+	key.writeString(responseID)
 	key.writeUint64(uint64(len(vary)))
 
 	for _, field := range vary {

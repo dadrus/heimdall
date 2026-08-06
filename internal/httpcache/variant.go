@@ -24,6 +24,7 @@ import (
 
 type variant struct {
 	Selector     string `json:"selector"`
+	ResponseID   string `json:"response_id"`
 	ExpiresAt    int64  `json:"expires_at"`
 	ResponseDate int64  `json:"response_date"`
 	StoredAt     int64  `json:"stored_at"`
