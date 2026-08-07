@@ -145,7 +145,11 @@ func newOAuth2IntrospectionAuthenticator(
 	)
 
 	resolver := x.IfThenElseExec(conf.MetadataEndpoint != nil,
-		func() oauth2.ServerMetadataResolver { return conf.MetadataEndpoint },
+		func() oauth2.ServerMetadataResolver {
+			conf.MetadataEndpoint.Init()
+
+			return conf.MetadataEndpoint
+		},
 		func() oauth2.ServerMetadataResolver {
 			ep := conf.IntrospectionEndpoint
 
