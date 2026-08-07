@@ -152,6 +152,67 @@ func TestExtractURL(t *testing.T) {
 				assert.Equal(t, url.Values{"bar": []string{"foo"}}, extracted.Query())
 			},
 		},
+		"X-Forwarded-Uri retains encoded dot segments if another byte requires escaping": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/admin/%2e%2e%2fpublic/x|?bar=foo")
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "/admin/../public/x|", extracted.Path)
+				assert.Equal(t, "/admin/%2e%2e%2fpublic/x%7C", extracted.RawPath)
+				assert.Equal(t, "/admin/%2e%2e%2fpublic/x%7C", extracted.EscapedPath())
+				assert.Equal(t, url.Values{"bar": []string{"foo"}}, extracted.Query())
+			},
+		},
+		"X-Forwarded-Uri retains encoded slash if another byte requires escaping": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/files/a%2Fb|")
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "/files/a/b|", extracted.Path)
+				assert.Equal(t, "/files/a%2Fb%7C", extracted.RawPath)
+				assert.Equal(t, "/files/a%2Fb%7C", extracted.EscapedPath())
+			},
+		},
+		"request URL retains encoded dot segments if another byte requires escaping": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				parsed, err := url.ParseRequestURI("/admin/%2e%2e%2fpublic/x|")
+				require.NoError(t, err)
+				req.URL = parsed
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "/admin/../public/x|", extracted.Path)
+				assert.Equal(t, "/admin/%2e%2e%2fpublic/x%7C", extracted.RawPath)
+				assert.Equal(t, "/admin/%2e%2e%2fpublic/x%7C", extracted.EscapedPath())
+			},
+		},
+		"request URL retains encoded slash if another byte requires escaping": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				parsed, err := url.ParseRequestURI("/files/a%2Fb|")
+				require.NoError(t, err)
+				req.URL = parsed
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "/files/a/b|", extracted.Path)
+				assert.Equal(t, "/files/a%2Fb%7C", extracted.RawPath)
+				assert.Equal(t, "/files/a%2Fb%7C", extracted.EscapedPath())
+			},
+		},
 		"Request path is used and ends with a slash": {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()

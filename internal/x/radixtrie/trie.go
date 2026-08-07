@@ -473,7 +473,7 @@ func (t *Trie[V]) findNode(
 			}
 		}
 
-		return nil, 0, nil
+		return nil, 0, captures
 	}
 
 	// First see if this matches a static token.

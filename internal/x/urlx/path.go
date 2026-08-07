@@ -17,9 +17,12 @@
 package urlx
 
 import (
+	"net/url"
 	pathpkg "path"
 	"strings"
 )
+
+const pathUpperHex = "0123456789ABCDEF"
 
 //nolint:gocognit,gocyclo,gocyclo,cyclop,funlen
 func PathHasDotSegments(path string) bool {
@@ -248,4 +251,125 @@ func PathUnescape(value string, opts UnescapeOptions) string {
 	builder.WriteString(value[last:])
 
 	return builder.String()
+}
+
+// EscapedPath returns a valid encoded path while preserving existing
+// percent-encoded octets from URL.RawPath.
+//
+// It assumes that RawPath originates from URL parsing and represents Path.
+// Unlike url.URL.EscapedPath, an invalid literal byte in RawPath does not cause
+// the complete encoded representation to be discarded.
+//
+//nolint:cyclop
+func EscapedPath(value *url.URL) string {
+	if value.RawPath == "" {
+		return value.EscapedPath()
+	}
+
+	rawPath := value.RawPath
+	first := -1
+
+	// Find the first byte to escape
+	for idx := 0; idx < len(rawPath); idx++ {
+		current := rawPath[idx]
+
+		if current == '%' &&
+			idx+2 < len(rawPath) &&
+			isHexDigit(rawPath[idx+1]) &&
+			isHexDigit(rawPath[idx+2]) {
+			idx += 2
+
+			continue
+		}
+
+		if !isValidEncodedPathByte(current) {
+			first = idx
+
+			break
+		}
+	}
+
+	if first == -1 {
+		return rawPath
+	}
+
+	escapeCount := 1
+
+	// Count the remaining bytes requiring escaping so that the builder can
+	// allocate the exact output capacity.
+	for idx := first + 1; idx < len(rawPath); idx++ {
+		current := rawPath[idx]
+
+		if current == '%' &&
+			idx+2 < len(rawPath) &&
+			isHexDigit(rawPath[idx+1]) &&
+			isHexDigit(rawPath[idx+2]) {
+			idx += 2
+
+			continue
+		}
+
+		if !isValidEncodedPathByte(current) {
+			escapeCount++
+		}
+	}
+
+	var result strings.Builder
+
+	// Every escaped byte replaces one byte with three bytes.
+	result.Grow(len(rawPath) + 2*escapeCount)
+	result.WriteString(rawPath[:first])
+
+	for idx := first; idx < len(rawPath); idx++ {
+		current := rawPath[idx]
+
+		if current == '%' &&
+			idx+2 < len(rawPath) &&
+			isHexDigit(rawPath[idx+1]) &&
+			isHexDigit(rawPath[idx+2]) {
+			result.WriteString(rawPath[idx : idx+3])
+			idx += 2
+
+			continue
+		}
+
+		if isValidEncodedPathByte(current) {
+			result.WriteByte(current)
+
+			continue
+		}
+
+		result.WriteByte('%')
+		result.WriteByte(pathUpperHex[current>>4])
+		result.WriteByte(pathUpperHex[current&0x0f])
+	}
+
+	return result.String()
+}
+
+func isHexDigit(value byte) bool {
+	return value >= '0' && value <= '9' ||
+		value >= 'a' && value <= 'f' ||
+		value >= 'A' && value <= 'F'
+}
+
+// Mirrors the characters accepted by net/url for an encoded path.
+// In particular, '?' and '#' are not valid literal path bytes here.
+func isValidEncodedPathByte(value byte) bool {
+	if value >= 'a' && value <= 'z' ||
+		value >= 'A' && value <= 'Z' ||
+		value >= '0' && value <= '9' {
+		return true
+	}
+
+	switch value {
+	case '-', '_', '.', '~',
+		'/',
+		'!', '$', '&', '\'', '(', ')', '*', '+', ',', ';', '=',
+		':', '@', '[', ']':
+		return true
+
+	default:
+		return false
+	}
 }
