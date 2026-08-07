@@ -630,3 +630,62 @@ func TestRequestContextReset(t *testing.T) {
 	require.Empty(t, ctx.hmdlReq.ClientIPAddresses)
 	require.Equal(t, 10, cap(ctx.hmdlReq.ClientIPAddresses))
 }
+
+func TestRequestContextHeader(t *testing.T) {
+	t.Parallel()
+
+	cf := newContextFactory()
+
+	for uc, tc := range map[string]struct {
+		name     string
+		expected string
+	}{
+		"canonical header name": {
+			name:     "X-Foo",
+			expected: "bar",
+		},
+		"lowercase header name": {
+			name:     "x-foo",
+			expected: "bar",
+		},
+		"uppercase header name": {
+			name:     "X-FOO",
+			expected: "bar",
+		},
+		"mixed case header name": {
+			name:     "x-FoO",
+			expected: "bar",
+		},
+		"unknown header": {
+			name:     "X-Bar",
+			expected: "",
+		},
+		"lowercase host header": {
+			name:     "host",
+			expected: "foo.bar",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := cf.Create(
+				t.Context(),
+				&envoy_auth.CheckRequest{
+					Attributes: &envoy_auth.AttributeContext{
+						Request: &envoy_auth.AttributeContext_Request{
+							Http: &envoy_auth.AttributeContext_HttpRequest{
+								Host: "FoO.Bar",
+								Headers: map[string]string{
+									"x-foo": "bar",
+								},
+							},
+						},
+					},
+				},
+			)
+			defer cf.Destroy(ctx)
+
+			assert.Equal(t, tc.expected, ctx.Request().Header(tc.name))
+		})
+	}
+}

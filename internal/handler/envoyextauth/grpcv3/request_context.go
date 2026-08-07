@@ -163,7 +163,10 @@ func canonicalizeHeaders(headers map[string]string) map[string]string {
 
 func (r *RequestContext) Request() *heimdall.Request { return r.hmdlReq }
 func (r *RequestContext) Headers() map[string]string { return r.reqHeaders }
-func (r *RequestContext) Header(name string) string  { return r.reqHeaders[name] }
+
+func (r *RequestContext) Header(name string) string {
+	return r.reqHeaders[http.CanonicalHeaderKey(name)]
+}
 
 func (r *RequestContext) Cookie(name string) string {
 	values, ok := r.reqHeaders["Cookie"]
