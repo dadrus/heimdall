@@ -1213,7 +1213,7 @@ func TestRepositoryFindRule(t *testing.T) {
 		requestURL       *url.URL
 		addRules         func(t *testing.T, repo *repository)
 		configureFactory func(t *testing.T, factory *mocks.FactoryMock)
-		assert           func(t *testing.T, err error, rul rule.Rule)
+		assert           func(t *testing.T, err error, rul rule.Rule, captures map[string]string)
 	}{
 		"no matching rule": {
 			requestURL: &url.URL{Scheme: "http", Host: "foo.bar", Path: "/baz"},
@@ -1222,7 +1222,7 @@ func TestRepositoryFindRule(t *testing.T) {
 
 				factory.EXPECT().HasDefaultRule().Return(false)
 			},
-			assert: func(t *testing.T, err error, _ rule.Rule) {
+			assert: func(t *testing.T, err error, _ rule.Rule, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -1237,11 +1237,12 @@ func TestRepositoryFindRule(t *testing.T) {
 				factory.EXPECT().HasDefaultRule().Return(true)
 				factory.EXPECT().DefaultRule().Return(&ruleImpl{id: "test", isDefault: true})
 			},
-			assert: func(t *testing.T, err error, rul rule.Rule) {
+			assert: func(t *testing.T, err error, rul rule.Rule, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.Equal(t, &ruleImpl{id: "test", isDefault: true}, rul)
+				assert.Equal(t, &ruleImpl{id: "test", isDefault: true}, rul)
+				assert.Empty(t, captures)
 			},
 		},
 		"simple upstream rule match": {
@@ -1260,7 +1261,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				err := repo.AddRuleSet(t.Context(), "1", []rule.Rule{rule1})
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, rul rule.Rule) {
+			assert: func(t *testing.T, err error, rul rule.Rule, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -1268,8 +1269,9 @@ func TestRepositoryFindRule(t *testing.T) {
 				impl, ok := rul.(*ruleImpl)
 				require.True(t, ok)
 
-				require.Equal(t, "test", impl.id)
-				require.Equal(t, "1", impl.srcID)
+				assert.Equal(t, "test", impl.id)
+				assert.Equal(t, "1", impl.srcID)
+				assert.Empty(t, captures)
 			},
 		},
 		"upstream rule match with backtracking due to constraints limitations within the rule set": {
@@ -1323,7 +1325,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				err := repo.AddRuleSet(t.Context(), "1", []rule.Rule{rule1, rule2, rule3})
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, rul rule.Rule) {
+			assert: func(t *testing.T, err error, rul rule.Rule, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -1331,8 +1333,9 @@ func TestRepositoryFindRule(t *testing.T) {
 				impl, ok := rul.(*ruleImpl)
 				require.True(t, ok)
 
-				require.Equal(t, "rule3", impl.id)
-				require.Equal(t, "1", impl.srcID)
+				assert.Equal(t, "rule3", impl.id)
+				assert.Equal(t, "1", impl.srcID)
+				assert.Empty(t, captures)
 			},
 		},
 		"upstream rule match with backtracking within the rule set": {
@@ -1368,7 +1371,7 @@ func TestRepositoryFindRule(t *testing.T) {
 				err := repo.AddRuleSet(t.Context(), "1", []rule.Rule{rule1, rule2})
 				require.NoError(t, err)
 			},
-			assert: func(t *testing.T, err error, rul rule.Rule) {
+			assert: func(t *testing.T, err error, rul rule.Rule, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -1376,8 +1379,9 @@ func TestRepositoryFindRule(t *testing.T) {
 				impl, ok := rul.(*ruleImpl)
 				require.True(t, ok)
 
-				require.Equal(t, "rule2", impl.id)
-				require.Equal(t, "1", impl.srcID)
+				assert.Equal(t, "rule2", impl.id)
+				assert.Equal(t, "1", impl.srcID)
+				assert.Empty(t, captures)
 			},
 		},
 		"encoded unreserved character selects specific rule": {
@@ -1425,11 +1429,12 @@ func TestRepositoryFindRule(t *testing.T) {
 					[]rule.Rule{protected, public},
 				))
 			},
-			assert: func(t *testing.T, err error, rul rule.Rule) {
+			assert: func(t *testing.T, err error, rul rule.Rule, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, "protected", rul.ID())
+				assert.Empty(t, captures)
 			},
 		},
 		"fully encoded unreserved segment selects specific rule": {
@@ -1477,11 +1482,12 @@ func TestRepositoryFindRule(t *testing.T) {
 					[]rule.Rule{protected, public},
 				))
 			},
-			assert: func(t *testing.T, err error, rul rule.Rule) {
+			assert: func(t *testing.T, err error, rul rule.Rule, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, "protected", rul.ID())
+				assert.Empty(t, captures)
 			},
 		},
 		"reserved encoded slash remains part of capture": {
@@ -1533,11 +1539,13 @@ func TestRepositoryFindRule(t *testing.T) {
 					[]rule.Rule{protected, public},
 				))
 			},
-			assert: func(t *testing.T, err error, rul rule.Rule) {
+			assert: func(t *testing.T, err error, rul rule.Rule, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, "public", rul.ID())
+				assert.Len(t, captures, 1)
+				assert.Equal(t, "admin%2Fusers", captures["value"])
 			},
 		},
 		"does not decode percent encoding twice": {
@@ -1589,11 +1597,219 @@ func TestRepositoryFindRule(t *testing.T) {
 					[]rule.Rule{protected, public},
 				))
 			},
-			assert: func(t *testing.T, err error, rul rule.Rule) {
+			assert: func(t *testing.T, err error, rul rule.Rule, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
 				assert.Equal(t, "public", rul.ID())
+				assert.Len(t, captures, 1)
+				assert.Equal(t, "%2561", captures["value"])
+			},
+		},
+		"matches a generic route constrained by its second path parameter after rejecting a more specific route": {
+			requestURL: &url.URL{
+				Scheme: "http",
+				Host:   "example.com",
+				Path:   "/confidential/public",
+			},
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
+				t.Helper()
+
+				factory.EXPECT().HasDefaultRule().Return(false)
+			},
+			addRules: func(t *testing.T, repo *repository) {
+				t.Helper()
+
+				specific := &ruleImpl{
+					id:    "specific",
+					srcID: "1",
+					hash:  []byte{1},
+				}
+				specific.routes = append(specific.routes, &routeImpl{
+					rule: specific,
+					host: "example.com",
+					path: "/:tenant/public",
+					matcher: andMatcher{
+						methodMatcher{http.MethodPost},
+					},
+				})
+
+				generic := &ruleImpl{
+					id:    "generic",
+					srcID: "1",
+					hash:  []byte{2},
+				}
+				generic.routes = append(generic.routes, &routeImpl{
+					rule: generic,
+					host: "example.com",
+					path: "/:tenant/:resource",
+					matcher: andMatcher{
+						&pathParamMatcher{
+							newExactMatcher("public"),
+							"resource",
+							config.EncodedSlashesOff,
+						},
+					},
+				})
+
+				require.NoError(t, repo.AddRuleSet(
+					t.Context(),
+					"1",
+					[]rule.Rule{specific, generic},
+				))
+			},
+			assert: func(t *testing.T, err error, rul rule.Rule, captures map[string]string) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, rul)
+
+				assert.Equal(t, "generic", rul.ID())
+				assert.Equal(t, map[string]string{
+					"tenant":   "confidential",
+					"resource": "public",
+				}, captures)
+			},
+		},
+		"rejects a route whose path parameter constraint does not match": {
+			requestURL: &url.URL{
+				Scheme: "http",
+				Host:   "example.com",
+				Path:   "/confidential/public",
+			},
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
+				t.Helper()
+
+				factory.EXPECT().HasDefaultRule().Return(false)
+			},
+			addRules: func(t *testing.T, repo *repository) {
+				t.Helper()
+
+				specific := &ruleImpl{
+					id:    "specific",
+					srcID: "1",
+					hash:  []byte{1},
+				}
+				specific.routes = append(specific.routes, &routeImpl{
+					rule: specific,
+					host: "example.com",
+					path: "/:tenant/public",
+					matcher: andMatcher{
+						methodMatcher{http.MethodPost},
+					},
+				})
+
+				generic := &ruleImpl{
+					id:    "generic",
+					srcID: "1",
+					hash:  []byte{2},
+				}
+				generic.routes = append(generic.routes, &routeImpl{
+					rule: generic,
+					host: "example.com",
+					path: "/:tenant/:resource",
+					matcher: andMatcher{
+						&pathParamMatcher{
+							newExactMatcher("public"),
+							"tenant",
+							config.EncodedSlashesOff,
+						},
+					},
+				})
+
+				require.NoError(t, repo.AddRuleSet(
+					t.Context(),
+					"1",
+					[]rule.Rule{specific, generic},
+				))
+			},
+			assert: func(t *testing.T, err error, rul rule.Rule, _ map[string]string) {
+				t.Helper()
+
+				require.ErrorIs(t, err, heimdall.ErrNoRuleFound)
+				assert.Nil(t, rul)
+			},
+		},
+		"selects the fallback route after other matching candidates fail their constraints": {
+			requestURL: &url.URL{
+				Scheme: "http",
+				Host:   "example.com",
+				Path:   "/confidential/public",
+			},
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
+				t.Helper()
+
+				factory.EXPECT().HasDefaultRule().Return(false)
+			},
+			addRules: func(t *testing.T, repo *repository) {
+				t.Helper()
+
+				// Structurally most specific route. It matches the path, but must
+				// be rejected because the request uses GET.
+				specific := &ruleImpl{
+					id:    "specific",
+					srcID: "1",
+					hash:  []byte{1},
+				}
+				specific.routes = append(specific.routes, &routeImpl{
+					rule: specific,
+					host: "example.com",
+					path: "/:tenant/public",
+					matcher: andMatcher{
+						methodMatcher{http.MethodPost},
+					},
+				})
+
+				// This route structurally matches, but its path parameter
+				// constraint does not: the actual tenant is "confidential".
+				constrained := &ruleImpl{
+					id:    "constrained",
+					srcID: "1",
+					hash:  []byte{2},
+				}
+				constrained.routes = append(constrained.routes, &routeImpl{
+					rule: constrained,
+					host: "example.com",
+					path: "/:tenant/:resource",
+					matcher: andMatcher{
+						&pathParamMatcher{
+							newExactMatcher("public"),
+							"tenant",
+							config.EncodedSlashesOff,
+						},
+					},
+				})
+
+				// This is the rule that should be selected after both more
+				// specific alternatives have been rejected.
+				fallback := &ruleImpl{
+					id:    "fallback",
+					srcID: "1",
+					hash:  []byte{3},
+				}
+				fallback.routes = append(fallback.routes, &routeImpl{
+					rule:    fallback,
+					host:    "example.com",
+					path:    "/:tenant/**",
+					matcher: andMatcher{},
+				})
+
+				require.NoError(t, repo.AddRuleSet(
+					t.Context(),
+					"1",
+					[]rule.Rule{specific, constrained, fallback},
+				))
+			},
+			assert: func(t *testing.T, err error, rul rule.Rule, captures map[string]string) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, rul)
+
+				assert.Equal(t, "fallback", rul.ID())
+				assert.Equal(t, map[string]string{
+					"tenant": "confidential",
+				}, captures)
 			},
 		},
 	} {
@@ -1619,7 +1835,7 @@ func TestRepositoryFindRule(t *testing.T) {
 			rul, err := repo.FindRule(ctx)
 
 			// THEN
-			tc.assert(t, err, rul)
+			tc.assert(t, err, rul, req.URL.Captures)
 		})
 	}
 }

@@ -46,8 +46,6 @@ type MetadataEndpoint struct {
 }
 
 func (e *MetadataEndpoint) Get(ctx context.Context, args map[string]any) (ServerMetadata, error) {
-	e.init()
-
 	req, err := e.CreateRequest(ctx, nil, endpoint.RenderFunc(func(value string) (string, error) {
 		tpl, err := template.New(value)
 		if err != nil {
@@ -95,7 +93,7 @@ func (e *MetadataEndpoint) Get(ctx context.Context, args map[string]any) (Server
 	return sm, nil
 }
 
-func (e *MetadataEndpoint) init() {
+func (e *MetadataEndpoint) Init() {
 	if e.Headers == nil {
 		e.Headers = make(map[string]string)
 	}
