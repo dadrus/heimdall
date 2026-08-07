@@ -33,6 +33,58 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 )
 
+func TestMetadataEndpointInit(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		ep       *MetadataEndpoint
+		expected endpoint.Endpoint
+	}{
+		"default settings are applied": {
+			ep: &MetadataEndpoint{},
+			expected: endpoint.Endpoint{
+				Method:  http.MethodGet,
+				Headers: map[string]string{"Accept": "application/json"},
+				HTTPCache: &endpoint.HTTPCache{
+					Enabled:    true,
+					DefaultTTL: 30 * time.Minute,
+				},
+			},
+		},
+		"configured settings are preserved": {
+			ep: &MetadataEndpoint{
+				Endpoint: endpoint.Endpoint{
+					Method:  http.MethodPatch,
+					Headers: map[string]string{"Accept": "application/custom+json"},
+					HTTPCache: &endpoint.HTTPCache{
+						Enabled:    false,
+						DefaultTTL: time.Minute,
+					},
+				},
+			},
+			expected: endpoint.Endpoint{
+				Method:  http.MethodPatch,
+				Headers: map[string]string{"Accept": "application/custom+json"},
+				HTTPCache: &endpoint.HTTPCache{
+					Enabled:    false,
+					DefaultTTL: time.Minute,
+				},
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			ep := tc.ep
+
+			// WHEN
+			ep.Init()
+
+			// THEN
+			assert.Equal(t, tc.expected, ep.Endpoint)
+		})
+	}
+}
+
 func TestMetadataEndpointGet(t *testing.T) {
 	t.Parallel()
 
@@ -411,6 +463,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 					func() map[string]ResolvedEndpointSettings { return tc.resolvedEPSettings },
 				),
 			}
+			ep.Init()
 
 			// WHEN
 			sm, err := ep.Get(t.Context(), tc.args)
