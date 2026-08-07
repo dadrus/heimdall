@@ -204,4 +204,3 @@ func countEncodedOctets(value string) map[string]int {
 
 	return result
 }
-
