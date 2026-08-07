@@ -178,10 +178,9 @@ assertions:
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 3)
+				assert.Len(t, auth.ads, 2)
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
 				// assertions settings
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
@@ -241,10 +240,9 @@ cache_ttl: 5s`),
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 3)
+				assert.Len(t, auth.ads, 2)
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
 				// assertions settings
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
@@ -419,10 +417,9 @@ cache_ttl: 5s`),
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 3)
+				assert.Len(t, auth.ads, 2)
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
 				// assertions settings
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
@@ -505,10 +502,9 @@ cache_ttl: 5s`),
 
 				// token extractor settings
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 3)
+				assert.Len(t, auth.ads, 2)
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
 				// assertions settings
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))

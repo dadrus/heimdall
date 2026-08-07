@@ -138,7 +138,6 @@ func newOAuth2IntrospectionAuthenticator(
 			return extractors.CompositeExtractStrategy{
 				extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"},
 				extractors.QueryParameterExtractStrategy{Name: "access_token"},
-				extractors.BodyParameterExtractStrategy{Name: "access_token"},
 			}
 		},
 		func() extractors.CompositeExtractStrategy { return conf.AuthDataSource },
