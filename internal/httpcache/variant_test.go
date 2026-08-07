@@ -522,8 +522,9 @@ func TestDecodeVariantIndex(t *testing.T) {
 			if tc.errorExpected {
 				require.Error(t, err)
 				assert.Equal(t, variantIndex{}, actual)
+
 				if tc.expectedError != nil {
-					assert.ErrorIs(t, err, tc.expectedError)
+					require.ErrorIs(t, err, tc.expectedError)
 				}
 
 				return

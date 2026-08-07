@@ -812,8 +812,8 @@ func TestRoundTripperStoreResponsePublishesImmutableResponseEntries(t *testing.T
 	rt := &RoundTripper{}
 
 	// WHEN
-	rt.storeResponse(cacheReq, newResponse("response-a"))
-	rt.storeResponse(cacheReq, newResponse("response-b"))
+	rt.storeResponse(cacheReq, newResponse("response-a")) //nolint:bodyclose
+	rt.storeResponse(cacheReq, newResponse("response-b")) //nolint:bodyclose
 
 	// THEN
 	require.Len(t, responseKeys, 2)
