@@ -170,6 +170,7 @@ func (rt *RoundTripper) lookupCachedResponse(req cacheableRequest) (*http.Respon
 
 func (rt *RoundTripper) storeResponse(req cacheableRequest, resp *http.Response) {
 	now := time.Now()
+
 	metadata, ok := rt.responseCacheMetadata(req, resp, now)
 	if !ok {
 		return
@@ -186,6 +187,7 @@ func (rt *RoundTripper) storeResponse(req cacheableRequest, resp *http.Response)
 	}
 
 	selector := req.selector(metadata.Vary)
+
 	responseID, err := newResponseID()
 	if err != nil {
 		return

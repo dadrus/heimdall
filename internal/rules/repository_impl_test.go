@@ -1637,9 +1637,9 @@ func TestRepositoryFindRule(t *testing.T) {
 				source := rule.RuleSet{ID: "1"}
 
 				specific := &ruleImpl{
-					id:    "specific",
+					id:     "specific",
 					source: source,
-					hash:  []byte{1},
+					hash:   []byte{1},
 				}
 				specific.routes = append(specific.routes, &routeImpl{
 					rule: specific,
@@ -1651,9 +1651,9 @@ func TestRepositoryFindRule(t *testing.T) {
 				})
 
 				generic := &ruleImpl{
-					id:    "generic",
+					id:     "generic",
 					source: source,
-					hash:  []byte{2},
+					hash:   []byte{2},
 				}
 				generic.routes = append(generic.routes, &routeImpl{
 					rule: generic,
@@ -1704,9 +1704,9 @@ func TestRepositoryFindRule(t *testing.T) {
 				source := rule.RuleSet{ID: "1"}
 
 				specific := &ruleImpl{
-					id:    "specific",
+					id:     "specific",
 					source: source,
-					hash:  []byte{1},
+					hash:   []byte{1},
 				}
 				specific.routes = append(specific.routes, &routeImpl{
 					rule: specific,
@@ -1718,9 +1718,9 @@ func TestRepositoryFindRule(t *testing.T) {
 				})
 
 				generic := &ruleImpl{
-					id:    "generic",
+					id:     "generic",
 					source: source,
-					hash:  []byte{2},
+					hash:   []byte{2},
 				}
 				generic.routes = append(generic.routes, &routeImpl{
 					rule: generic,
@@ -1767,9 +1767,9 @@ func TestRepositoryFindRule(t *testing.T) {
 				// Structurally most specific route. It matches the path, but must
 				// be rejected because the request uses GET.
 				specific := &ruleImpl{
-					id:    "specific",
+					id:     "specific",
 					source: source,
-					hash:  []byte{1},
+					hash:   []byte{1},
 				}
 				specific.routes = append(specific.routes, &routeImpl{
 					rule: specific,
@@ -1783,9 +1783,9 @@ func TestRepositoryFindRule(t *testing.T) {
 				// This route structurally matches, but its path parameter
 				// constraint does not: the actual tenant is "confidential".
 				constrained := &ruleImpl{
-					id:    "constrained",
+					id:     "constrained",
 					source: source,
-					hash:  []byte{2},
+					hash:   []byte{2},
 				}
 				constrained.routes = append(constrained.routes, &routeImpl{
 					rule: constrained,
@@ -1803,9 +1803,9 @@ func TestRepositoryFindRule(t *testing.T) {
 				// This is the rule that should be selected after both more
 				// specific alternatives have been rejected.
 				fallback := &ruleImpl{
-					id:    "fallback",
+					id:     "fallback",
 					source: source,
-					hash:  []byte{3},
+					hash:   []byte{3},
 				}
 				fallback.routes = append(fallback.routes, &routeImpl{
 					rule:    fallback,

@@ -61,6 +61,7 @@ func requestTargetID(req *http.Request) string {
 	// shared response.
 	authorization := strings.TrimSpace(req.Header.Get("Authorization"))
 	key.writeBool(authorization != "")
+
 	if authorization != "" {
 		key.writeString(authorization)
 	}
@@ -70,12 +71,14 @@ func requestTargetID(req *http.Request) string {
 
 func requestVariantSelector(req *http.Request, vary []string) string {
 	key := newKeyHash("request-variant-selector")
+
 	for _, field := range vary {
 		values, present := req.Header[field]
 
 		key.writeString(field)
 		key.writeBool(present)
 		key.writeUint64(uint64(len(values)))
+
 		for _, value := range values {
 			key.writeString(value)
 		}

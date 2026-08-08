@@ -174,6 +174,7 @@ func FuzzEscapedPath(f *testing.F) {
 		// Existing percent-encoded octets must never disappear or have their hex
 		// casing rewritten. The repair path may add new uppercase octets.
 		before := countEncodedOctets(rawPath)
+
 		after := countEncodedOctets(result)
 		for octet, count := range before {
 			require.GreaterOrEqual(t, after[octet], count, "octet", octet)

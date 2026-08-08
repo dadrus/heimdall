@@ -613,6 +613,7 @@ func TestRoundTripperRoundTrip(t *testing.T) {
 				if status == 0 {
 					status = http.StatusOK
 				}
+
 				w.WriteHeader(status)
 
 				responseBody := "foobar"
@@ -676,8 +677,10 @@ func TestRoundTripperRoundTripWithoutCacheInContext(t *testing.T) {
 
 	// GIVEN
 	var originHits atomic.Int32
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		hit := originHits.Add(1)
+
 		w.Header().Set("Cache-Control", "max-age=60")
 		_, _ = fmt.Fprintf(w, "origin-hit-%d", hit)
 	}))
@@ -687,7 +690,7 @@ func TestRoundTripperRoundTripWithoutCacheInContext(t *testing.T) {
 		Transport: http.DefaultTransport,
 	}}
 
-	var bodies []string
+	bodies := make([]string, 0, 2)
 
 	// WHEN
 	for range 2 {
@@ -719,6 +722,7 @@ func newStatefulCacheMock(t *testing.T) *cachemocks.CacheMock {
 
 	cch := cachemocks.NewCacheMock(t)
 	entries := make(map[string]cachedValue)
+
 	var mutex sync.Mutex
 
 	cch.EXPECT().Get(mock.Anything, mock.AnythingOfType("string")).
@@ -774,8 +778,11 @@ func TestRoundTripperStoreResponsePublishesImmutableResponseEntries(t *testing.T
 
 	cacheReq := newCacheableRequest(req)
 	selector := cacheReq.selector(nil)
-	var responseKeys []string
-	var indexDumps [][]byte
+
+	var (
+		responseKeys []string
+		indexDumps   [][]byte
+	)
 
 	cch.EXPECT().Get(mock.Anything, cacheReq.indexKey).
 		Return(nil, ErrNoCacheEntry).
@@ -894,6 +901,7 @@ func TestRoundTripperLookupCachedResponseUsesIndexedResponseID(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
+
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
@@ -911,6 +919,7 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 
 		// GIVEN
 		var originHits atomic.Int32
+
 		cch := cachemocks.NewCacheMock(t)
 		cch.EXPECT().Get(mock.Anything, mock.AnythingOfType("string")).
 			Return(nil, ErrNoCacheEntry).
@@ -940,6 +949,7 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 
 		// THEN
 		require.NoError(t, err)
+
 		defer resp.Body.Close()
 
 		body, err := io.ReadAll(resp.Body)
@@ -953,6 +963,7 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 
 		// GIVEN
 		var originHits atomic.Int32
+
 		cch := cachemocks.NewCacheMock(t)
 		cch.EXPECT().Get(mock.Anything, mock.AnythingOfType("string")).
 			Return(nil, backendErr).
@@ -982,6 +993,7 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 
 		// THEN
 		require.NoError(t, err)
+
 		defer resp.Body.Close()
 
 		body, err := io.ReadAll(resp.Body)
@@ -1033,6 +1045,7 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 
 		// THEN
 		require.NoError(t, err)
+
 		defer resp.Body.Close()
 
 		body, err := io.ReadAll(resp.Body)
@@ -1091,6 +1104,7 @@ func TestRoundTripperRoundTripHandlesCacheFailures(t *testing.T) {
 
 		// THEN
 		require.NoError(t, err)
+
 		defer resp.Body.Close()
 
 		body, err := io.ReadAll(resp.Body)

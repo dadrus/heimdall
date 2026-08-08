@@ -49,6 +49,7 @@ type variantGroup struct {
 
 func (group variantGroup) mostRecentMatch(selector string, now int64) (variant, bool) {
 	var match variant
+
 	found := false
 
 	for _, entry := range group.Entries {

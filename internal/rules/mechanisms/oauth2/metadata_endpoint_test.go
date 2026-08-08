@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,6 +32,7 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	endpointtestsupport "github.com/dadrus/heimdall/internal/rules/endpoint/testsupport"
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 )
 
@@ -67,8 +67,8 @@ func TestMetadataEndpointInit(t *testing.T) {
 					},
 				},
 			},
-			expectedMethod:    http.MethodPatch,
-			expectedAccept:    "application/custom+json",
+			expectedMethod: http.MethodPatch,
+			expectedAccept: "application/custom+json",
 			expectedHTTPCache: &endpoint.HTTPCache{
 				Enabled:    false,
 				DefaultTTL: time.Minute,

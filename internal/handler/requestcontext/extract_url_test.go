@@ -187,6 +187,7 @@ func TestExtractURL(t *testing.T) {
 
 				parsed, err := url.ParseRequestURI("/admin/%2e%2e%2fpublic/x|")
 				require.NoError(t, err)
+
 				req.URL = parsed
 			},
 			assert: func(t *testing.T, extracted url.URL) {
@@ -203,6 +204,7 @@ func TestExtractURL(t *testing.T) {
 
 				parsed, err := url.ParseRequestURI("/files/a%2Fb|")
 				require.NoError(t, err)
+
 				req.URL = parsed
 			},
 			assert: func(t *testing.T, extracted url.URL) {
