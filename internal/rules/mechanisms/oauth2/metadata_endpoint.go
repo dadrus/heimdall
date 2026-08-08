@@ -45,8 +45,6 @@ type MetadataEndpoint struct {
 }
 
 func (e *MetadataEndpoint) Get(ctx context.Context, args map[string]any) (ServerMetadata, error) {
-	e.init()
-
 	req, err := e.CreateRequest(ctx, nil, args)
 	if err != nil {
 		return ServerMetadata{}, errorchain.NewWithMessage(pipeline.ErrInternal,
@@ -86,7 +84,7 @@ func (e *MetadataEndpoint) Get(ctx context.Context, args map[string]any) (Server
 	return sm, nil
 }
 
-func (e *MetadataEndpoint) init() {
+func (e *MetadataEndpoint) Init() {
 	e.SetHeader("Accept", "application/json")
 
 	if len(e.Method) == 0 {

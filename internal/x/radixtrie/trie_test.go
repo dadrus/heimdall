@@ -465,22 +465,123 @@ func TestTreeFindEntryWildcardWithCaptures(t *testing.T) { //nolint: gocyclo
 func TestTrieFindEntryWithBacktracking(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	tree := New[string]()
+	type route struct {
+		host  string
+		path  string
+		value string
+	}
 
-	err := tree.Add("*.example.com", "/date/:year/abc", "first")
-	require.NoError(t, err)
+	for uc, tc := range map[string]struct {
+		routes    []route
+		host      string
+		path      string
+		matcher   LookupMatcherFunc[string]
+		expValue  string
+		expParams map[string]string
+		expErr    error
+	}{
+		"falls back to less specific host": {
+			routes: []route{
+				{
+					value: "first",
+					host:  "*.example.com",
+					path:  "/date/:year/abc",
+				},
+				{
+					value: "second",
+					host:  "*",
+					path:  "/date/**",
+				},
+			},
+			host: "foo.bar.example.com",
+			path: "/date/2024/abc",
+			matcher: func(values string, _, _ []string) bool {
+				return values != "first"
+			},
+			expValue:  "second",
+			expParams: map[string]string{},
+		},
+		"preserves captures when falling back to wildcard path": {
+			routes: []route{
+				{
+					value: "first",
+					host:  "*",
+					path:  "/:tenant/public",
+				},
+				{
+					value: "second",
+					host:  "*",
+					path:  "/:tenant/:resource",
+				},
+			},
+			host: "example.com",
+			path: "/confidential/public",
+			matcher: func(value string, keys, values []string) bool {
+				return value == "second" &&
+					slices.Equal(keys, []string{"tenant", "resource"}) &&
+					slices.Equal(values, []string{"confidential", "public"})
+			},
+			expValue: "second",
+			expParams: map[string]string{
+				"tenant":   "confidential",
+				"resource": "public",
+			},
+		},
+		"does not match constraint against shifted capture": {
+			routes: []route{
+				{
+					value: "first",
+					host:  "*",
+					path:  "/:tenant/public",
+				},
+				{
+					value: "second",
+					host:  "*",
+					path:  "/:tenant/:resource",
+				},
+			},
+			host: "example.com",
+			path: "/confidential/public",
+			matcher: func(value string, keys, values []string) bool {
+				if value != "second" {
+					return false
+				}
 
-	err = tree.Add("*", "/date/**", "second")
-	require.NoError(t, err)
+				idx := slices.Index(keys, "tenant")
 
-	// WHEN
-	entry, err := tree.FindEntry("foo.bar.example.com", "/date/2024/abc",
-		LookupMatcherFunc[string](func(value string, _, _ []string) bool { return value != "first" }))
+				return idx >= 0 &&
+					idx < len(values) &&
+					values[idx] == "public"
+			},
+			expErr: ErrNotFound,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			tree := New[string]()
 
-	// THEN
-	require.NoError(t, err)
-	assert.Equal(t, "second", entry.Value)
+			for _, route := range tc.routes {
+				err := tree.Add(route.host, route.path, route.value)
+				require.NoError(t, err)
+			}
+
+			// WHEN
+			entry, err := tree.FindEntry(tc.host, tc.path, tc.matcher)
+
+			// THEN
+			if tc.expErr != nil {
+				require.ErrorIs(t, err, tc.expErr)
+				assert.Nil(t, entry)
+
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, entry)
+			assert.Equal(t, tc.expValue, entry.Value)
+			assert.Equal(t, tc.expParams, entry.Parameters)
+		})
+	}
 }
 
 func TestTrieAddHostPatternWithNamedFreeWildcard(t *testing.T) {

@@ -100,3 +100,108 @@ func FuzzPathUnescape(f *testing.F) {
 		)
 	})
 }
+
+func FuzzEscapedPath(f *testing.F) {
+	for _, seed := range []struct {
+		path    string
+		rawPath string
+	}{
+		{path: ""},
+		{path: "."},
+		{path: ".."},
+		{path: "/api/v1/resource"},
+		{path: "/api/a b|c"},
+		{rawPath: "/api/v1/resource"},
+		{rawPath: "/api/%61dmin"},
+		{rawPath: "/admin/%2e%2e%2fpublic/x|"},
+		{rawPath: "/files/a%2Fb|"},
+		{rawPath: "/proxy/https%3A%2F%2Fexample.com|"},
+		{rawPath: "/api/%ZZ/%2/%"},
+		{rawPath: "%25%36%31"},
+		{rawPath: "\x00%00\xff"},
+	} {
+		f.Add(seed.path, seed.rawPath)
+	}
+
+	f.Fuzz(func(t *testing.T, path, rawPath string) {
+		if rawPath != "" {
+			// Build a consistent URL value even for RawPath strings that the
+			// standard library considers malformed. EscapedPath repairs those
+			// literal bytes while preserving all valid encoded octets.
+			path = PathUnescape(rawPath, UnescapeOptions{Mode: UnescapeAll})
+		}
+
+		value := &url.URL{Path: path, RawPath: rawPath}
+		result := EscapedPath(value)
+
+		// Without RawPath the helper must have exactly the standard-library
+		// semantics.
+		if rawPath == "" {
+			require.Equal(t, value.EscapedPath(), result)
+		}
+
+		// A RawPath already accepted by net/url must be returned byte-for-byte.
+		if rawPath != "" && value.EscapedPath() == rawPath {
+			require.Equal(t, rawPath, result)
+		}
+
+		// Repairing RawPath can only preserve or expand it: every invalid
+		// literal byte is replaced by one three-byte percent sequence. When
+		// RawPath is absent, result is derived from Path instead.
+		if rawPath != "" {
+			require.GreaterOrEqual(t, len(result), len(rawPath))
+		}
+
+		decoded, err := url.PathUnescape(result)
+		require.NoError(t, err)
+		require.Equal(t, path, decoded)
+
+		// The returned value must be a RawPath net/url accepts, and processing it
+		// again must be idempotent.
+		canonical := &url.URL{Path: path, RawPath: result}
+		require.Equal(t, result, canonical.EscapedPath())
+		require.Equal(t, result, EscapedPath(canonical))
+
+		// When RawPath is present, repairing it must preserve the
+		// security-relevant encoded-slash and dot-segment semantics. Without
+		// RawPath there is no encoded source representation to compare against;
+		// the helper delegates to net/url, which is asserted above.
+		if rawPath != "" {
+			require.Equal(t, ContainsEncodedSlash(rawPath), ContainsEncodedSlash(result))
+			require.Equal(t, PathHasDotSegments(rawPath), PathHasDotSegments(result))
+		}
+
+		// Existing percent-encoded octets must never disappear or have their hex
+		// casing rewritten. The repair path may add new uppercase octets.
+		before := countEncodedOctets(rawPath)
+
+		after := countEncodedOctets(result)
+		for octet, count := range before {
+			require.GreaterOrEqual(t, after[octet], count, "octet", octet)
+		}
+
+		// Literal slash and dot bytes are valid path bytes, so repairing cannot
+		// create additional encoded slash or dot octets. Exact counts here guard
+		// the encodings used by both path-security checks.
+		for _, octet := range []string{"%2F", "%2f", "%2E", "%2e"} {
+			require.Equal(t, before[octet], after[octet], "octet", octet)
+		}
+	})
+}
+
+func countEncodedOctets(value string) map[string]int {
+	result := make(map[string]int)
+
+	for idx := 0; idx+2 < len(value); idx++ {
+		if value[idx] != '%' ||
+			!isHexDigit(value[idx+1]) ||
+			!isHexDigit(value[idx+2]) {
+			continue
+		}
+
+		result[value[idx:idx+3]]++
+		idx += 2
+	}
+
+	return result
+}

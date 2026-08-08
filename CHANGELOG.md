@@ -1,7 +1,39 @@
 # Changelog
 
+## [0.17.20](https://github.com/dadrus/heimdall/compare/v0.17.19...v0.17.20) (2026-08-07)
+
+
+### Bug Fixes
+
+* Canonicalized request header names in Envoy gRPC ext_authz ([#3423](https://github.com/dadrus/heimdall/issues/3423)) ([a6eb158](https://github.com/dadrus/heimdall/commit/a6eb15823ebb9fb8d80953d0dd8b2119d4243346))
+* HTTP cache updated to honor `Vary` response headers ([#3418](https://github.com/dadrus/heimdall/issues/3418)) ([17021db](https://github.com/dadrus/heimdall/commit/17021db73a01fbcacf5e0f32dad1bf9620b3ad0d))
+* Percent-encoded path components preserved during request normalization ([#3421](https://github.com/dadrus/heimdall/issues/3421)) ([f8243a1](https://github.com/dadrus/heimdall/commit/f8243a11f679d6464168105f238103a4fdadee89))
+* Preserve path captures during route lookup backtracking ([#3419](https://github.com/dadrus/heimdall/issues/3419)) ([a9b6ea0](https://github.com/dadrus/heimdall/commit/a9b6ea068570bff767938af8f7129035638cb651))
+* Prevented potential crashes under concurrent access during OAuth2 metadata endpoint initialization ([#3416](https://github.com/dadrus/heimdall/issues/3416)) ([2101c2f](https://github.com/dadrus/heimdall/commit/2101c2f01505b69c5538cde551795fada6ac446c))
+* Removed implicit request body token extraction from JWT and OAuth2 authenticators ([#3425](https://github.com/dadrus/heimdall/issues/3425)) ([2597a0e](https://github.com/dadrus/heimdall/commit/2597a0ecfa43a532a4e2045b76846f8b42f7a820))
+
+
+### Dependencies
+
+* update google.golang.org/protobuf digest to 644d026 ([#3413](https://github.com/dadrus/heimdall/issues/3413)) ([0a54851](https://github.com/dadrus/heimdall/commit/0a5485179cb68eb0ba328f9945eb2401eee8c3e7))
+* update module github.com/knadh/koanf/parsers/yaml to v1.1.1 ([#3398](https://github.com/dadrus/heimdall/issues/3398)) ([9c34664](https://github.com/dadrus/heimdall/commit/9c34664036d6ee78497f3d754e6dd9097f392a4b))
+* update module github.com/knadh/koanf/providers/confmap to v1.0.1 ([#3399](https://github.com/dadrus/heimdall/issues/3399)) ([8c40185](https://github.com/dadrus/heimdall/commit/8c401851ab86bd4bc4cbff8891262305341ff468))
+* update module github.com/knadh/koanf/providers/env/v2 to v2.0.1 ([#3400](https://github.com/dadrus/heimdall/issues/3400)) ([bb7d902](https://github.com/dadrus/heimdall/commit/bb7d902a741deeff475c0ac71986b7b9e8f07ae1))
+* update module github.com/knadh/koanf/providers/rawbytes to v1.0.1 ([#3401](https://github.com/dadrus/heimdall/issues/3401)) ([5e61595](https://github.com/dadrus/heimdall/commit/5e61595baa68fb9320da8d602d9d71c6fad507b1))
+* update module github.com/knadh/koanf/providers/structs to v1.0.1 ([#3402](https://github.com/dadrus/heimdall/issues/3402)) ([7f0caf3](https://github.com/dadrus/heimdall/commit/7f0caf331bf71d6d8ef4815a7b9306a5efd91e3a))
+* update module github.com/knadh/koanf/v2 to v2.3.6 ([#3403](https://github.com/dadrus/heimdall/issues/3403)) ([1745ac3](https://github.com/dadrus/heimdall/commit/1745ac305749f1f1d2f7211c99d1625305d446d3))
+* update module github.com/santhosh-tekuri/jsonschema/v6 to v6.0.3 ([#3414](https://github.com/dadrus/heimdall/issues/3414)) ([601d89c](https://github.com/dadrus/heimdall/commit/601d89cdbef920b6c48c3126d71cf718218a8e4f))
+* update opentelemetry-go monorepo to v1.45.0 ([#3395](https://github.com/dadrus/heimdall/issues/3395)) ([1b5d96b](https://github.com/dadrus/heimdall/commit/1b5d96b151a6d4caf0a02161dc5ce72d9a13d738))
+* update opentelemetry-go-contrib monorepo to v0.70.0 ([#3404](https://github.com/dadrus/heimdall/issues/3404)) ([68024ae](https://github.com/dadrus/heimdall/commit/68024ae236d857dbdfc91e76167f009a1514e145))
+
 ## [0.17.19](https://github.com/dadrus/heimdall/compare/v0.17.18...v0.17.19) (2026-08-03)
 
+In addition to updated dependencies, this release addresses the following vulnerabilities:
+
+* Missing duplicate-slash normalization, which may lead to policy bypass ([GHSA-647x-xcgh-6rpq](https://github.com/dadrus/heimdall/security/advisories/GHSA-647x-xcgh-6rpq)). Fixed in dc5cd9f.
+* Percent-encoded unreserved path characters may lead to authorization bypass as well ([GHSA-j7gq-v6c3-938j](https://github.com/dadrus/heimdall/security/advisories/GHSA-j7gq-v6c3-938j)). Fixed in 4d1705b.
+
+Please check whether you are affected and update immediately!
 
 ### Bug Fixes
 
