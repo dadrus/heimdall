@@ -17,6 +17,7 @@
 package urlx
 
 import (
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -156,6 +157,93 @@ func BenchmarkPathUnescape(b *testing.B) {
 						_ = PathUnescape(tc.value, mode.opts)
 					}
 				})
+			}
+		})
+	}
+}
+
+func BenchmarkEscapedPath(b *testing.B) {
+	longPlainPath := "/" + strings.Repeat("segment/", 32) + "resource"
+	longDecodedPath := "/" + strings.Repeat("admin/", 32) + "users"
+	longEncodedPath := "/" + strings.Repeat("%61dmin/", 32) + "users"
+
+	for _, tc := range []struct {
+		name  string
+		value *url.URL
+	}{
+		{
+			name: "no_raw_path_short",
+			value: &url.URL{
+				Path: "/api/v1/resource",
+			},
+		},
+		{
+			name: "no_raw_path_long",
+			value: &url.URL{
+				Path: longPlainPath,
+			},
+		},
+		{
+			name: "valid_raw_path_plain",
+			value: &url.URL{
+				Path:    "/api/v1/resource",
+				RawPath: "/api/v1/resource",
+			},
+		},
+		{
+			name: "valid_raw_path_encoded_short",
+			value: &url.URL{
+				Path:    "/files/a/b",
+				RawPath: "/files/a%2Fb",
+			},
+		},
+		{
+			name: "valid_raw_path_encoded_long",
+			value: &url.URL{
+				Path:    longDecodedPath,
+				RawPath: longEncodedPath,
+			},
+		},
+		{
+			name: "repair_encoded_dot_segments",
+			value: &url.URL{
+				Path:    "/admin/../public/x|",
+				RawPath: "/admin/%2e%2e%2fpublic/x|",
+			},
+		},
+		{
+			name: "repair_encoded_slash",
+			value: &url.URL{
+				Path:    "/files/a/b|",
+				RawPath: "/files/a%2Fb|",
+			},
+		},
+		{
+			name: "repair_multiple_unsafe_bytes",
+			value: &url.URL{
+				Path:    "/api/a b|c",
+				RawPath: "/api/a b|c",
+			},
+		},
+		{
+			name: "repair_raw_utf8",
+			value: &url.URL{
+				Path:    "/café",
+				RawPath: "/café",
+			},
+		},
+	} {
+		b.Run(tc.name, func(b *testing.B) {
+			inputLength := len(tc.value.RawPath)
+			if inputLength == 0 {
+				inputLength = len(tc.value.Path)
+			}
+
+			b.ReportAllocs()
+			b.SetBytes(int64(inputLength))
+
+			for b.Loop() {
+				_ = EscapedPath(tc.value)
 			}
 		})
 	}

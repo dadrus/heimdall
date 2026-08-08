@@ -243,8 +243,7 @@ config:
 ====
 
 == OAuth2 Introspection
-
-This authenticator handles requests that have Bearer token in the HTTP Authorization header (`Authorization: Bearer <token>`), in the `access_token` query parameter or the `access_token` body parameter (latter, if the body is of `application/x-www-form-urlencoded` MIME type). It then uses https://datatracker.ietf.org/doc/html/rfc7662[OAuth 2.0 Token Introspection] endpoint to check if the token is valid. The validation includes at least the verification of the status and the time validity. That is if the token is still active and whether it has been issued in an acceptable time frame. Latter can be adjusted by specifying a leeway. All other validation options can and should be configured.
+This authenticator handles requests that have an access token in the HTTP Authorization header (`Authorization: Bearer <token>`), a query parameter or, if explicitly configured, a body parameter. It then uses https://datatracker.ietf.org/doc/html/rfc7662[OAuth 2.0 Token Introspection] endpoint to check if the token is valid. The validation includes at least the verification of the status and the time validity. That is if the token is still active and whether it has been issued in an acceptable time frame. Latter can be adjusted by specifying a leeway. All other validation options can and should be configured.
 
 To enable the usage of this authenticator, you have to set the `type` property to `oauth2_introspection`.
 
@@ -288,7 +287,7 @@ Controls whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc723
 
 * *`token_source`*: _link:{{< relref "/docs/configuration/types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
 +
-Where to get the access token from. Defaults to retrieve it from the `Authorization` header, the `access_token` query parameter or the `access_token` body parameter (latter, if the body is of `application/x-www-form-urlencoded` MIME type).
+Where to get the access token from. Defaults to retrieve it from the `Authorization` header or the `access_token` query parameter.
 
 * *`assertions`*: _link:{{< relref "/docs/configuration/types.adoc#_assertions" >}}[Assertions]_ (optional, overridable)
 +
@@ -346,7 +345,7 @@ If the `iss` claim of the issued JWT is set to `\https://my-auth-server.com/real
 
 == JWT
 
-As the link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator, this authenticator handles requests that have a Bearer token in the `Authorization` header, in a different header, a query parameter or a body parameter as well. Unlike the OAuth2 Introspection authenticator it expects the token to be a JSON Web Token (JWT) and verifies it according https://www.rfc-editor.org/rfc/rfc7519#section-7.2[RFC 7519, Section 7.2]. It does however not support encrypted payloads and nested JWTs. In addition to this, validation includes the verification of the time validity. Latter can be adjusted by specifying a leeway. All other validation options can and should be configured.
+As the link:{{< relref "#_oauth2_introspection">}}[OAuth2 Introspection] authenticator, this authenticator handles requests that have a Bearer token in the `Authorization` header, in a different header, a query parameter or, if explicitly configured, a body parameter. Unlike the OAuth2 Introspection authenticator it expects the token to be a JSON Web Token (JWT) and verifies it according https://www.rfc-editor.org/rfc/rfc7519#section-7.2[RFC 7519, Section 7.2]. It does however not support encrypted payloads and nested JWTs. In addition to this, validation includes the verification of the time validity. Latter can be adjusted by specifying a leeway. All other validation options can and should be configured.
 
 To enable the usage of this authenticator, you have to set the `type` property to `jwt`.
 
@@ -390,7 +389,7 @@ Controls whether HTTP caching according to https://www.rfc-editor.org/rfc/rfc723
 
 * *`jwt_source`*: _link:{{< relref "/docs/configuration/types.adoc#_authentication_data_source" >}}[Authentication Data Source]_ (optional, not overridable)
 +
-Where to get the access token from. Defaults to retrieve it from the `Authorization` header, the `access_token` query parameter or the `access_token` body parameter (latter, if the body is of `application/x-www-form-urlencoded` MIME type).
+Where to get the access token from. Defaults to retrieve it from the `Authorization` header or the `access_token` query parameter.
 
 * *`assertions`*: _link:{{< relref "/docs/configuration/types.adoc#_assertions" >}}[Assertions]_ (dependant, overridable)
 +

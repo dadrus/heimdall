@@ -195,6 +195,16 @@ func TestRequestContextURL(t *testing.T) {
 			rawPath:     "/bar/%2e.%2ftest/foo/%5Bval%5D",
 			rawQuery:    "bar=foo",
 		},
+		"encoded dot segments are retained if another byte requires escaping": {
+			requestPath: "/admin/%2e%2e%2fpublic/x|",
+			path:        "/admin/../public/x|",
+			rawPath:     "/admin/%2e%2e%2fpublic/x%7C",
+		},
+		"encoded slash is retained if another byte requires escaping": {
+			requestPath: "/files/a%2Fb|",
+			path:        "/files/a/b|",
+			rawPath:     "/files/a%2Fb%7C",
+		},
 		"trailing slash": {
 			requestPath: "/bar/baz/",
 			path:        "/bar/baz/",
@@ -231,6 +241,7 @@ func TestRequestContextURL(t *testing.T) {
 
 			assert.Equal(t, tc.path, ctx.Request().URL.Path)
 			assert.Equal(t, tc.rawPath, ctx.Request().URL.RawPath)
+			assert.Equal(t, tc.rawPath, ctx.Request().URL.EscapedPath())
 			assert.Equal(t, tc.rawQuery, ctx.Request().URL.RawQuery)
 		})
 	}
@@ -618,4 +629,63 @@ func TestRequestContextReset(t *testing.T) {
 	require.NotNil(t, ctx.hmdlReq.ClientIPAddresses)
 	require.Empty(t, ctx.hmdlReq.ClientIPAddresses)
 	require.Equal(t, 10, cap(ctx.hmdlReq.ClientIPAddresses))
+}
+
+func TestRequestContextHeader(t *testing.T) {
+	t.Parallel()
+
+	cf := newContextFactory()
+
+	for uc, tc := range map[string]struct {
+		name     string
+		expected string
+	}{
+		"canonical header name": {
+			name:     "X-Foo",
+			expected: "bar",
+		},
+		"lowercase header name": {
+			name:     "x-foo",
+			expected: "bar",
+		},
+		"uppercase header name": {
+			name:     "X-FOO",
+			expected: "bar",
+		},
+		"mixed case header name": {
+			name:     "x-FoO",
+			expected: "bar",
+		},
+		"unknown header": {
+			name:     "X-Bar",
+			expected: "",
+		},
+		"lowercase host header": {
+			name:     "host",
+			expected: "foo.bar",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			ctx := cf.Create(
+				t.Context(),
+				&envoy_auth.CheckRequest{
+					Attributes: &envoy_auth.AttributeContext{
+						Request: &envoy_auth.AttributeContext_Request{
+							Http: &envoy_auth.AttributeContext_HttpRequest{
+								Host: "FoO.Bar",
+								Headers: map[string]string{
+									"x-foo": "bar",
+								},
+							},
+						},
+					},
+				},
+			)
+			defer cf.Destroy(ctx)
+
+			assert.Equal(t, tc.expected, ctx.Request().Header(tc.name))
+		})
+	}
 }
