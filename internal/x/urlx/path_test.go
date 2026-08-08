@@ -18,9 +18,11 @@ package urlx
 
 import (
 	"fmt"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPathHasDotSegments(t *testing.T) {
@@ -366,5 +368,93 @@ func TestPathUnescapeSinglePass(t *testing.T) {
 				format,
 			)
 		}
+	}
+}
+
+func TestEscapedPath(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		value    *url.URL
+		expected string
+	}{
+		"without raw path": {
+			value: &url.URL{
+				Path: "/api/v1/resource",
+			},
+			expected: "/api/v1/resource",
+		},
+		"without raw path requiring escaping": {
+			value: &url.URL{
+				Path: "/api/a b",
+			},
+			expected: "/api/a%20b",
+		},
+		"preserves valid encoded slash": {
+			value: &url.URL{
+				Path:    "/files/a/b",
+				RawPath: "/files/a%2Fb",
+			},
+			expected: "/files/a%2Fb",
+		},
+		"preserves valid encoded dot segments": {
+			value: &url.URL{
+				Path:    "/admin/../public/x",
+				RawPath: "/admin/%2e%2e%2fpublic/x",
+			},
+			expected: "/admin/%2e%2e%2fpublic/x",
+		},
+		"escapes invalid byte while preserving encoded dot segments": {
+			value: &url.URL{
+				Path:    "/admin/../public/x|",
+				RawPath: "/admin/%2e%2e%2fpublic/x|",
+			},
+			expected: "/admin/%2e%2e%2fpublic/x%7C",
+		},
+		"escapes invalid byte while preserving encoded slash": {
+			value: &url.URL{
+				Path:    "/files/a/b|",
+				RawPath: "/files/a%2Fb|",
+			},
+			expected: "/files/a%2Fb%7C",
+		},
+		"escapes multiple invalid bytes": {
+			value: &url.URL{
+				Path:    "/api/a b|c",
+				RawPath: "/api/a b|c",
+			},
+			expected: "/api/a%20b%7Cc",
+		},
+		"escapes malformed percent sequence": {
+			value: &url.URL{
+				Path:    "/api/%ZZ/%2",
+				RawPath: "/api/%ZZ/%2",
+			},
+			expected: "/api/%25ZZ/%252",
+		},
+		"escapes raw UTF-8 bytes": {
+			value: &url.URL{
+				Path:    "/café",
+				RawPath: "/café",
+			},
+			expected: "/caf%C3%A9",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			result := EscapedPath(tc.value)
+			assert.Equal(t, tc.expected, result)
+
+			decoded, err := url.PathUnescape(result)
+			require.NoError(t, err)
+			assert.Equal(t, tc.value.Path, decoded)
+
+			// The produced value must be a valid RawPath hint. Otherwise a
+			// later stdlib EscapedPath call could discard it again.
+			normalized := &url.URL{
+				Path:    tc.value.Path,
+				RawPath: result,
+			}
+			assert.Equal(t, result, normalized.EscapedPath())
+		})
 	}
 }

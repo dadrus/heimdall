@@ -169,11 +169,10 @@ assertions:
 				assert.Equal(t, "application/json", md.JWKSEndpoint.Headers["Accept"].String())
 
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 4)
+				assert.Len(t, auth.ads, 3)
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"})
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, auth.a.Audiences)
@@ -227,11 +226,10 @@ cache_ttl: 5s`),
 				assert.Equal(t, "application/json", md.JWKSEndpoint.Headers["Accept"].String())
 
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 4)
+				assert.Len(t, auth.ads, 3)
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"})
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, auth.a.Audiences)
@@ -466,11 +464,10 @@ cache_ttl: 5s`),
 				require.False(t, ok)
 
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 4)
+				assert.Len(t, auth.ads, 3)
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"})
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, auth.a.Audiences)
@@ -546,11 +543,10 @@ cache_ttl: 5s`),
 				assert.Equal(t, "https://example.com/token", cc.TokenURL)
 
 				assert.IsType(t, extractors.CompositeExtractStrategy{}, auth.ads)
-				assert.Len(t, auth.ads, 4)
+				assert.Len(t, auth.ads, 3)
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"})
 				assert.Contains(t, auth.ads, extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"})
 				assert.Contains(t, auth.ads, extractors.QueryParameterExtractStrategy{Name: "access_token"})
-				assert.Contains(t, auth.ads, extractors.BodyParameterExtractStrategy{Name: "access_token"})
 
 				require.NoError(t, auth.a.ScopesMatcher.Match([]string{}))
 				assert.Empty(t, auth.a.Audiences)
@@ -3343,6 +3339,10 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 
 			ctx := pipelinemocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
+
+			if metadataEndpoint, ok := tc.authenticator.r.(*oauth2.MetadataEndpoint); ok {
+				metadataEndpoint.Init()
+			}
 
 			configureMocks(t, ctx, cch, ads, tc.authenticator)
 			instructServer(t)

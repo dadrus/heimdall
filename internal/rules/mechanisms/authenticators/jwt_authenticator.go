@@ -190,14 +190,17 @@ func newJwtAuthenticator(app app.Context, name string, rawConfig map[string]any)
 				extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "Bearer"},
 				extractors.HeaderValueExtractStrategy{Name: "Authorization", Scheme: "DPoP"},
 				extractors.QueryParameterExtractStrategy{Name: "access_token"},
-				extractors.BodyParameterExtractStrategy{Name: "access_token"},
 			}
 		},
 		func() extractors.CompositeExtractStrategy { return conf.AuthDataSource },
 	)
 
 	resolver := x.IfThenElseExec(conf.MetadataEndpoint != nil,
-		func() oauth2.ServerMetadataResolver { return conf.MetadataEndpoint },
+		func() oauth2.ServerMetadataResolver {
+			conf.MetadataEndpoint.Init()
+
+			return conf.MetadataEndpoint
+		},
 		func() oauth2.ServerMetadataResolver {
 			ep := conf.JWKSEndpoint
 			ep.SetHeader("Accept", "application/json")

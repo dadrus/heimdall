@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/goccy/go-json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,6 +35,61 @@ import (
 	endpointtestsupport "github.com/dadrus/heimdall/internal/rules/endpoint/testsupport"
 	"github.com/dadrus/heimdall/internal/x"
 )
+
+func TestMetadataEndpointInit(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		ep                *MetadataEndpoint
+		expectedMethod    string
+		expectedAccept    string
+		expectedHTTPCache *endpoint.HTTPCache
+	}{
+		"default settings are applied": {
+			ep:             &MetadataEndpoint{},
+			expectedMethod: http.MethodGet,
+			expectedAccept: "application/json",
+			expectedHTTPCache: &endpoint.HTTPCache{
+				Enabled:    true,
+				DefaultTTL: 30 * time.Minute,
+			},
+		},
+		"configured settings are preserved": {
+			ep: &MetadataEndpoint{
+				Endpoint: endpoint.Endpoint{
+					Method: http.MethodPatch,
+					Headers: map[string]template.Template{
+						"Accept": template.Must("application/custom+json"),
+					},
+					HTTPCache: &endpoint.HTTPCache{
+						Enabled:    false,
+						DefaultTTL: time.Minute,
+					},
+				},
+			},
+			expectedMethod:    http.MethodPatch,
+			expectedAccept:    "application/custom+json",
+			expectedHTTPCache: &endpoint.HTTPCache{
+				Enabled:    false,
+				DefaultTTL: time.Minute,
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			ep := tc.ep
+
+			// WHEN
+			ep.Init()
+
+			// THEN
+			assert.Equal(t, tc.expectedMethod, ep.Method)
+			require.Contains(t, ep.Headers, "Accept")
+			assert.Equal(t, tc.expectedAccept, ep.Headers["Accept"].String())
+			assert.Equal(t, tc.expectedHTTPCache, ep.HTTPCache)
+		})
+	}
+}
 
 func TestMetadataEndpointGet(t *testing.T) {
 	t.Parallel()
@@ -436,6 +492,7 @@ func TestMetadataEndpointGet(t *testing.T) {
 					func() map[string]ResolvedEndpointSettings { return tc.resolvedEPSettings },
 				),
 			}
+			ep.Init()
 
 			// WHEN
 			sm, err := ep.Get(t.Context(), tc.args)
