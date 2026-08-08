@@ -28,6 +28,12 @@
 
 ## [0.17.19](https://github.com/dadrus/heimdall/compare/v0.17.18...v0.17.19) (2026-08-03)
 
+In addition to updated dependencies and some bug fixes, this release addresses the following vulnerabilities:
+
+* Missing duplicate-slash normalization, which may lead to policy bypass ([GHSA-647x-xcgh-6rpq](https://github.com/dadrus/heimdall/security/advisories/GHSA-647x-xcgh-6rpq)). Fixed in dc5cd9f.
+* Percent-encoded unreserved path characters may lead to authorization bypass as well ([GHSA-j7gq-v6c3-938j](https://github.com/dadrus/heimdall/security/advisories/GHSA-j7gq-v6c3-938j)). Fixed in 4d1705b.
+
+Please check whether you are affected and update immediately!
 
 ### Bug Fixes
 
