@@ -24,6 +24,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -333,6 +334,7 @@ func TestRequestContextReset(t *testing.T) {
 	ctx.SetPipelineError(errors.New("pipeline error"))
 	_ = ctx.Body()
 	ctx.Outputs()["a"] = "b"
+	ctx.Results()["a"] = heimdall.NewResult("b")
 	ctx.AddCookieForUpstream("foo", "bar")
 	ctx.AddHeaderForUpstream("bar", "foo")
 	_ = ctx.Headers()
@@ -346,6 +348,8 @@ func TestRequestContextReset(t *testing.T) {
 	require.Nil(t, ctx.req)
 	require.NotNil(t, ctx.outputs)
 	require.Empty(t, ctx.outputs)
+	require.NotNil(t, ctx.results)
+	require.Empty(t, ctx.results)
 	require.NotNil(t, ctx.headers)
 	require.Empty(t, ctx.headers)
 	require.NotNil(t, ctx.upstreamCookies)
