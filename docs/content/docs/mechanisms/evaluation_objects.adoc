@@ -196,10 +196,17 @@ Outputs = {
 NOTE: Before upgrading to v0.18.0 (to be released soon), migrate references to `Outputs` to the `Results` object described below. In v0.18.0, `Outputs` will adopt the same structure as `Results`, which would otherwise introduce a breaking change that cannot be migrated automatically. After all heimdall instances have been upgraded to v0.18.0, references to `Results` can be changed back to `Outputs`. v0.18.0 will deprecate the `Results` object.
 
 === Results
+This object is similar to the `Outputs` object and represents a pipeline-execution-specific key value map. It is used by pipeline steps to store or read results of particular step executions. The step id is used as a key, and the value is the corresponding structured result.
 
-This object is similar to the `Outputs` object and represents a pipeline-execution-specific key value map. It is used by pipeline steps to store or read results of particular step executions. The step id is used as a key and the value is the corresponding result.
+Each result provides the following property and method:
 
-Unlike the `Outputs` object, each result is stored in a structured form containing at least a `Payload` property. For pipeline steps receiving their results from remote systems, the result additionally contains a `Headers` property preserving the response headers.
+* *`Payload`*: _any_
++
+Contains the result produced by the corresponding pipeline step. For pipeline steps communicating with remote HTTP endpoints, this is the prepared response payload.
+
+* *`Header(name)`*: _method_
++
+Returns the value of the response header with the given name as a `string`. Header names are matched case-insensitively. If the header is not present, or the result was not produced by a pipeline step communicating with a remote HTTP endpoint, an empty string (`""`) is returned. If a header appears multiple times in the response, the returned `string` is a comma separated list of all values.
 
 Example:
 
@@ -207,12 +214,29 @@ Example:
 ----
 Results = {
   "id_1": { "Payload": ["a", "b"] },
-  "id_2": { "Payload": { "foo": "bar", "baz": false }},
-  "id_3": {
-    "Headers": { "X-Some-Header": ["value"] },
-    "Payload": { "foo": "bar", "baz": false }
-  }
+  "id_2": { "Payload": { "foo": "bar", "baz": false } }
 }
+----
+
+The payload can be accessed from a Go template using:
+
+[source, gotemplate]
+----
+{{ .Results.id_2.Payload }}
+----
+
+Response headers of results produced by remote HTTP endpoints can be accessed using:
+
+[source, gotemplate]
+----
+{{ .Results.id_3.Header "X-Some-Header" }}
+----
+
+or from a CEL expression using:
+
+[source, cel]
+----
+Results.id_3.Header("X-Some-Header")
 ----
 
 === Payload
