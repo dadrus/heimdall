@@ -434,7 +434,7 @@ expressions:
 				assert.Equal(t, "failed rendering values", identifier.ID())
 			},
 		},
-		"expressions can use subject, request, outputs, and values properties": {
+		"expressions can use subject, request, outputs, results, and values properties": {
 			config: []byte(`
 values:
   a: "{{ .Request.URL.Captures.foo }}"
@@ -459,6 +459,8 @@ expressions:
   - expression: Request.URL.Path.split("/").last() == "test"
   - expression: Request.URL.Captures.foo == "bar"
   - expression: Outputs.foo == "bar"
+  - expression: Results.foo.Payload.foo == "bar"
+  - expression: Results.foo.Header("X-My-Header") == "baz"
   - expression: Subject.ID == Values.a + Values.b
 `),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.RequestContextMock, sub *subject.Subject) {
@@ -491,7 +493,12 @@ expressions:
 				})
 
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
-				ctx.EXPECT().Results().Return(heimdall.Results{"foo": heimdall.NewResult(map[string]any{"foo": "bar"})})
+				ctx.EXPECT().Results().Return(heimdall.Results{
+					"foo": heimdall.NewResultWithHeaders(
+						map[string]any{"foo": "bar"},
+						http.Header{"X-My-Header": {"baz"}},
+					),
+				})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()

@@ -17,6 +17,7 @@
 package finalizers
 
 import (
+	"net/http"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -330,6 +331,7 @@ headers:
   baz: bar
   X-Baz: '{{ .Request.Header "X-Foo" }}'
   X-Foo: '{{ .Outputs.foo }}'
+  X-Result: '{{ .Results.foo.Header "X-My-Header" }}'
 `),
 			configureContext: func(t *testing.T, ctx *mocks.RequestContextMock) {
 				t.Helper()
@@ -342,9 +344,20 @@ headers:
 				ctx.EXPECT().AddHeaderForUpstream("baz", "bar")
 				ctx.EXPECT().AddHeaderForUpstream("X-Baz", "Bar")
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo", "bar")
+				ctx.EXPECT().AddHeaderForUpstream("X-Result", "from-result")
+
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
-				ctx.EXPECT().Results().Return(heimdall.Results{"foo": heimdall.NewResult(map[string]any{"foo": "bar"})})
+
+				headers := make(http.Header)
+				headers.Set("X-My-Header", "from-result")
+
+				ctx.EXPECT().Results().Return(heimdall.Results{
+					"foo": heimdall.NewResultWithHeaders(
+						map[string]any{"foo": "bar"},
+						headers,
+					),
+				})
 			},
 			subject: &subject.Subject{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}},
 			assert: func(t *testing.T, err error) {
