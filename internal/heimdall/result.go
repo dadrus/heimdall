@@ -74,22 +74,6 @@ func (r *Result) Header(name string) string {
 	return r.headers.Get(name)
 }
 
-// MarshalJSON serializes Result according to the structured result contract.
-//
-// A result without response headers is serialized as:
-//
-//	{
-//	  "Payload": ...
-//	}
-//
-// A result with response headers is serialized as:
-//
-//	{
-//	  "Headers": ...,
-//	  "Payload": ...
-//	}
-//
-// The internal normalized-header cache is not serialized.
 func (r *Result) MarshalJSON() ([]byte, error) {
 	if r == nil {
 		return []byte("null"), nil
