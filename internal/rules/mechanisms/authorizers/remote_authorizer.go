@@ -95,10 +95,10 @@ func (ai *authorizationInformation) addResultsTo(key string, ctx heimdall.Reques
 		ctx.Outputs()[key] = ai.Payload
 	}
 
-	ctx.Results()[key] = map[string]any{
-		"Headers": ai.Headers,
-		"Payload": ai.Payload,
-	}
+	ctx.Results()[key] = heimdall.NewResultWithHeaders(
+		ai.Payload,
+		ai.Headers,
+	)
 }
 
 func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any) (*remoteAuthorizer, error) {

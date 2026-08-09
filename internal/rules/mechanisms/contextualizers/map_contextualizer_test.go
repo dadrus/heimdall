@@ -272,7 +272,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 		contextualizer   *mapContextualizer
 		subject          *subject.Subject
 		configureContext func(t *testing.T, ctx *heimdallmocks.RequestContextMock)
-		assert           func(t *testing.T, err error, sub *subject.Subject, outputs, results map[string]any)
+		assert           func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any, results heimdall.Results)
 	}{
 		"with error in values rendering": {
 			contextualizer: &mapContextualizer{
@@ -290,7 +290,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any, _ heimdall.Results) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -326,7 +326,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any, _ heimdall.Results) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -380,7 +380,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, outputs, results map[string]any) {
+			assert: func(t *testing.T, err error, _ *subject.Subject, outputs map[string]any, results heimdall.Results) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -391,14 +391,15 @@ func TestMapContextualizerExecute(t *testing.T) {
 				assert.Equal(t, "bar", outputs["contextualizer1"].(map[string]string)["outputs"])
 				assert.Equal(t, "bar", outputs["contextualizer1"].(map[string]string)["results"])
 
-				require.NotEmpty(t, results["contextualizer1"])
-				data, ok := results["contextualizer1"].(map[string]any)
+				result := results["contextualizer1"]
+				require.NotNil(t, result)
+				payload, ok := result.Payload.(map[string]string)
 				require.True(t, ok)
 
-				assert.Equal(t, "http://foo.bar", data["Payload"].(map[string]string)["urlValues"])
-				assert.Equal(t, "Foo", data["Payload"].(map[string]string)["subject"])
-				assert.Equal(t, "bar", data["Payload"].(map[string]string)["outputs"])
-				assert.Equal(t, "bar", data["Payload"].(map[string]string)["results"])
+				assert.Equal(t, "http://foo.bar", payload["urlValues"])
+				assert.Equal(t, "Foo", payload["subject"])
+				assert.Equal(t, "bar", payload["outputs"])
+				assert.Equal(t, "bar", payload["results"])
 			},
 		},
 	} {
@@ -409,7 +410,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 			ctx := heimdallmocks.NewRequestContextMock(t)
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
-			ctx.EXPECT().Results().Return(map[string]any{"foo": map[string]any{"Payload": "bar"}})
+			ctx.EXPECT().Results().Return(heimdall.Results{"foo": heimdall.NewResult("bar")})
 			ctx.EXPECT().Context().Return(t.Context())
 
 			configureContext(t, ctx)

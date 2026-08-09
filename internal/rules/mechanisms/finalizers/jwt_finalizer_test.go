@@ -763,20 +763,20 @@ func TestJWTFinalizerCacheKeyIncludesResultHeaders(t *testing.T) {
 	}
 	sub := &subject.Subject{ID: "foo", Attributes: map[string]any{"baz": "bar"}}
 	firstCtx := heimdallmocks.NewRequestContextMock(t)
-	firstCtx.EXPECT().Results().Return(map[string]any{
-		"remote": map[string]any{
-			"Headers": http.Header{"X-Tenant-ID": []string{"tenant-a"}},
-			"Payload": map[string]any{"foo": "bar"},
-		},
+	firstCtx.EXPECT().Results().Return(heimdall.Results{
+		"remote": heimdall.NewResultWithHeaders(
+			map[string]any{"foo": "bar"},
+			http.Header{"X-Tenant-ID": []string{"tenant-a"}},
+		),
 	})
 	firstKey := finalizer.calculateCacheKey(firstCtx, sub)
 
 	secondCtx := heimdallmocks.NewRequestContextMock(t)
-	secondCtx.EXPECT().Results().Return(map[string]any{
-		"remote": map[string]any{
-			"Headers": http.Header{"X-Tenant-ID": []string{"tenant-b"}},
-			"Payload": map[string]any{"foo": "bar"},
-		},
+	secondCtx.EXPECT().Results().Return(heimdall.Results{
+		"remote": heimdall.NewResultWithHeaders(
+			map[string]any{"foo": "bar"},
+			http.Header{"X-Tenant-ID": []string{"tenant-b"}},
+		),
 	})
 	secondKey := finalizer.calculateCacheKey(secondCtx, sub)
 
@@ -843,10 +843,8 @@ signer:
 				t.Helper()
 
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer TestToken")
-				ctx.EXPECT().Results().Return(map[string]any{
-					"remote": map[string]any{
-						"Payload": map[string]any{"foo": "bar"},
-					},
+				ctx.EXPECT().Results().Return(heimdall.Results{
+					"remote": heimdall.NewResult(map[string]any{"foo": "bar"}),
 				})
 
 				cacheKey := fin.calculateCacheKey(ctx, sub)
@@ -873,10 +871,8 @@ ttl: 1m
 
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
-				ctx.EXPECT().Results().Return(map[string]any{
-					"remote": map[string]any{
-						"Payload": map[string]any{},
-					},
+				ctx.EXPECT().Results().Return(heimdall.Results{
+					"remote": heimdall.NewResult(map[string]any{}),
 				})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -911,10 +907,8 @@ claims: '{
 				ctx.EXPECT().AddHeaderForUpstream("X-Token",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bar ") }))
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
-				ctx.EXPECT().Results().Return(map[string]any{
-					"remote": map[string]any{
-						"Payload": map[string]any{"foo": "bar"},
-					},
+				ctx.EXPECT().Results().Return(heimdall.Results{
+					"remote": heimdall.NewResult(map[string]any{"foo": "bar"}),
 				})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -945,10 +939,8 @@ values:
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
 				ctx.EXPECT().Outputs().Return(map[string]any{"bar": "baz"})
-				ctx.EXPECT().Results().Return(map[string]any{
-					"remote": map[string]any{
-						"Payload": map[string]any{"foo": "bar"},
-					},
+				ctx.EXPECT().Results().Return(heimdall.Results{
+					"remote": heimdall.NewResult(map[string]any{"foo": "bar"}),
 				})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -974,10 +966,8 @@ claims: "foo: bar"
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
-				ctx.EXPECT().Results().Return(map[string]any{
-					"remote": map[string]any{
-						"Payload": map[string]any{},
-					},
+				ctx.EXPECT().Results().Return(heimdall.Results{
+					"remote": heimdall.NewResult(map[string]any{}),
 				})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -1008,10 +998,8 @@ claims: "{{ len .foobar }}"
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
-				ctx.EXPECT().Results().Return(map[string]any{
-					"remote": map[string]any{
-						"Payload": map[string]any{},
-					},
+				ctx.EXPECT().Results().Return(heimdall.Results{
+					"remote": heimdall.NewResult(map[string]any{}),
 				})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
@@ -1044,10 +1032,8 @@ values:
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
-				ctx.EXPECT().Results().Return(map[string]any{
-					"remote": map[string]any{
-						"Payload": map[string]any{},
-					},
+				ctx.EXPECT().Results().Return(heimdall.Results{
+					"remote": heimdall.NewResult(map[string]any{}),
 				})
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))

@@ -88,9 +88,7 @@ func (c *mapContextualizer) Execute(ctx heimdall.RequestContext, sub *subject.Su
 		ctx.Outputs()[c.id] = resp
 	}
 
-	ctx.Results()[c.id] = map[string]any{
-		"Payload": resp,
-	}
+	ctx.Results()[c.id] = heimdall.NewResult(resp)
 
 	return nil
 }

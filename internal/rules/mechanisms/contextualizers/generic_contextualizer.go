@@ -65,11 +65,6 @@ func init() {
 		})
 }
 
-type contextualizerData struct {
-	Headers http.Header `json:"headers"`
-	Payload any         `json:"payload"`
-}
-
 type genericContextualizer struct {
 	name            string
 	id              string
@@ -155,7 +150,7 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 
 	var (
 		cacheKey string
-		response *contextualizerData
+		response *heimdall.Result
 	)
 
 	vals, payload, err := c.renderTemplates(ctx, sub)
@@ -165,13 +160,14 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 
 	if c.ttl > 0 {
 		cacheKey = c.calculateCacheKey(sub, vals, payload)
-		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
-			var cd contextualizerData
 
-			if err = json.Unmarshal(entry, &cd); err == nil {
+		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
+			var result heimdall.Result
+
+			if err = json.Unmarshal(entry, &result); err == nil {
 				logger.Debug().Msg("Reusing contextualizer response from cache")
 
-				response = &cd
+				response = &result
 			}
 		}
 	}
@@ -195,10 +191,7 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 		ctx.Outputs()[c.id] = response.Payload
 	}
 
-	ctx.Results()[c.id] = map[string]any{
-		"Headers": response.Headers,
-		"Payload": response.Payload,
-	}
+	ctx.Results()[c.id] = response
 
 	return nil
 }
@@ -259,7 +252,7 @@ func (c *genericContextualizer) callEndpoint(
 	sub *subject.Subject,
 	values map[string]string,
 	payload string,
-) (*contextualizerData, error) {
+) (*heimdall.Result, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Calling contextualizer endpoint")
 
@@ -291,7 +284,7 @@ func (c *genericContextualizer) callEndpoint(
 		return nil, err
 	}
 
-	return &contextualizerData{Headers: resp.Header, Payload: data}, nil
+	return heimdall.NewResultWithHeaders(data, resp.Header), nil
 }
 
 func (c *genericContextualizer) createRequest(

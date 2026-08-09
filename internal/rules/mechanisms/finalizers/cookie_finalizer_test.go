@@ -294,7 +294,7 @@ cookies:
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: mocks.NewRequestFunctionsMock(t)})
 				ctx.EXPECT().Outputs().Return(map[string]any{})
-				ctx.EXPECT().Results().Return(map[string]any{"Payload": map[string]any{}})
+				ctx.EXPECT().Results().Return(heimdall.Results{"foo": heimdall.NewResult(map[string]any{})})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -326,7 +326,7 @@ cookies:
 				ctx.EXPECT().AddCookieForUpstream("x_bar", "bar")
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqf})
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
-				ctx.EXPECT().Results().Return(map[string]any{"Payload": map[string]any{"foo": "bar"}})
+				ctx.EXPECT().Results().Return(heimdall.Results{"foo": heimdall.NewResult(map[string]any{"foo": "bar"})})
 			},
 			createSubject: func(t *testing.T) *subject.Subject {
 				t.Helper()
