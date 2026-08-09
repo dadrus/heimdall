@@ -97,17 +97,47 @@ func (r *Result) MarshalJSON() ([]byte, error) {
 
 	if !r.hasHeaders {
 		return json.Marshal(struct {
-			Payload any `json:"Payload"`
+			Payload any `json:"payload"`
 		}{
 			Payload: r.Payload,
 		})
 	}
 
 	return json.Marshal(struct {
-		Headers http.Header `json:"Headers"`
-		Payload any         `json:"Payload"`
+		Headers http.Header `json:"headers"`
+		Payload any         `json:"payload"`
 	}{
 		Headers: r.headers.values,
 		Payload: r.Payload,
 	})
+}
+
+func (r *Result) UnmarshalJSON(data []byte) error {
+	var value struct {
+		Headers json.RawMessage `json:"headers"`
+		Payload any             `json:"payload"`
+	}
+
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+
+	r.Payload = value.Payload
+	r.headers = Headers{}
+	r.hasHeaders = false
+
+	if value.Headers == nil {
+		return nil
+	}
+
+	var headers http.Header
+
+	if err := json.Unmarshal(value.Headers, &headers); err != nil {
+		return err
+	}
+
+	r.headers = NewHeaders(headers)
+	r.hasHeaders = true
+
+	return nil
 }

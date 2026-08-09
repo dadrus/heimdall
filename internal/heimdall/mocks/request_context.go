@@ -158,19 +158,19 @@ func (_m *RequestContextMock) Outputs() map[string]interface{} {
 }
 
 // Results provides a mock function with given fields:
-func (_m *RequestContextMock) Results() map[string]interface{} {
+func (_m *RequestContextMock) Results() heimdall.Results {
 	ret := _m.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Results")
 	}
 
-	var r0 map[string]interface{}
-	if rf, ok := ret.Get(0).(func() map[string]interface{}); ok {
+	var r0 heimdall.Results
+	if rf, ok := ret.Get(0).(func() heimdall.Results); ok {
 		r0 = rf()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]interface{})
+			r0 = ret.Get(0).(heimdall.Results)
 		}
 	}
 
@@ -221,12 +221,12 @@ func (_c *RequestContextMock_Results_Call) Run(run func()) *RequestContextMock_R
 	return _c
 }
 
-func (_c *RequestContextMock_Results_Call) Return(_a0 map[string]interface{}) *RequestContextMock_Results_Call {
+func (_c *RequestContextMock_Results_Call) Return(_a0 heimdall.Results) *RequestContextMock_Results_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *RequestContextMock_Results_Call) RunAndReturn(run func() map[string]interface{}) *RequestContextMock_Results_Call {
+func (_c *RequestContextMock_Results_Call) RunAndReturn(run func() heimdall.Results) *RequestContextMock_Results_Call {
 	_c.Call.Return(run)
 	return _c
 }
