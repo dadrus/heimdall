@@ -24,9 +24,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/heimdall"
 )
 
 func TestRequestClientIPs(t *testing.T) {
