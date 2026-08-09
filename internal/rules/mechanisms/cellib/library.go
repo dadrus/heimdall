@@ -44,6 +44,7 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 		Strings(),
 		Urls(),
 		Requests(),
+		Results(),
 		Errors(),
 		Networks(),
 		ext.NativeTypes(reflect.TypeOf(&subject.Subject{})),
