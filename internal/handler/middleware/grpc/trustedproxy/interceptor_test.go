@@ -163,14 +163,9 @@ func TestInterceptorExecution(t *testing.T) {
 				require.Empty(t, receivedMD.Get("Forwarded"))
 				require.Equal(t, []string{"foo"}, receivedMD.Get("X-Foo-Bar"))
 
-				require.Empty(t, receivedHeaders["x-forwarded-proto"])
-				require.Empty(t, receivedHeaders["x-forwarded-host"])
-				require.Empty(t, receivedHeaders["x-forwarded-path"])
-				require.Empty(t, receivedHeaders["x-forwarded-uri"])
-				require.Empty(t, receivedHeaders["x-forwarded-for"])
-				require.Empty(t, receivedHeaders["x-forwarded-method"])
-				require.Empty(t, receivedHeaders["forwarded"])
-				require.Equal(t, "foo", receivedHeaders["x-foo-bar"])
+				require.Equal(t, map[string]string{
+					"x-foo-bar": "foo",
+				}, receivedHeaders)
 			} else {
 				require.Equal(t, sendMD.Get("X-Forwarded-Proto"), receivedMD.Get("X-Forwarded-Proto"))
 				require.Equal(t, sendMD.Get("X-Forwarded-Host"), receivedMD.Get("X-Forwarded-Host"))
@@ -181,20 +176,15 @@ func TestInterceptorExecution(t *testing.T) {
 				require.Equal(t, sendMD.Get("Forwarded"), receivedMD.Get("Forwarded"))
 				require.Equal(t, sendMD.Get("X-Foo-Bar"), receivedMD.Get("X-Foo-Bar"))
 
-				require.Equal(t, sendHeaders["x-forwarded-proto"], receivedHeaders["x-forwarded-proto"])
-				require.Equal(t, sendHeaders["x-forwarded-host"], receivedHeaders["x-forwarded-host"])
-				require.Equal(t, sendHeaders["x-forwarded-path"], receivedHeaders["x-forwarded-path"])
-				require.Equal(t, sendHeaders["x-forwarded-uri"], receivedHeaders["x-forwarded-uri"])
-				require.Equal(t, sendHeaders["x-forwarded-for"], receivedHeaders["x-forwarded-for"])
-				require.Equal(t, sendHeaders["x-forwarded-method"], receivedHeaders["x-forwarded-method"])
-				require.Equal(t, sendHeaders["forwarded"], receivedHeaders["forwarded"])
-				require.Equal(t, sendHeaders["x-foo-bar"], receivedHeaders["x-foo-bar"])
+				require.Equal(t, sendHeaders, receivedHeaders)
 			}
 
 			logs := tb.CollectedLog()
-			if len(logs) != 0 {
-				require.NotEmpty(t, tc.warningLog, "logs contain warnings, but no warnings are expected")
+
+			if len(tc.warningLog) != 0 {
 				assert.Contains(t, logs, tc.warningLog)
+			} else {
+				require.Empty(t, logs)
 			}
 		})
 	}
