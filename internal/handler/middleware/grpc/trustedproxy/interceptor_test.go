@@ -172,96 +172,28 @@ func TestInterceptorExecution(t *testing.T) {
 				require.Empty(t, receivedHeaders["forwarded"])
 				require.Equal(t, "foo", receivedHeaders["x-foo-bar"])
 			} else {
-				require.Equal(
-					t,
-					sendMD.Get("X-Forwarded-Proto"),
-					receivedMD.Get("X-Forwarded-Proto"),
-				)
-				require.Equal(
-					t,
-					sendMD.Get("X-Forwarded-Host"),
-					receivedMD.Get("X-Forwarded-Host"),
-				)
-				require.Equal(
-					t,
-					sendMD.Get("X-Forwarded-Path"),
-					receivedMD.Get("X-Forwarded-Path"),
-				)
-				require.Equal(
-					t,
-					sendMD.Get("X-Forwarded-Uri"),
-					receivedMD.Get("X-Forwarded-Uri"),
-				)
-				require.Equal(
-					t,
-					sendMD.Get("X-Forwarded-For"),
-					receivedMD.Get("X-Forwarded-For"),
-				)
-				require.Equal(
-					t,
-					sendMD.Get("X-Forwarded-Method"),
-					receivedMD.Get("X-Forwarded-Method"),
-				)
-				require.Equal(
-					t,
-					sendMD.Get("Forwarded"),
-					receivedMD.Get("Forwarded"),
-				)
-				require.Equal(
-					t,
-					sendMD.Get("X-Foo-Bar"),
-					receivedMD.Get("X-Foo-Bar"),
-				)
+				require.Equal(t, sendMD.Get("X-Forwarded-Proto"), receivedMD.Get("X-Forwarded-Proto"))
+				require.Equal(t, sendMD.Get("X-Forwarded-Host"), receivedMD.Get("X-Forwarded-Host"))
+				require.Equal(t, sendMD.Get("X-Forwarded-Path"), receivedMD.Get("X-Forwarded-Path"))
+				require.Equal(t, sendMD.Get("X-Forwarded-Uri"), receivedMD.Get("X-Forwarded-Uri"))
+				require.Equal(t, sendMD.Get("X-Forwarded-For"), receivedMD.Get("X-Forwarded-For"))
+				require.Equal(t, sendMD.Get("X-Forwarded-Method"), receivedMD.Get("X-Forwarded-Method"))
+				require.Equal(t, sendMD.Get("Forwarded"), receivedMD.Get("Forwarded"))
+				require.Equal(t, sendMD.Get("X-Foo-Bar"), receivedMD.Get("X-Foo-Bar"))
 
-				require.Equal(
-					t,
-					sendHeaders["x-forwarded-proto"],
-					receivedHeaders["x-forwarded-proto"],
-				)
-				require.Equal(
-					t,
-					sendHeaders["x-forwarded-host"],
-					receivedHeaders["x-forwarded-host"],
-				)
-				require.Equal(
-					t,
-					sendHeaders["x-forwarded-path"],
-					receivedHeaders["x-forwarded-path"],
-				)
-				require.Equal(
-					t,
-					sendHeaders["x-forwarded-uri"],
-					receivedHeaders["x-forwarded-uri"],
-				)
-				require.Equal(
-					t,
-					sendHeaders["x-forwarded-for"],
-					receivedHeaders["x-forwarded-for"],
-				)
-				require.Equal(
-					t,
-					sendHeaders["x-forwarded-method"],
-					receivedHeaders["x-forwarded-method"],
-				)
-				require.Equal(
-					t,
-					sendHeaders["forwarded"],
-					receivedHeaders["forwarded"],
-				)
-				require.Equal(
-					t,
-					sendHeaders["x-foo-bar"],
-					receivedHeaders["x-foo-bar"],
-				)
+				require.Equal(t, sendHeaders["x-forwarded-proto"], receivedHeaders["x-forwarded-proto"])
+				require.Equal(t, sendHeaders["x-forwarded-host"], receivedHeaders["x-forwarded-host"])
+				require.Equal(t, sendHeaders["x-forwarded-path"], receivedHeaders["x-forwarded-path"])
+				require.Equal(t, sendHeaders["x-forwarded-uri"], receivedHeaders["x-forwarded-uri"])
+				require.Equal(t, sendHeaders["x-forwarded-for"], receivedHeaders["x-forwarded-for"])
+				require.Equal(t, sendHeaders["x-forwarded-method"], receivedHeaders["x-forwarded-method"])
+				require.Equal(t, sendHeaders["forwarded"], receivedHeaders["forwarded"])
+				require.Equal(t, sendHeaders["x-foo-bar"], receivedHeaders["x-foo-bar"])
 			}
 
 			logs := tb.CollectedLog()
 			if len(logs) != 0 {
-				require.NotEmpty(
-					t,
-					tc.warningLog,
-					"logs contain warnings, but no warnings are expected",
-				)
+				require.NotEmpty(t, tc.warningLog, "logs contain warnings, but no warnings are expected")
 				assert.Contains(t, logs, tc.warningLog)
 			}
 		})
