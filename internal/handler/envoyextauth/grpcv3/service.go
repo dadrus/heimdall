@@ -33,6 +33,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/errorhandler"
 	loggermiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/otelmetrics"
+	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/trustedproxy"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 )
 
@@ -63,6 +64,7 @@ func newService(
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			recovery.UnaryServerInterceptor(recoveryHandler),
+			trustedproxy.New(logger, cfg.TrustedProxies...),
 			metrics.UnaryServerInterceptor(),
 			errorhandler.New(
 				errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
