@@ -229,14 +229,14 @@ Response headers of results produced by remote HTTP endpoints can be accessed us
 
 [source, gotemplate]
 ----
-{{ .Results.id_3.Header "X-Some-Header" }}
+{{ .Results.id_1.Header "X-Some-Header" }}
 ----
 
 or from a CEL expression using:
 
 [source, cel]
 ----
-Results.id_3.Header("X-Some-Header")
+Results.id_1.Header("X-Some-Header")
 ----
 
 === Payload
