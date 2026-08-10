@@ -577,11 +577,11 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		configureContext func(t *testing.T, ctx *heimdallmocks.RequestContextMock)
 		configureCache   func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
 			sub *subject.Subject)
-		assert func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any)
+		assert func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any, results heimdall.Results)
 	}{
 		"fails due to nil subject": {
 			contextualizer: &genericContextualizer{id: "contextualizer", e: endpoint.Endpoint{URL: srv.URL}},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any, _ heimdall.Results) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -617,12 +617,15 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			) {
 				t.Helper()
 
-				rawData, err := json.Marshal(&contextualizerData{Payload: "Hi Foo"})
+				headers := make(http.Header)
+				headers.Set("foo", "bar")
+
+				rawData, err := json.Marshal(heimdall.NewResultWithHeaders("Hi Foo", headers))
 				require.NoError(t, err)
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawData, nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any, results heimdall.Results) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -634,6 +637,12 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				assert.Len(t, outputs, 2)
 				assert.Equal(t, "Hi Foo", outputs["contextualizer"])
 				assert.Equal(t, "bar", outputs["foo"])
+
+				assert.Len(t, results, 2)
+				entry := results["contextualizer"]
+				require.NotNil(t, entry)
+				assert.Equal(t, "Hi Foo", entry.Payload)
+				assert.Equal(t, "bar", entry.Header("foo"))
 			},
 		},
 		"with error in values rendering": {
@@ -653,7 +662,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any, _ heimdall.Results) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -684,7 +693,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any, _ heimdall.Results) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -709,7 +718,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any, _ heimdall.Results) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -739,7 +748,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ *subject.Subject, _ map[string]any, _ heimdall.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -790,7 +799,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any, results heimdall.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -799,6 +808,13 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				assert.Len(t, sub.Attributes, 1)
 				assert.Len(t, outputs, 1)
+
+				require.Len(t, results, 2)
+				entry := results["test-contextualizer"]
+				require.NotNil(t, entry)
+				assert.Nil(t, entry.Payload)
+				assert.NotEmpty(t, entry.Header("Date"))
+				assert.NotEmpty(t, entry.Header("Content-Length"))
 			},
 		},
 		"without payload, but with cache": {
@@ -815,10 +831,14 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.MatchedBy(func(data []byte) bool {
-					var val contextualizerData
-					err := json.Unmarshal(data, &val)
+					var result heimdall.Result
 
-					return err == nil && val.Payload == "Hi from endpoint"
+					if err := json.Unmarshal(data, &result); err != nil {
+						return false
+					}
+
+					return result.Payload == "Hi from endpoint" &&
+						result.Header("Content-Type") == "text/text"
 				}), contextualizer.ttl).Return(nil)
 			},
 			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
@@ -839,7 +859,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				responseContent = []byte(`Hi from endpoint`)
 				responseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any, results heimdall.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -923,7 +943,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 						URL:              &heimdall.URL{URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}},
 					})
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any, results heimdall.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -936,6 +956,14 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				entry := outputs["test-contextualizer"]
 				assert.Len(t, entry, 1)
 				assert.Contains(t, entry, "baz")
+
+				require.Len(t, results, 2)
+				result := results["test-contextualizer"]
+				require.NotNil(t, result)
+				assert.Contains(t, result.Payload, "baz")
+				assert.NotEmpty(t, result.Header("Date"))
+				assert.NotEmpty(t, result.Header("Content-Length"))
+				assert.Equal(t, responseContentType, result.Header("Content-Type"))
 			},
 		},
 	} {
@@ -966,6 +994,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			ctx := heimdallmocks.NewRequestContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
+			ctx.EXPECT().Results().Return(heimdall.Results{"foo": heimdall.NewResult("bar")})
 
 			configureContext(t, ctx)
 			configureCache(t, cch, tc.contextualizer, tc.subject)
@@ -975,7 +1004,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			err := tc.contextualizer.Execute(ctx, tc.subject)
 
 			// THEN
-			tc.assert(t, err, tc.subject, ctx.Outputs())
+			tc.assert(t, err, tc.subject, ctx.Outputs(), ctx.Results())
 		})
 	}
 }

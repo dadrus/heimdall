@@ -105,6 +105,7 @@ func (a *celAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Subjec
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
+		"Results": ctx.Results(),
 	})
 	if err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrInternal,
@@ -118,6 +119,7 @@ func (a *celAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Subjec
 		"Subject": sub,
 		"Values":  vals,
 		"Outputs": ctx.Outputs(),
+		"Results": ctx.Results(),
 	}, a)
 }
 

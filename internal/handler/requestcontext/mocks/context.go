@@ -247,6 +247,25 @@ func (_mock *ContextMock) Outputs() map[string]any {
 	return r0
 }
 
+// Results provides a mock function for the type ContextMock
+func (_mock *ContextMock) Results() heimdall.Results {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Results")
+	}
+
+	var r0 heimdall.Results
+	if returnFunc, ok := ret.Get(0).(func() heimdall.Results); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(heimdall.Results)
+		}
+	}
+	return r0
+}
+
 // ContextMock_Outputs_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Outputs'
 type ContextMock_Outputs_Call struct {
 	*mock.Call
@@ -270,6 +289,33 @@ func (_c *ContextMock_Outputs_Call) Return(stringToV map[string]any) *ContextMoc
 }
 
 func (_c *ContextMock_Outputs_Call) RunAndReturn(run func() map[string]any) *ContextMock_Outputs_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ContextMock_Results_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Results'
+type ContextMock_Results_Call struct {
+	*mock.Call
+}
+
+// Outputs is a helper method to define mock.On call
+func (_e *ContextMock_Expecter) Results() *ContextMock_Results_Call {
+	return &ContextMock_Results_Call{Call: _e.mock.On("Results")}
+}
+
+func (_c *ContextMock_Results_Call) Run(run func()) *ContextMock_Results_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ContextMock_Results_Call) Return(results heimdall.Results) *ContextMock_Results_Call {
+	_c.Call.Return(results)
+	return _c
+}
+
+func (_c *ContextMock_Results_Call) RunAndReturn(run func() heimdall.Results) *ContextMock_Results_Call {
 	_c.Call.Return(run)
 	return _c
 }

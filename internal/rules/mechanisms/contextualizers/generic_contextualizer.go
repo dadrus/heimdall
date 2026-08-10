@@ -65,10 +65,6 @@ func init() {
 		})
 }
 
-type contextualizerData struct {
-	Payload any `json:"payload"`
-}
-
 type genericContextualizer struct {
 	name            string
 	id              string
@@ -154,7 +150,7 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 
 	var (
 		cacheKey string
-		response *contextualizerData
+		response *heimdall.Result
 	)
 
 	vals, payload, err := c.renderTemplates(ctx, sub)
@@ -164,13 +160,14 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 
 	if c.ttl > 0 {
 		cacheKey = c.calculateCacheKey(sub, vals, payload)
-		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
-			var cd contextualizerData
 
-			if err = json.Unmarshal(entry, &cd); err == nil {
+		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
+			var result heimdall.Result
+
+			if err = json.Unmarshal(entry, &result); err == nil {
 				logger.Debug().Msg("Reusing contextualizer response from cache")
 
-				response = &cd
+				response = &result
 			}
 		}
 	}
@@ -193,6 +190,8 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 	if response.Payload != nil {
 		ctx.Outputs()[c.id] = response.Payload
 	}
+
+	ctx.Results()[c.id] = response
 
 	return nil
 }
@@ -253,7 +252,7 @@ func (c *genericContextualizer) callEndpoint(
 	sub *subject.Subject,
 	values map[string]string,
 	payload string,
-) (*contextualizerData, error) {
+) (*heimdall.Result, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Calling contextualizer endpoint")
 
@@ -285,7 +284,7 @@ func (c *genericContextualizer) callEndpoint(
 		return nil, err
 	}
 
-	return &contextualizerData{Payload: data}, nil
+	return heimdall.NewResultWithHeaders(data, resp.Header), nil
 }
 
 func (c *genericContextualizer) createRequest(
@@ -308,6 +307,7 @@ func (c *genericContextualizer) createRequest(
 			"Subject": sub,
 			"Values":  values,
 			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
 		})
 	})
 
@@ -398,6 +398,7 @@ func (c *genericContextualizer) calculateCacheKey(
 	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(c.ttl))
 
 	hash := sha256.New()
+	hash.Write(stringx.ToBytes("generic-contextualizer:v2"))
 	hash.Write(c.e.Hash())
 	hash.Write(stringx.ToBytes(c.id))
 	hash.Write(stringx.ToBytes(strings.Join(c.fwdHeaders, ",")))
@@ -426,6 +427,7 @@ func (c *genericContextualizer) renderTemplates(
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
+		"Results": ctx.Results(),
 	})
 	if err != nil {
 		return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
@@ -440,6 +442,7 @@ func (c *genericContextualizer) renderTemplates(
 			"Subject": sub,
 			"Values":  vals,
 			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(heimdall.ErrInternal,
 				"failed to render payload for the contextualization endpoint").

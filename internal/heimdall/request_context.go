@@ -34,6 +34,7 @@ type RequestContext interface {
 	SetPipelineError(err error)
 
 	Outputs() map[string]any
+	Results() Results
 }
 
 //go:generate mockery --name RequestFunctions --structname RequestFunctionsMock
