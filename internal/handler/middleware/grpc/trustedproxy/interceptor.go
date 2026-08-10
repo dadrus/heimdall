@@ -90,6 +90,10 @@ func sanitizeRequest(req any) {
 		GetHeaders()
 
 	trustedproxy.RemoveForwardingHeaders(func(name string) {
-		delete(headers, strings.ToLower(name))
+		for key := range headers {
+			if strings.EqualFold(key, name) {
+				delete(headers, key)
+			}
+		}
 	})
 }

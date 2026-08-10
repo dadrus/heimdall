@@ -81,23 +81,23 @@ func TestInterceptorExecution(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			sendMD := metadata.Pairs(
-				"x-forwarded-proto", "https",
+				"X-Forwarded-Proto", "https",
 				"x-forwarded-host", "foobar.com",
 				"x-forwarded-path", "/test",
 				"x-forwarded-uri", "/test?foo=bar",
-				"x-forwarded-for", "172.17.1.2",
+				"X-FORWARDED-FOR", "172.17.1.2",
 				"x-forwarded-method", "GET",
-				"forwarded", "for=172.17.1.2;proto=https",
+				"FoRwArDeD", "for=172.17.1.2;proto=https",
 				"x-foo-bar", "foo",
 			)
 			sendHeaders := map[string]string{
 				"x-forwarded-proto":  "https",
-				"x-forwarded-host":   "foobar.com",
+				"X-Forwarded-Host":   "foobar.com",
 				"x-forwarded-path":   "/test",
-				"x-forwarded-uri":    "/test?foo=bar",
+				"X-FORWARDED-URI":    "/test?foo=bar",
 				"x-forwarded-for":    "172.17.1.2",
 				"x-forwarded-method": "GET",
-				"forwarded":          "for=172.17.1.2;proto=https",
+				"FoRwArDeD":          "for=172.17.1.2;proto=https",
 				"x-foo-bar":          "foo",
 			}
 
