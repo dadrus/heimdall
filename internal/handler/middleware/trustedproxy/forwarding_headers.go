@@ -16,6 +16,8 @@
 
 package trustedproxy
 
+import "strings"
+
 var forwardingHeaders = [...]string{ //nolint:gochecknoglobals
 	"Forwarded",
 	"X-Forwarded-For",
@@ -29,5 +31,26 @@ var forwardingHeaders = [...]string{ //nolint:gochecknoglobals
 func RemoveForwardingHeaders(remove func(string)) {
 	for _, name := range forwardingHeaders {
 		remove(name)
+	}
+}
+
+func IsForwardingHeader(name string) bool {
+	switch {
+	case strings.EqualFold(name, "Forwarded"):
+		return true
+	case strings.EqualFold(name, "X-Forwarded-For"):
+		return true
+	case strings.EqualFold(name, "X-Forwarded-Proto"):
+		return true
+	case strings.EqualFold(name, "X-Forwarded-Host"):
+		return true
+	case strings.EqualFold(name, "X-Forwarded-Uri"):
+		return true
+	case strings.EqualFold(name, "X-Forwarded-Path"):
+		return true
+	case strings.EqualFold(name, "X-Forwarded-Method"):
+		return true
+	default:
+		return false
 	}
 }
