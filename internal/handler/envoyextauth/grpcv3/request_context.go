@@ -28,7 +28,7 @@ import (
 	"github.com/rs/zerolog"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
@@ -96,12 +96,6 @@ func newRequestContext() *RequestContext {
 }
 
 func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest) {
-	clientIPs := r.hmdlReq.ClientIPAddresses
-
-	if rmd, ok := metadata.FromIncomingContext(ctx); ok {
-		clientIPs = requestClientIPs(clientIPs, rmd)
-	}
-
 	httpReq := req.GetAttributes().GetRequest().GetHttp()
 
 	parsed, err := url.ParseRequestURI(httpReq.GetPath())
@@ -123,17 +117,33 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 		Path:     parsed.Path,
 		RawQuery: parsed.RawQuery,
 	}
+
 	r.reqHeaders["Host"] = r.hmdlReq.URL.Host
-	r.hmdlReq.ClientIPAddresses = clientIPs
+	r.hmdlReq.ClientIPAddresses = requestClientIPs(
+		ctx,
+		r.hmdlReq.ClientIPAddresses,
+		r.reqHeaders,
+	)
 }
 
-func requestClientIPs(ips []string, md metadata.MD) []string {
-	// this header is used by envoyproxy to forward the ip addresses of the hops
-	if res, _ := httpx.IPsFromXForwardedFor(ips, md.Get("x-forwarded-for")); len(res) != 0 {
-		return res
+func requestClientIPs(ctx context.Context, ips []string, headers map[string]string) []string {
+	res, _ := httpx.IPsFromForwarded(ips, []string{headers["Forwarded"]})
+	if len(res) == 0 {
+		res, _ = httpx.IPsFromXForwardedFor(ips, []string{headers["X-Forwarded-For"]})
 	}
 
-	return ips
+	if len(res) == 0 {
+		res = ips
+	}
+
+	if peerInfo, ok := peer.FromContext(ctx); ok && peerInfo.Addr != nil {
+		peerIP := httpx.IPFromHostPort(peerInfo.Addr.String())
+		if len(peerIP) != 0 {
+			res = append(res, peerIP)
+		}
+	}
+
+	return res
 }
 
 func (r *RequestContext) Reset() {
