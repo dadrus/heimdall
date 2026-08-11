@@ -19,6 +19,7 @@ package grpcv3
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 	"testing"
@@ -29,6 +30,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
 )
@@ -689,6 +691,77 @@ func TestRequestContextHeader(t *testing.T) {
 			defer cf.Destroy(ctx)
 
 			assert.Equal(t, tc.expected, ctx.Request().Header(tc.name))
+		})
+	}
+}
+
+func TestRequestClientIPs(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		headers  map[string]string
+		expected []string
+	}{
+		"neither Forwarded, nor X-Forwarded-For headers are present": {
+			headers: map[string]string{},
+			expected: []string{
+				"192.0.2.1",
+			},
+		},
+		"only Forwarded header is present": {
+			headers: map[string]string{
+				"Forwarded": "proto=http;for=127.0.0.1, proto=https;for=192.168.12.125",
+			},
+			expected: []string{
+				"127.0.0.1",
+				"192.168.12.125",
+				"192.0.2.1",
+			},
+		},
+		"only X-Forwarded-For header is present": {
+			headers: map[string]string{
+				"X-Forwarded-For": "127.0.0.1, 192.168.12.125",
+			},
+			expected: []string{
+				"127.0.0.1",
+				"192.168.12.125",
+				"192.0.2.1",
+			},
+		},
+		"Forwarded and X-Forwarded-For headers are present": {
+			headers: map[string]string{
+				"X-Forwarded-For": "127.0.0.2, 192.168.12.126",
+				"Forwarded":       "proto=http;for=127.0.0.3, proto=http;for=192.168.12.127",
+			},
+			expected: []string{
+				"127.0.0.3",
+				"192.168.12.127",
+				"192.0.2.1",
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			md := metadata.New(nil)
+			md.Set("x-forwarded-for", "203.0.113.1")
+
+			ctx := metadata.NewIncomingContext(t.Context(), md)
+			ctx = peer.NewContext(ctx, &peer.Peer{
+				Addr: &net.TCPAddr{
+					IP:   net.ParseIP("192.0.2.1"),
+					Port: 12345,
+				},
+			})
+
+			// WHEN
+			ips := requestClientIPs(
+				ctx,
+				make([]string, 0, 10),
+				tc.headers,
+			)
+
+			// THEN
+			assert.Equal(t, tc.expected, ips)
 		})
 	}
 }
