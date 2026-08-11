@@ -2413,6 +2413,62 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				require.NotNil(t, sub)
 			},
 		},
+		"failed with positive cache hit due to invalid JWK certificate": {
+			authenticator: &jwtAuthenticator{
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						JWKSEndpoint: &endpoint.Endpoint{
+							URL:     jwksSrv.URL,
+							Headers: map[string]string{"Accept": "application/json"},
+						},
+					}, nil
+				}),
+				a: oauth2.Expectation{
+					AllowedAlgorithms: []string{"ES384"},
+					TrustedIssuers:    []string{issuer},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+				},
+				sf:              &SubjectInfo{IDFrom: "sub"},
+				ttl:             &tenSecondsTTL,
+				validateJWKCert: true,
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.RequestContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				auth *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ep := &endpoint.Endpoint{
+					URL:     jwksSrv.URL,
+					Headers: map[string]string{"Accept": "application/json"},
+				}
+				cacheKey := auth.calculateCacheKey(ep, jwksSrv.URL, kidKeyWithCert)
+
+				rawKey, err := json.Marshal(keyAndCertEntry.JWK())
+				require.NoError(t, err)
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawKey, nil)
+			},
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorContains(t, err, "JWK")
+				require.ErrorContains(t, err, "invalid")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
