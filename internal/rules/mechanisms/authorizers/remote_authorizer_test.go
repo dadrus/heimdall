@@ -1276,6 +1276,75 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.Equal(t, "authorizer", identifier.ID())
 			},
 		},
+		"failed with positive cache hit due to authorization expression": {
+			authorizer: &remoteAuthorizer{
+				id: "authz",
+				e: endpoint.Endpoint{
+					URL: srv.URL,
+				},
+				expressions: func() []*cellib.CompiledExpression {
+					exp, err := cellib.CompileExpression(
+						env,
+						"Payload.role == 'admin'",
+						"admin role required",
+					)
+					require.NoError(t, err)
+
+					return []*cellib.CompiledExpression{exp}
+				}(),
+				ttl: 20 * time.Second,
+			},
+			subject: &subject.Subject{
+				ID:         "my-id",
+				Attributes: map[string]any{},
+			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
+			configureCache: func(
+				t *testing.T,
+				cch *mocks.CacheMock,
+				auth *remoteAuthorizer,
+				sub *subject.Subject,
+			) {
+				t.Helper()
+
+				rawInfo, err := json.Marshal(authorizationInformation{
+					Payload: map[string]any{
+						"role": "user",
+					},
+				})
+				require.NoError(t, err)
+
+				cacheKey := auth.calculateCacheKey(sub, nil, "")
+
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawInfo, nil)
+			},
+			assert: func(
+				t *testing.T,
+				err error,
+				_ *subject.Subject,
+				outputs map[string]any,
+				results heimdall.Results,
+			) {
+				t.Helper()
+
+				assert.False(t, authorizationEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrAuthorization)
+				require.ErrorContains(t, err, "admin role required")
+
+				var identifier interface{ ID() string }
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "authz", identifier.ID())
+
+				assert.NotContains(t, outputs, "authz")
+				assert.NotContains(t, results, "authz")
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN

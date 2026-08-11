@@ -163,6 +163,7 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 	}, nil
 }
 
+//nolint:cyclop
 func (a *remoteAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -176,6 +177,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Sub
 	var (
 		cacheKey string
 		authInfo *authorizationInformation
+		fetched  bool
 	)
 
 	vals, payload, err := a.renderTemplates(ctx, sub)
@@ -185,6 +187,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Sub
 
 	if a.ttl > 0 {
 		cacheKey = a.calculateCacheKey(sub, vals, payload)
+
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			var ai authorizationInformation
 
@@ -197,17 +200,23 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Sub
 	}
 
 	if authInfo == nil {
-		authInfo, err = a.doAuthorize(ctx, sub, vals, payload)
+		authInfo, err = a.fetchAuthorizationInformation(ctx, sub, vals, payload)
 		if err != nil {
 			return err
 		}
 
-		if a.ttl > 0 && len(cacheKey) != 0 {
-			data, _ := json.Marshal(authInfo)
+		fetched = true
+	}
 
-			if err = cch.Set(ctx.Context(), cacheKey, data, a.ttl); err != nil {
-				logger.Warn().Err(err).Msg("Failed to cache authorization information")
-			}
+	if err = a.verify(ctx, authInfo.Payload); err != nil {
+		return err
+	}
+
+	if fetched && a.ttl > 0 && len(cacheKey) != 0 {
+		data, _ := json.Marshal(authInfo)
+
+		if err = cch.Set(ctx.Context(), cacheKey, data, a.ttl); err != nil {
+			logger.Warn().Err(err).Msg("Failed to cache authorization information")
 		}
 	}
 
@@ -278,7 +287,7 @@ func (a *remoteAuthorizer) ID() string { return a.id }
 
 func (a *remoteAuthorizer) ContinueOnError() bool { return false }
 
-func (a *remoteAuthorizer) doAuthorize(
+func (a *remoteAuthorizer) fetchAuthorizationInformation(
 	ctx heimdall.RequestContext,
 	sub *subject.Subject,
 	values map[string]string,
@@ -330,11 +339,6 @@ func (a *remoteAuthorizer) doAuthorize(
 
 	data, err := a.readResponse(ctx, resp)
 	if err != nil && !errors.Is(err, errNoContent) {
-		return nil, err
-	}
-
-	err = a.verify(ctx, data)
-	if err != nil {
 		return nil, err
 	}
 
