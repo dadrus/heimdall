@@ -224,7 +224,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.RequestContext
 	)
 
 	if a.ttl > 0 {
-		cacheKey = a.calculateCacheKey(authData)
+		cacheKey = a.calculateCacheKey(ctx, authData)
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			logger.Debug().Msg("Reusing subject information from cache")
 
@@ -393,10 +393,36 @@ func (a *genericAuthenticator) getCacheTTL(sessionLifespan *SessionLifespan) tim
 	return a.ttl
 }
 
-func (a *genericAuthenticator) calculateCacheKey(reference string) string {
+func (a *genericAuthenticator) calculateCacheKey(ctx heimdall.RequestContext, reference string) string {
 	digest := sha256.New()
 	digest.Write(a.e.Hash())
 	digest.Write(stringx.ToBytes(reference))
+
+	if len(a.fwdHeaders) != 0 || len(a.fwdCookies) != 0 {
+		req := ctx.Request()
+
+		var (
+			headerKind = [1]byte{0x01}
+			cookieKind = [1]byte{0x02}
+			separator  = [1]byte{0x00}
+		)
+
+		for _, headerName := range a.fwdHeaders {
+			digest.Write(headerKind[:])
+			digest.Write(stringx.ToBytes(headerName))
+			digest.Write(separator[:])
+			digest.Write(stringx.ToBytes(req.Header(headerName)))
+			digest.Write(separator[:])
+		}
+
+		for _, cookieName := range a.fwdCookies {
+			digest.Write(cookieKind[:])
+			digest.Write(stringx.ToBytes(cookieName))
+			digest.Write(separator[:])
+			digest.Write(stringx.ToBytes(req.Cookie(cookieName)))
+			digest.Write(separator[:])
+		}
+	}
 
 	var ttl [8]byte
 	binary.BigEndian.PutUint64(ttl[:], uint64(a.ttl)) //nolint:gosec
