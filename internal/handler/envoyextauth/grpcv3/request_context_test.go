@@ -49,9 +49,10 @@ func TestNewRequestContext(t *testing.T) {
 		Body:     "content=heimdall",
 		RawBody:  []byte("content=heimdall"),
 		Headers: map[string]string{
-			"x-foo-bar":    "barfoo",
-			"cookie":       "bar=foo;foo=baz",
-			"content-type": "application/x-www-form-urlencoded",
+			"x-foo-bar":       "barfoo",
+			"cookie":          "bar=foo;foo=baz",
+			"content-type":    "application/x-www-form-urlencoded",
+			"x-forwarded-for": "127.0.0.1",
 		},
 	}
 	checkReq := &envoy_auth.CheckRequest{
@@ -61,17 +62,20 @@ func TestNewRequestContext(t *testing.T) {
 			},
 		},
 	}
+
 	md := metadata.New(nil)
-	md.Set("x-forwarded-for", "127.0.0.1", "192.168.1.1")
+	md.Set("x-forwarded-for", "203.0.113.1")
+
+	grpcCtx := metadata.NewIncomingContext(t.Context(), md)
+	grpcCtx = peer.NewContext(grpcCtx, &peer.Peer{
+		Addr: &net.TCPAddr{
+			IP:   net.ParseIP("192.168.1.1"),
+			Port: 12345,
+		},
+	})
 
 	cf := newContextFactory()
-	ctx := cf.Create(
-		metadata.NewIncomingContext(
-			t.Context(),
-			md,
-		),
-		checkReq,
-	)
+	ctx := cf.Create(grpcCtx, checkReq)
 
 	defer cf.Destroy(ctx)
 
@@ -84,82 +88,15 @@ func TestNewRequestContext(t *testing.T) {
 	require.Equal(t, "bar=moo#foobar", ctx.Request().URL.RawQuery)
 	require.Equal(t, "moo#foobar", ctx.Request().URL.URL.Query().Get("bar"))
 	require.Equal(t, map[string]any{"content": []string{"heimdall"}}, ctx.Request().Body())
-	require.Len(t, ctx.Request().Headers(), 4)
+	require.Len(t, ctx.Request().Headers(), 5)
 	require.Equal(t, "foo.bar:8080", ctx.Request().Header("Host"))
 	require.Equal(t, "barfoo", ctx.Request().Header("X-Foo-Bar"))
+	require.Equal(t, "127.0.0.1", ctx.Request().Header("X-Forwarded-For"))
 	require.Equal(t, "foo", ctx.Request().Cookie("bar"))
 	require.Equal(t, "baz", ctx.Request().Cookie("foo"))
 	require.Empty(t, ctx.Request().Cookie("baz"))
 	require.NotNil(t, ctx.Context())
 	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIPAddresses)
-}
-
-func TestNewRequestContextXForwardedForCSV(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	checkReq := &envoy_auth.CheckRequest{
-		Attributes: &envoy_auth.AttributeContext{
-			Request: &envoy_auth.AttributeContext_Request{
-				Http: &envoy_auth.AttributeContext_HttpRequest{
-					Method:  http.MethodGet,
-					Scheme:  "https",
-					Host:    "foo.bar",
-					Path:    "/",
-					Headers: map[string]string{},
-				},
-			},
-		},
-	}
-	md := metadata.New(nil)
-	md.Set("x-forwarded-for", "127.0.0.1, 192.168.1.1")
-
-	cf := newContextFactory()
-	ctx := cf.Create(
-		metadata.NewIncomingContext(
-			t.Context(),
-			md,
-		),
-		checkReq,
-	)
-	defer cf.Destroy(ctx)
-
-	// THEN
-	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIPAddresses)
-}
-
-func TestNewRequestContextXForwardedForMixedValues(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	checkReq := &envoy_auth.CheckRequest{
-		Attributes: &envoy_auth.AttributeContext{
-			Request: &envoy_auth.AttributeContext_Request{
-				Http: &envoy_auth.AttributeContext_HttpRequest{
-					Method:  http.MethodGet,
-					Scheme:  "https",
-					Host:    "foo.bar",
-					Path:    "/",
-					Headers: map[string]string{},
-				},
-			},
-		},
-	}
-	md := metadata.New(nil)
-	md.Set("x-forwarded-for", "127.0.0.1", "192.168.1.1, 10.0.0.2", "   ")
-
-	cf := newContextFactory()
-	ctx := cf.Create(
-		metadata.NewIncomingContext(
-			t.Context(),
-			md,
-		),
-		checkReq,
-	)
-	defer cf.Destroy(ctx)
-
-	// THEN
-	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1", "10.0.0.2"}, ctx.Request().ClientIPAddresses)
 }
 
 func TestRequestContextURL(t *testing.T) {
@@ -292,6 +229,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				header := findHeader(okResponse.GetHeaders(), "X-For-Upstream-1")
 				require.NotNil(t, header)
 				assert.Equal(t, "some-value-1,some-value-3", header.GetValue())
+
 				header = findHeader(okResponse.GetHeaders(), "X-For-Upstream-2")
 				require.NotNil(t, header)
 				assert.Equal(t, "some-value-2", header.GetValue())
@@ -343,6 +281,7 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				require.Len(t, okResponse.GetHeaders(), 1)
 				assert.Equal(t, "Cookie", okResponse.GetHeaders()[0].GetHeader().GetKey())
+
 				values := strings.Split(okResponse.GetHeaders()[0].GetHeader().GetValue(), ";")
 				assert.Len(t, values, 2)
 				assert.Contains(t, okResponse.GetHeaders()[0].GetHeader().GetValue(), "some-cookie=value-1")
@@ -368,9 +307,11 @@ func TestRequestContextFinalize(t *testing.T) {
 				require.NotNil(t, okResponse)
 
 				require.Len(t, okResponse.GetHeaders(), 2)
+
 				header := findHeader(okResponse.GetHeaders(), "X-For-Upstream")
 				require.NotNil(t, header)
 				assert.Equal(t, "some-value", header.GetValue())
+
 				header = findHeader(okResponse.GetHeaders(), "Cookie")
 				require.NotNil(t, header)
 				assert.Equal(t, "some-cookie=value-1", header.GetValue())
@@ -569,6 +510,8 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 
 	// WHEN
 	captures := ctx.Request().URL.Captures
+
+	// THEN
 	require.Len(t, captures, 1)
 	assert.Equal(t, "b", captures["a"])
 }
@@ -586,19 +529,25 @@ func TestRequestContextReset(t *testing.T) {
 					Path:    "/test",
 					Query:   "bar=moo",
 					RawBody: []byte(`{ "content": "heimdall" }`),
-					Headers: map[string]string{"content-type": "application/json"},
+					Headers: map[string]string{
+						"content-type":    "application/json",
+						"x-forwarded-for": "127.0.0.1",
+					},
 				},
 			},
 		},
 	}
 
-	md := metadata.MD{
-		"x-forwarded-for": []string{"127.0.0.1"},
-	}
+	grpcCtx := peer.NewContext(context.TODO(), &peer.Peer{
+		Addr: &net.TCPAddr{
+			IP:   net.ParseIP("192.168.1.1"),
+			Port: 12345,
+		},
+	})
 
 	// GIVEN
 	ctx := newRequestContext()
-	ctx.Init(metadata.NewIncomingContext(context.TODO(), md), checkReq)
+	ctx.Init(grpcCtx, checkReq)
 	ctx.Request().URL.Captures = map[string]string{"b": "a"}
 	ctx.SetPipelineError(errors.New("test error"))
 	_ = ctx.Body()
@@ -607,6 +556,12 @@ func TestRequestContextReset(t *testing.T) {
 	ctx.AddCookieForUpstream("foo", "bar")
 	ctx.AddHeaderForUpstream("bar", "foo")
 	_ = ctx.Headers()
+
+	require.Equal(
+		t,
+		[]string{"127.0.0.1", "192.168.1.1"},
+		ctx.Request().ClientIPAddresses,
+	)
 
 	// WHEN
 	ctx.Reset()
@@ -688,6 +643,7 @@ func TestRequestContextHeader(t *testing.T) {
 					},
 				},
 			)
+
 			defer cf.Destroy(ctx)
 
 			assert.Equal(t, tc.expected, ctx.Request().Header(tc.name))
@@ -736,6 +692,17 @@ func TestRequestClientIPs(t *testing.T) {
 			expected: []string{
 				"127.0.0.3",
 				"192.168.12.127",
+				"192.0.2.1",
+			},
+		},
+		"X-Forwarded-For contains multiple and empty values": {
+			headers: map[string]string{
+				"X-Forwarded-For": "127.0.0.1, 192.168.1.1, 10.0.0.2,   ",
+			},
+			expected: []string{
+				"127.0.0.1",
+				"192.168.1.1",
+				"10.0.0.2",
 				"192.0.2.1",
 			},
 		},
