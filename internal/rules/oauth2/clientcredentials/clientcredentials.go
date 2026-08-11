@@ -118,7 +118,11 @@ func (c *Config) Hash() []byte {
 	digest.Write(stringx.ToBytes(c.ClientID))
 	digest.Write(stringx.ToBytes(c.ClientSecret))
 	digest.Write(stringx.ToBytes(c.TokenURL))
-	digest.Write(stringx.ToBytes(strings.Join(c.Scopes, "")))
+
+	for _, scope := range c.Scopes {
+		digest.Write(stringx.ToBytes(scope))
+		digest.Write([]byte{0})
+	}
 
 	return digest.Sum(nil)
 }
@@ -128,7 +132,11 @@ func (c *Config) calculateCacheKey() string {
 	digest.Write(stringx.ToBytes(c.ClientID))
 	digest.Write(stringx.ToBytes(c.ClientSecret))
 	digest.Write(stringx.ToBytes(c.TokenURL))
-	digest.Write(stringx.ToBytes(strings.Join(c.Scopes, "")))
+
+	for _, scope := range c.Scopes {
+		digest.Write(stringx.ToBytes(scope))
+		digest.Write([]byte{0})
+	}
 
 	if c.TTL == nil {
 		digest.Write([]byte{0})
