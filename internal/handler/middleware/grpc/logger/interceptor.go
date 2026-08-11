@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/rs/zerolog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -39,6 +40,7 @@ type ServerInterceptor interface {
 
 func New(logger zerolog.Logger, opts ...Option) ServerInterceptor {
 	conf := config{accessLogEnabled: true}
+
 	for _, opt := range opts {
 		opt(&conf)
 	}
@@ -69,13 +71,29 @@ func (li *logInterceptor) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 		peerAddr := peerFromCtx(ctx)
 		ctx = accesscontext.New(ctx)
 
-		logEvt := logCommonData(li.accessLogger.Info(), start, peerAddr, info.FullMethod, traceCtx, requestMD)
+		logEvt := logCommonData(
+			li.accessLogger.Info(),
+			start,
+			peerAddr,
+			info.FullMethod,
+			traceCtx,
+			req,
+			requestMD,
+		)
 		logEvt.Msg("TX started")
 
 		resp, err := handler(withTraceData(li.logger.With(), &traceCtx).Logger().WithContext(ctx), req)
 		grpcStatus, _ := status.FromError(err)
 
-		logEvt = logCommonData(li.accessLogger.Info(), start, peerAddr, info.FullMethod, traceCtx, requestMD)
+		logEvt = logCommonData(
+			li.accessLogger.Info(),
+			start,
+			peerAddr,
+			info.FullMethod,
+			traceCtx,
+			req,
+			requestMD,
+		)
 		logEvt = logAccessStatus(ctx, logEvt, err).
 			Uint32("_grpc_status_code", uint32(grpcStatus.Code())).
 			Int64("_tx_duration_ms", time.Since(start).Milliseconds())
@@ -86,9 +104,7 @@ func (li *logInterceptor) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 }
 
 func (li *logInterceptor) StreamServerInterceptor() grpc.StreamServerInterceptor {
-	return func(
-		srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler,
-	) error {
+	return func(srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		ctx := stream.Context()
 		traceCtx := tracecontext.Extract(ctx)
 
@@ -101,13 +117,29 @@ func (li *logInterceptor) StreamServerInterceptor() grpc.StreamServerInterceptor
 		peerAddr := peerFromCtx(ctx)
 		ctx = accesscontext.New(ctx)
 
-		logEvt := logCommonData(li.accessLogger.Info(), start, peerAddr, info.FullMethod, traceCtx, requestMD)
+		logEvt := logCommonData(
+			li.accessLogger.Info(),
+			start,
+			peerAddr,
+			info.FullMethod,
+			traceCtx,
+			nil,
+			requestMD,
+		)
 		logEvt.Msg("TX started")
 
 		err := handler(srv, stream)
 		grpcStatus, _ := status.FromError(err)
 
-		logEvt = logCommonData(li.accessLogger.Info(), start, peerAddr, info.FullMethod, traceCtx, requestMD)
+		logEvt = logCommonData(
+			li.accessLogger.Info(),
+			start,
+			peerAddr,
+			info.FullMethod,
+			traceCtx,
+			nil,
+			requestMD,
+		)
 		logEvt = logAccessStatus(ctx, logEvt, err).
 			Uint32("_grpc_status_code", uint32(grpcStatus.Code())).
 			Int64("_tx_duration_ms", time.Since(start).Milliseconds())
@@ -137,13 +169,29 @@ func logCommonData(
 	peerAddr string,
 	fullMethod string,
 	traceCtx tracecontext.TraceContext,
+	req any,
 	requestMD metadata.MD,
 ) *zerolog.Event {
 	logEvt.
 		Int64("_tx_start", start.Unix()).
 		Str("_client_ip", peerAddr).
 		Str("_grpc_method", fullMethod)
+
 	logEvt = logTraceData(&traceCtx, logEvt)
+
+	if checkReq, ok := req.(*envoy_auth.CheckRequest); ok {
+		headers := checkReq.
+			GetAttributes().
+			GetRequest().
+			GetHttp().
+			GetHeaders()
+
+		logEvt = logHeader(logEvt, headers, "x-forwarded-for", "_x_forwarded_for")
+		logEvt = logHeader(logEvt, headers, "forwarded", "_forwarded")
+
+		return logEvt
+	}
+
 	logEvt = logMetaData(logEvt, requestMD, "x-forwarded-for", "_x_forwarded_for")
 	logEvt = logMetaData(logEvt, requestMD, "forwarded", "_forwarded")
 
@@ -183,6 +231,19 @@ func logTraceData(traceCtx *tracecontext.TraceContext, logEvt *zerolog.Event) *z
 		if len(traceCtx.ParentID) != 0 {
 			logEvt = logEvt.Str("_parent_id", traceCtx.ParentID)
 		}
+	}
+
+	return logEvt
+}
+
+func logHeader(
+	logEvt *zerolog.Event,
+	headers map[string]string,
+	headerName string,
+	logKey string,
+) *zerolog.Event {
+	if value := headers[headerName]; len(value) != 0 {
+		return logEvt.Str(logKey, value)
 	}
 
 	return logEvt

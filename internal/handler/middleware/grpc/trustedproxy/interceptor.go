@@ -19,7 +19,6 @@ package trustedproxy
 import (
 	"context"
 	"net"
-	"strings"
 
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/rs/zerolog"
@@ -89,11 +88,9 @@ func sanitizeRequest(req any) {
 		GetHttp().
 		GetHeaders()
 
-	trustedproxy.RemoveForwardingHeaders(func(name string) {
-		for key := range headers {
-			if strings.EqualFold(key, name) {
-				delete(headers, key)
-			}
+	for key := range headers {
+		if trustedproxy.IsForwardingHeader(key) {
+			delete(headers, key)
 		}
-	})
+	}
 }

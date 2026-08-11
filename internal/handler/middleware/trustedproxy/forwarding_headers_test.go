@@ -46,3 +46,75 @@ func TestRemoveForwardingHeaders(t *testing.T) {
 		"X-Foo-Bar": []string{"foo"},
 	}, headers)
 }
+
+func TestIsForwardingHeader(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		name     string
+		expected bool
+	}{
+		"Forwarded": {
+			name:     "Forwarded",
+			expected: true,
+		},
+		"forwarded lowercase": {
+			name:     "forwarded",
+			expected: true,
+		},
+		"Forwarded mixed case": {
+			name:     "FoRwArDeD",
+			expected: true,
+		},
+		"X-Forwarded-For": {
+			name:     "X-Forwarded-For",
+			expected: true,
+		},
+		"X-Forwarded-For uppercase": {
+			name:     "X-FORWARDED-FOR",
+			expected: true,
+		},
+		"X-Forwarded-Proto": {
+			name:     "X-Forwarded-Proto",
+			expected: true,
+		},
+		"X-Forwarded-Host": {
+			name:     "X-Forwarded-Host",
+			expected: true,
+		},
+		"X-Forwarded-Uri": {
+			name:     "X-Forwarded-Uri",
+			expected: true,
+		},
+		"X-Forwarded-Path": {
+			name:     "X-Forwarded-Path",
+			expected: true,
+		},
+		"X-Forwarded-Method lowercase": {
+			name:     "x-forwarded-method",
+			expected: true,
+		},
+		"unrelated header": {
+			name:     "X-Foo-Bar",
+			expected: false,
+		},
+		"similar prefix": {
+			name:     "X-Forwarded-Foo",
+			expected: false,
+		},
+		"empty header": {
+			name:     "",
+			expected: false,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN
+			actual := IsForwardingHeader(tc.name)
+
+			// THEN
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}
