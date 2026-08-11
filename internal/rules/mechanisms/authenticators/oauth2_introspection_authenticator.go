@@ -309,6 +309,7 @@ func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map
 	return nil, err
 }
 
+//nolint:cyclop
 func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(
 	ctx heimdall.RequestContext,
 	token string,
@@ -316,7 +317,12 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(
 	cch := cache.Ctx(ctx.Context())
 	logger := zerolog.Ctx(ctx.Context())
 
-	var cacheKey string
+	var (
+		cacheKey       string
+		introspectResp *oauth2.IntrospectionResponse
+		rawResp        []byte
+		fetched        bool
+	)
 
 	claims, err := a.extractTokenClaims(token)
 	if err != nil {
@@ -335,20 +341,30 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(
 
 	if a.isCacheEnabled() {
 		cacheKey = a.calculateCacheKey(metadata.IntrospectionEndpoint, req.URL.String(), token)
-		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
-			logger.Debug().Msg("Reusing introspection response from cache")
 
-			return entry, nil
+		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
+			var response oauth2.IntrospectionResponse
+
+			if err = json.Unmarshal(entry, &response); err == nil {
+				logger.Debug().Msg("Reusing introspection response from cache")
+
+				introspectResp = &response
+				rawResp = entry
+			}
 		}
 	}
 
-	introspectResp, rawResp, err := a.fetchTokenIntrospectionResponse(
-		ctx,
-		metadata.IntrospectionEndpoint.CreateClient(req.URL.Hostname()),
-		req,
-	)
-	if err != nil {
-		return nil, err
+	if introspectResp == nil {
+		introspectResp, rawResp, err = a.fetchTokenIntrospectionResponse(
+			ctx,
+			metadata.IntrospectionEndpoint.CreateClient(req.URL.Hostname()),
+			req,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		fetched = true
 	}
 
 	// verification of the issuer is optional according to RFC 7662. The below implementation
@@ -366,9 +382,11 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(
 			CausedBy(err)
 	}
 
-	if cacheTTL := a.getCacheTTL(introspectResp); cacheTTL > 0 {
-		if err = cch.Set(ctx.Context(), cacheKey, rawResp, cacheTTL); err != nil {
-			logger.Warn().Err(err).Msg("Failed to cache introspection response")
+	if fetched {
+		if cacheTTL := a.getCacheTTL(introspectResp); cacheTTL > 0 {
+			if err = cch.Set(ctx.Context(), cacheKey, rawResp, cacheTTL); err != nil {
+				logger.Warn().Err(err).Msg("Failed to cache introspection response")
+			}
 		}
 	}
 
