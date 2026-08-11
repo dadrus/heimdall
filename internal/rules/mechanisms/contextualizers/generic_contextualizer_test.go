@@ -966,6 +966,85 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				assert.Equal(t, responseContentType, result.Header("Content-Type"))
 			},
 		},
+		"with forwarded header and cache miss due to different value": {
+			contextualizer: &genericContextualizer{
+				id:         "test-contextualizer",
+				e:          endpoint.Endpoint{URL: srv.URL},
+				fwdHeaders: []string{"X-Tenant-ID"},
+				ttl:        5 * time.Second,
+			},
+			subject: &subject.Subject{
+				ID:         "Foo",
+				Attributes: map[string]any{"bar": "baz"},
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "tenant-b", req.Header.Get("X-Tenant-ID"))
+				}
+
+				responseContentType = "application/json"
+				responseContent = []byte(`{"tenant":"tenant-b"}`)
+				responseCode = http.StatusOK
+			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+				t.Helper()
+
+				reqFuns := heimdallmocks.NewRequestFunctionsMock(t)
+				reqFuns.EXPECT().Header("X-Tenant-ID").Return("tenant-b")
+
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					RequestFunctions: reqFuns,
+				})
+			},
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer, sub *subject.Subject) {
+				t.Helper()
+
+				cacheKeyFor := func(headerValue string) string {
+					t.Helper()
+
+					reqFuns := heimdallmocks.NewRequestFunctionsMock(t)
+					reqFuns.EXPECT().Header("X-Tenant-ID").Return(headerValue)
+
+					ctx := heimdallmocks.NewRequestContextMock(t)
+					ctx.EXPECT().Request().Return(&heimdall.Request{
+						RequestFunctions: reqFuns,
+					})
+
+					return contextualizer.calculateCacheKey(ctx, sub, nil, "")
+				}
+
+				tenantACacheKey := cacheKeyFor("tenant-a")
+				tenantBCacheKey := cacheKeyFor("tenant-b")
+
+				require.NotEqual(t, tenantACacheKey, tenantBCacheKey)
+
+				cch.EXPECT().Get(mock.Anything, tenantBCacheKey).
+					Return(nil, errors.New("no cache entry"))
+
+				cch.EXPECT().Set(mock.Anything, tenantBCacheKey, mock.Anything, contextualizer.ttl).
+					Return(nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any, results heimdall.Results) {
+				t.Helper()
+
+				assert.True(t, remoteEndpointCalled)
+
+				require.NoError(t, err)
+				assert.Len(t, sub.Attributes, 1)
+
+				require.Len(t, outputs, 2)
+				assert.Equal(t, map[string]any{"tenant": "tenant-b"}, outputs["test-contextualizer"])
+
+				require.Len(t, results, 2)
+				result := results["test-contextualizer"]
+				require.NotNil(t, result)
+				assert.Equal(t, map[string]any{"tenant": "tenant-b"}, result.Payload)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -1005,6 +1084,184 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 			// THEN
 			tc.assert(t, err, tc.subject, ctx.Outputs(), ctx.Results())
+		})
+	}
+}
+
+func TestGenericContextualizerCalculateCacheKey(t *testing.T) {
+	t.Parallel()
+
+	ep := endpoint.Endpoint{
+		URL: "https://example.com/context",
+	}
+
+	sub := &subject.Subject{
+		ID:         "subject",
+		Attributes: map[string]any{},
+	}
+
+	for uc, tc := range map[string]struct {
+		contextualizer1 *genericContextualizer
+		contextualizer2 *genericContextualizer
+		headers1        map[string]string
+		headers2        map[string]string
+		cookies1        map[string]string
+		cookies2        map[string]string
+		expectEqual     bool
+	}{
+		"same configuration and request": {
+			contextualizer1: &genericContextualizer{
+				id:         "contextualizer",
+				e:          ep,
+				fwdHeaders: []string{"X-Tenant-ID"},
+				fwdCookies: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			contextualizer2: &genericContextualizer{
+				id:         "contextualizer",
+				e:          ep,
+				fwdHeaders: []string{"X-Tenant-ID"},
+				fwdCookies: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			headers1:    map[string]string{"X-Tenant-ID": "tenant-a"},
+			headers2:    map[string]string{"X-Tenant-ID": "tenant-a"},
+			cookies1:    map[string]string{"tenant": "tenant-a"},
+			cookies2:    map[string]string{"tenant": "tenant-a"},
+			expectEqual: true,
+		},
+		"different forwarded header value": {
+			contextualizer1: &genericContextualizer{
+				id:         "contextualizer",
+				e:          ep,
+				fwdHeaders: []string{"X-Tenant-ID"},
+				ttl:        5 * time.Second,
+			},
+			contextualizer2: &genericContextualizer{
+				id:         "contextualizer",
+				e:          ep,
+				fwdHeaders: []string{"X-Tenant-ID"},
+				ttl:        5 * time.Second,
+			},
+			headers1: map[string]string{"X-Tenant-ID": "tenant-a"},
+			headers2: map[string]string{"X-Tenant-ID": "tenant-b"},
+		},
+		"different forwarded header name": {
+			contextualizer1: &genericContextualizer{
+				id:         "contextualizer",
+				e:          ep,
+				fwdHeaders: []string{"X-Tenant-ID"},
+				ttl:        5 * time.Second,
+			},
+			contextualizer2: &genericContextualizer{
+				id:         "contextualizer",
+				e:          ep,
+				fwdHeaders: []string{"X-Organization-ID"},
+				ttl:        5 * time.Second,
+			},
+			headers1: map[string]string{"X-Tenant-ID": "foo"},
+			headers2: map[string]string{"X-Organization-ID": "foo"},
+		},
+		"different forwarded cookie value": {
+			contextualizer1: &genericContextualizer{
+				id:         "contextualizer",
+				e:          ep,
+				fwdCookies: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			contextualizer2: &genericContextualizer{
+				id:         "contextualizer",
+				e:          ep,
+				fwdCookies: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			cookies1: map[string]string{"tenant": "tenant-a"},
+			cookies2: map[string]string{"tenant": "tenant-b"},
+		},
+		"different forwarded cookie name": {
+			contextualizer1: &genericContextualizer{
+				id:         "contextualizer",
+				e:          ep,
+				fwdCookies: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			contextualizer2: &genericContextualizer{
+				id:         "contextualizer",
+				e:          ep,
+				fwdCookies: []string{"organization"},
+				ttl:        5 * time.Second,
+			},
+			cookies1: map[string]string{"tenant": "foo"},
+			cookies2: map[string]string{"organization": "foo"},
+		},
+		"different forwarded value type": {
+			contextualizer1: &genericContextualizer{
+				id:         "contextualizer",
+				e:          ep,
+				fwdHeaders: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			contextualizer2: &genericContextualizer{
+				id:         "contextualizer",
+				e:          ep,
+				fwdCookies: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			headers1: map[string]string{"tenant": "foo"},
+			cookies2: map[string]string{"tenant": "foo"},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			createContext := func(
+				headers map[string]string,
+				cookies map[string]string,
+				contextualizer *genericContextualizer,
+			) heimdall.RequestContext {
+				t.Helper()
+
+				ctx := heimdallmocks.NewRequestContextMock(t)
+
+				if len(contextualizer.fwdHeaders) == 0 && len(contextualizer.fwdCookies) == 0 {
+					return ctx
+				}
+
+				reqFuns := heimdallmocks.NewRequestFunctionsMock(t)
+
+				for _, headerName := range contextualizer.fwdHeaders {
+					reqFuns.EXPECT().
+						Header(headerName).
+						Return(headers[headerName])
+				}
+
+				for _, cookieName := range contextualizer.fwdCookies {
+					reqFuns.EXPECT().
+						Cookie(cookieName).
+						Return(cookies[cookieName])
+				}
+
+				ctx.EXPECT().
+					Request().
+					Return(&heimdall.Request{
+						RequestFunctions: reqFuns,
+					})
+
+				return ctx
+			}
+
+			ctx1 := createContext(tc.headers1, tc.cookies1, tc.contextualizer1)
+			ctx2 := createContext(tc.headers2, tc.cookies2, tc.contextualizer2)
+
+			// WHEN
+			key1 := tc.contextualizer1.calculateCacheKey(ctx1, sub, nil, "")
+			key2 := tc.contextualizer2.calculateCacheKey(ctx2, sub, nil, "")
+
+			// THEN
+			if tc.expectEqual {
+				assert.Equal(t, key1, key2)
+			} else {
+				assert.NotEqual(t, key1, key2)
+			}
 		})
 	}
 }
