@@ -594,46 +594,133 @@ func TestClientCredentialsToken(t *testing.T) {
 func TestClientCredentialsHash(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	s1 := &Config{
-		ClientID: "Foo", ClientSecret: "Bar",
-	}
-	s2 := &Config{
-		ClientID: "Baz", ClientSecret: "Bar",
-	}
+	for uc, tc := range map[string]struct {
+		c1, c2      *Config
+		expectEqual bool
+	}{
+		"same configuration": {
+			c1: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				Scopes:       []string{"foo", "bar"},
+			},
+			c2: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				Scopes:       []string{"foo", "bar"},
+			},
+			expectEqual: true,
+		},
+		"different client ids": {
+			c1: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+			},
+			c2: &Config{
+				ClientID:     "Baz",
+				ClientSecret: "Bar",
+			},
+		},
+		"ambiguous scope sets": {
+			c1: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				Scopes:       []string{"foo", "bar"},
+			},
+			c2: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				Scopes:       []string{"foobar"},
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// WHEN
+			hash1 := tc.c1.Hash()
+			hash2 := tc.c2.Hash()
 
-	// WHEN
-	hash1 := s1.Hash()
-	hash2 := s2.Hash()
+			// THEN
+			assert.NotEmpty(t, hash1)
+			assert.NotEmpty(t, hash2)
 
-	// THEN
-	assert.NotEmpty(t, hash1)
-	assert.NotEmpty(t, hash2)
-	assert.NotEqual(t, hash1, hash2)
+			if tc.expectEqual {
+				assert.Equal(t, hash1, hash2)
+			} else {
+				assert.NotEqual(t, hash1, hash2)
+			}
+		})
+	}
 }
 
 func TestClientCredentialsCalculateCacheKey(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	c1 := &Config{
-		TokenURL:     "https://example.com/token",
-		ClientID:     "client",
-		ClientSecret: "secret",
-		TTL:          new(5 * time.Second),
+	for uc, tc := range map[string]struct {
+		c1, c2      *Config
+		expectEqual bool
+	}{
+		"same configuration": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          new(5 * time.Second),
+				Scopes:       []string{"foo", "bar"},
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          new(5 * time.Second),
+				Scopes:       []string{"foo", "bar"},
+			},
+			expectEqual: true,
+		},
+		"different cache ttl": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          new(5 * time.Second),
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          new(15 * time.Second),
+			},
+		},
+		"ambiguous scope sets": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          new(5 * time.Second),
+				Scopes:       []string{"foo", "bar"},
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          new(5 * time.Second),
+				Scopes:       []string{"foobar"},
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// WHEN
+			key1 := tc.c1.calculateCacheKey()
+			key2 := tc.c2.calculateCacheKey()
+
+			// THEN
+			assert.NotEmpty(t, key1)
+			assert.NotEmpty(t, key2)
+
+			if tc.expectEqual {
+				assert.Equal(t, key1, key2)
+			} else {
+				assert.NotEqual(t, key1, key2)
+			}
+		})
 	}
-
-	c2 := &Config{
-		TokenURL:     "https://example.com/token",
-		ClientID:     "client",
-		ClientSecret: "secret",
-		TTL:          new(15 * time.Second),
-	}
-
-	// WHEN
-	key1 := c1.calculateCacheKey()
-	key2 := c2.calculateCacheKey()
-
-	// THEN
-	assert.NotEqual(t, key1, key2)
 }
