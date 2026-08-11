@@ -1469,25 +1469,165 @@ func TestGenericAuthenticatorReadResponse(t *testing.T) {
 func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
 	ep := endpoint.Endpoint{
 		URL: "https://example.com/identity",
 	}
 
-	a1 := &genericAuthenticator{
-		e:   ep,
-		ttl: 5 * time.Second,
+	for uc, tc := range map[string]struct {
+		authenticator1 *genericAuthenticator
+		authenticator2 *genericAuthenticator
+		headers1       map[string]string
+		headers2       map[string]string
+		cookies1       map[string]string
+		cookies2       map[string]string
+		expectEqual    bool
+	}{
+		"same configuration and request": {
+			authenticator1: &genericAuthenticator{
+				e:          ep,
+				fwdHeaders: []string{"X-Tenant-ID"},
+				fwdCookies: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			authenticator2: &genericAuthenticator{
+				e:          ep,
+				fwdHeaders: []string{"X-Tenant-ID"},
+				fwdCookies: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			headers1:    map[string]string{"X-Tenant-ID": "tenant-a"},
+			headers2:    map[string]string{"X-Tenant-ID": "tenant-a"},
+			cookies1:    map[string]string{"tenant": "tenant-a"},
+			cookies2:    map[string]string{"tenant": "tenant-a"},
+			expectEqual: true,
+		},
+		"different cache ttl": {
+			authenticator1: &genericAuthenticator{
+				e:   ep,
+				ttl: 5 * time.Second,
+			},
+			authenticator2: &genericAuthenticator{
+				e:   ep,
+				ttl: 15 * time.Second,
+			},
+		},
+		"different forwarded header value": {
+			authenticator1: &genericAuthenticator{
+				e:          ep,
+				fwdHeaders: []string{"X-Tenant-ID"},
+				ttl:        5 * time.Second,
+			},
+			authenticator2: &genericAuthenticator{
+				e:          ep,
+				fwdHeaders: []string{"X-Tenant-ID"},
+				ttl:        5 * time.Second,
+			},
+			headers1: map[string]string{"X-Tenant-ID": "tenant-a"},
+			headers2: map[string]string{"X-Tenant-ID": "tenant-b"},
+		},
+		"different forwarded header name": {
+			authenticator1: &genericAuthenticator{
+				e:          ep,
+				fwdHeaders: []string{"X-Tenant-ID"},
+				ttl:        5 * time.Second,
+			},
+			authenticator2: &genericAuthenticator{
+				e:          ep,
+				fwdHeaders: []string{"X-Organization-ID"},
+				ttl:        5 * time.Second,
+			},
+			headers1: map[string]string{"X-Tenant-ID": "foo"},
+			headers2: map[string]string{"X-Organization-ID": "foo"},
+		},
+		"different forwarded cookie value": {
+			authenticator1: &genericAuthenticator{
+				e:          ep,
+				fwdCookies: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			authenticator2: &genericAuthenticator{
+				e:          ep,
+				fwdCookies: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			cookies1: map[string]string{"tenant": "tenant-a"},
+			cookies2: map[string]string{"tenant": "tenant-b"},
+		},
+		"different forwarded cookie name": {
+			authenticator1: &genericAuthenticator{
+				e:          ep,
+				fwdCookies: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			authenticator2: &genericAuthenticator{
+				e:          ep,
+				fwdCookies: []string{"organization"},
+				ttl:        5 * time.Second,
+			},
+			cookies1: map[string]string{"tenant": "foo"},
+			cookies2: map[string]string{"organization": "foo"},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			ctx1 := heimdallmocks.NewRequestContextMock(t)
+
+			if len(tc.authenticator1.fwdHeaders) != 0 || len(tc.authenticator1.fwdCookies) != 0 {
+				reqFuns1 := heimdallmocks.NewRequestFunctionsMock(t)
+
+				for _, headerName := range tc.authenticator1.fwdHeaders {
+					reqFuns1.EXPECT().
+						Header(headerName).
+						Return(tc.headers1[headerName])
+				}
+
+				for _, cookieName := range tc.authenticator1.fwdCookies {
+					reqFuns1.EXPECT().
+						Cookie(cookieName).
+						Return(tc.cookies1[cookieName])
+				}
+
+				ctx1.EXPECT().
+					Request().
+					Return(&heimdall.Request{
+						RequestFunctions: reqFuns1,
+					})
+			}
+
+			ctx2 := heimdallmocks.NewRequestContextMock(t)
+
+			if len(tc.authenticator2.fwdHeaders) != 0 || len(tc.authenticator2.fwdCookies) != 0 {
+				reqFuns2 := heimdallmocks.NewRequestFunctionsMock(t)
+
+				for _, headerName := range tc.authenticator2.fwdHeaders {
+					reqFuns2.EXPECT().
+						Header(headerName).
+						Return(tc.headers2[headerName])
+				}
+
+				for _, cookieName := range tc.authenticator2.fwdCookies {
+					reqFuns2.EXPECT().
+						Cookie(cookieName).
+						Return(tc.cookies2[cookieName])
+				}
+
+				ctx2.EXPECT().
+					Request().
+					Return(&heimdall.Request{
+						RequestFunctions: reqFuns2,
+					})
+			}
+
+			// WHEN
+			key1 := tc.authenticator1.calculateCacheKey(ctx1, "authentication-data")
+			key2 := tc.authenticator2.calculateCacheKey(ctx2, "authentication-data")
+
+			// THEN
+			if tc.expectEqual {
+				assert.Equal(t, key1, key2)
+			} else {
+				assert.NotEqual(t, key1, key2)
+			}
+		})
 	}
-
-	a2 := &genericAuthenticator{
-		e:   ep,
-		ttl: 15 * time.Second,
-	}
-
-	// WHEN
-	key1 := a1.calculateCacheKey("authentication-data")
-	key2 := a2.calculateCacheKey("authentication-data")
-
-	// THEN
-	assert.NotEqual(t, key1, key2)
 }
