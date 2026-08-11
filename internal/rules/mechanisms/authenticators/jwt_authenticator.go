@@ -442,6 +442,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 	return rawClaims, nil
 }
 
+//nolint:cyclop
 func (a *jwtAuthenticator) getKey(
 	ctx heimdall.RequestContext, keyID string, tokenClaims map[string]any, ep *endpoint.Endpoint,
 ) (*jose.JSONWebKey, error) {
@@ -449,8 +450,9 @@ func (a *jwtAuthenticator) getKey(
 	logger := zerolog.Ctx(ctx.Context())
 
 	var (
-		cacheKey string
-		jwks     *jose.JSONWebKeySet
+		cacheKey   string
+		jwk        *jose.JSONWebKey
+		keyFetched bool
 	)
 
 	req, err := a.createRequest(ctx.Context(), ep, tokenClaims)
@@ -461,30 +463,34 @@ func (a *jwtAuthenticator) getKey(
 	if a.isCacheEnabled() {
 		cacheKey = a.calculateCacheKey(ep, req.URL.String(), keyID)
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
-			var jwk jose.JSONWebKey
+			var key jose.JSONWebKey
 
-			if err = json.Unmarshal(entry, &jwk); err == nil {
+			if err = json.Unmarshal(entry, &key); err == nil {
 				logger.Debug().Msg("Reusing JWK from cache")
 
-				return &jwk, nil
+				jwk = &key
 			}
 		}
 	}
 
-	jwks, err = a.fetchJWKS(ctx.Context(), ep.CreateClient(req.URL.Hostname()), req)
-	if err != nil {
-		return nil, err
+	if jwk == nil {
+		jwks, err := a.fetchJWKS(ctx.Context(), ep.CreateClient(req.URL.Hostname()), req)
+		if err != nil {
+			return nil, err
+		}
+
+		keys := jwks.Key(keyID)
+		if len(keys) != 1 {
+			return nil, errorchain.
+				NewWithMessagef(heimdall.ErrAuthentication,
+					"no (unique) key found for the keyID='%s' referenced in the JWT", keyID).
+				WithErrorContext(a)
+		}
+
+		jwk = &keys[0]
+		keyFetched = true
 	}
 
-	keys := jwks.Key(keyID)
-	if len(keys) != 1 {
-		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrAuthentication,
-				"no (unique) key found for the keyID='%s' referenced in the JWT", keyID).
-			WithErrorContext(a)
-	}
-
-	jwk := &keys[0]
 	if err = a.validateJWK(jwk); err != nil {
 		return nil, errorchain.
 			NewWithMessagef(heimdall.ErrAuthentication, "JWK for keyID=%s is invalid", keyID).
@@ -492,11 +498,13 @@ func (a *jwtAuthenticator) getKey(
 			CausedBy(err)
 	}
 
-	if cacheTTL := a.getCacheTTL(jwk); cacheTTL > 0 {
-		data, _ := json.Marshal(jwk)
+	if keyFetched {
+		if cacheTTL := a.getCacheTTL(jwk); cacheTTL > 0 {
+			data, _ := json.Marshal(jwk)
 
-		if err = cch.Set(ctx.Context(), cacheKey, data, cacheTTL); err != nil {
-			logger.Warn().Err(err).Msg("Failed to cache JWK")
+			if err = cch.Set(ctx.Context(), cacheKey, data, cacheTTL); err != nil {
+				logger.Warn().Err(err).Msg("Failed to cache JWK")
+			}
 		}
 	}
 
