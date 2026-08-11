@@ -1943,6 +1943,72 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.NotEmpty(t, sub.Attributes["exp"])
 			},
 		},
+		"with default cache, with cache hit and failing scope assertion": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+					return oauth2.ServerMetadata{
+						IntrospectionEndpoint: &endpoint.Endpoint{
+							URL:    srv.URL,
+							Method: http.MethodPost,
+							Headers: map[string]string{
+								"Content-Type": "application/x-www-form-urlencoded",
+								"Accept":       "application/json",
+							},
+						},
+					}, nil
+				}),
+				a: oauth2.Expectation{
+					TrustedIssuers: []string{"foobar"},
+					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{"write"},
+				},
+				sf: &SubjectInfo{IDFrom: "sub"},
+			},
+			configureMocks: func(t *testing.T,
+				ctx *heimdallmocks.RequestContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return("test_access_token", nil)
+
+				rawIntrospectResponse, err := json.Marshal(map[string]any{
+					"active":     true,
+					"scope":      "read",
+					"username":   "unknown",
+					"token_type": "Bearer",
+					"aud":        "bar",
+					"sub":        "foo",
+					"iss":        "foobar",
+					"iat":        time.Now().Unix(),
+					"nbf":        time.Now().Unix(),
+					"exp":        time.Now().Unix() + 30,
+				})
+				require.NoError(t, err)
+
+				cch.EXPECT().
+					Get(mock.Anything, mock.Anything).
+					Return(rawIntrospectResponse, nil)
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.False(t, introspectionEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorContains(t, err, "assertion conditions")
+				require.ErrorContains(t, err, "required scope write is missing")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+
+				assert.Nil(t, sub)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
