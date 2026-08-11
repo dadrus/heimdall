@@ -2185,3 +2185,22 @@ func TestOauth2IntrospectionAuthenticatorIsInsecure(t *testing.T) {
 	// WHEN & THEN
 	require.False(t, auth.IsInsecure())
 }
+
+func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ep := &endpoint.Endpoint{
+		URL: "https://example.com/introspect",
+	}
+
+	a1 := &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)}
+	a2 := &oauth2IntrospectionAuthenticator{ttl: new(15 * time.Second)}
+
+	// WHEN
+	key1 := a1.calculateCacheKey(ep, ep.URL, "token")
+	key2 := a2.calculateCacheKey(ep, ep.URL, "token")
+
+	// THEN
+	assert.NotEqual(t, key1, key2)
+}

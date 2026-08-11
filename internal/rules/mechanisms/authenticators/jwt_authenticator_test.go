@@ -2703,3 +2703,20 @@ func TestJwtAuthenticatorIsInsecure(t *testing.T) {
 	// WHEN & THEN
 	require.False(t, auth.IsInsecure())
 }
+
+func TestJwtAuthenticatorCalculateCacheKeyWithDefaultAndExplicitTTL(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ep := &endpoint.Endpoint{URL: "https://example.com/.well-known/jwks.json"}
+
+	withDefaultTTL := &jwtAuthenticator{}
+	withExplicitTTL := &jwtAuthenticator{ttl: new(5 * time.Second)}
+
+	// WHEN
+	key1 := withDefaultTTL.calculateCacheKey(ep, ep.URL, "kid")
+	key2 := withExplicitTTL.calculateCacheKey(ep, ep.URL, "kid")
+
+	// THEN
+	assert.NotEqual(t, key1, key2)
+}

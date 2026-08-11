@@ -18,6 +18,7 @@ package authenticators
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"io"
@@ -396,6 +397,10 @@ func (a *genericAuthenticator) calculateCacheKey(reference string) string {
 	digest := sha256.New()
 	digest.Write(a.e.Hash())
 	digest.Write(stringx.ToBytes(reference))
+
+	var ttl [8]byte
+	binary.BigEndian.PutUint64(ttl[:], uint64(a.ttl)) //nolint:gosec
+	digest.Write(ttl[:])
 
 	var result [sha256.Size]byte
 
