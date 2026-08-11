@@ -54,11 +54,14 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
 
 	parentCtx := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID: trace.TraceID{1}, SpanID: trace.SpanID{2}, TraceFlags: trace.FlagsSampled,
+		TraceID:    trace.TraceID{1},
+		SpanID:     trace.SpanID{2},
+		TraceFlags: trace.FlagsSampled,
 	})
 
 	for uc, tc := range map[string]struct {
 		outgoingContext func(t *testing.T) context.Context
+		requestHeaders  map[string]string
 		configureMock   func(t *testing.T, m *mocks2.MockHandler)
 		assert          func(t *testing.T, logEvent1, logEvent2, logEvent3 map[string]any)
 	}{
@@ -71,7 +74,8 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 			configureMock: func(t *testing.T, m *mocks2.MockHandler) {
 				t.Helper()
 
-				m.On("Check",
+				m.On(
+					"Check",
 					mock.MatchedBy(
 						func(ctx context.Context) bool {
 							zerolog.Ctx(ctx).Info().Msg("test called")
@@ -82,7 +86,11 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 					),
 					mock.Anything,
 				).Return(
-					&envoy_auth.CheckResponse{Status: &rpc_status.Status{Code: int32(envoy_type.StatusCode_OK)}},
+					&envoy_auth.CheckResponse{
+						Status: &rpc_status.Status{
+							Code: int32(envoy_type.StatusCode_OK),
+						},
+					},
 					nil,
 				)
 			},
@@ -130,20 +138,26 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 				t.Helper()
 
 				md := map[string]string{
-					"x-forwarded-for": "127.0.0.1",
-					"forwarded":       "for=127.0.0.1",
+					"x-forwarded-for": "203.0.113.1",
+					"forwarded":       "for=203.0.113.1",
 				}
 
 				otel.GetTextMapPropagator().Inject(
 					trace.ContextWithRemoteSpanContext(t.Context(), parentCtx),
-					propagation.MapCarrier(md))
+					propagation.MapCarrier(md),
+				)
 
 				return metadata.NewOutgoingContext(t.Context(), metadata.New(md))
+			},
+			requestHeaders: map[string]string{
+				"x-forwarded-for": "127.0.0.1",
+				"forwarded":       "for=127.0.0.1",
 			},
 			configureMock: func(t *testing.T, m *mocks2.MockHandler) {
 				t.Helper()
 
-				m.On("Check",
+				m.On(
+					"Check",
 					mock.MatchedBy(
 						func(ctx context.Context) bool {
 							zerolog.Ctx(ctx).Info().Msg("test called")
@@ -205,7 +219,8 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 			configureMock: func(t *testing.T, m *mocks2.MockHandler) {
 				t.Helper()
 
-				m.On("Check",
+				m.On(
+					"Check",
 					mock.MatchedBy(
 						func(ctx context.Context) bool {
 							zerolog.Ctx(ctx).Info().Msg("test called")
@@ -217,7 +232,11 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 					),
 					mock.Anything,
 				).Return(
-					&envoy_auth.CheckResponse{Status: &rpc_status.Status{Code: int32(envoy_type.StatusCode_Forbidden)}},
+					&envoy_auth.CheckResponse{
+						Status: &rpc_status.Status{
+							Code: int32(envoy_type.StatusCode_Forbidden),
+						},
+					},
 					nil,
 				)
 			},
@@ -273,9 +292,16 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
 			handler := &mocks2.MockHandler{}
-			conn, err := grpc.NewClient("passthrough://bufnet",
-				grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
-				grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+			conn, err := grpc.NewClient(
+				"passthrough://bufnet",
+				grpc.WithContextDialer(
+					func(context.Context, string) (net.Conn, error) {
+						return lis.Dial()
+					},
+				),
+				grpc.WithTransportCredentials(insecure.NewCredentials()),
+			)
 			require.NoError(t, err)
 
 			defer conn.Close()
@@ -299,9 +325,10 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 				Attributes: &envoy_auth.AttributeContext{
 					Request: &envoy_auth.AttributeContext_Request{
 						Http: &envoy_auth.AttributeContext_HttpRequest{
-							Body:   "foo",
-							Method: http.MethodPost,
-							Path:   "/foobar",
+							Body:    "foo",
+							Method:  http.MethodPost,
+							Path:    "/foobar",
+							Headers: tc.requestHeaders,
 						},
 					},
 				},
@@ -312,7 +339,6 @@ func TestLogInterceptorForKnownService(t *testing.T) {
 
 			events := strings.Split(tb.CollectedLog(), "}")
 			require.Len(t, events, 4)
-
 			require.NoError(t, json.Unmarshal([]byte(events[0]+"}"), &logLine1))
 			require.NoError(t, json.Unmarshal([]byte(events[1]+"}"), &logLine2))
 			require.NoError(t, json.Unmarshal([]byte(events[2]+"}"), &logLine3))
@@ -332,19 +358,35 @@ func TestLogInterceptorWithAccessLogDisabled(t *testing.T) {
 	logger := zerolog.New(zerolog.TestWriter{T: tb})
 	handler := &mocks2.MockHandler{}
 
-	conn, err := grpc.NewClient("passthrough://bufnet",
-		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(
+		"passthrough://bufnet",
+		grpc.WithContextDialer(
+			func(context.Context, string) (net.Conn, error) {
+				return lis.Dial()
+			},
+		),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	require.NoError(t, err)
 
 	defer conn.Close()
 
-	handler.On("Check", mock.MatchedBy(func(ctx context.Context) bool {
-		zerolog.Ctx(ctx).Info().Msg("test called")
+	handler.On(
+		"Check",
+		mock.MatchedBy(
+			func(ctx context.Context) bool {
+				zerolog.Ctx(ctx).Info().Msg("test called")
 
-		return true
-	}), mock.Anything).Return(
-		&envoy_auth.CheckResponse{Status: &rpc_status.Status{Code: int32(envoy_type.StatusCode_OK)}},
+				return true
+			},
+		),
+		mock.Anything,
+	).Return(
+		&envoy_auth.CheckResponse{
+			Status: &rpc_status.Status{
+				Code: int32(envoy_type.StatusCode_OK),
+			},
+		},
 		nil,
 	)
 
@@ -375,13 +417,16 @@ func TestLogInterceptorWithAccessLogDisabled(t *testing.T) {
 
 	// THEN
 	require.NoError(t, err)
+
 	srv.Stop()
 
 	events := strings.Split(strings.TrimRight(tb.CollectedLog(), "\n"), "}")
+
 	// only "test called" log event should be present, no TX started / finished
 	require.Len(t, events, 2)
 
 	var logLine map[string]any
+
 	require.NoError(t, json.Unmarshal([]byte(events[0]+"}"), &logLine))
 
 	assert.Equal(t, "test called", logLine["message"])
@@ -399,17 +444,25 @@ func TestLogInterceptorStreamWithAccessLogDisabled(t *testing.T) {
 	logger := zerolog.New(zerolog.TestWriter{T: tb})
 	handler := &mocks2.MockHandler{}
 
-	conn, err := grpc.NewClient("passthrough://bufnet",
-		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(
+		"passthrough://bufnet",
+		grpc.WithContextDialer(
+			func(context.Context, string) (net.Conn, error) {
+				return lis.Dial()
+			},
+		),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	require.NoError(t, err)
 
 	defer conn.Close()
 
 	srv := grpc.NewServer(
-		grpc.UnknownServiceHandler(func(_ interface{}, _ grpc.ServerStream) error {
-			return status.Error(codes.Unknown, "unknown service or method")
-		}),
+		grpc.UnknownServiceHandler(
+			func(_ interface{}, _ grpc.ServerStream) error {
+				return status.Error(codes.Unknown, "unknown service or method")
+			},
+		),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainStreamInterceptor(New(logger, WithAccessLogEnabled(false)).StreamServerInterceptor()),
 	)
@@ -426,6 +479,7 @@ func TestLogInterceptorStreamWithAccessLogDisabled(t *testing.T) {
 
 	// THEN
 	require.Error(t, err)
+
 	srv.Stop()
 	handler.AssertExpectations(t)
 
@@ -446,20 +500,26 @@ func TestLogInterceptorForUnknownService(t *testing.T) {
 	tb := &testsupport.TestingLog{TB: t}
 	logger := zerolog.New(zerolog.TestWriter{T: tb})
 	handler := &mocks2.MockHandler{}
+
 	bufDialer := func(context.Context, string) (net.Conn, error) {
 		return lis.Dial()
 	}
-	conn, err := grpc.NewClient("passthrough://bufnet",
+
+	conn, err := grpc.NewClient(
+		"passthrough://bufnet",
 		grpc.WithContextDialer(bufDialer),
-		grpc.WithTransportCredentials(insecure.NewCredentials()))
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
 	require.NoError(t, err)
 
 	defer conn.Close()
 
 	srv := grpc.NewServer(
-		grpc.UnknownServiceHandler(func(_ interface{}, _ grpc.ServerStream) error {
-			return status.Error(codes.Unknown, "unknown service or method")
-		}),
+		grpc.UnknownServiceHandler(
+			func(_ interface{}, _ grpc.ServerStream) error {
+				return status.Error(codes.Unknown, "unknown service or method")
+			},
+		),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainStreamInterceptor(New(logger).StreamServerInterceptor()),
 	)
@@ -476,6 +536,7 @@ func TestLogInterceptorForUnknownService(t *testing.T) {
 
 	// THEN
 	require.Error(t, err)
+
 	srv.Stop()
 	handler.AssertExpectations(t)
 
