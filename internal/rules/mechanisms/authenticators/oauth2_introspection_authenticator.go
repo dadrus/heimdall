@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"io"
@@ -505,11 +506,24 @@ func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.In
 	}
 }
 
-func (a *oauth2IntrospectionAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, templatedURL, token string) string {
+func (a *oauth2IntrospectionAuthenticator) calculateCacheKey(
+	ep *endpoint.Endpoint,
+	templatedURL, token string,
+) string {
 	digest := sha256.New()
 	digest.Write(ep.Hash())
 	digest.Write(stringx.ToBytes(templatedURL))
 	digest.Write(stringx.ToBytes(token))
+
+	if a.ttl == nil {
+		digest.Write([]byte{0})
+	} else {
+		digest.Write([]byte{1})
+
+		var ttl [8]byte
+		binary.BigEndian.PutUint64(ttl[:], uint64(*a.ttl)) //nolint:gosec
+		digest.Write(ttl[:])
+	}
 
 	var result [sha256.Size]byte
 

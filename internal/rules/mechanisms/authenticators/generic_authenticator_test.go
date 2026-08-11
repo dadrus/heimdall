@@ -1465,3 +1465,29 @@ func TestGenericAuthenticatorReadResponse(t *testing.T) {
 		})
 	}
 }
+
+func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ep := endpoint.Endpoint{
+		URL: "https://example.com/identity",
+	}
+
+	a1 := &genericAuthenticator{
+		e:   ep,
+		ttl: 5 * time.Second,
+	}
+
+	a2 := &genericAuthenticator{
+		e:   ep,
+		ttl: 15 * time.Second,
+	}
+
+	// WHEN
+	key1 := a1.calculateCacheKey("authentication-data")
+	key2 := a2.calculateCacheKey("authentication-data")
+
+	// THEN
+	assert.NotEqual(t, key1, key2)
+}

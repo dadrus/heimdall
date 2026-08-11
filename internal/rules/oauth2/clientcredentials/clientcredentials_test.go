@@ -611,3 +611,29 @@ func TestClientCredentialsHash(t *testing.T) {
 	assert.NotEmpty(t, hash2)
 	assert.NotEqual(t, hash1, hash2)
 }
+
+func TestClientCredentialsCalculateCacheKey(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	c1 := &Config{
+		TokenURL:     "https://example.com/token",
+		ClientID:     "client",
+		ClientSecret: "secret",
+		TTL:          new(5 * time.Second),
+	}
+
+	c2 := &Config{
+		TokenURL:     "https://example.com/token",
+		ClientID:     "client",
+		ClientSecret: "secret",
+		TTL:          new(15 * time.Second),
+	}
+
+	// WHEN
+	key1 := c1.calculateCacheKey()
+	key2 := c2.calculateCacheKey()
+
+	// THEN
+	assert.NotEqual(t, key1, key2)
+}

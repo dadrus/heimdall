@@ -19,6 +19,7 @@ package clientcredentials
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"io"
 	"net/http"
@@ -128,6 +129,16 @@ func (c *Config) calculateCacheKey() string {
 	digest.Write(stringx.ToBytes(c.ClientSecret))
 	digest.Write(stringx.ToBytes(c.TokenURL))
 	digest.Write(stringx.ToBytes(strings.Join(c.Scopes, "")))
+
+	if c.TTL == nil {
+		digest.Write([]byte{0})
+	} else {
+		digest.Write([]byte{1})
+
+		var ttl [8]byte
+		binary.BigEndian.PutUint64(ttl[:], uint64(*c.TTL)) //nolint:gosec
+		digest.Write(ttl[:])
+	}
 
 	var result [sha256.Size]byte
 

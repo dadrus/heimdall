@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"net/http"
@@ -631,6 +632,16 @@ func (a *jwtAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, renderedURL,
 	digest.Write(ep.Hash())
 	digest.Write(stringx.ToBytes(renderedURL))
 	digest.Write(stringx.ToBytes(reference))
+
+	if a.ttl == nil {
+		digest.Write([]byte{0})
+	} else {
+		digest.Write([]byte{1})
+
+		var ttl [8]byte
+		binary.BigEndian.PutUint64(ttl[:], uint64(*a.ttl)) //nolint:gosec
+		digest.Write(ttl[:])
+	}
 
 	var result [sha256.Size]byte
 
