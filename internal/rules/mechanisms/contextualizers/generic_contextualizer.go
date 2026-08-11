@@ -159,7 +159,7 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 	}
 
 	if c.ttl > 0 {
-		cacheKey = c.calculateCacheKey(sub, vals, payload)
+		cacheKey = c.calculateCacheKey(ctx, sub, vals, payload)
 
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			var result heimdall.Result
@@ -386,6 +386,7 @@ func (c *genericContextualizer) readResponse(ctx heimdall.RequestContext, resp *
 }
 
 func (c *genericContextualizer) calculateCacheKey(
+	ctx heimdall.RequestContext,
 	sub *subject.Subject,
 	values map[string]string,
 	payload string,
@@ -393,6 +394,7 @@ func (c *genericContextualizer) calculateCacheKey(
 	const int64BytesCount = 8
 
 	var ttlBytes [int64BytesCount]byte
+
 	//nolint:gosec
 	// no integer overflow during conversion possible
 	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(c.ttl))
@@ -401,8 +403,6 @@ func (c *genericContextualizer) calculateCacheKey(
 	hash.Write(stringx.ToBytes("generic-contextualizer:v2"))
 	hash.Write(c.e.Hash())
 	hash.Write(stringx.ToBytes(c.id))
-	hash.Write(stringx.ToBytes(strings.Join(c.fwdHeaders, ",")))
-	hash.Write(stringx.ToBytes(strings.Join(c.fwdCookies, ",")))
 	hash.Write(stringx.ToBytes(payload))
 	hash.Write(ttlBytes[:])
 	hash.Write(sub.Hash())
@@ -410,6 +410,32 @@ func (c *genericContextualizer) calculateCacheKey(
 	for k, v := range values {
 		hash.Write(stringx.ToBytes(k))
 		hash.Write(stringx.ToBytes(v))
+	}
+
+	if len(c.fwdHeaders) != 0 || len(c.fwdCookies) != 0 {
+		req := ctx.Request()
+
+		var (
+			headerKind = [1]byte{0x01}
+			cookieKind = [1]byte{0x02}
+			separator  = [1]byte{0x00}
+		)
+
+		for _, headerName := range c.fwdHeaders {
+			hash.Write(headerKind[:])
+			hash.Write(stringx.ToBytes(headerName))
+			hash.Write(separator[:])
+			hash.Write(stringx.ToBytes(req.Header(headerName)))
+			hash.Write(separator[:])
+		}
+
+		for _, cookieName := range c.fwdCookies {
+			hash.Write(cookieKind[:])
+			hash.Write(stringx.ToBytes(cookieName))
+			hash.Write(separator[:])
+			hash.Write(stringx.ToBytes(req.Cookie(cookieName)))
+			hash.Write(separator[:])
+		}
 	}
 
 	var result [sha256.Size]byte
