@@ -1567,6 +1567,20 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 			cookies1: map[string]string{"tenant": "foo"},
 			cookies2: map[string]string{"organization": "foo"},
 		},
+		"different forwarded value type": {
+			authenticator1: &genericAuthenticator{
+				e:          ep,
+				fwdHeaders: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			authenticator2: &genericAuthenticator{
+				e:          ep,
+				fwdCookies: []string{"tenant"},
+				ttl:        5 * time.Second,
+			},
+			headers1: map[string]string{"tenant": "foo"},
+			cookies2: map[string]string{"tenant": "foo"},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN

@@ -401,9 +401,14 @@ func (a *genericAuthenticator) calculateCacheKey(ctx heimdall.RequestContext, re
 	if len(a.fwdHeaders) != 0 || len(a.fwdCookies) != 0 {
 		req := ctx.Request()
 
-		var separator [1]byte
+		var (
+			headerKind = [1]byte{0x01}
+			cookieKind = [1]byte{0x02}
+			separator  = [1]byte{0x00}
+		)
 
 		for _, headerName := range a.fwdHeaders {
+			digest.Write(headerKind[:])
 			digest.Write(stringx.ToBytes(headerName))
 			digest.Write(separator[:])
 			digest.Write(stringx.ToBytes(req.Header(headerName)))
@@ -411,6 +416,7 @@ func (a *genericAuthenticator) calculateCacheKey(ctx heimdall.RequestContext, re
 		}
 
 		for _, cookieName := range a.fwdCookies {
+			digest.Write(cookieKind[:])
 			digest.Write(stringx.ToBytes(cookieName))
 			digest.Write(separator[:])
 			digest.Write(stringx.ToBytes(req.Cookie(cookieName)))
