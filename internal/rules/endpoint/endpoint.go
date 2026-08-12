@@ -80,6 +80,13 @@ func (e Endpoint) CreateClient(peerName string) *http.Client {
 		}
 	}
 
+	if e.AuthStrategy != nil {
+		client.Transport = &authenticationRoundTripper{
+			next:     client.Transport,
+			strategy: e.AuthStrategy,
+		}
+	}
+
 	return client
 }
 
@@ -105,17 +112,6 @@ func (e Endpoint) CreateRequest(ctx context.Context, body io.Reader, rndr Render
 		return nil, errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed to create a request instance").
 			CausedBy(err)
-	}
-
-	if e.AuthStrategy != nil {
-		logger.Debug().Msg("Authenticating request")
-
-		err = e.AuthStrategy.Apply(req)
-		if err != nil {
-			return nil, errorchain.
-				NewWithMessage(heimdall.ErrInternal, "failed to authenticate request").
-				CausedBy(err)
-		}
 	}
 
 	for headerName, valueTemplate := range e.Headers {
@@ -146,6 +142,10 @@ func (e Endpoint) SendRequest(
 
 	resp, err := e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
+		if errors.Is(err, heimdall.ErrInternal) {
+			return nil, err
+		}
+
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.New(heimdall.ErrCommunicationTimeout).CausedBy(err)
