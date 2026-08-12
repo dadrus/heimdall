@@ -1195,12 +1195,12 @@ func TestGenericContextualizerExecute(t *testing.T) {
 func TestGenericContextualizerCalculateCacheKey(t *testing.T) {
 	t.Parallel()
 
-	newContextualizer := func(id string, ttl time.Duration) *genericContextualizer {
+	newContextualizer := func(name string, ttl time.Duration) *genericContextualizer {
 		t.Helper()
 
 		return &genericContextualizer{
-			id:  id,
-			ttl: ttl,
+			name: name,
+			ttl:  ttl,
 		}
 	}
 
@@ -1267,7 +1267,7 @@ func TestGenericContextualizerCalculateCacheKey(t *testing.T) {
 			payload2:    `{"foo":"bar"}`,
 			expectEqual: true,
 		},
-		"different contextualizer id": {
+		"different contextualizer names": {
 			contextualizer1: newContextualizer("contextualizer-a", 5*time.Second),
 			contextualizer2: newContextualizer("contextualizer-b", 5*time.Second),
 			request1: newRequest(

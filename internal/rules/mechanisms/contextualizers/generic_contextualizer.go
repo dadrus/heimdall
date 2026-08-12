@@ -400,7 +400,7 @@ func (c *genericContextualizer) calculateCacheKey(
 	hash := sha256.New()
 	hash.Write(stringx.ToBytes("generic-contextualizer:v3"))
 	hash.Write(separator[:])
-	hash.Write(stringx.ToBytes(c.id))
+	hash.Write(stringx.ToBytes(c.name))
 	hash.Write(separator[:])
 	hash.Write(ttlBytes[:])
 	hash.Write(stringx.ToBytes(req.Method))
