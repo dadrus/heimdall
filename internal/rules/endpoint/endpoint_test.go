@@ -201,7 +201,6 @@ func TestEndpointCreateRequest(t *testing.T) {
 				AuthStrategy: func() AuthenticationStrategy {
 					as := mocks.NewAuthenticationStrategyMock(t)
 					as.EXPECT().Apply(
-						mock.Anything,
 						mock.MatchedBy(func(req *http.Request) bool {
 							req.Header.Set("X-Test", "test")
 
@@ -228,7 +227,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				URL: "http://test.org",
 				AuthStrategy: func() AuthenticationStrategy {
 					as := mocks.NewAuthenticationStrategyMock(t)
-					as.EXPECT().Apply(mock.Anything, mock.Anything).Return(errors.New("test error"))
+					as.EXPECT().Apply(mock.Anything).Return(errors.New("test error"))
 
 					return as
 				}(),
@@ -247,7 +246,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				Method: "PATCH",
 				AuthStrategy: func() AuthenticationStrategy {
 					as := mocks.NewAuthenticationStrategyMock(t)
-					as.EXPECT().Apply(mock.Anything, mock.MatchedBy(func(req *http.Request) bool {
+					as.EXPECT().Apply(mock.MatchedBy(func(req *http.Request) bool {
 						req.Header.Set("X-Test", "test")
 
 						return true
@@ -423,7 +422,7 @@ func TestEndpointSendRequest(t *testing.T) {
 				t.Helper()
 
 				as := mocks.NewAuthenticationStrategyMock(t)
-				as.EXPECT().Apply(mock.Anything, mock.MatchedBy(func(req *http.Request) bool {
+				as.EXPECT().Apply(mock.MatchedBy(func(req *http.Request) bool {
 					req.Header.Set("X-Test", "test")
 
 					return true

@@ -218,10 +218,11 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 			configureMocks(t, cch)
 
-			req := &http.Request{Header: http.Header{}}
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://example.com", nil)
+			require.NoError(t, err)
 
 			// WHEN
-			err := tc.strategy.Apply(ctx, req)
+			err = tc.strategy.Apply(req)
 
 			// THEN
 			tc.assert(t, err, endpointCalled, req)

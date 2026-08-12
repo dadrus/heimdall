@@ -17,13 +17,12 @@
 package endpoint
 
 import (
-	"context"
 	"net/http"
 )
 
 //go:generate mockery --name AuthenticationStrategy --structname AuthenticationStrategyMock
 
 type AuthenticationStrategy interface {
-	Apply(ctx context.Context, req *http.Request) error
+	Apply(req *http.Request) error
 	Hash() []byte
 }

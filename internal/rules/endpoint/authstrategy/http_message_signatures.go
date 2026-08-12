@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/binary"
@@ -78,7 +77,9 @@ func (s *HTTPMessageSignatures) OnChanged(logger zerolog.Logger) {
 	}
 }
 
-func (s *HTTPMessageSignatures) Apply(ctx context.Context, req *http.Request) error {
+func (s *HTTPMessageSignatures) Apply(req *http.Request) error {
+	ctx := req.Context()
+	
 	logger := zerolog.Ctx(ctx)
 	logger.Debug().Msg("Applying http_message_signatures strategy to authenticate request")
 

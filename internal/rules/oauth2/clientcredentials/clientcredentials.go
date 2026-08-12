@@ -91,7 +91,7 @@ func (c *Config) Token(ctx context.Context) (*TokenInfo, error) {
 	return tokenInfo, nil
 }
 
-func (c *Config) Apply(_ context.Context, req *http.Request) error {
+func (c *Config) Apply(req *http.Request) error {
 	if c.AuthMethod == AuthMethodRequestBody {
 		// This is not recommended, but there are non-compliant servers out there
 		// which do support the Basic Auth authentication method required by

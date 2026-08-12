@@ -91,7 +91,7 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 			}
 
 			// WHEN
-			err := tc.strategy.Apply(t.Context(), req)
+			err := tc.strategy.Apply(req)
 
 			// THEN
 			tc.assert(t, err, req)

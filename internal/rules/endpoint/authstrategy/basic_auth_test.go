@@ -36,7 +36,7 @@ func TestApplyBasicAuthStrategy(t *testing.T) {
 	s := BasicAuth{User: user, Password: password}
 
 	// WHEN
-	err := s.Apply(t.Context(), req)
+	err := s.Apply(req)
 
 	// THEN
 	require.NoError(t, err)

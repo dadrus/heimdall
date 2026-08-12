@@ -3,8 +3,6 @@
 package mocks
 
 import (
-	context "context"
-
 	http "net/http"
 
 	mock "github.com/stretchr/testify/mock"
@@ -23,13 +21,13 @@ func (_m *AuthenticationStrategyMock) EXPECT() *AuthenticationStrategyMock_Expec
 	return &AuthenticationStrategyMock_Expecter{mock: &_m.Mock}
 }
 
-// Apply provides a mock function with given fields: _a0, _a1
-func (_m *AuthenticationStrategyMock) Apply(_a0 context.Context, _a1 *http.Request) error {
-	ret := _m.Called(_a0, _a1)
+// Apply provides a mock function with given fields: _a0
+func (_m *AuthenticationStrategyMock) Apply(_a0 *http.Request) error {
+	ret := _m.Called(_a0)
 
 	var r0 error
-	if rf, ok := ret.Get(0).(func(context.Context, *http.Request) error); ok {
-		r0 = rf(_a0, _a1)
+	if rf, ok := ret.Get(0).(func(*http.Request) error); ok {
+		r0 = rf(_a0)
 	} else {
 		r0 = ret.Error(0)
 	}
@@ -43,15 +41,14 @@ type AuthenticationStrategyMock_Apply_Call struct {
 }
 
 // Apply is a helper method to define mock.On call
-//   - _a0 context.Context
-//   - _a1 *http.Request
-func (_e *AuthenticationStrategyMock_Expecter) Apply(_a0 interface{}, _a1 interface{}) *AuthenticationStrategyMock_Apply_Call {
-	return &AuthenticationStrategyMock_Apply_Call{Call: _e.mock.On("Apply", _a0, _a1)}
+//   - _a0 *http.Request
+func (_e *AuthenticationStrategyMock_Expecter) Apply(_a0 interface{}) *AuthenticationStrategyMock_Apply_Call {
+	return &AuthenticationStrategyMock_Apply_Call{Call: _e.mock.On("Apply", _a0)}
 }
 
-func (_c *AuthenticationStrategyMock_Apply_Call) Run(run func(_a0 context.Context, _a1 *http.Request)) *AuthenticationStrategyMock_Apply_Call {
+func (_c *AuthenticationStrategyMock_Apply_Call) Run(run func(_a0 *http.Request)) *AuthenticationStrategyMock_Apply_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		run(args[0].(context.Context), args[1].(*http.Request))
+		run(args[0].(*http.Request))
 	})
 	return _c
 }
@@ -61,7 +58,7 @@ func (_c *AuthenticationStrategyMock_Apply_Call) Return(_a0 error) *Authenticati
 	return _c
 }
 
-func (_c *AuthenticationStrategyMock_Apply_Call) RunAndReturn(run func(context.Context, *http.Request) error) *AuthenticationStrategyMock_Apply_Call {
+func (_c *AuthenticationStrategyMock_Apply_Call) RunAndReturn(run func(*http.Request) error) *AuthenticationStrategyMock_Apply_Call {
 	_c.Call.Return(run)
 	return _c
 }

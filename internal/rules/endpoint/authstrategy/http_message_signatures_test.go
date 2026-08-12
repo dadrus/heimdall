@@ -340,7 +340,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			err = tc.conf.Apply(t.Context(), req)
+			err = tc.conf.Apply(req)
 
 			tc.assert(t, err, req)
 		})

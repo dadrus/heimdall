@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"crypto/sha256"
 	"net/http"
 
@@ -32,7 +31,7 @@ type APIKey struct {
 	Value string `mapstructure:"value" validate:"required"`
 }
 
-func (c *APIKey) Apply(_ context.Context, req *http.Request) error {
+func (c *APIKey) Apply(req *http.Request) error {
 	switch c.In {
 	case "cookie":
 		req.AddCookie(&http.Cookie{Name: c.Name, Value: c.Value})
