@@ -17,12 +17,11 @@
 package authstrategy
 
 import (
-	"crypto/sha256"
 	"net/http"
 
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type APIKey struct {
@@ -61,11 +60,10 @@ func (c *APIKey) Apply(req *http.Request) error {
 }
 
 func (c *APIKey) Hash() []byte {
-	hash := sha256.New()
+	key := cachekey.New("auth-strategy:api-key")
+	key.WriteString(c.In)
+	key.WriteString(c.Name)
+	key.WriteString(c.Value)
 
-	hash.Write(stringx.ToBytes(c.In))
-	hash.Write(stringx.ToBytes(c.Name))
-	hash.Write(stringx.ToBytes(c.Value))
-
-	return hash.Sum(nil)
+	return key.Sum()
 }
