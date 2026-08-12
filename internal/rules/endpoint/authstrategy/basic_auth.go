@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"crypto/sha256"
 	"net/http"
 
@@ -29,7 +28,8 @@ type BasicAuth struct {
 	Password string `mapstructure:"password" validate:"required"`
 }
 
-func (c *BasicAuth) Apply(_ context.Context, req *http.Request) error {
+func (c *BasicAuth) Apply(req *http.Request) error {
+	req.Header = req.Header.Clone()
 	req.SetBasicAuth(c.User, c.Password)
 
 	return nil

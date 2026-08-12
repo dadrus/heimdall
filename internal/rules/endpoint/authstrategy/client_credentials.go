@@ -17,7 +17,6 @@
 package authstrategy
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/rs/zerolog"
@@ -36,7 +35,8 @@ type OAuth2ClientCredentials struct {
 	Header *HeaderConfig `mapstructure:"header"`
 }
 
-func (c *OAuth2ClientCredentials) Apply(ctx context.Context, req *http.Request) error {
+func (c *OAuth2ClientCredentials) Apply(req *http.Request) error {
+	ctx := req.Context()
 	logger := zerolog.Ctx(ctx)
 	logger.Debug().Msg("Applying oauth2_client_credentials strategy to authenticate request")
 
@@ -55,6 +55,7 @@ func (c *OAuth2ClientCredentials) Apply(ctx context.Context, req *http.Request) 
 		headerScheme = c.Header.Scheme
 	}
 
+	req.Header = req.Header.Clone()
 	req.Header.Set(headerName, headerScheme+" "+token.AccessToken)
 
 	return nil

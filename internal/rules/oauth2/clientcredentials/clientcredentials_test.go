@@ -19,8 +19,10 @@ package clientcredentials
 import (
 	"encoding/base64"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -36,6 +38,73 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/x"
 )
+
+func TestConfigApply(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		config *Config
+		assert func(t *testing.T, req, original *http.Request)
+	}{
+		"basic auth": {
+			config: &Config{
+				ClientID:     "foo",
+				ClientSecret: "bar",
+			},
+			assert: func(t *testing.T, req, original *http.Request) {
+				t.Helper()
+
+				user, password, ok := req.BasicAuth()
+				require.True(t, ok)
+				assert.Equal(t, "foo", user)
+				assert.Equal(t, "bar", password)
+
+				_, _, ok = original.BasicAuth()
+				assert.False(t, ok)
+			},
+		},
+		"request body": {
+			config: &Config{
+				ClientID:     "foo",
+				ClientSecret: "bar",
+				AuthMethod:   AuthMethodRequestBody,
+			},
+			assert: func(t *testing.T, req, original *http.Request) {
+				t.Helper()
+
+				data, err := io.ReadAll(req.Body)
+				require.NoError(t, err)
+
+				values, err := url.ParseQuery(string(data))
+				require.NoError(t, err)
+
+				assert.Equal(t, "client_credentials", values.Get("grant_type"))
+				assert.Equal(t, "foo", values.Get("client_id"))
+				assert.Equal(t, "bar", values.Get("client_secret"))
+
+				// Direct fields must only have changed on the shallow copy.
+				assert.NotEqual(t, original.ContentLength, req.ContentLength)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			original, err := http.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"https://example.com",
+				strings.NewReader("grant_type=client_credentials"),
+			)
+			require.NoError(t, err)
+
+			req := *original
+
+			err = tc.config.Apply(&req)
+			require.NoError(t, err)
+
+			tc.assert(t, &req, original)
+		})
+	}
+}
 
 func TestClientCredentialsToken(t *testing.T) {
 	t.Parallel()

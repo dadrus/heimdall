@@ -332,7 +332,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 			err := tc.conf.init()
 			require.NoError(t, err)
 
-			req, err := http.NewRequestWithContext(
+			originalReq, err := http.NewRequestWithContext(
 				t.Context(),
 				http.MethodGet,
 				"http//example.com/test",
@@ -340,9 +340,18 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			err = tc.conf.Apply(t.Context(), req)
+			originalReq.Header.Set("X-Original", "foo")
 
-			tc.assert(t, err, req)
+			req := *originalReq
+
+			err = tc.conf.Apply(&req)
+
+			tc.assert(t, err, &req)
+
+			assert.Equal(t, "foo", originalReq.Header.Get("X-Original"))
+			assert.Empty(t, originalReq.Header.Get("Signature"))
+			assert.Empty(t, originalReq.Header.Get("Signature-Input"))
+			assert.Empty(t, originalReq.Header.Get("Content-Digest"))
 		})
 	}
 }

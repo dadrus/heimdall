@@ -142,7 +142,10 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 				assert.True(t, tokenEndpointCalled)
 				require.Error(t, err)
-				assert.Empty(t, req.Header)
+
+				assert.Equal(t, "foo", req.Header.Get("X-Existing"))
+				assert.Empty(t, req.Header.Get("Authorization"))
+				assert.Empty(t, req.Header.Get("X-My-Header"))
 			},
 		},
 		"full configuration, no cache hit and token has expires_in claim": {
@@ -218,13 +221,27 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 
 			configureMocks(t, cch)
 
-			req := &http.Request{Header: http.Header{}}
+			originalReq, err := http.NewRequestWithContext(
+				ctx,
+				http.MethodGet,
+				"https://example.com",
+				nil,
+			)
+			require.NoError(t, err)
+
+			originalReq.Header.Set("X-Existing", "foo")
+
+			req := *originalReq
 
 			// WHEN
-			err := tc.strategy.Apply(ctx, req)
+			err = tc.strategy.Apply(&req)
 
 			// THEN
-			tc.assert(t, err, endpointCalled, req)
+			tc.assert(t, err, endpointCalled, &req)
+
+			assert.Equal(t, "foo", originalReq.Header.Get("X-Existing"))
+			assert.Empty(t, originalReq.Header.Get("Authorization"))
+			assert.Empty(t, originalReq.Header.Get("X-My-Header"))
 		})
 	}
 }

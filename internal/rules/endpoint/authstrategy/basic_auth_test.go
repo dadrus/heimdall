@@ -32,15 +32,27 @@ func TestApplyBasicAuthStrategy(t *testing.T) {
 	user := "Foo"
 	password := "Bar"
 	expectedValue := "Basic " + base64.StdEncoding.EncodeToString([]byte(user+":"+password))
-	req := &http.Request{Header: http.Header{}}
+
+	original := &http.Request{
+		Header: http.Header{
+			"X-Test": []string{"foo"},
+		},
+	}
+
+	req := *original
 	s := BasicAuth{User: user, Password: password}
 
 	// WHEN
-	err := s.Apply(t.Context(), req)
+	err := s.Apply(&req)
 
 	// THEN
 	require.NoError(t, err)
+
 	assert.Equal(t, expectedValue, req.Header.Get("Authorization"))
+	assert.Equal(t, "foo", req.Header.Get("X-Test"))
+
+	assert.Empty(t, original.Header.Get("Authorization"))
+	assert.Equal(t, "foo", original.Header.Get("X-Test"))
 }
 
 func TestBasicAuthStrategyHash(t *testing.T) {

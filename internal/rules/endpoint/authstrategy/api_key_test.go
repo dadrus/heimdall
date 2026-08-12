@@ -80,8 +80,10 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := &http.Request{
-				Header: http.Header{},
+			original := &http.Request{
+				Header: http.Header{
+					"X-Test": []string{"test"},
+				},
 				URL: &url.URL{
 					Scheme:   "http",
 					Host:     "foo.bar",
@@ -90,11 +92,24 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 				},
 			}
 
+			req := *original
+
 			// WHEN
-			err := tc.strategy.Apply(t.Context(), req)
+			err := tc.strategy.Apply(&req)
 
 			// THEN
-			tc.assert(t, err, req)
+			tc.assert(t, err, &req)
+
+			assert.Equal(t, "test", original.Header.Get("X-Test"))
+			assert.Empty(t, original.Header.Get("Foo"))
+
+			query := original.URL.Query()
+			assert.Len(t, query, 1)
+			assert.Equal(t, "foo", query.Get("bar"))
+			assert.Empty(t, query.Get("Foo"))
+
+			_, err = original.Cookie("Foo")
+			assert.ErrorIs(t, err, http.ErrNoCookie)
 		})
 	}
 }
