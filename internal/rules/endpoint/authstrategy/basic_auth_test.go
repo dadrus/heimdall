@@ -58,16 +58,43 @@ func TestApplyBasicAuthStrategy(t *testing.T) {
 func TestBasicAuthStrategyHash(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	s1 := &BasicAuth{User: "Foo", Password: "Bar"}
-	s2 := &BasicAuth{User: "Foo", Password: "Baz"}
+	for uc, tc := range map[string]struct {
+		strategy1   *BasicAuth
+		strategy2   *BasicAuth
+		expectEqual bool
+	}{
+		"same configuration": {
+			strategy1:   &BasicAuth{User: "Foo", Password: "Bar"},
+			strategy2:   &BasicAuth{User: "Foo", Password: "Bar"},
+			expectEqual: true,
+		},
+		"different user": {
+			strategy1: &BasicAuth{User: "Foo", Password: "Bar"},
+			strategy2: &BasicAuth{User: "Baz", Password: "Bar"},
+		},
+		"different password": {
+			strategy1: &BasicAuth{User: "Foo", Password: "Bar"},
+			strategy2: &BasicAuth{User: "Foo", Password: "Baz"},
+		},
+		"field boundaries are preserved": {
+			strategy1: &BasicAuth{User: "a", Password: "bc"},
+			strategy2: &BasicAuth{User: "ab", Password: "c"},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// WHEN
+			hash1 := tc.strategy1.Hash()
+			hash2 := tc.strategy2.Hash()
 
-	// WHEN
-	hash1 := s1.Hash()
-	hash2 := s2.Hash()
+			// THEN
+			assert.NotEmpty(t, hash1)
+			assert.NotEmpty(t, hash2)
 
-	// THEN
-	assert.NotEmpty(t, hash1)
-	assert.NotEmpty(t, hash2)
-	assert.NotEqual(t, hash1, hash2)
+			if tc.expectEqual {
+				assert.Equal(t, hash1, hash2)
+			} else {
+				assert.NotEqual(t, hash1, hash2)
+			}
+		})
+	}
 }
