@@ -158,8 +158,13 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 		return err
 	}
 
+	req, err := c.createRequest(ctx, sub, vals, payload)
+	if err != nil {
+		return err
+	}
+
 	if c.ttl > 0 {
-		cacheKey = c.calculateCacheKey(ctx, sub, vals, payload)
+		cacheKey = c.calculateCacheKey(req, payload)
 
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			var result heimdall.Result
@@ -173,7 +178,7 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 	}
 
 	if response == nil {
-		response, err = c.callEndpoint(ctx, sub, vals, payload)
+		response, err = c.callEndpoint(ctx, req)
 		if err != nil {
 			return err
 		}
@@ -249,17 +254,10 @@ func (c *genericContextualizer) ContinueOnError() bool { return c.continueOnErro
 
 func (c *genericContextualizer) callEndpoint(
 	ctx heimdall.RequestContext,
-	sub *subject.Subject,
-	values map[string]string,
-	payload string,
+	req *http.Request,
 ) (*heimdall.Result, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Calling contextualizer endpoint")
-
-	req, err := c.createRequest(ctx, sub, values, payload)
-	if err != nil {
-		return nil, err
-	}
 
 	resp, err := c.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
@@ -386,9 +384,7 @@ func (c *genericContextualizer) readResponse(ctx heimdall.RequestContext, resp *
 }
 
 func (c *genericContextualizer) calculateCacheKey(
-	ctx heimdall.RequestContext,
-	sub *subject.Subject,
-	values map[string]string,
+	req *http.Request,
 	payload string,
 ) string {
 	const int64BytesCount = 8
@@ -399,43 +395,27 @@ func (c *genericContextualizer) calculateCacheKey(
 	// no integer overflow during conversion possible
 	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(c.ttl))
 
+	var separator [1]byte
+
 	hash := sha256.New()
-	hash.Write(stringx.ToBytes("generic-contextualizer:v2"))
-	hash.Write(c.e.Hash())
+	hash.Write(stringx.ToBytes("generic-contextualizer:v3"))
+	hash.Write(separator[:])
 	hash.Write(stringx.ToBytes(c.id))
-	hash.Write(stringx.ToBytes(payload))
+	hash.Write(separator[:])
 	hash.Write(ttlBytes[:])
-	hash.Write(sub.Hash())
+	hash.Write(stringx.ToBytes(req.Method))
+	hash.Write(separator[:])
+	hash.Write(stringx.ToBytes(req.URL.String()))
+	hash.Write(separator[:])
 
-	for k, v := range values {
-		hash.Write(stringx.ToBytes(k))
-		hash.Write(stringx.ToBytes(v))
-	}
+	_ = req.Header.Write(hash)
 
-	if len(c.fwdHeaders) != 0 || len(c.fwdCookies) != 0 {
-		req := ctx.Request()
+	hash.Write(separator[:])
+	hash.Write(stringx.ToBytes(payload))
 
-		var (
-			headerKind = [1]byte{0x01}
-			cookieKind = [1]byte{0x02}
-			separator  = [1]byte{0x00}
-		)
-
-		for _, headerName := range c.fwdHeaders {
-			hash.Write(headerKind[:])
-			hash.Write(stringx.ToBytes(headerName))
-			hash.Write(separator[:])
-			hash.Write(stringx.ToBytes(req.Header(headerName)))
-			hash.Write(separator[:])
-		}
-
-		for _, cookieName := range c.fwdCookies {
-			hash.Write(cookieKind[:])
-			hash.Write(stringx.ToBytes(cookieName))
-			hash.Write(separator[:])
-			hash.Write(stringx.ToBytes(req.Cookie(cookieName)))
-			hash.Write(separator[:])
-		}
+	if c.e.AuthStrategy != nil {
+		hash.Write(separator[:])
+		hash.Write(c.e.AuthStrategy.Hash())
 	}
 
 	var result [sha256.Size]byte
