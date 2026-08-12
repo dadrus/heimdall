@@ -37,7 +37,6 @@ type OAuth2ClientCredentials struct {
 
 func (c *OAuth2ClientCredentials) Apply(req *http.Request) error {
 	ctx := req.Context()
-
 	logger := zerolog.Ctx(ctx)
 	logger.Debug().Msg("Applying oauth2_client_credentials strategy to authenticate request")
 
@@ -56,6 +55,7 @@ func (c *OAuth2ClientCredentials) Apply(req *http.Request) error {
 		headerScheme = c.Header.Scheme
 	}
 
+	req.Header = req.Header.Clone()
 	req.Header.Set(headerName, headerScheme+" "+token.AccessToken)
 
 	return nil

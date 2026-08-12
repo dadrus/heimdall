@@ -94,7 +94,7 @@ func (c *Config) Token(ctx context.Context) (*TokenInfo, error) {
 func (c *Config) Apply(req *http.Request) error {
 	if c.AuthMethod == AuthMethodRequestBody {
 		// This is not recommended, but there are non-compliant servers out there
-		// which do support the Basic Auth authentication method required by
+		// that do support the Basic Auth authentication method required by
 		// the spec. See also https://www.rfc-editor.org/rfc/rfc6749#section-2.3.1
 		data, _ := io.ReadAll(req.Body)
 		values, _ := url.ParseQuery(stringx.ToString(data))
@@ -107,6 +107,7 @@ func (c *Config) Apply(req *http.Request) error {
 		req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(body), nil }
 		req.ContentLength = int64(body.Len())
 	} else {
+		req.Header = req.Header.Clone()
 		req.SetBasicAuth(url.QueryEscape(c.ClientID), url.QueryEscape(c.ClientSecret))
 	}
 

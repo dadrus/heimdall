@@ -79,7 +79,7 @@ func (s *HTTPMessageSignatures) OnChanged(logger zerolog.Logger) {
 
 func (s *HTTPMessageSignatures) Apply(req *http.Request) error {
 	ctx := req.Context()
-	
+
 	logger := zerolog.Ctx(ctx)
 	logger.Debug().Msg("Applying http_message_signatures strategy to authenticate request")
 

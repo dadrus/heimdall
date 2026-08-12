@@ -29,6 +29,7 @@ type BasicAuth struct {
 }
 
 func (c *BasicAuth) Apply(req *http.Request) error {
+	req.Header = req.Header.Clone()
 	req.SetBasicAuth(c.User, c.Password)
 
 	return nil

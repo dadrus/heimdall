@@ -34,16 +34,27 @@ type APIKey struct {
 func (c *APIKey) Apply(req *http.Request) error {
 	switch c.In {
 	case "cookie":
+		req.Header = req.Header.Clone()
 		req.AddCookie(&http.Cookie{Name: c.Name, Value: c.Value})
+
 	case "header":
+		req.Header = req.Header.Clone()
 		req.Header.Set(c.Name, c.Value)
+
 	case "query":
+		targetURL := *req.URL
+		req.URL = &targetURL
+
 		query := req.URL.Query()
 		query.Set(c.Name, c.Value)
 		req.URL.RawQuery = query.Encode()
+
 	default:
-		return errorchain.NewWithMessagef(heimdall.ErrConfiguration,
-			"unsupported in value (%s) in api key auth strategy", c.In)
+		return errorchain.NewWithMessagef(
+			heimdall.ErrConfiguration,
+			"unsupported in value (%s) in api key auth strategy",
+			c.In,
+		)
 	}
 
 	return nil
