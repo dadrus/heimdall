@@ -461,7 +461,7 @@ func (a *jwtAuthenticator) getKey(
 	}
 
 	if a.isCacheEnabled() {
-		cacheKey = a.calculateCacheKey(ep, req.URL.String(), keyID)
+		cacheKey = a.calculateCacheKey(ep, req, keyID)
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			var key jose.JSONWebKey
 
@@ -635,16 +635,38 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 	return rawPayload, nil
 }
 
-func (a *jwtAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, renderedURL, reference string) string {
+func (a *jwtAuthenticator) calculateCacheKey(
+	ep *endpoint.Endpoint,
+	req *http.Request,
+	reference string,
+) string {
+	var separator [1]byte
+
 	digest := sha256.New()
-	digest.Write(ep.Hash())
-	digest.Write(stringx.ToBytes(renderedURL))
+	digest.Write(stringx.ToBytes("jwt-authenticator:jwk:v2"))
+	digest.Write(separator[:])
+	digest.Write(stringx.ToBytes(req.Method))
+	digest.Write(separator[:])
+	digest.Write(stringx.ToBytes(req.URL.String()))
+	digest.Write(separator[:])
+
+	_ = req.Header.Write(digest)
+
+	digest.Write(separator[:])
 	digest.Write(stringx.ToBytes(reference))
+	digest.Write(separator[:])
+
+	if ep.AuthStrategy == nil {
+		digest.Write(separator[:])
+	} else {
+		digest.Write(separator[:])
+		digest.Write(ep.AuthStrategy.Hash())
+	}
 
 	if a.ttl == nil {
-		digest.Write([]byte{0})
+		digest.Write(separator[:])
 	} else {
-		digest.Write([]byte{1})
+		digest.Write(separator[:])
 
 		var ttl [8]byte
 		binary.BigEndian.PutUint64(ttl[:], uint64(*a.ttl)) //nolint:gosec
