@@ -18,9 +18,6 @@ package clientcredentials
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"io"
 	"net/http"
 	"net/url"
@@ -31,6 +28,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/x"
@@ -115,43 +113,26 @@ func (c *Config) Apply(req *http.Request) error {
 }
 
 func (c *Config) Hash() []byte {
-	digest := sha256.New()
-	digest.Write(stringx.ToBytes(c.ClientID))
-	digest.Write(stringx.ToBytes(c.ClientSecret))
-	digest.Write(stringx.ToBytes(c.TokenURL))
+	key := cachekey.New("oauth2-client-credentials")
+	key.WriteString(c.TokenURL)
+	key.WriteString(c.ClientID)
+	key.WriteString(c.ClientSecret)
+	key.WriteString(string(c.effectiveAuthMethod()))
+	key.WriteStrings(c.Scopes)
 
-	for _, scope := range c.Scopes {
-		digest.Write(stringx.ToBytes(scope))
-		digest.Write([]byte{0})
-	}
-
-	return digest.Sum(nil)
+	return key.Sum()
 }
 
 func (c *Config) calculateCacheKey() string {
-	digest := sha256.New()
-	digest.Write(stringx.ToBytes(c.ClientID))
-	digest.Write(stringx.ToBytes(c.ClientSecret))
-	digest.Write(stringx.ToBytes(c.TokenURL))
+	key := cachekey.New("oauth2-client-credentials:token")
+	key.WriteBytes(c.Hash())
+	key.WriteBool(c.TTL != nil)
 
-	for _, scope := range c.Scopes {
-		digest.Write(stringx.ToBytes(scope))
-		digest.Write([]byte{0})
+	if c.TTL != nil {
+		key.WriteInt64(int64(*c.TTL))
 	}
 
-	if c.TTL == nil {
-		digest.Write([]byte{0})
-	} else {
-		digest.Write([]byte{1})
-
-		var ttl [8]byte
-		binary.BigEndian.PutUint64(ttl[:], uint64(*c.TTL)) //nolint:gosec
-		digest.Write(ttl[:])
-	}
-
-	var result [sha256.Size]byte
-
-	return hex.EncodeToString(digest.Sum(result[:0]))
+	return key.SumString()
 }
 
 func (c *Config) getCacheTTL(resp *TokenInfo) time.Duration {
@@ -258,4 +239,12 @@ func (c *Config) fetchToken(ctx context.Context) (*TokenInfo, error) {
 	}
 
 	return tokenInfo, nil
+}
+
+func (c *Config) effectiveAuthMethod() AuthMethod {
+	if c.AuthMethod == "" {
+		return AuthMethodBasicAuth
+	}
+
+	return c.AuthMethod
 }
