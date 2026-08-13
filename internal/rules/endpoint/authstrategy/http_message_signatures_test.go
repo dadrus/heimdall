@@ -193,6 +193,9 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				assert.NotEmpty(t, conf.Certificates())
 				assert.NotEmpty(t, conf.Keys())
 				assert.Equal(t, "http message signer", conf.Name())
+				require.NotNil(t, conf.TTL)
+				assert.Equal(t, time.Minute, *conf.TTL)
+				assert.Equal(t, "heimdall", conf.Signer.Name)
 			},
 		},
 		"successful configuration with custom ttl": {
@@ -214,6 +217,9 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				assert.NotEmpty(t, conf.Certificates())
 				assert.NotEmpty(t, conf.Keys())
 				assert.Equal(t, "http message signer", conf.Name())
+				require.NotNil(t, conf.TTL)
+				assert.Equal(t, time.Hour, *conf.TTL)
+				assert.Equal(t, "heimdall", conf.Signer.Name)
 			},
 		},
 	} {
