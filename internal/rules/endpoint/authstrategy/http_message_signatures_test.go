@@ -237,18 +237,18 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 	ttl := time.Hour
 
 	for uc, tc := range map[string]struct {
-		first     HTTPMessageSignatures
-		second    HTTPMessageSignatures
+		first     *HTTPMessageSignatures
+		second    *HTTPMessageSignatures
 		equalHash bool
 	}{
 		"same configuration": {
-			first: HTTPMessageSignatures{
+			first: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall", KeyID: "key1"},
 				Label:      "sig",
 				Components: []string{"@method"},
 				TTL:        &ttl,
 			},
-			second: HTTPMessageSignatures{
+			second: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall", KeyID: "key1"},
 				Label:      "sig",
 				Components: []string{"@method"},
@@ -257,13 +257,13 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 			equalHash: true,
 		},
 		"different label": {
-			first: HTTPMessageSignatures{
+			first: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall", KeyID: "key1"},
 				Label:      "foo",
 				Components: []string{"@method"},
 				TTL:        &ttl,
 			},
-			second: HTTPMessageSignatures{
+			second: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall", KeyID: "key1"},
 				Label:      "bar",
 				Components: []string{"@method"},
@@ -271,24 +271,24 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 			},
 		},
 		"component boundaries do not collide": {
-			first: HTTPMessageSignatures{
+			first: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall", KeyID: "key1"},
 				Components: []string{"ab", "c"},
 				TTL:        &ttl,
 			},
-			second: HTTPMessageSignatures{
+			second: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall", KeyID: "key1"},
 				Components: []string{"a", "bc"},
 				TTL:        &ttl,
 			},
 		},
 		"signer boundaries do not collide": {
-			first: HTTPMessageSignatures{
+			first: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "a", KeyID: "bc"},
 				Components: []string{"@method"},
 				TTL:        &ttl,
 			},
-			second: HTTPMessageSignatures{
+			second: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "ab", KeyID: "c"},
 				Components: []string{"@method"},
 				TTL:        &ttl,
