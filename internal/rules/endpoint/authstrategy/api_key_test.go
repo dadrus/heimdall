@@ -117,16 +117,47 @@ func TestApplyApiKeyStrategy(t *testing.T) {
 func TestAPIKeyStrategyHash(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	s1 := &APIKey{In: "header", Name: "Foo", Value: "Bar"}
-	s2 := &APIKey{In: "cookie", Name: "Foo", Value: "Bar"}
+	for uc, tc := range map[string]struct {
+		strategy1   *APIKey
+		strategy2   *APIKey
+		expectEqual bool
+	}{
+		"same configuration": {
+			strategy1:   &APIKey{In: "header", Name: "Foo", Value: "Bar"},
+			strategy2:   &APIKey{In: "header", Name: "Foo", Value: "Bar"},
+			expectEqual: true,
+		},
+		"different location": {
+			strategy1: &APIKey{In: "header", Name: "Foo", Value: "Bar"},
+			strategy2: &APIKey{In: "cookie", Name: "Foo", Value: "Bar"},
+		},
+		"different name": {
+			strategy1: &APIKey{In: "header", Name: "Foo", Value: "Bar"},
+			strategy2: &APIKey{In: "header", Name: "Baz", Value: "Bar"},
+		},
+		"different value": {
+			strategy1: &APIKey{In: "header", Name: "Foo", Value: "Bar"},
+			strategy2: &APIKey{In: "header", Name: "Foo", Value: "Baz"},
+		},
+		"field boundaries are preserved": {
+			strategy1: &APIKey{In: "header", Name: "a", Value: "bc"},
+			strategy2: &APIKey{In: "header", Name: "ab", Value: "c"},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// WHEN
+			hash1 := tc.strategy1.Hash()
+			hash2 := tc.strategy2.Hash()
 
-	// WHEN
-	hash1 := s1.Hash()
-	hash2 := s2.Hash()
+			// THEN
+			assert.NotEmpty(t, hash1)
+			assert.NotEmpty(t, hash2)
 
-	// THEN
-	assert.NotEmpty(t, hash1)
-	assert.NotEmpty(t, hash2)
-	assert.NotEqual(t, hash1, hash2)
+			if tc.expectEqual {
+				assert.Equal(t, hash1, hash2)
+			} else {
+				assert.NotEqual(t, hash1, hash2)
+			}
+		})
+	}
 }

@@ -17,9 +17,6 @@
 package contextualizers
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
@@ -32,6 +29,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
@@ -158,8 +156,13 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 		return err
 	}
 
+	req, err := c.createRequest(ctx, sub, vals, payload)
+	if err != nil {
+		return err
+	}
+
 	if c.ttl > 0 {
-		cacheKey = c.calculateCacheKey(ctx, sub, vals, payload)
+		cacheKey = c.calculateCacheKey(req, payload)
 
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			var result heimdall.Result
@@ -173,7 +176,7 @@ func (c *genericContextualizer) Execute(ctx heimdall.RequestContext, sub *subjec
 	}
 
 	if response == nil {
-		response, err = c.callEndpoint(ctx, sub, vals, payload)
+		response, err = c.callEndpoint(ctx, req)
 		if err != nil {
 			return err
 		}
@@ -249,17 +252,10 @@ func (c *genericContextualizer) ContinueOnError() bool { return c.continueOnErro
 
 func (c *genericContextualizer) callEndpoint(
 	ctx heimdall.RequestContext,
-	sub *subject.Subject,
-	values map[string]string,
-	payload string,
+	req *http.Request,
 ) (*heimdall.Result, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Calling contextualizer endpoint")
-
-	req, err := c.createRequest(ctx, sub, values, payload)
-	if err != nil {
-		return nil, err
-	}
 
 	resp, err := c.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
@@ -386,61 +382,24 @@ func (c *genericContextualizer) readResponse(ctx heimdall.RequestContext, resp *
 }
 
 func (c *genericContextualizer) calculateCacheKey(
-	ctx heimdall.RequestContext,
-	sub *subject.Subject,
-	values map[string]string,
+	req *http.Request,
 	payload string,
 ) string {
-	const int64BytesCount = 8
+	key := cachekey.New("generic-contextualizer:response")
 
-	var ttlBytes [int64BytesCount]byte
+	key.WriteString(c.name)
+	key.WriteInt64(int64(c.ttl))
+	key.WriteString(req.Method)
+	key.WriteString(req.URL.String())
+	key.WriteHeader(req.Header)
+	key.WriteString(payload)
 
-	//nolint:gosec
-	// no integer overflow during conversion possible
-	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(c.ttl))
-
-	hash := sha256.New()
-	hash.Write(stringx.ToBytes("generic-contextualizer:v2"))
-	hash.Write(c.e.Hash())
-	hash.Write(stringx.ToBytes(c.id))
-	hash.Write(stringx.ToBytes(payload))
-	hash.Write(ttlBytes[:])
-	hash.Write(sub.Hash())
-
-	for k, v := range values {
-		hash.Write(stringx.ToBytes(k))
-		hash.Write(stringx.ToBytes(v))
+	key.WriteBool(c.e.AuthStrategy != nil)
+	if c.e.AuthStrategy != nil {
+		key.WriteBytes(c.e.AuthStrategy.Hash())
 	}
 
-	if len(c.fwdHeaders) != 0 || len(c.fwdCookies) != 0 {
-		req := ctx.Request()
-
-		var (
-			headerKind = [1]byte{0x01}
-			cookieKind = [1]byte{0x02}
-			separator  = [1]byte{0x00}
-		)
-
-		for _, headerName := range c.fwdHeaders {
-			hash.Write(headerKind[:])
-			hash.Write(stringx.ToBytes(headerName))
-			hash.Write(separator[:])
-			hash.Write(stringx.ToBytes(req.Header(headerName)))
-			hash.Write(separator[:])
-		}
-
-		for _, cookieName := range c.fwdCookies {
-			hash.Write(cookieKind[:])
-			hash.Write(stringx.ToBytes(cookieName))
-			hash.Write(separator[:])
-			hash.Write(stringx.ToBytes(req.Cookie(cookieName)))
-			hash.Write(separator[:])
-		}
-	}
-
-	var result [sha256.Size]byte
-
-	return hex.EncodeToString(hash.Sum(result[:0]))
+	return key.SumString()
 }
 
 func (c *genericContextualizer) renderTemplates(

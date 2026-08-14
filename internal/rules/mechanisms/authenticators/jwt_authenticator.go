@@ -18,10 +18,7 @@ package authenticators
 
 import (
 	"context"
-	"crypto/sha256"
 	"crypto/x509"
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"net/http"
 	"net/url"
@@ -35,6 +32,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
@@ -45,7 +43,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 const defaultJWTAuthenticatorTTL = 10 * time.Minute
@@ -461,7 +458,7 @@ func (a *jwtAuthenticator) getKey(
 	}
 
 	if a.isCacheEnabled() {
-		cacheKey = a.calculateCacheKey(ep, req.URL.String(), keyID)
+		cacheKey = a.calculateCacheKey(ep, req, keyID)
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			var key jose.JSONWebKey
 
@@ -635,25 +632,29 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 	return rawPayload, nil
 }
 
-func (a *jwtAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, renderedURL, reference string) string {
-	digest := sha256.New()
-	digest.Write(ep.Hash())
-	digest.Write(stringx.ToBytes(renderedURL))
-	digest.Write(stringx.ToBytes(reference))
+func (a *jwtAuthenticator) calculateCacheKey(
+	ep *endpoint.Endpoint,
+	req *http.Request,
+	reference string,
+) string {
+	key := cachekey.New("jwt-authenticator:jwk")
 
-	if a.ttl == nil {
-		digest.Write([]byte{0})
-	} else {
-		digest.Write([]byte{1})
+	key.WriteString(req.Method)
+	key.WriteString(req.URL.String())
+	key.WriteHeader(req.Header)
+	key.WriteString(reference)
 
-		var ttl [8]byte
-		binary.BigEndian.PutUint64(ttl[:], uint64(*a.ttl)) //nolint:gosec
-		digest.Write(ttl[:])
+	key.WriteBool(ep.AuthStrategy != nil)
+	if ep.AuthStrategy != nil {
+		key.WriteBytes(ep.AuthStrategy.Hash())
 	}
 
-	var result [sha256.Size]byte
+	key.WriteBool(a.ttl != nil)
+	if a.ttl != nil {
+		key.WriteInt64(int64(*a.ttl))
+	}
 
-	return hex.EncodeToString(digest.Sum(result[:0]))
+	return key.SumString()
 }
 
 func (a *jwtAuthenticator) validateJWK(jwk *jose.JSONWebKey) error {

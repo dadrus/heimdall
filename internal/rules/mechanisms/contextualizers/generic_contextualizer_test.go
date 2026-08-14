@@ -39,6 +39,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/values"
@@ -968,8 +969,11 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		},
 		"with forwarded header and cache miss due to different value": {
 			contextualizer: &genericContextualizer{
-				id:         "test-contextualizer",
-				e:          endpoint.Endpoint{URL: srv.URL},
+				id: "test-contextualizer",
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+				},
 				fwdHeaders: []string{"X-Tenant-ID"},
 				ttl:        5 * time.Second,
 			},
@@ -1000,21 +1004,23 @@ func TestGenericContextualizerExecute(t *testing.T) {
 					RequestFunctions: reqFuns,
 				})
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer, sub *subject.Subject) {
+			configureCache: func(
+				t *testing.T,
+				cch *mocks.CacheMock,
+				contextualizer *genericContextualizer,
+				_ *subject.Subject,
+			) {
 				t.Helper()
 
 				cacheKeyFor := func(headerValue string) string {
 					t.Helper()
 
-					reqFuns := heimdallmocks.NewRequestFunctionsMock(t)
-					reqFuns.EXPECT().Header("X-Tenant-ID").Return(headerValue)
+					req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, nil)
+					require.NoError(t, err)
 
-					ctx := heimdallmocks.NewRequestContextMock(t)
-					ctx.EXPECT().Request().Return(&heimdall.Request{
-						RequestFunctions: reqFuns,
-					})
+					req.Header.Set("X-Tenant-ID", headerValue)
 
-					return contextualizer.calculateCacheKey(ctx, sub, nil, "")
+					return contextualizer.calculateCacheKey(req, "")
 				}
 
 				tenantACacheKey := cacheKeyFor("tenant-a")
@@ -1022,13 +1028,21 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				require.NotEqual(t, tenantACacheKey, tenantBCacheKey)
 
-				cch.EXPECT().Get(mock.Anything, tenantBCacheKey).
+				cch.EXPECT().
+					Get(mock.Anything, tenantBCacheKey).
 					Return(nil, errors.New("no cache entry"))
 
-				cch.EXPECT().Set(mock.Anything, tenantBCacheKey, mock.Anything, contextualizer.ttl).
+				cch.EXPECT().
+					Set(mock.Anything, tenantBCacheKey, mock.Anything, contextualizer.ttl).
 					Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub *subject.Subject, outputs map[string]any, results heimdall.Results) {
+			assert: func(
+				t *testing.T,
+				err error,
+				sub *subject.Subject,
+				outputs map[string]any,
+				results heimdall.Results,
+			) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -1043,6 +1057,96 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				result := results["test-contextualizer"]
 				require.NotNil(t, result)
 				assert.Equal(t, map[string]any{"tenant": "tenant-b"}, result.Payload)
+			},
+		},
+		"with rendered endpoint header and cache miss due to different output": {
+			contextualizer: &genericContextualizer{
+				id: "test-contextualizer",
+				e: endpoint.Endpoint{
+					URL:    srv.URL,
+					Method: http.MethodGet,
+					Headers: map[string]string{
+						"X-Tenant-ID": "{{ .Outputs.foo }}",
+					},
+				},
+				ttl: 5 * time.Second,
+			},
+			subject: &subject.Subject{
+				ID:         "Foo",
+				Attributes: map[string]any{"bar": "baz"},
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "bar", req.Header.Get("X-Tenant-ID"))
+				}
+
+				responseContentType = "application/json"
+				responseContent = []byte(`{"tenant":"bar"}`)
+				responseCode = http.StatusOK
+			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
+			configureCache: func(
+				t *testing.T,
+				cch *mocks.CacheMock,
+				contextualizer *genericContextualizer,
+				_ *subject.Subject,
+			) {
+				t.Helper()
+
+				previousReq, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, nil)
+				require.NoError(t, err)
+
+				previousReq.Header.Set("X-Tenant-ID", "tenant-a")
+
+				currentReq, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, nil)
+				require.NoError(t, err)
+
+				currentReq.Header.Set("X-Tenant-ID", "bar")
+
+				previousCacheKey := contextualizer.calculateCacheKey(previousReq, "")
+				currentCacheKey := contextualizer.calculateCacheKey(currentReq, "")
+
+				require.NotEqual(t, previousCacheKey, currentCacheKey)
+
+				cch.EXPECT().
+					Get(mock.Anything, currentCacheKey).
+					Return(nil, errors.New("no cache entry"))
+
+				cch.EXPECT().
+					Set(mock.Anything, currentCacheKey, mock.Anything, contextualizer.ttl).
+					Return(nil)
+			},
+			assert: func(
+				t *testing.T,
+				err error,
+				sub *subject.Subject,
+				outputs map[string]any,
+				results heimdall.Results,
+			) {
+				t.Helper()
+
+				assert.True(t, remoteEndpointCalled)
+
+				require.NoError(t, err)
+				assert.Len(t, sub.Attributes, 1)
+
+				require.Len(t, outputs, 2)
+				assert.Equal(t, map[string]any{"tenant": "bar"}, outputs["test-contextualizer"])
+
+				require.Len(t, results, 2)
+
+				result := results["test-contextualizer"]
+				require.NotNil(t, result)
+
+				assert.Equal(t, map[string]any{"tenant": "bar"}, result.Payload)
 			},
 		},
 	} {
@@ -1091,170 +1195,308 @@ func TestGenericContextualizerExecute(t *testing.T) {
 func TestGenericContextualizerCalculateCacheKey(t *testing.T) {
 	t.Parallel()
 
-	ep := endpoint.Endpoint{
-		URL: "https://example.com/context",
+	newContextualizer := func(name string, ttl time.Duration) *genericContextualizer {
+		t.Helper()
+
+		return &genericContextualizer{
+			name: name,
+			ttl:  ttl,
+		}
 	}
 
-	sub := &subject.Subject{
-		ID:         "subject",
-		Attributes: map[string]any{},
+	newRequest := func(
+		method string,
+		rawURL string,
+		headers map[string]string,
+		cookies map[string]string,
+	) *http.Request {
+		t.Helper()
+
+		req, err := http.NewRequestWithContext(t.Context(), method, rawURL, nil)
+		require.NoError(t, err)
+
+		for name, value := range headers {
+			req.Header.Set(name, value)
+		}
+
+		for name, value := range cookies {
+			req.AddCookie(&http.Cookie{
+				Name:  name,
+				Value: value,
+			})
+		}
+
+		return req
 	}
 
 	for uc, tc := range map[string]struct {
 		contextualizer1 *genericContextualizer
 		contextualizer2 *genericContextualizer
-		headers1        map[string]string
-		headers2        map[string]string
-		cookies1        map[string]string
-		cookies2        map[string]string
+		request1        *http.Request
+		request2        *http.Request
+		payload1        string
+		payload2        string
 		expectEqual     bool
 	}{
-		"same configuration and request": {
-			contextualizer1: &genericContextualizer{
-				id:         "contextualizer",
-				e:          ep,
-				fwdHeaders: []string{"X-Tenant-ID"},
-				fwdCookies: []string{"tenant"},
-				ttl:        5 * time.Second,
-			},
-			contextualizer2: &genericContextualizer{
-				id:         "contextualizer",
-				e:          ep,
-				fwdHeaders: []string{"X-Tenant-ID"},
-				fwdCookies: []string{"tenant"},
-				ttl:        5 * time.Second,
-			},
-			headers1:    map[string]string{"X-Tenant-ID": "tenant-a"},
-			headers2:    map[string]string{"X-Tenant-ID": "tenant-a"},
-			cookies1:    map[string]string{"tenant": "tenant-a"},
-			cookies2:    map[string]string{"tenant": "tenant-a"},
+		"same effective request": {
+			contextualizer1: newContextualizer("contextualizer", 5*time.Second),
+			contextualizer2: newContextualizer("contextualizer", 5*time.Second),
+			request1: newRequest(
+				http.MethodPost,
+				"https://example.com/context",
+				map[string]string{
+					"Content-Type": "application/json",
+					"X-Tenant-ID":  "tenant-a",
+				},
+				map[string]string{
+					"tenant": "tenant-a",
+				},
+			),
+			request2: newRequest(
+				http.MethodPost,
+				"https://example.com/context",
+				map[string]string{
+					"Content-Type": "application/json",
+					"X-Tenant-ID":  "tenant-a",
+				},
+				map[string]string{
+					"tenant": "tenant-a",
+				},
+			),
+			payload1:    `{"foo":"bar"}`,
+			payload2:    `{"foo":"bar"}`,
 			expectEqual: true,
 		},
-		"different forwarded header value": {
-			contextualizer1: &genericContextualizer{
-				id:         "contextualizer",
-				e:          ep,
-				fwdHeaders: []string{"X-Tenant-ID"},
-				ttl:        5 * time.Second,
-			},
-			contextualizer2: &genericContextualizer{
-				id:         "contextualizer",
-				e:          ep,
-				fwdHeaders: []string{"X-Tenant-ID"},
-				ttl:        5 * time.Second,
-			},
-			headers1: map[string]string{"X-Tenant-ID": "tenant-a"},
-			headers2: map[string]string{"X-Tenant-ID": "tenant-b"},
+		"different contextualizer names": {
+			contextualizer1: newContextualizer("contextualizer-a", 5*time.Second),
+			contextualizer2: newContextualizer("contextualizer-b", 5*time.Second),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
 		},
-		"different forwarded header name": {
-			contextualizer1: &genericContextualizer{
-				id:         "contextualizer",
-				e:          ep,
-				fwdHeaders: []string{"X-Tenant-ID"},
-				ttl:        5 * time.Second,
-			},
-			contextualizer2: &genericContextualizer{
-				id:         "contextualizer",
-				e:          ep,
-				fwdHeaders: []string{"X-Organization-ID"},
-				ttl:        5 * time.Second,
-			},
-			headers1: map[string]string{"X-Tenant-ID": "foo"},
-			headers2: map[string]string{"X-Organization-ID": "foo"},
+		"different ttl": {
+			contextualizer1: newContextualizer("contextualizer", 5*time.Second),
+			contextualizer2: newContextualizer("contextualizer", 10*time.Second),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
 		},
-		"different forwarded cookie value": {
-			contextualizer1: &genericContextualizer{
-				id:         "contextualizer",
-				e:          ep,
-				fwdCookies: []string{"tenant"},
-				ttl:        5 * time.Second,
-			},
-			contextualizer2: &genericContextualizer{
-				id:         "contextualizer",
-				e:          ep,
-				fwdCookies: []string{"tenant"},
-				ttl:        5 * time.Second,
-			},
-			cookies1: map[string]string{"tenant": "tenant-a"},
-			cookies2: map[string]string{"tenant": "tenant-b"},
+		"different request method": {
+			contextualizer1: newContextualizer("contextualizer", 5*time.Second),
+			contextualizer2: newContextualizer("contextualizer", 5*time.Second),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodPost,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
 		},
-		"different forwarded cookie name": {
-			contextualizer1: &genericContextualizer{
-				id:         "contextualizer",
-				e:          ep,
-				fwdCookies: []string{"tenant"},
-				ttl:        5 * time.Second,
-			},
-			contextualizer2: &genericContextualizer{
-				id:         "contextualizer",
-				e:          ep,
-				fwdCookies: []string{"organization"},
-				ttl:        5 * time.Second,
-			},
-			cookies1: map[string]string{"tenant": "foo"},
-			cookies2: map[string]string{"organization": "foo"},
+		"different rendered url": {
+			contextualizer1: newContextualizer("contextualizer", 5*time.Second),
+			contextualizer2: newContextualizer("contextualizer", 5*time.Second),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/tenant-a",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/tenant-b",
+				nil,
+				nil,
+			),
 		},
-		"different forwarded value type": {
+		"different header value": {
+			contextualizer1: newContextualizer("contextualizer", 5*time.Second),
+			contextualizer2: newContextualizer("contextualizer", 5*time.Second),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				map[string]string{"X-Tenant-ID": "tenant-a"},
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				map[string]string{"X-Tenant-ID": "tenant-b"},
+				nil,
+			),
+		},
+		"different header name": {
+			contextualizer1: newContextualizer("contextualizer", 5*time.Second),
+			contextualizer2: newContextualizer("contextualizer", 5*time.Second),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				map[string]string{"X-Tenant-ID": "foo"},
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				map[string]string{"X-Organization-ID": "foo"},
+				nil,
+			),
+		},
+		"different cookie value": {
+			contextualizer1: newContextualizer("contextualizer", 5*time.Second),
+			contextualizer2: newContextualizer("contextualizer", 5*time.Second),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				map[string]string{"tenant": "tenant-a"},
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				map[string]string{"tenant": "tenant-b"},
+			),
+		},
+		"different cookie name": {
+			contextualizer1: newContextualizer("contextualizer", 5*time.Second),
+			contextualizer2: newContextualizer("contextualizer", 5*time.Second),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				map[string]string{"tenant": "foo"},
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				map[string]string{"organization": "foo"},
+			),
+		},
+		"different header and cookie": {
+			contextualizer1: newContextualizer("contextualizer", 5*time.Second),
+			contextualizer2: newContextualizer("contextualizer", 5*time.Second),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				map[string]string{"tenant": "foo"},
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				map[string]string{"tenant": "foo"},
+			),
+		},
+		"different payload": {
+			contextualizer1: newContextualizer("contextualizer", 5*time.Second),
+			contextualizer2: newContextualizer("contextualizer", 5*time.Second),
+			request1: newRequest(
+				http.MethodPost,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodPost,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			payload1: `{"tenant":"tenant-a"}`,
+			payload2: `{"tenant":"tenant-b"}`,
+		},
+		"same effective request despite different endpoint configuration": {
 			contextualizer1: &genericContextualizer{
-				id:         "contextualizer",
-				e:          ep,
-				fwdHeaders: []string{"tenant"},
-				ttl:        5 * time.Second,
+				id:  "contextualizer",
+				ttl: 5 * time.Second,
+				e: endpoint.Endpoint{
+					URL: "https://example.com/{{ .Values.path }}",
+				},
 			},
 			contextualizer2: &genericContextualizer{
-				id:         "contextualizer",
-				e:          ep,
-				fwdCookies: []string{"tenant"},
-				ttl:        5 * time.Second,
+				id:  "contextualizer",
+				ttl: 5 * time.Second,
+				e: endpoint.Endpoint{
+					URL: "https://example.com/context",
+				},
 			},
-			headers1: map[string]string{"tenant": "foo"},
-			cookies2: map[string]string{"tenant": "foo"},
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			expectEqual: true,
+		},
+		"different authentication strategy": {
+			contextualizer1: &genericContextualizer{
+				id:  "contextualizer",
+				ttl: 5 * time.Second,
+				e: endpoint.Endpoint{
+					AuthStrategy: &authstrategy.BasicAuth{
+						User:     "foo",
+						Password: "bar",
+					},
+				},
+			},
+			contextualizer2: &genericContextualizer{
+				id:  "contextualizer",
+				ttl: 5 * time.Second,
+				e: endpoint.Endpoint{
+					AuthStrategy: &authstrategy.BasicAuth{
+						User:     "foo",
+						Password: "baz",
+					},
+				},
+			},
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			createContext := func(
-				headers map[string]string,
-				cookies map[string]string,
-				contextualizer *genericContextualizer,
-			) heimdall.RequestContext {
-				t.Helper()
-
-				ctx := heimdallmocks.NewRequestContextMock(t)
-
-				if len(contextualizer.fwdHeaders) == 0 && len(contextualizer.fwdCookies) == 0 {
-					return ctx
-				}
-
-				reqFuns := heimdallmocks.NewRequestFunctionsMock(t)
-
-				for _, headerName := range contextualizer.fwdHeaders {
-					reqFuns.EXPECT().
-						Header(headerName).
-						Return(headers[headerName])
-				}
-
-				for _, cookieName := range contextualizer.fwdCookies {
-					reqFuns.EXPECT().
-						Cookie(cookieName).
-						Return(cookies[cookieName])
-				}
-
-				ctx.EXPECT().
-					Request().
-					Return(&heimdall.Request{
-						RequestFunctions: reqFuns,
-					})
-
-				return ctx
-			}
-
-			ctx1 := createContext(tc.headers1, tc.cookies1, tc.contextualizer1)
-			ctx2 := createContext(tc.headers2, tc.cookies2, tc.contextualizer2)
-
 			// WHEN
-			key1 := tc.contextualizer1.calculateCacheKey(ctx1, sub, nil, "")
-			key2 := tc.contextualizer2.calculateCacheKey(ctx2, sub, nil, "")
+			key1 := tc.contextualizer1.calculateCacheKey(tc.request1, tc.payload1)
+			key2 := tc.contextualizer2.calculateCacheKey(tc.request2, tc.payload2)
 
 			// THEN
 			if tc.expectEqual {

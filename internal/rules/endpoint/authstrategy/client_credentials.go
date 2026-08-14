@@ -21,6 +21,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
 )
 
@@ -59,4 +60,24 @@ func (c *OAuth2ClientCredentials) Apply(req *http.Request) error {
 	req.Header.Set(headerName, headerScheme+" "+token.AccessToken)
 
 	return nil
+}
+
+func (c *OAuth2ClientCredentials) Hash() []byte {
+	headerName := "Authorization"
+	if c.Header != nil {
+		headerName = c.Header.Name
+	}
+
+	key := cachekey.New("auth-strategy:oauth2-client-credentials")
+	key.WriteBytes(c.Config.Hash())
+	key.WriteString(headerName)
+
+	hasFixedScheme := c.Header != nil && len(c.Header.Scheme) != 0
+	key.WriteBool(hasFixedScheme)
+
+	if hasFixedScheme {
+		key.WriteString(c.Header.Scheme)
+	}
+
+	return key.Sum()
 }

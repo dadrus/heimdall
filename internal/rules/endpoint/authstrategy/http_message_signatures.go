@@ -17,9 +17,7 @@
 package authstrategy
 
 import (
-	"crypto/sha256"
 	"crypto/x509"
-	"encoding/binary"
 	"fmt"
 	"net/http"
 	"sync"
@@ -29,12 +27,11 @@ import (
 	"github.com/go-jose/go-jose/v4"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/keystore"
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type KeyStore struct {
@@ -105,29 +102,15 @@ func (s *HTTPMessageSignatures) Keys() []jose.JSONWebKey {
 }
 
 func (s *HTTPMessageSignatures) Hash() []byte {
-	const int64BytesCount = 8
+	key := cachekey.New("auth-strategy:http-message-signatures")
 
-	hash := sha256.New()
-	hash.Write(stringx.ToBytes(s.Label))
+	key.WriteString(s.Label)
+	key.WriteStrings(s.Components)
+	key.WriteInt64(int64(*s.TTL))
+	key.WriteString(s.Signer.Name)
+	key.WriteString(s.Signer.KeyID)
 
-	for _, component := range s.Components {
-		hash.Write(stringx.ToBytes(component))
-	}
-
-	if s.TTL != nil {
-		var ttlBytes [int64BytesCount]byte
-
-		//nolint:gosec
-		// no integer overflow during conversion possible
-		binary.LittleEndian.PutUint64(ttlBytes[:], uint64(*s.TTL))
-
-		hash.Write(ttlBytes[:])
-	}
-
-	hash.Write(stringx.ToBytes(s.Signer.Name))
-	hash.Write(stringx.ToBytes(s.Signer.KeyID))
-
-	return hash.Sum(nil)
+	return key.Sum()
 }
 
 func (s *HTTPMessageSignatures) Name() string { return "http message signer" }
@@ -182,15 +165,20 @@ func (s *HTTPMessageSignatures) init() error {
 		keys[idx] = entry.JWK()
 	}
 
+	if len(s.Signer.Name) == 0 {
+		s.Signer.Name = "heimdall"
+	}
+
+	if s.TTL == nil {
+		s.TTL = new(1 * time.Minute)
+	}
+
 	signer, err := httpsig.NewSigner(
 		toHTTPSigKey(kse),
 		httpsig.WithComponents(s.Components...),
-		httpsig.WithTag(x.IfThenElse(len(s.Signer.Name) != 0, s.Signer.Name, "heimdall")),
+		httpsig.WithTag(s.Signer.Name),
 		httpsig.WithLabel(s.Label),
-		httpsig.WithTTL(x.IfThenElseExec(s.TTL != nil,
-			func() time.Duration { return *s.TTL },
-			func() time.Duration { return 1 * time.Minute },
-		)),
+		httpsig.WithTTL(*s.TTL),
 	)
 	if err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration,

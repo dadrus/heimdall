@@ -669,16 +669,44 @@ func TestClientCredentialsHash(t *testing.T) {
 	}{
 		"same configuration": {
 			c1: &Config{
+				TokenURL:     "https://example.com/token",
 				ClientID:     "Foo",
 				ClientSecret: "Bar",
 				Scopes:       []string{"foo", "bar"},
 			},
 			c2: &Config{
+				TokenURL:     "https://example.com/token",
 				ClientID:     "Foo",
 				ClientSecret: "Bar",
 				Scopes:       []string{"foo", "bar"},
 			},
 			expectEqual: true,
+		},
+		"default and explicit basic auth method": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				AuthMethod:   AuthMethodBasicAuth,
+			},
+			expectEqual: true,
+		},
+		"different token url": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token-a",
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token-b",
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+			},
 		},
 		"different client ids": {
 			c1: &Config{
@@ -688,6 +716,38 @@ func TestClientCredentialsHash(t *testing.T) {
 			c2: &Config{
 				ClientID:     "Baz",
 				ClientSecret: "Bar",
+			},
+		},
+		"different client secrets": {
+			c1: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+			},
+			c2: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Baz",
+			},
+		},
+		"different authentication methods": {
+			c1: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				AuthMethod:   AuthMethodBasicAuth,
+			},
+			c2: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				AuthMethod:   AuthMethodRequestBody,
+			},
+		},
+		"field boundaries are preserved": {
+			c1: &Config{
+				ClientID:     "a",
+				ClientSecret: "bc",
+			},
+			c2: &Config{
+				ClientID:     "ab",
+				ClientSecret: "c",
 			},
 		},
 		"ambiguous scope sets": {
@@ -704,11 +764,9 @@ func TestClientCredentialsHash(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// WHEN
 			hash1 := tc.c1.Hash()
 			hash2 := tc.c2.Hash()
 
-			// THEN
 			assert.NotEmpty(t, hash1)
 			assert.NotEmpty(t, hash2)
 
@@ -745,6 +803,34 @@ func TestClientCredentialsCalculateCacheKey(t *testing.T) {
 			},
 			expectEqual: true,
 		},
+		"default and explicit basic auth method": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				AuthMethod:   AuthMethodBasicAuth,
+			},
+			expectEqual: true,
+		},
+		"different authentication method": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				AuthMethod:   AuthMethodBasicAuth,
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				AuthMethod:   AuthMethodRequestBody,
+			},
+		},
 		"different cache ttl": {
 			c1: &Config{
 				TokenURL:     "https://example.com/token",
@@ -757,6 +843,31 @@ func TestClientCredentialsCalculateCacheKey(t *testing.T) {
 				ClientID:     "client",
 				ClientSecret: "secret",
 				TTL:          new(15 * time.Second),
+			},
+		},
+		"default and explicit cache ttl": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          new(5 * time.Second),
+			},
+		},
+		"field boundaries are preserved": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "a",
+				ClientSecret: "bc",
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "ab",
+				ClientSecret: "c",
 			},
 		},
 		"ambiguous scope sets": {
@@ -777,11 +888,9 @@ func TestClientCredentialsCalculateCacheKey(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// WHEN
 			key1 := tc.c1.calculateCacheKey()
 			key2 := tc.c2.calculateCacheKey()
 
-			// THEN
 			assert.NotEmpty(t, key1)
 			assert.NotEmpty(t, key2)
 

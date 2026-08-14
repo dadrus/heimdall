@@ -245,3 +245,101 @@ func TestApplyClientCredentialsStrategy(t *testing.T) {
 		})
 	}
 }
+
+func TestOAuth2ClientCredentialsHash(t *testing.T) {
+	t.Parallel()
+
+	config := clientcredentials.Config{
+		TokenURL:     "https://example.com/token",
+		ClientID:     "client",
+		ClientSecret: "secret",
+	}
+
+	for uc, tc := range map[string]struct {
+		strategy1   *OAuth2ClientCredentials
+		strategy2   *OAuth2ClientCredentials
+		expectEqual bool
+	}{
+		"same configuration": {
+			strategy1: &OAuth2ClientCredentials{
+				Config: config,
+				Header: &HeaderConfig{
+					Name:   "X-Token",
+					Scheme: "Bearer",
+				},
+			},
+			strategy2: &OAuth2ClientCredentials{
+				Config: config,
+				Header: &HeaderConfig{
+					Name:   "X-Token",
+					Scheme: "Bearer",
+				},
+			},
+			expectEqual: true,
+		},
+		"default and explicit default header": {
+			strategy1: &OAuth2ClientCredentials{
+				Config: config,
+			},
+			strategy2: &OAuth2ClientCredentials{
+				Config: config,
+				Header: &HeaderConfig{
+					Name: "Authorization",
+				},
+			},
+			expectEqual: true,
+		},
+		"different header name": {
+			strategy1: &OAuth2ClientCredentials{
+				Config: config,
+				Header: &HeaderConfig{Name: "X-Token"},
+			},
+			strategy2: &OAuth2ClientCredentials{
+				Config: config,
+				Header: &HeaderConfig{Name: "X-Access-Token"},
+			},
+		},
+		"different fixed scheme": {
+			strategy1: &OAuth2ClientCredentials{
+				Config: config,
+				Header: &HeaderConfig{
+					Name:   "X-Token",
+					Scheme: "Bearer",
+				},
+			},
+			strategy2: &OAuth2ClientCredentials{
+				Config: config,
+				Header: &HeaderConfig{
+					Name:   "X-Token",
+					Scheme: "Token",
+				},
+			},
+		},
+		"dynamic and fixed scheme": {
+			strategy1: &OAuth2ClientCredentials{
+				Config: config,
+				Header: &HeaderConfig{
+					Name: "X-Token",
+				},
+			},
+			strategy2: &OAuth2ClientCredentials{
+				Config: config,
+				Header: &HeaderConfig{
+					Name:   "X-Token",
+					Scheme: "Bearer",
+				},
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			hash1 := tc.strategy1.Hash()
+			hash2 := tc.strategy2.Hash()
+
+			if tc.expectEqual {
+				assert.Equal(t, hash1, hash2)
+			} else {
+				assert.NotEqual(t, hash1, hash2)
+			}
+		})
+	}
+}

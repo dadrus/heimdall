@@ -19,9 +19,6 @@ package authenticators
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
@@ -35,6 +32,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
@@ -43,7 +41,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 // by intention. Used only during application bootstrap
@@ -340,7 +337,7 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(
 	}
 
 	if a.isCacheEnabled() {
-		cacheKey = a.calculateCacheKey(metadata.IntrospectionEndpoint, req.URL.String(), token)
+		cacheKey = a.calculateCacheKey(metadata.IntrospectionEndpoint, req, token)
 
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			var response oauth2.IntrospectionResponse
@@ -526,24 +523,25 @@ func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.In
 
 func (a *oauth2IntrospectionAuthenticator) calculateCacheKey(
 	ep *endpoint.Endpoint,
-	templatedURL, token string,
+	req *http.Request,
+	token string,
 ) string {
-	digest := sha256.New()
-	digest.Write(ep.Hash())
-	digest.Write(stringx.ToBytes(templatedURL))
-	digest.Write(stringx.ToBytes(token))
+	key := cachekey.New("oauth2-introspection-authenticator:response")
 
-	if a.ttl == nil {
-		digest.Write([]byte{0})
-	} else {
-		digest.Write([]byte{1})
+	key.WriteString(req.Method)
+	key.WriteString(req.URL.String())
+	key.WriteHeader(req.Header)
+	key.WriteString(token)
 
-		var ttl [8]byte
-		binary.BigEndian.PutUint64(ttl[:], uint64(*a.ttl)) //nolint:gosec
-		digest.Write(ttl[:])
+	key.WriteBool(ep.AuthStrategy != nil)
+	if ep.AuthStrategy != nil {
+		key.WriteBytes(ep.AuthStrategy.Hash())
 	}
 
-	var result [sha256.Size]byte
+	key.WriteBool(a.ttl != nil)
+	if a.ttl != nil {
+		key.WriteInt64(int64(*a.ttl))
+	}
 
-	return hex.EncodeToString(digest.Sum(result[:0]))
+	return key.SumString()
 }

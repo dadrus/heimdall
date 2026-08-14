@@ -17,10 +17,9 @@
 package authstrategy
 
 import (
-	"crypto/sha256"
 	"net/http"
 
-	"github.com/dadrus/heimdall/internal/x/stringx"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 )
 
 type BasicAuth struct {
@@ -36,10 +35,9 @@ func (c *BasicAuth) Apply(req *http.Request) error {
 }
 
 func (c *BasicAuth) Hash() []byte {
-	hash := sha256.New()
+	key := cachekey.New("auth-strategy:basic")
+	key.WriteString(c.User)
+	key.WriteString(c.Password)
 
-	hash.Write(stringx.ToBytes(c.User))
-	hash.Write(stringx.ToBytes(c.Password))
-
-	return hash.Sum(nil)
+	return key.Sum()
 }

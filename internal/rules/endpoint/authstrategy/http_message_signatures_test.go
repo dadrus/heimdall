@@ -193,6 +193,9 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				assert.NotEmpty(t, conf.Certificates())
 				assert.NotEmpty(t, conf.Keys())
 				assert.Equal(t, "http message signer", conf.Name())
+				require.NotNil(t, conf.TTL)
+				assert.Equal(t, time.Minute, *conf.TTL)
+				assert.Equal(t, "heimdall", conf.Signer.Name)
 			},
 		},
 		"successful configuration with custom ttl": {
@@ -214,6 +217,9 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				assert.NotEmpty(t, conf.Certificates())
 				assert.NotEmpty(t, conf.Keys())
 				assert.Equal(t, "http message signer", conf.Name())
+				require.NotNil(t, conf.TTL)
+				assert.Equal(t, time.Hour, *conf.TTL)
+				assert.Equal(t, "heimdall", conf.Signer.Name)
 			},
 		},
 	} {
@@ -228,27 +234,83 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 func TestHTTPMessageSignaturesHash(t *testing.T) {
 	t.Parallel()
 
-	ttl := 1 * time.Hour
-	conf1 := &HTTPMessageSignatures{
-		Signer:     SignerConfig{KeyStore: KeyStore{Path: "/path/to/keystore.pem"}, KeyID: "key1"},
-		Components: []string{"@method"},
-		TTL:        &ttl,
-	}
-	conf2 := &HTTPMessageSignatures{
-		Signer:     SignerConfig{KeyStore: KeyStore{Path: "/path/to/keystore.pem"}, KeyID: "key1", Name: "foo"},
-		Components: []string{"@status"},
-		TTL:        &ttl,
-		Label:      "test",
-	}
+	ttl := time.Hour
 
-	hash1 := conf1.Hash()
-	hash2 := conf2.Hash()
+	for uc, tc := range map[string]struct {
+		first     *HTTPMessageSignatures
+		second    *HTTPMessageSignatures
+		equalHash bool
+	}{
+		"same configuration": {
+			first: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall", KeyID: "key1"},
+				Label:      "sig",
+				Components: []string{"@method"},
+				TTL:        &ttl,
+			},
+			second: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall", KeyID: "key1"},
+				Label:      "sig",
+				Components: []string{"@method"},
+				TTL:        &ttl,
+			},
+			equalHash: true,
+		},
+		"different label": {
+			first: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall", KeyID: "key1"},
+				Label:      "foo",
+				Components: []string{"@method"},
+				TTL:        &ttl,
+			},
+			second: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall", KeyID: "key1"},
+				Label:      "bar",
+				Components: []string{"@method"},
+				TTL:        &ttl,
+			},
+		},
+		"component boundaries do not collide": {
+			first: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall", KeyID: "key1"},
+				Components: []string{"ab", "c"},
+				TTL:        &ttl,
+			},
+			second: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall", KeyID: "key1"},
+				Components: []string{"a", "bc"},
+				TTL:        &ttl,
+			},
+		},
+		"signer boundaries do not collide": {
+			first: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "a", KeyID: "bc"},
+				Components: []string{"@method"},
+				TTL:        &ttl,
+			},
+			second: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "ab", KeyID: "c"},
+				Components: []string{"@method"},
+				TTL:        &ttl,
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			firstHash := tc.first.Hash()
+			secondHash := tc.second.Hash()
 
-	assert.NotEmpty(t, hash1)
-	assert.NotEmpty(t, hash2)
-	assert.NotEqual(t, hash1, hash2)
-	assert.Equal(t, hash1, conf1.Hash())
-	assert.Equal(t, hash2, conf2.Hash())
+			assert.NotEmpty(t, firstHash)
+			assert.NotEmpty(t, secondHash)
+			assert.Equal(t, firstHash, tc.first.Hash())
+			assert.Equal(t, secondHash, tc.second.Hash())
+
+			if tc.equalHash {
+				assert.Equal(t, firstHash, secondHash)
+			} else {
+				assert.NotEqual(t, firstHash, secondHash)
+			}
+		})
+	}
 }
 
 func TestHTTPMessageSignaturesApply(t *testing.T) {

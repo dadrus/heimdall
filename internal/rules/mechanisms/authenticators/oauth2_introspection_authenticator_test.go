@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"testing"
 	"time"
 
@@ -2255,18 +2256,266 @@ func TestOauth2IntrospectionAuthenticatorIsInsecure(t *testing.T) {
 func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	ep := &endpoint.Endpoint{
-		URL: "https://example.com/introspect",
+	for uc, tc := range map[string]struct {
+		firstAuthenticator  *oauth2IntrospectionAuthenticator
+		firstEndpoint       *endpoint.Endpoint
+		firstRequest        *http.Request
+		firstToken          string
+		secondAuthenticator *oauth2IntrospectionAuthenticator
+		secondEndpoint      *endpoint.Endpoint
+		secondRequest       *http.Request
+		secondToken         string
+		equal               bool
+	}{
+		"same inputs": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			firstEndpoint: &endpoint.Endpoint{},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+				Header: http.Header{
+					"Content-Type": {"application/x-www-form-urlencoded"},
+				},
+			},
+			firstToken: "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{},
+			secondRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+				Header: http.Header{
+					"Content-Type": {"application/x-www-form-urlencoded"},
+				},
+			},
+			secondToken: "token",
+			equal:       true,
+		},
+		"different effective request method": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			firstEndpoint: &endpoint.Endpoint{},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			firstToken: "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{},
+			secondRequest: &http.Request{
+				Method: http.MethodPut,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			secondToken: "token",
+		},
+		"different effective request url": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			firstEndpoint: &endpoint.Endpoint{},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/a"},
+			},
+			firstToken: "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{},
+			secondRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/b"},
+			},
+			secondToken: "token",
+		},
+		"different effective request header": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			firstEndpoint: &endpoint.Endpoint{},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+				Header: http.Header{
+					"X-Tenant": {"tenant-a"},
+				},
+			},
+			firstToken: "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{},
+			secondRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+				Header: http.Header{
+					"X-Tenant": {"tenant-b"},
+				},
+			},
+			secondToken: "token",
+		},
+		"different token": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			firstEndpoint: &endpoint.Endpoint{},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			firstToken: "token-a",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{},
+			secondRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			secondToken: "token-b",
+		},
+		"without vs with authentication strategy": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			firstEndpoint: &endpoint.Endpoint{},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			firstToken: "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{
+				AuthStrategy: &authstrategy.APIKey{
+					In:    "header",
+					Name:  "X-API-Key",
+					Value: "secret",
+				},
+			},
+			secondRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			secondToken: "token",
+		},
+		"different authentication strategy": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			firstEndpoint: &endpoint.Endpoint{
+				AuthStrategy: &authstrategy.APIKey{
+					In:    "header",
+					Name:  "X-API-Key",
+					Value: "secret-a",
+				},
+			},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			firstToken: "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{
+				AuthStrategy: &authstrategy.APIKey{
+					In:    "header",
+					Name:  "X-API-Key",
+					Value: "secret-b",
+				},
+			},
+			secondRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			secondToken: "token",
+		},
+		"default vs configured ttl": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{},
+			firstEndpoint:      &endpoint.Endpoint{},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			firstToken: "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{},
+			secondRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			secondToken: "token",
+		},
+		"different ttl": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			firstEndpoint: &endpoint.Endpoint{},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			firstToken: "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(15 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{},
+			secondRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			secondToken: "token",
+		},
+		"url and token boundaries do not collide": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			firstEndpoint: &endpoint.Endpoint{},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/a"},
+			},
+			firstToken: "bc",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{},
+			secondRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/ab"},
+			},
+			secondToken: "c",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			first := tc.firstAuthenticator.calculateCacheKey(
+				tc.firstEndpoint,
+				tc.firstRequest,
+				tc.firstToken,
+			)
+			second := tc.secondAuthenticator.calculateCacheKey(
+				tc.secondEndpoint,
+				tc.secondRequest,
+				tc.secondToken,
+			)
+
+			if tc.equal {
+				assert.Equal(t, first, second)
+			} else {
+				assert.NotEqual(t, first, second)
+			}
+		})
 	}
-
-	a1 := &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)}
-	a2 := &oauth2IntrospectionAuthenticator{ttl: new(15 * time.Second)}
-
-	// WHEN
-	key1 := a1.calculateCacheKey(ep, ep.URL, "token")
-	key2 := a2.calculateCacheKey(ep, ep.URL, "token")
-
-	// THEN
-	assert.NotEqual(t, key1, key2)
 }

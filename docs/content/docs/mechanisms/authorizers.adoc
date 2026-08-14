@@ -174,7 +174,7 @@ NOTE: This setting is deprecated and will be removed in the 0.18.0 release. Use 
 
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
-Allows caching of the authorization endpoint responses. Defaults to 0s, which means no caching. The cache key is calculated from the entire configuration of the authorizer instance and the available information about the current subject.
+Allows caching of the authorization endpoint responses. Defaults to `0s`, which means no caching. The cache identity is derived from the authorizer, the configured cache TTL and the effective request to the endpoint, including the HTTP method, rendered URL and headers, rendered payload and endpoint authentication strategy. Authorization expressions are evaluated for every execution, regardless of whether the authorization endpoint response was obtained remotely or reused from the cache.
 
 * *`values`* _map of strings_ (optional, overridable)
 +

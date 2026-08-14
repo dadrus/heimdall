@@ -17,9 +17,6 @@
 package authorizers
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
@@ -33,6 +30,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
@@ -185,8 +183,13 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Sub
 		return err
 	}
 
+	req, err := a.createRequest(ctx, sub, vals, payload)
+	if err != nil {
+		return err
+	}
+
 	if a.ttl > 0 {
-		cacheKey = a.calculateCacheKey(sub, vals, payload)
+		cacheKey = a.calculateCacheKey(req, payload)
 
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			var ai authorizationInformation
@@ -200,7 +203,7 @@ func (a *remoteAuthorizer) Execute(ctx heimdall.RequestContext, sub *subject.Sub
 	}
 
 	if authInfo == nil {
-		authInfo, err = a.fetchAuthorizationInformation(ctx, sub, vals, payload)
+		authInfo, err = a.fetchAuthorizationInformation(ctx, req)
 		if err != nil {
 			return err
 		}
@@ -287,15 +290,12 @@ func (a *remoteAuthorizer) ID() string { return a.id }
 
 func (a *remoteAuthorizer) ContinueOnError() bool { return false }
 
-func (a *remoteAuthorizer) fetchAuthorizationInformation(
+func (a *remoteAuthorizer) createRequest(
 	ctx heimdall.RequestContext,
 	sub *subject.Subject,
 	values map[string]string,
 	payload string,
-) (*authorizationInformation, error) {
-	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Msg("Calling remote authorization endpoint")
-
+) (*http.Request, error) {
 	endpointRenderer := endpoint.RenderFunc(func(tplString string) (string, error) {
 		tpl, err := template.New(tplString)
 		if err != nil {
@@ -318,6 +318,16 @@ func (a *remoteAuthorizer) fetchAuthorizationInformation(
 			WithErrorContext(a).
 			CausedBy(err)
 	}
+
+	return req, nil
+}
+
+func (a *remoteAuthorizer) fetchAuthorizationInformation(
+	ctx heimdall.RequestContext,
+	req *http.Request,
+) (*authorizationInformation, error) {
+	logger := zerolog.Ctx(ctx.Context())
+	logger.Debug().Msg("Calling remote authorization endpoint")
 
 	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
@@ -387,31 +397,25 @@ func (a *remoteAuthorizer) readResponse(ctx heimdall.RequestContext, resp *http.
 	return result, nil
 }
 
-func (a *remoteAuthorizer) calculateCacheKey(sub *subject.Subject, values map[string]string, payload string) string {
-	const int64BytesCount = 8
+func (a *remoteAuthorizer) calculateCacheKey(
+	req *http.Request,
+	payload string,
+) string {
+	key := cachekey.New("remote-authorizer:response")
 
-	var ttlBytes [int64BytesCount]byte
+	key.WriteString(a.name)
+	key.WriteInt64(int64(a.ttl))
+	key.WriteString(req.Method)
+	key.WriteString(req.URL.String())
+	key.WriteHeader(req.Header)
+	key.WriteString(payload)
 
-	//nolint:gosec
-	// no integer overflow during conversion possible
-	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(a.ttl))
-
-	hash := sha256.New()
-	hash.Write(a.e.Hash())
-	hash.Write(stringx.ToBytes(a.id))
-	hash.Write(stringx.ToBytes(strings.Join(a.headersForUpstream, ",")))
-	hash.Write(stringx.ToBytes(payload))
-	hash.Write(ttlBytes[:])
-	hash.Write(sub.Hash())
-
-	for k, v := range values {
-		hash.Write(stringx.ToBytes(k))
-		hash.Write(stringx.ToBytes(v))
+	key.WriteBool(a.e.AuthStrategy != nil)
+	if a.e.AuthStrategy != nil {
+		key.WriteBytes(a.e.AuthStrategy.Hash())
 	}
 
-	var result [sha256.Size]byte
-
-	return hex.EncodeToString(hash.Sum(result[:0]))
+	return key.SumString()
 }
 
 func (a *remoteAuthorizer) verify(ctx heimdall.RequestContext, result any) error {
