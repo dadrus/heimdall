@@ -501,37 +501,3 @@ func TestEndpointSendRequest(t *testing.T) {
 		})
 	}
 }
-
-func TestEndpointHash(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	e1 := Endpoint{URL: "foo.bar"}
-	e2 := Endpoint{URL: "foo.bar", Method: "FOO", Headers: map[string]string{"baz": "foo"}}
-	e3 := Endpoint{URL: "foo.bar", Method: "FOO", AuthStrategy: func() AuthenticationStrategy {
-		as := mocks.NewAuthenticationStrategyMock(t)
-		as.EXPECT().Hash().Return([]byte{1, 2, 3})
-
-		return as
-	}()}
-	e4 := Endpoint{URL: "foo.bar", Retry: &Retry{GiveUpAfter: 2}}
-
-	// WHEN
-	hash1 := e1.Hash()
-	hash2 := e2.Hash()
-	hash3 := e3.Hash()
-	hash4 := e4.Hash()
-
-	// THEN
-	assert.NotEmpty(t, hash1)
-	assert.NotEmpty(t, hash2)
-	assert.NotEmpty(t, hash3)
-	assert.NotEmpty(t, hash4)
-
-	assert.NotEqual(t, hash1, hash2)
-	assert.NotEqual(t, hash1, hash3)
-	assert.Equal(t, hash1, hash4)
-	assert.NotEqual(t, hash2, hash3)
-	assert.NotEqual(t, hash2, hash4)
-	assert.NotEqual(t, hash3, hash4)
-}

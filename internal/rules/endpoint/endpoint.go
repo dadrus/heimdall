@@ -17,9 +17,7 @@
 package endpoint
 
 import (
-	"bytes"
 	"context"
-	"crypto/sha256"
 	"errors"
 	"io"
 	"net/http"
@@ -35,7 +33,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/httpx"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type HTTPCache struct {
@@ -161,29 +158,6 @@ func (e Endpoint) SendRequest(
 	}
 
 	return e.readResponse(resp)
-}
-
-func (e Endpoint) Hash() []byte {
-	hash := sha256.New()
-
-	hash.Write(stringx.ToBytes(e.URL))
-	hash.Write(stringx.ToBytes(e.Method))
-
-	buf := bytes.NewBufferString("")
-	for k, v := range e.Headers {
-		buf.Write(stringx.ToBytes(k))
-		buf.Write(stringx.ToBytes(v))
-	}
-
-	hash.Write(buf.Bytes())
-
-	if e.AuthStrategy != nil {
-		hash.Write(e.AuthStrategy.Hash())
-	}
-
-	var result [sha256.Size]byte
-
-	return hash.Sum(result[:0])
 }
 
 func (e Endpoint) readResponse(resp *http.Response) ([]byte, error) {
