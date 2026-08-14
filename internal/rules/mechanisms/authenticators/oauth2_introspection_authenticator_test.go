@@ -2280,7 +2280,6 @@ func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 				},
 			},
 			firstToken: "token",
-
 			secondAuthenticator: &oauth2IntrospectionAuthenticator{
 				ttl: new(5 * time.Second),
 			},
@@ -2293,10 +2292,28 @@ func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 				},
 			},
 			secondToken: "token",
-
-			equal: true,
+			equal:       true,
 		},
-
+		"different effective request method": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			firstEndpoint: &endpoint.Endpoint{},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			firstToken: "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{},
+			secondRequest: &http.Request{
+				Method: http.MethodPut,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			secondToken: "token",
+		},
 		"different effective request url": {
 			firstAuthenticator: &oauth2IntrospectionAuthenticator{
 				ttl: new(5 * time.Second),
@@ -2307,7 +2324,6 @@ func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/a"},
 			},
 			firstToken: "token",
-
 			secondAuthenticator: &oauth2IntrospectionAuthenticator{
 				ttl: new(5 * time.Second),
 			},
@@ -2318,7 +2334,6 @@ func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 			},
 			secondToken: "token",
 		},
-
 		"different effective request header": {
 			firstAuthenticator: &oauth2IntrospectionAuthenticator{
 				ttl: new(5 * time.Second),
@@ -2332,7 +2347,6 @@ func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 				},
 			},
 			firstToken: "token",
-
 			secondAuthenticator: &oauth2IntrospectionAuthenticator{
 				ttl: new(5 * time.Second),
 			},
@@ -2346,7 +2360,6 @@ func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 			},
 			secondToken: "token",
 		},
-
 		"different token": {
 			firstAuthenticator: &oauth2IntrospectionAuthenticator{
 				ttl: new(5 * time.Second),
@@ -2357,7 +2370,6 @@ func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
 			},
 			firstToken: "token-a",
-
 			secondAuthenticator: &oauth2IntrospectionAuthenticator{
 				ttl: new(5 * time.Second),
 			},
@@ -2368,7 +2380,82 @@ func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 			},
 			secondToken: "token-b",
 		},
-
+		"without vs with authentication strategy": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			firstEndpoint: &endpoint.Endpoint{},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			firstToken: "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{
+				AuthStrategy: &authstrategy.APIKey{
+					In:    "header",
+					Name:  "X-API-Key",
+					Value: "secret",
+				},
+			},
+			secondRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			secondToken: "token",
+		},
+		"different authentication strategy": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			firstEndpoint: &endpoint.Endpoint{
+				AuthStrategy: &authstrategy.APIKey{
+					In:    "header",
+					Name:  "X-API-Key",
+					Value: "secret-a",
+				},
+			},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			firstToken: "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{
+				AuthStrategy: &authstrategy.APIKey{
+					In:    "header",
+					Name:  "X-API-Key",
+					Value: "secret-b",
+				},
+			},
+			secondRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			secondToken: "token",
+		},
+		"default vs configured ttl": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{},
+			firstEndpoint:      &endpoint.Endpoint{},
+			firstRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			firstToken: "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{
+				ttl: new(5 * time.Second),
+			},
+			secondEndpoint: &endpoint.Endpoint{},
+			secondRequest: &http.Request{
+				Method: http.MethodPost,
+				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
+			},
+			secondToken: "token",
+		},
 		"different ttl": {
 			firstAuthenticator: &oauth2IntrospectionAuthenticator{
 				ttl: new(5 * time.Second),
@@ -2379,7 +2466,6 @@ func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/introspect"},
 			},
 			firstToken: "token",
-
 			secondAuthenticator: &oauth2IntrospectionAuthenticator{
 				ttl: new(15 * time.Second),
 			},
@@ -2390,7 +2476,6 @@ func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 			},
 			secondToken: "token",
 		},
-
 		"url and token boundaries do not collide": {
 			firstAuthenticator: &oauth2IntrospectionAuthenticator{
 				ttl: new(5 * time.Second),
@@ -2401,7 +2486,6 @@ func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 				URL:    &url.URL{Scheme: "https", Host: "example.com", Path: "/a"},
 			},
 			firstToken: "bc",
-
 			secondAuthenticator: &oauth2IntrospectionAuthenticator{
 				ttl: new(5 * time.Second),
 			},
@@ -2421,7 +2505,6 @@ func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 				tc.firstRequest,
 				tc.firstToken,
 			)
-
 			second := tc.secondAuthenticator.calculateCacheKey(
 				tc.secondEndpoint,
 				tc.secondRequest,
