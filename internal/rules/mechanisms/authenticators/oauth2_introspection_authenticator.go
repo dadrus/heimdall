@@ -351,12 +351,13 @@ func (a *oauth2IntrospectionAuthenticator) getSubjectInformation(
 		}
 	}
 
+	client := metadata.IntrospectionEndpoint.CreateClient(req.URL.Hostname())
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+
 	if introspectResp == nil {
-		introspectResp, rawResp, err = a.fetchTokenIntrospectionResponse(
-			ctx,
-			metadata.IntrospectionEndpoint.CreateClient(req.URL.Hostname()),
-			req,
-		)
+		introspectResp, rawResp, err = a.fetchTokenIntrospectionResponse(ctx, client, req)
 		if err != nil {
 			return nil, err
 		}
