@@ -17,9 +17,6 @@
 package authorizers
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
@@ -33,6 +30,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
@@ -403,40 +401,21 @@ func (a *remoteAuthorizer) calculateCacheKey(
 	req *http.Request,
 	payload string,
 ) string {
-	const int64BytesCount = 8
+	key := cachekey.New("remote-authorizer:response")
 
-	var ttlBytes [int64BytesCount]byte
+	key.WriteString(a.name)
+	key.WriteInt64(int64(a.ttl))
+	key.WriteString(req.Method)
+	key.WriteString(req.URL.String())
+	key.WriteHeader(req.Header)
+	key.WriteString(payload)
 
-	//nolint:gosec
-	// no integer overflow during conversion possible
-	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(a.ttl))
-
-	var separator [1]byte
-
-	hash := sha256.New()
-	hash.Write(stringx.ToBytes("remote-authorizer:v2"))
-	hash.Write(separator[:])
-	hash.Write(stringx.ToBytes(a.name))
-	hash.Write(separator[:])
-	hash.Write(ttlBytes[:])
-	hash.Write(stringx.ToBytes(req.Method))
-	hash.Write(separator[:])
-	hash.Write(stringx.ToBytes(req.URL.String()))
-	hash.Write(separator[:])
-
-	_ = req.Header.Write(hash)
-
-	hash.Write(separator[:])
-	hash.Write(stringx.ToBytes(payload))
-	hash.Write(separator[:])
-
+	key.WriteBool(a.e.AuthStrategy != nil)
 	if a.e.AuthStrategy != nil {
-		hash.Write(a.e.AuthStrategy.Hash())
+		key.WriteBytes(a.e.AuthStrategy.Hash())
 	}
 
-	var result [sha256.Size]byte
-
-	return hex.EncodeToString(hash.Sum(result[:0]))
+	return key.SumString()
 }
 
 func (a *remoteAuthorizer) verify(ctx heimdall.RequestContext, result any) error {
