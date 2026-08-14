@@ -211,17 +211,11 @@ func (a *genericAuthenticator) ID() string { return a.id }
 
 func (a *genericAuthenticator) IsInsecure() bool { return false }
 
-//nolint:cyclop
 func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	cch := cache.Ctx(ctx.Context())
 
-	renderedPayload, err := a.renderPayload(authData)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := a.createRequest(ctx, authData, renderedPayload)
+	req, renderedPayload, err := a.createRequest(ctx, authData)
 	if err != nil {
 		return nil, err
 	}
@@ -291,52 +285,55 @@ func (a *genericAuthenticator) fetchSubjectInformation(req *http.Request) ([]byt
 	return a.readResponse(resp)
 }
 
-func (a *genericAuthenticator) renderPayload(authData string) (string, error) {
-	if a.payload == nil {
-		return "", nil
-	}
-
-	value, err := a.payload.Render(map[string]any{
-		"AuthenticationData": authData,
-	})
-	if err != nil {
-		return "", errorchain.NewWithMessage(heimdall.ErrInternal,
-			"failed to render payload for the authenticator endpoint").
-			WithErrorContext(a).CausedBy(err)
-	}
-
-	return value, nil
-}
-
 func (a *genericAuthenticator) createRequest(
 	ctx heimdall.RequestContext,
 	authData string,
-	payload string,
-) (*http.Request, error) {
+) (*http.Request, string, error) {
 	logger := zerolog.Ctx(ctx.Context())
-
-	var body io.Reader
-	if len(payload) != 0 {
-		body = strings.NewReader(payload)
-	}
 
 	templateData := map[string]any{
 		"AuthenticationData": authData,
 	}
 
-	req, err := a.e.CreateRequest(ctx.Context(), body,
+	var (
+		body    io.Reader
+		payload string
+	)
+
+	if a.payload != nil {
+		value, err := a.payload.Render(templateData)
+		if err != nil {
+			return nil, "", errorchain.NewWithMessage(
+				heimdall.ErrInternal,
+				"failed to render payload for the authenticator endpoint",
+			).
+				WithErrorContext(a).
+				CausedBy(err)
+		}
+
+		payload = value
+		body = strings.NewReader(payload)
+	}
+
+	req, err := a.e.CreateRequest(
+		ctx.Context(),
+		body,
 		endpoint.RenderFunc(func(value string) (string, error) {
 			tpl, err := template.New(value)
 			if err != nil {
-				return "", errorchain.NewWithMessage(heimdall.ErrInternal, "failed to create template").
+				return "", errorchain.NewWithMessage(
+					heimdall.ErrInternal,
+					"failed to create template",
+				).
 					WithErrorContext(a).
 					CausedBy(err)
 			}
 
 			return tpl.Render(templateData)
-		}))
+		}),
+	)
 	if err != nil {
-		return nil, errorchain.
+		return nil, "", errorchain.
 			NewWithMessage(heimdall.ErrInternal, "failed creating request").
 			WithErrorContext(a).
 			CausedBy(err)
@@ -364,7 +361,7 @@ func (a *genericAuthenticator) createRequest(
 		}
 	}
 
-	return req, nil
+	return req, payload, nil
 }
 
 func (a *genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
