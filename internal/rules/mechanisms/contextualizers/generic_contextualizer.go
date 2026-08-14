@@ -17,9 +17,6 @@
 package contextualizers
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
@@ -32,6 +29,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
@@ -387,40 +385,21 @@ func (c *genericContextualizer) calculateCacheKey(
 	req *http.Request,
 	payload string,
 ) string {
-	const int64BytesCount = 8
+	key := cachekey.New("generic-contextualizer:response")
 
-	var ttlBytes [int64BytesCount]byte
+	key.WriteString(c.name)
+	key.WriteInt64(int64(c.ttl))
+	key.WriteString(req.Method)
+	key.WriteString(req.URL.String())
+	key.WriteHeader(req.Header)
+	key.WriteString(payload)
 
-	//nolint:gosec
-	// no integer overflow during conversion possible
-	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(c.ttl))
-
-	var separator [1]byte
-
-	hash := sha256.New()
-	hash.Write(stringx.ToBytes("generic-contextualizer:v3"))
-	hash.Write(separator[:])
-	hash.Write(stringx.ToBytes(c.name))
-	hash.Write(separator[:])
-	hash.Write(ttlBytes[:])
-	hash.Write(stringx.ToBytes(req.Method))
-	hash.Write(separator[:])
-	hash.Write(stringx.ToBytes(req.URL.String()))
-	hash.Write(separator[:])
-
-	_ = req.Header.Write(hash)
-
-	hash.Write(separator[:])
-	hash.Write(stringx.ToBytes(payload))
-
+	key.WriteBool(c.e.AuthStrategy != nil)
 	if c.e.AuthStrategy != nil {
-		hash.Write(separator[:])
-		hash.Write(c.e.AuthStrategy.Hash())
+		key.WriteBytes(c.e.AuthStrategy.Hash())
 	}
 
-	var result [sha256.Size]byte
-
-	return hex.EncodeToString(hash.Sum(result[:0]))
+	return key.SumString()
 }
 
 func (c *genericContextualizer) renderTemplates(
