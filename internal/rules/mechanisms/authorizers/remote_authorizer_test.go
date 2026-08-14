@@ -558,6 +558,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 	var (
 		authorizationEndpointCalled bool
+		redirectEndpointCalled      bool
 		checkRequest                func(req *http.Request)
 
 		responseHeaders     map[string]string
@@ -568,6 +569,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 	env, err := cel.NewEnv(cellib.Library())
 	require.NoError(t, err)
+
+	redirectSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		redirectEndpointCalled = true
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer redirectSrv.Close()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authorizationEndpointCalled = true
@@ -1075,6 +1083,49 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				require.ErrorIs(t, err, heimdall.ErrAuthorization)
 				require.ErrorContains(t, err, "authorization failed")
+
+				var identifier interface{ ID() string }
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "authz", identifier.ID())
+			},
+		},
+		"with redirect response": {
+			authorizer: &remoteAuthorizer{
+				id: "authz",
+				e: endpoint.Endpoint{
+					URL: srv.URL,
+				},
+			},
+			subject: &subject.Subject{ID: "foo"},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				responseHeaders = map[string]string{
+					"Location": redirectSrv.URL,
+				}
+				responseCode = http.StatusFound
+			},
+			configureContext: func(t *testing.T, ctx *heimdallmocks.RequestContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
+			assert: func(
+				t *testing.T,
+				err error,
+				_ *subject.Subject,
+				_ map[string]any,
+				_ heimdall.Results,
+			) {
+				t.Helper()
+
+				assert.True(t, authorizationEndpointCalled)
+				assert.False(t, redirectEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrAuthorization)
+				require.ErrorContains(t, err, "authorization failed")
+				require.ErrorContains(t, err, strconv.Itoa(http.StatusFound))
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
@@ -1603,6 +1654,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			authorizationEndpointCalled = false
+			redirectEndpointCalled = false
 			responseHeaders = nil
 			responseContentType = ""
 			responseContent = nil
