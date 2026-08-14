@@ -726,14 +726,22 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 	}
 
 	var (
-		endpointCalled bool
-		checkRequest   func(req *http.Request)
+		endpointCalled         bool
+		redirectEndpointCalled bool
+		checkRequest           func(req *http.Request)
 
 		responseHeaders     map[string]string
 		responseContentType string
 		responseContent     []byte
 		responseCode        int
 	)
+
+	redirectSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		redirectEndpointCalled = true
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer redirectSrv.Close()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		endpointCalled = true
@@ -758,16 +766,19 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		authenticator  *genericAuthenticator
 		instructServer func(t *testing.T)
-		configureMocks func(t *testing.T,
+		configureMocks func(
+			t *testing.T,
 			ctx *heimdallmocks.RequestContextMock,
 			cch *mocks.CacheMock,
 			ads *mocks2.AuthDataExtractStrategyMock,
-			auth *genericAuthenticator)
+			auth *genericAuthenticator,
+		)
 		assert func(t *testing.T, err error, sub *subject.Subject)
 	}{
 		"with failing auth data source": {
 			authenticator: &genericAuthenticator{id: "auth3"},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -802,7 +813,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					return tpl
 				}(),
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -831,7 +843,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				e:  endpoint.Endpoint{URL: srv.URL + "?foo={{ urlenc foobar }}"},
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -860,7 +873,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				e:  endpoint.Endpoint{URL: "http://heimdall.test.local"},
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -889,7 +903,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				id: "auth3",
 				e:  endpoint.Endpoint{URL: srv.URL},
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -918,6 +933,46 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, "auth3", identifier.ID())
 			},
 		},
+		"with redirect response from server": {
+			authenticator: &genericAuthenticator{
+				id: "auth3",
+				e:  endpoint.Endpoint{URL: srv.URL},
+			},
+			configureMocks: func(
+				t *testing.T,
+				ctx *heimdallmocks.RequestContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *genericAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				responseHeaders = map[string]string{
+					"Location": redirectSrv.URL,
+				}
+				responseCode = http.StatusFound
+			},
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+				assert.False(t, redirectEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrCommunication)
+				require.ErrorContains(t, err, "unexpected response code")
+				require.ErrorContains(t, err, strconv.Itoa(http.StatusFound))
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
 		"with error while extracting subject information": {
 			authenticator: &genericAuthenticator{
 				id: "auth3",
@@ -931,7 +986,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				},
 				sf: &SubjectInfo{IDFrom: "barfoo"},
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -988,7 +1044,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					return tpl
 				}(),
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
 				_ *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1044,7 +1101,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				sf:  &SubjectInfo{IDFrom: "user_id"},
 				ttl: 5 * time.Second,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1053,7 +1111,9 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return([]byte(`{ "user_id": "barbar" }`), nil)
+				cch.EXPECT().
+					Get(mock.Anything, mock.Anything).
+					Return([]byte(`{ "user_id": "barbar" }`), nil)
 			},
 			assert: func(t *testing.T, err error, sub *subject.Subject) {
 				t.Helper()
@@ -1080,7 +1140,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				fwdHeaders: []string{"X-Original-Auth"},
 				ttl:        5 * time.Second,
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1094,8 +1155,17 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqFuns})
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("test error"))
-				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar" }`), auth.ttl).Return(nil)
+				cch.EXPECT().
+					Get(mock.Anything, mock.Anything).
+					Return(nil, errors.New("test error"))
+				cch.EXPECT().
+					Set(
+						mock.Anything,
+						mock.Anything,
+						[]byte(`{ "user_id": "barbar" }`),
+						auth.ttl,
+					).
+					Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1139,7 +1209,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{ActiveField: "active"},
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1153,7 +1224,9 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ctx.EXPECT().Request().Return(&heimdall.Request{RequestFunctions: reqFuns})
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().
+					Get(mock.Anything, mock.Anything).
+					Return(nil, errors.New("no cache entry"))
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1201,7 +1274,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ttl:                 5 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{IssuedAtField: "iat"},
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1210,7 +1284,9 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				t.Helper()
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().
+					Get(mock.Anything, mock.Anything).
+					Return(nil, errors.New("no cache entry"))
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1260,7 +1336,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				ttl:                 30 * time.Second,
 				sessionLifespanConf: &SessionLifespanConfig{NotAfterField: "exp"},
 			},
-			configureMocks: func(t *testing.T,
+			configureMocks: func(
+				t *testing.T,
 				ctx *heimdallmocks.RequestContextMock,
 				cch *mocks.CacheMock,
 				ads *mocks2.AuthDataExtractStrategyMock,
@@ -1271,8 +1348,17 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				exp := strconv.FormatInt(time.Now().Add(15*time.Second).Unix(), 10)
 
 				ads.EXPECT().GetAuthData(ctx).Return("session_token", nil)
-				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
-				cch.EXPECT().Set(mock.Anything, mock.Anything, []byte(`{ "user_id": "barbar", "exp": `+exp+` }`), 5*time.Second).Return(nil)
+				cch.EXPECT().
+					Get(mock.Anything, mock.Anything).
+					Return(nil, errors.New("no cache entry"))
+				cch.EXPECT().
+					Set(
+						mock.Anything,
+						mock.Anything,
+						[]byte(`{ "user_id": "barbar", "exp": `+exp+` }`),
+						5*time.Second,
+					).
+					Return(nil)
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -1310,26 +1396,32 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			endpointCalled = false
+			redirectEndpointCalled = false
 			responseHeaders = nil
 			responseContentType = ""
 			responseContent = nil
 
 			checkRequest = func(*http.Request) { t.Helper() }
 
-			instructServer := x.IfThenElse(tc.instructServer != nil,
+			instructServer := x.IfThenElse(
+				tc.instructServer != nil,
 				tc.instructServer,
-				func(t *testing.T) { t.Helper() })
+				func(t *testing.T) { t.Helper() },
+			)
 
-			configureMocks := x.IfThenElse(tc.configureMocks != nil,
+			configureMocks := x.IfThenElse(
+				tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T,
+				func(
+					t *testing.T,
 					_ *heimdallmocks.RequestContextMock,
 					_ *mocks.CacheMock,
 					_ *mocks2.AuthDataExtractStrategyMock,
 					_ *genericAuthenticator,
 				) {
 					t.Helper()
-				})
+				},
+			)
 
 			ads := mocks2.NewAuthDataExtractStrategyMock(t)
 			tc.authenticator.ads = ads
