@@ -329,7 +329,12 @@ func (a *remoteAuthorizer) fetchAuthorizationInformation(
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Calling remote authorization endpoint")
 
-	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
+	client := a.e.CreateClient(req.URL.Hostname())
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
