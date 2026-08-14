@@ -38,6 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/heimdall"
 	heimdallmocks "github.com/dadrus/heimdall/internal/heimdall/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/subject"
@@ -1469,172 +1470,344 @@ func TestGenericAuthenticatorReadResponse(t *testing.T) {
 func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 	t.Parallel()
 
-	ep := endpoint.Endpoint{
-		URL: "https://example.com/identity",
-	}
-
 	for uc, tc := range map[string]struct {
 		authenticator1 *genericAuthenticator
+		request1       *http.Request
+		payload1       string
 		authenticator2 *genericAuthenticator
-		headers1       map[string]string
-		headers2       map[string]string
-		cookies1       map[string]string
-		cookies2       map[string]string
+		request2       *http.Request
+		payload2       string
 		expectEqual    bool
 	}{
-		"same configuration and request": {
+		"same effective input": {
 			authenticator1: &genericAuthenticator{
-				e:          ep,
-				fwdHeaders: []string{"X-Tenant-ID"},
-				fwdCookies: []string{"tenant"},
-				ttl:        5 * time.Second,
+				name: "auth",
+				ttl:  5 * time.Second,
 			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
 			authenticator2: &genericAuthenticator{
-				e:          ep,
-				fwdHeaders: []string{"X-Tenant-ID"},
-				fwdCookies: []string{"tenant"},
-				ttl:        5 * time.Second,
+				name: "auth",
+				ttl:  5 * time.Second,
 			},
-			headers1:    map[string]string{"X-Tenant-ID": "tenant-a"},
-			headers2:    map[string]string{"X-Tenant-ID": "tenant-a"},
-			cookies1:    map[string]string{"tenant": "tenant-a"},
-			cookies2:    map[string]string{"tenant": "tenant-a"},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2:    `{"foo":"bar"}`,
+			expectEqual: true,
+		},
+		"different authenticator name": {
+			authenticator1: &genericAuthenticator{
+				name: "auth-a",
+				ttl:  5 * time.Second,
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth-b",
+				ttl:  5 * time.Second,
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2: `{"foo":"bar"}`,
+		},
+		"different step id of same authenticator": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				id:   "step-a",
+				ttl:  5 * time.Second,
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				id:   "step-b",
+				ttl:  5 * time.Second,
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2:    `{"foo":"bar"}`,
 			expectEqual: true,
 		},
 		"different cache ttl": {
 			authenticator1: &genericAuthenticator{
-				e:   ep,
-				ttl: 5 * time.Second,
+				name: "auth",
+				ttl:  5 * time.Second,
 			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
 			authenticator2: &genericAuthenticator{
-				e:   ep,
-				ttl: 15 * time.Second,
+				name: "auth",
+				ttl:  15 * time.Second,
 			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2: `{"foo":"bar"}`,
 		},
-		"different forwarded header value": {
+		"different effective request method": {
 			authenticator1: &genericAuthenticator{
-				e:          ep,
-				fwdHeaders: []string{"X-Tenant-ID"},
-				ttl:        5 * time.Second,
+				name: "auth",
+				ttl:  5 * time.Second,
 			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
 			authenticator2: &genericAuthenticator{
-				e:          ep,
-				fwdHeaders: []string{"X-Tenant-ID"},
-				ttl:        5 * time.Second,
+				name: "auth",
+				ttl:  5 * time.Second,
 			},
-			headers1: map[string]string{"X-Tenant-ID": "tenant-a"},
-			headers2: map[string]string{"X-Tenant-ID": "tenant-b"},
+			request2: httptest.NewRequest(
+				http.MethodPut,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2: `{"foo":"bar"}`,
 		},
-		"different forwarded header name": {
+		"different effective request url": {
 			authenticator1: &genericAuthenticator{
-				e:          ep,
-				fwdHeaders: []string{"X-Tenant-ID"},
-				ttl:        5 * time.Second,
+				name: "auth",
+				ttl:  5 * time.Second,
 			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity-a",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
 			authenticator2: &genericAuthenticator{
-				e:          ep,
-				fwdHeaders: []string{"X-Organization-ID"},
-				ttl:        5 * time.Second,
+				name: "auth",
+				ttl:  5 * time.Second,
 			},
-			headers1: map[string]string{"X-Tenant-ID": "foo"},
-			headers2: map[string]string{"X-Organization-ID": "foo"},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity-b",
+				nil,
+			),
+			payload2: `{"foo":"bar"}`,
 		},
-		"different forwarded cookie value": {
+		"different effective request header": {
 			authenticator1: &genericAuthenticator{
-				e:          ep,
-				fwdCookies: []string{"tenant"},
-				ttl:        5 * time.Second,
+				name: "auth",
+				ttl:  5 * time.Second,
 			},
+			request1: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					"https://example.com/identity",
+					nil,
+				)
+				req.Header.Set("X-Tenant-ID", "tenant-a")
+
+				return req
+			}(),
+			payload1: `{"foo":"bar"}`,
 			authenticator2: &genericAuthenticator{
-				e:          ep,
-				fwdCookies: []string{"tenant"},
-				ttl:        5 * time.Second,
+				name: "auth",
+				ttl:  5 * time.Second,
 			},
-			cookies1: map[string]string{"tenant": "tenant-a"},
-			cookies2: map[string]string{"tenant": "tenant-b"},
+			request2: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					"https://example.com/identity",
+					nil,
+				)
+				req.Header.Set("X-Tenant-ID", "tenant-b")
+
+				return req
+			}(),
+			payload2: `{"foo":"bar"}`,
 		},
-		"different forwarded cookie name": {
+		"different effective request cookie": {
 			authenticator1: &genericAuthenticator{
-				e:          ep,
-				fwdCookies: []string{"tenant"},
-				ttl:        5 * time.Second,
+				name: "auth",
+				ttl:  5 * time.Second,
 			},
+			request1: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					"https://example.com/identity",
+					nil,
+				)
+				req.AddCookie(&http.Cookie{
+					Name:  "tenant",
+					Value: "tenant-a",
+				})
+
+				return req
+			}(),
+			payload1: `{"foo":"bar"}`,
 			authenticator2: &genericAuthenticator{
-				e:          ep,
-				fwdCookies: []string{"organization"},
-				ttl:        5 * time.Second,
+				name: "auth",
+				ttl:  5 * time.Second,
 			},
-			cookies1: map[string]string{"tenant": "foo"},
-			cookies2: map[string]string{"organization": "foo"},
+			request2: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					"https://example.com/identity",
+					nil,
+				)
+				req.AddCookie(&http.Cookie{
+					Name:  "tenant",
+					Value: "tenant-b",
+				})
+
+				return req
+			}(),
+			payload2: `{"foo":"bar"}`,
 		},
-		"different forwarded value type": {
+		"different rendered payload": {
 			authenticator1: &genericAuthenticator{
-				e:          ep,
-				fwdHeaders: []string{"tenant"},
-				ttl:        5 * time.Second,
+				name: "auth",
+				ttl:  5 * time.Second,
 			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"tenant":"tenant-a"}`,
 			authenticator2: &genericAuthenticator{
-				e:          ep,
-				fwdCookies: []string{"tenant"},
-				ttl:        5 * time.Second,
+				name: "auth",
+				ttl:  5 * time.Second,
 			},
-			headers1: map[string]string{"tenant": "foo"},
-			cookies2: map[string]string{"tenant": "foo"},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2: `{"tenant":"tenant-b"}`,
+		},
+		"without vs with authentication strategy": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+				e: endpoint.Endpoint{
+					AuthStrategy: &authstrategy.APIKey{
+						In:    "header",
+						Name:  "X-API-Key",
+						Value: "secret",
+					},
+				},
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2: `{"foo":"bar"}`,
+		},
+		"different authentication strategy": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+				e: endpoint.Endpoint{
+					AuthStrategy: &authstrategy.APIKey{
+						In:    "header",
+						Name:  "X-API-Key",
+						Value: "secret-a",
+					},
+				},
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+				e: endpoint.Endpoint{
+					AuthStrategy: &authstrategy.APIKey{
+						In:    "header",
+						Name:  "X-API-Key",
+						Value: "secret-b",
+					},
+				},
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2: `{"foo":"bar"}`,
+		},
+		"different endpoint configuration with same effective request": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+				e: endpoint.Endpoint{
+					URL: "https://{{ .AuthenticationData }}/identity",
+				},
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+				e: endpoint.Endpoint{
+					URL: "https://example.com/{{ .AuthenticationData }}",
+				},
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2:    `{"foo":"bar"}`,
+			expectEqual: true,
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			ctx1 := heimdallmocks.NewRequestContextMock(t)
-
-			if len(tc.authenticator1.fwdHeaders) != 0 || len(tc.authenticator1.fwdCookies) != 0 {
-				reqFuns1 := heimdallmocks.NewRequestFunctionsMock(t)
-
-				for _, headerName := range tc.authenticator1.fwdHeaders {
-					reqFuns1.EXPECT().
-						Header(headerName).
-						Return(tc.headers1[headerName])
-				}
-
-				for _, cookieName := range tc.authenticator1.fwdCookies {
-					reqFuns1.EXPECT().
-						Cookie(cookieName).
-						Return(tc.cookies1[cookieName])
-				}
-
-				ctx1.EXPECT().
-					Request().
-					Return(&heimdall.Request{
-						RequestFunctions: reqFuns1,
-					})
-			}
-
-			ctx2 := heimdallmocks.NewRequestContextMock(t)
-
-			if len(tc.authenticator2.fwdHeaders) != 0 || len(tc.authenticator2.fwdCookies) != 0 {
-				reqFuns2 := heimdallmocks.NewRequestFunctionsMock(t)
-
-				for _, headerName := range tc.authenticator2.fwdHeaders {
-					reqFuns2.EXPECT().
-						Header(headerName).
-						Return(tc.headers2[headerName])
-				}
-
-				for _, cookieName := range tc.authenticator2.fwdCookies {
-					reqFuns2.EXPECT().
-						Cookie(cookieName).
-						Return(tc.cookies2[cookieName])
-				}
-
-				ctx2.EXPECT().
-					Request().
-					Return(&heimdall.Request{
-						RequestFunctions: reqFuns2,
-					})
-			}
+			t.Parallel()
 
 			// WHEN
-			key1 := tc.authenticator1.calculateCacheKey(ctx1, "authentication-data")
-			key2 := tc.authenticator2.calculateCacheKey(ctx2, "authentication-data")
+			key1 := tc.authenticator1.calculateCacheKey(tc.request1, tc.payload1)
+			key2 := tc.authenticator2.calculateCacheKey(tc.request2, tc.payload2)
 
 			// THEN
 			if tc.expectEqual {

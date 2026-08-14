@@ -17,9 +17,6 @@
 package authenticators
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
@@ -31,6 +28,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/heimdall"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
@@ -38,7 +36,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 // by intention. Used only during application bootstrap
@@ -214,9 +211,20 @@ func (a *genericAuthenticator) ID() string { return a.id }
 
 func (a *genericAuthenticator) IsInsecure() bool { return false }
 
+//nolint:cyclop
 func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	cch := cache.Ctx(ctx.Context())
+
+	renderedPayload, err := a.renderPayload(authData)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := a.createRequest(ctx, authData, renderedPayload)
+	if err != nil {
+		return nil, err
+	}
 
 	var (
 		cacheKey string
@@ -224,7 +232,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.RequestContext
 	)
 
 	if a.ttl > 0 {
-		cacheKey = a.calculateCacheKey(ctx, authData)
+		cacheKey = a.calculateCacheKey(req, renderedPayload)
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			logger.Debug().Msg("Reusing subject information from cache")
 
@@ -232,7 +240,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.RequestContext
 		}
 	}
 
-	payload, err := a.fetchSubjectInformation(ctx, authData)
+	payload, err := a.fetchSubjectInformation(req)
 	if err != nil {
 		return nil, err
 	}
@@ -259,12 +267,7 @@ func (a *genericAuthenticator) getSubjectInformation(ctx heimdall.RequestContext
 	return payload, nil
 }
 
-func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.RequestContext, authData string) ([]byte, error) {
-	req, err := a.createRequest(ctx, authData)
-	if err != nil {
-		return nil, err
-	}
-
+func (a *genericAuthenticator) fetchSubjectInformation(req *http.Request) ([]byte, error) {
 	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
 		var clientErr *url.Error
@@ -288,24 +291,37 @@ func (a *genericAuthenticator) fetchSubjectInformation(ctx heimdall.RequestConte
 	return a.readResponse(resp)
 }
 
-func (a *genericAuthenticator) createRequest(ctx heimdall.RequestContext, authData string) (*http.Request, error) {
+func (a *genericAuthenticator) renderPayload(authData string) (string, error) {
+	if a.payload == nil {
+		return "", nil
+	}
+
+	value, err := a.payload.Render(map[string]any{
+		"AuthenticationData": authData,
+	})
+	if err != nil {
+		return "", errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to render payload for the authenticator endpoint").
+			WithErrorContext(a).CausedBy(err)
+	}
+
+	return value, nil
+}
+
+func (a *genericAuthenticator) createRequest(
+	ctx heimdall.RequestContext,
+	authData string,
+	payload string,
+) (*http.Request, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
 	var body io.Reader
+	if len(payload) != 0 {
+		body = strings.NewReader(payload)
+	}
 
 	templateData := map[string]any{
 		"AuthenticationData": authData,
-	}
-
-	if a.payload != nil {
-		value, err := a.payload.Render(templateData)
-		if err != nil {
-			return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
-				"failed to render payload for the authenticator endpoint").
-				WithErrorContext(a).CausedBy(err)
-		}
-
-		body = strings.NewReader(value)
 	}
 
 	req, err := a.e.CreateRequest(ctx.Context(), body,
@@ -393,42 +409,20 @@ func (a *genericAuthenticator) getCacheTTL(sessionLifespan *SessionLifespan) tim
 	return a.ttl
 }
 
-func (a *genericAuthenticator) calculateCacheKey(ctx heimdall.RequestContext, reference string) string {
-	digest := sha256.New()
-	digest.Write(a.e.Hash())
-	digest.Write(stringx.ToBytes(reference))
+func (a *genericAuthenticator) calculateCacheKey(req *http.Request, payload string) string {
+	key := cachekey.New("generic-authenticator:response")
 
-	if len(a.fwdHeaders) != 0 || len(a.fwdCookies) != 0 {
-		req := ctx.Request()
+	key.WriteString(a.name)
+	key.WriteInt64(int64(a.ttl))
+	key.WriteString(req.Method)
+	key.WriteString(req.URL.String())
+	key.WriteHeader(req.Header)
+	key.WriteString(payload)
 
-		var (
-			headerKind = [1]byte{0x01}
-			cookieKind = [1]byte{0x02}
-			separator  = [1]byte{0x00}
-		)
-
-		for _, headerName := range a.fwdHeaders {
-			digest.Write(headerKind[:])
-			digest.Write(stringx.ToBytes(headerName))
-			digest.Write(separator[:])
-			digest.Write(stringx.ToBytes(req.Header(headerName)))
-			digest.Write(separator[:])
-		}
-
-		for _, cookieName := range a.fwdCookies {
-			digest.Write(cookieKind[:])
-			digest.Write(stringx.ToBytes(cookieName))
-			digest.Write(separator[:])
-			digest.Write(stringx.ToBytes(req.Cookie(cookieName)))
-			digest.Write(separator[:])
-		}
+	key.WriteBool(a.e.AuthStrategy != nil)
+	if a.e.AuthStrategy != nil {
+		key.WriteBytes(a.e.AuthStrategy.Hash())
 	}
 
-	var ttl [8]byte
-	binary.BigEndian.PutUint64(ttl[:], uint64(a.ttl)) //nolint:gosec
-	digest.Write(ttl[:])
-
-	var result [sha256.Size]byte
-
-	return hex.EncodeToString(digest.Sum(result[:0]))
+	return key.SumString()
 }
