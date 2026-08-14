@@ -2334,7 +2334,7 @@ func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
 			firstToken: "token",
 
 			secondAuthenticator: &oauth2IntrospectionAuthenticator{
-				ttl: new(15 * time.Second),
+				ttl: new(5 * time.Second),
 			},
 			secondEndpoint: &endpoint.Endpoint{},
 			secondRequest: &http.Request{
