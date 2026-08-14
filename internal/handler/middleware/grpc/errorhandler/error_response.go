@@ -19,6 +19,7 @@ package errorhandler
 import (
 	"encoding/xml"
 	"fmt"
+	"html"
 
 	"github.com/elnormous/contenttype"
 	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
@@ -81,7 +82,7 @@ func errorResponse(
 func format(mimeType string, body any) (string, error) {
 	switch mimeType {
 	case "text/html":
-		return fmt.Sprintf("<p>%s</p>", body), nil
+		return fmt.Sprintf("<p>%s</p>", html.EscapeString(fmt.Sprint(body))), nil
 	case "application/json":
 		res, err := json.Marshal(body)
 

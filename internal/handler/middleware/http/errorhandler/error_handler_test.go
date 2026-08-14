@@ -162,6 +162,15 @@ func TestHandlerHandle(t *testing.T) {
 			expCode: http.StatusInternalServerError,
 			expBody: "<p>internal error</p>",
 		},
+		"escape error in text/html": {
+			// ensuring that error is escaped if it somehow should contain data from outside
+			// should not be possible (TM)
+			handler: New(WithVerboseErrors(true)),
+			err:     errorchain.NewWithMessage(heimdall.ErrAuthorization, "<script>alert(1)</script>"),
+			expCode: http.StatusForbidden,
+			accept:  "text/html",
+			expBody: "<p>authorization error: &lt;script&gt;alert(1)&lt;/script&gt;</p>",
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
