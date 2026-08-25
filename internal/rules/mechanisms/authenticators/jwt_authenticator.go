@@ -641,11 +641,13 @@ func (a *jwtAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, req *http.Re
 	key.WriteString(reference)
 
 	key.WriteBool(ep.AuthStrategy != nil)
+
 	if ep.AuthStrategy != nil {
 		key.WriteBytes(ep.AuthStrategy.Hash())
 	}
 
 	key.WriteBool(a.ttl != nil)
+
 	if a.ttl != nil {
 		key.WriteInt64(int64(*a.ttl))
 	}

@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 // SPDX-License-Identifier: Apache-2.0
+
 package cellib
 
 import (
@@ -158,6 +159,7 @@ func (c *networkCache) getOrCreate(cidrs []string) (IPNetworks, error) {
 	}
 
 	current := c.snapshot.Load()
+
 	var entries []networkCacheEntry
 	if current != nil {
 		entries = current.entries

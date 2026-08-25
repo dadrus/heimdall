@@ -13,6 +13,7 @@
 // limitations under the License.
 //
 // SPDX-License-Identifier: Apache-2.0
+
 package cellib
 
 import (
@@ -74,15 +75,12 @@ func TestNetworksConcurrentEvaluation(t *testing.T) {
 	)
 
 	var wg sync.WaitGroup
+
 	start := make(chan struct{})
 	errs := make(chan error, goroutines)
 
 	for range goroutines {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			<-start
 
 			for range evaluations {
@@ -92,7 +90,7 @@ func TestNetworksConcurrentEvaluation(t *testing.T) {
 					return
 				}
 			}
-		}()
+		})
 	}
 
 	close(start)
@@ -120,15 +118,12 @@ func TestNetworksConcurrentEvaluationWithDynamicCIDRs(t *testing.T) {
 	)
 
 	var wg sync.WaitGroup
+
 	start := make(chan struct{})
 	errs := make(chan error, goroutines)
 
 	for idx := range goroutines {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			dynamicCIDR := fmt.Sprintf("192.168.%d.0/24", idx)
 			cidrs := []string{dynamicCIDR, "10.0.0.0/8"}
 			activation := map[string]any{"cidrs": cidrs}
@@ -146,7 +141,7 @@ func TestNetworksConcurrentEvaluationWithDynamicCIDRs(t *testing.T) {
 			if cidrs[0] != dynamicCIDR || cidrs[1] != "10.0.0.0/8" {
 				errs <- fmt.Errorf("networks modified input CIDRs: %v", cidrs)
 			}
-		}()
+		})
 	}
 
 	close(start)
@@ -166,16 +161,13 @@ func TestNetworkCacheConcurrentReuse(t *testing.T) {
 	const goroutines = 32
 
 	var wg sync.WaitGroup
+
 	start := make(chan struct{})
 	results := make(chan IPNetworks, goroutines)
 	errs := make(chan error, goroutines)
 
 	for range goroutines {
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			<-start
 
 			networks, err := cache.getOrCreate([]string{"10.0.0.0/8"})
@@ -186,7 +178,7 @@ func TestNetworkCacheConcurrentReuse(t *testing.T) {
 			}
 
 			results <- networks
-		}()
+		})
 	}
 
 	close(start)
@@ -221,6 +213,7 @@ func TestNetworkCacheOwnsCIDRs(t *testing.T) {
 	t.Parallel()
 
 	var cache networkCache
+
 	cidrs := []string{"192.168.0.0/16", "10.0.0.0/8"}
 	original := []string{"192.168.0.0/16", "10.0.0.0/8"}
 

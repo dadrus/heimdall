@@ -44,12 +44,12 @@ func (resultsLib) ProgramOptions() []cel.ProgramOption {
 
 func (resultsLib) CompileOptions() []cel.EnvOption {
 	resultType := cel.ObjectType(
-		reflect.TypeOf(pipeline.Result{}).String(),
+		reflect.TypeFor[pipeline.Result]().String(),
 		traits.ReceiverType,
 	)
 
 	return []cel.EnvOption{
-		ext.NativeTypes(reflect.TypeOf(&pipeline.Result{})),
+		ext.NativeTypes(reflect.TypeFor[*pipeline.Result]()),
 		cel.Function(
 			"Header",
 			cel.MemberOverload(

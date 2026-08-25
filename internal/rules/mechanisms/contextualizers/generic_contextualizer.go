@@ -60,10 +60,6 @@ func init() {
 	)
 }
 
-type contextualizerData struct {
-	Payload any `json:"payload"`
-}
-
 type genericContextualizer struct {
 	name       string
 	id         string
@@ -375,6 +371,7 @@ func (c *genericContextualizer) calculateCacheKey(
 	key.WriteString(payload)
 
 	key.WriteBool(c.e.AuthStrategy != nil)
+
 	if c.e.AuthStrategy != nil {
 		key.WriteBytes(c.e.AuthStrategy.Hash())
 	}

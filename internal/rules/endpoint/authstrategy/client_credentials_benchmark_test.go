@@ -74,11 +74,6 @@ func BenchmarkOAuth2ClientCredentialsApply(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	ctx := cache.WithContext(
-		context.Background(),
-		&clientCredentialsBenchmarkCache{value: rawToken},
-	)
-
 	for _, tc := range []struct {
 		name             string
 		header           *headerConfig
@@ -108,10 +103,12 @@ func BenchmarkOAuth2ClientCredentialsApply(b *testing.B) {
 		},
 	} {
 		b.Run(tc.name, func(b *testing.B) {
-			strategy := newOAuth2ClientCredentialsBenchmarkStrategy(
-				b,
-				tc.header,
+			ctx := cache.WithContext(
+				b.Context(),
+				&clientCredentialsBenchmarkCache{value: rawToken},
 			)
+
+			strategy := newOAuth2ClientCredentialsBenchmarkStrategy(b, ctx, tc.header)
 
 			base := newAuthStrategyBenchmarkRequest(
 				b,
@@ -139,6 +136,7 @@ func BenchmarkOAuth2ClientCredentialsApply(b *testing.B) {
 
 func newOAuth2ClientCredentialsBenchmarkStrategy(
 	b *testing.B,
+	ctx context.Context,
 	header *headerConfig,
 ) *OAuth2ClientCredentials {
 	b.Helper()
@@ -168,7 +166,7 @@ func newOAuth2ClientCredentialsBenchmarkStrategy(
 
 	handle.EXPECT().
 		OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
-			if err := cb(b.Context(), credentials); err != nil {
+			if err := cb(ctx, credentials); err != nil {
 				b.Fatal(err)
 			}
 

@@ -421,6 +421,7 @@ func (a *remoteAuthorizer) calculateCacheKey(req *http.Request, payload string) 
 	key.WriteString(payload)
 
 	key.WriteBool(a.e.AuthStrategy != nil)
+
 	if a.e.AuthStrategy != nil {
 		key.WriteBytes(a.e.AuthStrategy.Hash())
 	}

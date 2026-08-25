@@ -40,6 +40,7 @@ func New(logger zerolog.Logger, proxies ...string) grpc.UnaryServerInterceptor {
 	) (any, error) {
 		if !matcher.Contains(peerIP(ctx)) {
 			ctx = sanitizeMetadata(ctx)
+
 			sanitizeRequest(req)
 		}
 

@@ -321,7 +321,7 @@ func (a *oauth2IntrospectionAuthenticator) extractTokenClaims(token string) (map
 	return nil, err
 }
 
-//nolint:cyclop
+//nolint:cyclop, funlen
 func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
 	ctx pipeline.Context,
 	authData extractors.AuthData,
@@ -565,11 +565,13 @@ func (a *oauth2IntrospectionAuthenticator) calculateCacheKey(
 	key.WriteString(token)
 
 	key.WriteBool(ep.AuthStrategy != nil)
+
 	if ep.AuthStrategy != nil {
 		key.WriteBytes(ep.AuthStrategy.Hash())
 	}
 
 	key.WriteBool(a.ttl != nil)
+
 	if a.ttl != nil {
 		key.WriteInt64(int64(*a.ttl))
 	}

@@ -290,6 +290,7 @@ func (f *jwtFinalizer) calculateCacheKey(ctx pipeline.Context, sub pipeline.Subj
 	key.WriteBytes(f.signer.Hash())
 
 	key.WriteBool(f.claims != nil)
+
 	if f.claims != nil {
 		key.WriteBytes(f.claims.Hash())
 	}
@@ -298,6 +299,7 @@ func (f *jwtFinalizer) calculateCacheKey(ctx pipeline.Context, sub pipeline.Subj
 	key.WriteBytes(sub.Hash())
 
 	key.WriteUint64(uint64(len(f.v)))
+
 	for name, value := range f.v {
 		key.WriteString(name)
 		key.WriteBytes(value.Hash())
@@ -306,6 +308,7 @@ func (f *jwtFinalizer) calculateCacheKey(ctx pipeline.Context, sub pipeline.Subj
 	results := ctx.Results()
 
 	key.WriteBool(len(results) != 0)
+
 	if len(results) != 0 {
 		rawResults, _ := json.Marshal(results)
 		key.WriteBytes(rawResults)

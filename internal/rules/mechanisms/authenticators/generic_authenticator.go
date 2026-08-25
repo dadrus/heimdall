@@ -417,6 +417,7 @@ func (a *genericAuthenticator) calculateCacheKey(req *http.Request, payload stri
 	key.WriteString(payload)
 
 	key.WriteBool(a.e.AuthStrategy != nil)
+
 	if a.e.AuthStrategy != nil {
 		key.WriteBytes(a.e.AuthStrategy.Hash())
 	}
