@@ -122,7 +122,7 @@ jobs:
       - name: Review code
         uses: reviewdog/action-golangci-lint@c76cceaaab89abe74e649d2e34c6c9adc26662d2 # v2.10.0
         with:
-          go_version: "${{ env.GO_VERSION }}"
+          go_version_file: go.mod
           golangci_lint_version: "${{ env.GOLANGCI_LINT_VERSION }}"
           reporter: github-pr-review
           fail_level: error
