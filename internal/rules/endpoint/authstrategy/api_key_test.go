@@ -313,13 +313,19 @@ func TestAPIKeyApply(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			req, err := http.NewRequestWithContext(
+			original, err := http.NewRequestWithContext(
 				t.Context(),
 				http.MethodPost,
 				"http://example.com/test?bar=foo",
 				nil,
 			)
 			require.NoError(t, err)
+
+			original.Header.Set("X-Test", "test")
+
+			// Use a shallow copy intentionally. The authentication strategy
+			// must not mutate shared Header or URL state on the original.
+			req := *original
 
 			sr := secretsmocks.NewResolverMock(t)
 			handle := secretsmocks.NewSecretHandleMock(t)
@@ -335,9 +341,129 @@ func TestAPIKeyApply(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			err = tc.config.Apply(req)
+			err = tc.config.Apply(&req)
 
-			tc.assert(t, err, req)
+			tc.assert(t, err, &req)
+
+			// The original request must remain unchanged.
+			assert.Equal(t, "test", original.Header.Get("X-Test"))
+			assert.Empty(t, original.Header.Get("Foo"))
+
+			query := original.URL.Query()
+			assert.Len(t, query, 1)
+			assert.Equal(t, "foo", query.Get("bar"))
+			assert.Empty(t, query.Get("Foo"))
+
+			_, err = original.Cookie("Foo")
+			assert.ErrorIs(t, err, http.ErrNoCookie)
+		})
+	}
+}
+
+func TestAPIKeyHash(t *testing.T) {
+	t.Parallel()
+
+	type strategyConfig struct {
+		in    string
+		name  string
+		value string
+	}
+
+	for uc, tc := range map[string]struct {
+		strategy1   strategyConfig
+		strategy2   strategyConfig
+		expectEqual bool
+	}{
+		"same configuration": {
+			strategy1: strategyConfig{
+				in:    "header",
+				name:  "Foo",
+				value: "Bar",
+			},
+			strategy2: strategyConfig{
+				in:    "header",
+				name:  "Foo",
+				value: "Bar",
+			},
+			expectEqual: true,
+		},
+		"different location": {
+			strategy1: strategyConfig{
+				in:    "header",
+				name:  "Foo",
+				value: "Bar",
+			},
+			strategy2: strategyConfig{
+				in:    "cookie",
+				name:  "Foo",
+				value: "Bar",
+			},
+		},
+		"different name": {
+			strategy1: strategyConfig{
+				in:    "header",
+				name:  "Foo",
+				value: "Bar",
+			},
+			strategy2: strategyConfig{
+				in:    "header",
+				name:  "Baz",
+				value: "Bar",
+			},
+		},
+		"different value": {
+			strategy1: strategyConfig{
+				in:    "header",
+				name:  "Foo",
+				value: "Bar",
+			},
+			strategy2: strategyConfig{
+				in:    "header",
+				name:  "Foo",
+				value: "Baz",
+			},
+		},
+		"field boundaries are preserved": {
+			strategy1: strategyConfig{
+				in:    "header",
+				name:  "a",
+				value: "bc",
+			},
+			strategy2: strategyConfig{
+				in:    "header",
+				name:  "ab",
+				value: "c",
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			strategy1 := newInitializedAPIKey(
+				t,
+				tc.strategy1.in,
+				tc.strategy1.name,
+				tc.strategy1.value,
+			)
+
+			strategy2 := newInitializedAPIKey(
+				t,
+				tc.strategy2.in,
+				tc.strategy2.name,
+				tc.strategy2.value,
+			)
+
+			hash1 := strategy1.Hash()
+			hash2 := strategy2.Hash()
+
+			assert.NotEmpty(t, hash1)
+			assert.NotEmpty(t, hash2)
+
+			if tc.expectEqual {
+				assert.Equal(t, hash1, hash2)
+			} else {
+				assert.NotEqual(t, hash1, hash2)
+			}
 		})
 	}
 }
@@ -377,4 +503,48 @@ func TestToStringSecret(t *testing.T) {
 			tc.assert(t, value, err)
 		})
 	}
+}
+
+func newInitializedAPIKey(
+	t *testing.T,
+	in string,
+	name string,
+	value string,
+) *APIKey {
+	t.Helper()
+
+	secretConfig := config.Secret{
+		Source:   "foo",
+		Selector: "bar",
+	}
+
+	secret := types.NewStringSecret("bar", value)
+
+	sr := secretsmocks.NewResolverMock(t)
+	handle := secretsmocks.NewSecretHandleMock(t)
+
+	sr.EXPECT().
+		Secret(secrets.Reference{Source: secretConfig.Source, Selector: secretConfig.Selector}).
+		Return(handle, nil)
+
+	handle.EXPECT().
+		OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+			err := cb(t.Context(), secret)
+			require.NoError(t, err)
+
+			return true
+		}))
+
+	appCtx := app.NewContextMock(t)
+	appCtx.EXPECT().SecretResolver().Return(sr)
+
+	strategy := &APIKey{
+		In:     in,
+		Name:   name,
+		Secret: secretConfig,
+	}
+
+	require.NoError(t, strategy.init(appCtx))
+
+	return strategy
 }

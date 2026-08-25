@@ -92,6 +92,7 @@ func (f *headerFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 			"Request": ctx.Request(),
 			"Subject": sub,
 			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
 		})
 		if err != nil {
 			return errorchain.

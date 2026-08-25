@@ -14,10 +14,13 @@ packages:
           pkgname: methodfilter
           filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
       RoundTripper:
-        config:
-          dir: internal/x/httpx
-          pkgname: httpx
-          filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+        configs:
+          - dir: internal/x/httpx
+            pkgname: httpx
+            filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+          - dir: internal/rules/endpoint
+            pkgname: endpoint
+            filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
   github.com/dadrus/heimdall/internal/app:
     interfaces:
       Context:

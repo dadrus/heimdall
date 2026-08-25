@@ -243,6 +243,19 @@ func TestHandlerHandle(t *testing.T) {
 			expCode:   http.StatusUnauthorized,
 			expHeader: http.Header{},
 		},
+		"escape error in text/html": {
+			// ensuring that error is escaped if it somehow should contain data from outside
+			// should not be possible (TM)
+			handler: New(WithVerboseErrors(true)),
+			err:     errorchain.NewWithMessage(pipeline.ErrAuthorization, "<script>alert(1)</script>"),
+			expCode: http.StatusForbidden,
+			accept:  "text/html",
+			expHeader: http.Header{
+				"Content-Type":           []string{"text/html"},
+				"X-Content-Type-Options": []string{"nosniff"},
+			},
+			expBody: "<p>authorization error: &lt;script&gt;alert(1)&lt;/script&gt;</p>",
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN

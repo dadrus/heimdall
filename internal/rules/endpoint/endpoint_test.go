@@ -18,6 +18,7 @@ package endpoint
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -109,6 +110,40 @@ func TestEndpointCreateClient(t *testing.T) {
 				require.True(t, ok)
 			},
 		},
+		"for endpoint with auth strategy, configured retry policy and http cache": {
+			endpoint: endpointValue(
+				t,
+				"http://foo.bar",
+				WithAuthStrategy(mocks.NewAuthenticationStrategyMock(t)),
+				WithRetry(&Retry{
+					GiveUpAfter: 2 * time.Second,
+					MaxDelay:    10 * time.Second,
+				}),
+				WithHTTPCache(&HTTPCache{
+					Enabled:    true,
+					DefaultTTL: 15 * time.Minute,
+				}),
+			),
+			assert: func(t *testing.T, client *http.Client) {
+				t.Helper()
+
+				authTransport, ok := client.Transport.(*authenticationRoundTripper)
+				require.True(t, ok)
+
+				cacheTransport, ok := authTransport.next.(*httpcache.RoundTripper)
+				require.True(t, ok)
+				assert.Equal(t, 15*time.Minute, cacheTransport.DefaultCacheTTL)
+
+				retryTransport, ok := cacheTransport.Transport.(*httpretry.RetryRoundtripper)
+				require.True(t, ok)
+				assert.NotZero(t, retryTransport.MaxRetryCount)
+				assert.NotNil(t, retryTransport.ShouldRetry)
+				assert.NotNil(t, retryTransport.CalculateBackoff)
+
+				_, ok = retryTransport.Next.(*otelhttp.Transport)
+				require.True(t, ok)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// THEN
@@ -133,7 +168,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 
 				require.NoError(t, err)
 
-				assert.Equal(t, "POST", request.Method)
+				assert.Equal(t, http.MethodPost, request.Method)
 				assert.Equal(t, "http://foo.bar", request.URL.String())
 				assert.Nil(t, request.Body)
 				assert.Empty(t, request.Header)
@@ -176,62 +211,10 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Empty(t, request.Header)
 			},
 		},
-		"with auth strategy, applied successfully": {
-			endpoint: endpointValue(t, "http://test.org",
-				WithAuthStrategy(func() AuthenticationStrategy {
-					as := mocks.NewAuthenticationStrategyMock(t)
-					as.EXPECT().Apply(
-						mock.MatchedBy(func(req *http.Request) bool {
-							req.Header.Set("X-Test", "test")
-
-							return true
-						}),
-					).Return(nil)
-
-					return as
-				}()),
-			),
-			assert: func(t *testing.T, request *http.Request, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				assert.Equal(t, http.MethodPost, request.Method)
-				assert.Equal(t, "http://test.org", request.URL.String())
-				assert.Len(t, request.Header, 1)
-				assert.Equal(t, "test", request.Header.Get("X-Test"))
-			},
-		},
-		"with failing auth strategy": {
-			endpoint: endpointValue(t, "http://test.org",
-				WithAuthStrategy(func() AuthenticationStrategy {
-					as := mocks.NewAuthenticationStrategyMock(t)
-					as.EXPECT().Apply(mock.Anything).Return(assert.AnError)
-
-					return as
-				}()),
-			),
-			assert: func(t *testing.T, _ *http.Request, err error) {
-				t.Helper()
-
-				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrInternal)
-				require.ErrorContains(t, err, "failed to authenticate request")
-			},
-		},
 		"with auth strategy and additional header": {
 			endpoint: endpointValue(t, "http://test.org",
 				WithMethod(http.MethodPatch),
-				WithAuthStrategy(func() AuthenticationStrategy {
-					as := mocks.NewAuthenticationStrategyMock(t)
-					as.EXPECT().Apply(mock.MatchedBy(func(req *http.Request) bool {
-						req.Header.Set("X-Test", "test")
-
-						return true
-					})).Return(nil)
-
-					return as
-				}()),
+				WithAuthStrategy(mocks.NewAuthenticationStrategyMock(t)),
 				WithHeader("Foo-Bar", "baz"),
 			),
 			assert: func(t *testing.T, request *http.Request, err error) {
@@ -242,8 +225,7 @@ func TestEndpointCreateRequest(t *testing.T) {
 				assert.Equal(t, http.MethodPatch, request.Method)
 				assert.Equal(t, "http://test.org", request.URL.String())
 
-				assert.Len(t, request.Header, 2)
-				assert.Equal(t, "test", request.Header.Get("X-Test"))
+				assert.Len(t, request.Header, 1)
 				assert.Equal(t, "baz", request.Header.Get("Foo-Bar"))
 			},
 		},
@@ -398,13 +380,15 @@ func TestEndpointSendRequest(t *testing.T) {
 
 				as := mocks.NewAuthenticationStrategyMock(t)
 				as.EXPECT().Apply(mock.MatchedBy(func(req *http.Request) bool {
+					assert.Equal(t, "baz", req.Header.Get("Foo-Bar"))
+
 					req.Header.Set("X-Test", "test")
 
 					return true
 				})).Return(nil)
 
 				return endpointValue(t, srv.URL,
-					WithMethod("PATCH"),
+					WithMethod(http.MethodPatch),
 					WithAuthStrategy(as),
 					WithHeader("Foo-Bar", "baz"),
 				)
@@ -418,7 +402,7 @@ func TestEndpointSendRequest(t *testing.T) {
 				checkRequest = func(request *http.Request) {
 					t.Helper()
 
-					assert.Equal(t, "PATCH", request.Method)
+					assert.Equal(t, http.MethodPatch, request.Method)
 
 					assert.NotEmpty(t, request.Header)
 					assert.Equal(t, "test", request.Header.Get("X-Test"))
@@ -437,6 +421,39 @@ func TestEndpointSendRequest(t *testing.T) {
 				assert.Equal(t, []byte("hello from srv"), response)
 			},
 		},
+		"with failing auth strategy": {
+			endpoint: func(t *testing.T) Endpoint {
+				t.Helper()
+
+				as := mocks.NewAuthenticationStrategyMock(t)
+				as.EXPECT().
+					Apply(mock.Anything).
+					Return(errors.New("test error"))
+
+				return endpointValue(
+					t,
+					srv.URL,
+					WithAuthStrategy(as),
+				)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(*http.Request) {
+					t.Fatal("server must not be called")
+				}
+			},
+			assert: func(t *testing.T, response []byte, err error) {
+				t.Helper()
+
+				assert.Nil(t, response)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
+				require.ErrorContains(t, err, "failed to authenticate request")
+				require.ErrorContains(t, err, "test error")
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			//  GIVEN
@@ -444,9 +461,13 @@ func TestEndpointSendRequest(t *testing.T) {
 			statusCode = http.StatusOK
 			checkRequest = func(*http.Request) { t.Helper() }
 
-			instructServer := x.IfThenElse(tc.instructServer != nil,
+			instructServer := x.IfThenElse(
+				tc.instructServer != nil,
 				tc.instructServer,
-				func(t *testing.T) { t.Helper() })
+				func(t *testing.T) {
+					t.Helper()
+				},
+			)
 			instructServer(t)
 
 			var body io.Reader
@@ -463,40 +484,6 @@ func TestEndpointSendRequest(t *testing.T) {
 			tc.assert(t, response, err)
 		})
 	}
-}
-
-func TestEndpointHash(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	e1 := endpointValue(t, "foo.bar")
-	e2 := endpointValue(t, "foo.bar", WithMethod("FOO"), WithHeader("baz", "foo"))
-	e3 := endpointValue(t, "foo.bar", WithMethod("FOO"), WithAuthStrategy(func() AuthenticationStrategy {
-		as := mocks.NewAuthenticationStrategyMock(t)
-		as.EXPECT().Hash().Return([]byte{1, 2, 3})
-
-		return as
-	}()))
-	e4 := endpointValue(t, "foo.bar", WithRetry(&Retry{GiveUpAfter: 2}))
-
-	// WHEN
-	hash1 := e1.Hash()
-	hash2 := e2.Hash()
-	hash3 := e3.Hash()
-	hash4 := e4.Hash()
-
-	// THEN
-	assert.NotEmpty(t, hash1)
-	assert.NotEmpty(t, hash2)
-	assert.NotEmpty(t, hash3)
-	assert.NotEmpty(t, hash4)
-
-	assert.NotEqual(t, hash1, hash2)
-	assert.NotEqual(t, hash1, hash3)
-	assert.Equal(t, hash1, hash4)
-	assert.NotEqual(t, hash2, hash3)
-	assert.NotEqual(t, hash2, hash4)
-	assert.NotEqual(t, hash3, hash4)
 }
 
 func endpointValue(t *testing.T, rawURL string, opts ...Option) Endpoint {

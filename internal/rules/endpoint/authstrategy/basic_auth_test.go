@@ -37,12 +37,69 @@ import (
 func TestBasicAuthCredentialsHash(t *testing.T) {
 	t.Parallel()
 
-	creds := basicAuthCredentials{
-		UserID:   "baz",
-		Password: "foo",
-	}
+	for uc, tc := range map[string]struct {
+		credentials1 basicAuthCredentials
+		credentials2 basicAuthCredentials
+		expectEqual  bool
+	}{
+		"same credentials": {
+			credentials1: basicAuthCredentials{
+				UserID:   "Foo",
+				Password: "Bar",
+			},
+			credentials2: basicAuthCredentials{
+				UserID:   "Foo",
+				Password: "Bar",
+			},
+			expectEqual: true,
+		},
+		"different user": {
+			credentials1: basicAuthCredentials{
+				UserID:   "Foo",
+				Password: "Bar",
+			},
+			credentials2: basicAuthCredentials{
+				UserID:   "Baz",
+				Password: "Bar",
+			},
+		},
+		"different password": {
+			credentials1: basicAuthCredentials{
+				UserID:   "Foo",
+				Password: "Bar",
+			},
+			credentials2: basicAuthCredentials{
+				UserID:   "Foo",
+				Password: "Baz",
+			},
+		},
+		"field boundaries are preserved": {
+			credentials1: basicAuthCredentials{
+				UserID:   "a",
+				Password: "bc",
+			},
+			credentials2: basicAuthCredentials{
+				UserID:   "ab",
+				Password: "c",
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
 
-	require.NotEmpty(t, creds.Hash())
+			hash1 := tc.credentials1.Hash()
+			hash2 := tc.credentials2.Hash()
+
+			assert.NotEmpty(t, hash1)
+			assert.NotEmpty(t, hash2)
+
+			if tc.expectEqual {
+				assert.Equal(t, hash1, hash2)
+			} else {
+				assert.NotEqual(t, hash1, hash2)
+			}
+		})
+	}
 }
 
 func TestBasicAuthInit(t *testing.T) {
@@ -102,7 +159,13 @@ func TestBasicAuthInit(t *testing.T) {
 				require.True(t, ok)
 				assert.Equal(t, "baz", val.UserID)
 				assert.Equal(t, "foo", val.Password)
-				assert.NotEmpty(t, ba.Hash())
+
+				expectedHash := basicAuthCredentials{
+					UserID:   "baz",
+					Password: "foo",
+				}.Hash()
+
+				assert.Equal(t, expectedHash, ba.Hash())
 			},
 		},
 	} {
@@ -225,6 +288,8 @@ func TestBasicAuthApply(t *testing.T) {
 				assert.True(t, ok)
 				assert.Equal(t, "baz", username)
 				assert.Equal(t, "foo", password)
+
+				assert.Equal(t, "foo", req.Header.Get("X-Test"))
 			},
 		},
 	} {
@@ -236,13 +301,19 @@ func TestBasicAuthApply(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			req, err := http.NewRequestWithContext(
+			original, err := http.NewRequestWithContext(
 				t.Context(),
 				http.MethodPost,
 				"http://example.com/test?bar=foo",
 				nil,
 			)
 			require.NoError(t, err)
+
+			original.Header.Set("X-Test", "foo")
+
+			// Intentionally use a shallow copy. Apply must not modify shared
+			// header state on the original request.
+			req := *original
 
 			sr := secretsmocks.NewResolverMock(t)
 			handle := secretsmocks.NewCredentialsHandleMock(t)
@@ -261,9 +332,14 @@ func TestBasicAuthApply(t *testing.T) {
 				require.NoError(t, err)
 			}
 
-			err = ba.Apply(req)
+			err = ba.Apply(&req)
 
-			tc.assert(t, err, req)
+			tc.assert(t, err, &req)
+
+			// Applying authentication to the shallow copy must never mutate
+			// the original request.
+			assert.Empty(t, original.Header.Get("Authorization"))
+			assert.Equal(t, "foo", original.Header.Get("X-Test"))
 		})
 	}
 }

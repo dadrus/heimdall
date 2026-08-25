@@ -18,18 +18,17 @@ package authstrategy
 
 import (
 	"context"
-	"crypto/sha256"
 	"net/http"
 	"sync/atomic"
 
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type APIKey struct {
@@ -55,13 +54,19 @@ func (c *APIKey) Apply(req *http.Request) error {
 
 	switch c.In {
 	case "cookie":
+		req.Header = req.Header.Clone()
 		req.AddCookie(&http.Cookie{Name: c.Name, Value: creds})
 	case "header":
+		req.Header = req.Header.Clone()
 		req.Header.Set(c.Name, creds)
 	case "query":
+		targetURL := *req.URL
+		req.URL = &targetURL
+
 		query := req.URL.Query()
 		query.Set(c.Name, creds)
 		req.URL.RawQuery = query.Encode()
+
 	default:
 		return errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"unsupported in value (%s) in api key auth strategy", c.In)
@@ -84,15 +89,12 @@ func (c *APIKey) init(appCtx app.Context) error {
 		secrets.Reference{Source: c.Secret.Source, Selector: c.Secret.Selector},
 		secrets.WithConverter(toStringSecret),
 		secrets.WithUpdateCallback(func(_ context.Context, _ secrets.Secret, value string) error {
-			hash := sha256.New()
+			key := cachekey.New("auth-strategy:api-key")
+			key.WriteString(c.In)
+			key.WriteString(c.Name)
+			key.WriteString(value)
 
-			hash.Write(stringx.ToBytes(c.In))
-			hash.Write(stringx.ToBytes(c.Name))
-			hash.Write(stringx.ToBytes(value))
-
-			var result [sha256.Size]byte
-
-			c.hash.Store(hash.Sum(result[:0]))
+			c.hash.Store(key.Sum())
 
 			return nil
 		}),

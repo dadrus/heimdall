@@ -46,6 +46,7 @@ import (
 	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/endpoint/authstrategy"
+	endpointmocks "github.com/dadrus/heimdall/internal/rules/endpoint/mocks"
 	endpointtestsupport "github.com/dadrus/heimdall/internal/rules/endpoint/testsupport"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
@@ -829,7 +830,9 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 
 	var (
 		introspectionEndpointCalled      bool
+		redirectEndpointCalled           bool
 		checkIntrospectionRequest        func(req *http.Request)
+		introspectionResponseHeaders     map[string]string
 		introspectionResponseContentType string
 		introspectionResponseContent     []byte
 		introspectionResponseCode        int
@@ -847,10 +850,21 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 	dpopKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	require.NoError(t, err)
 
+	redirectSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		redirectEndpointCalled = true
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer redirectSrv.Close()
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		introspectionEndpointCalled = true
 
 		checkIntrospectionRequest(r)
+
+		for name, value := range introspectionResponseHeaders {
+			w.Header().Set(name, value)
+		}
 
 		if introspectionResponseContent != nil {
 			w.Header().Set("Content-Type", introspectionResponseContentType)
@@ -992,6 +1006,55 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrCommunication)
 				require.ErrorContains(t, err, "unexpected response code")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
+		"with disabled cache and redirect response from the endpoint": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(
+					func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+						return oauth2.ServerMetadata{
+							IntrospectionEndpoint: endpointtestsupport.NewEndpoint(t, srv.URL),
+						}, nil
+					},
+				),
+				ttl:           &zeroTTL,
+				principalName: DefaultPrincipalName,
+			},
+			configureMocks: func(
+				t *testing.T,
+				ctx *pipelinemocks.ContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).
+					Return(extractors.AuthData{Value: "test_access_token"}, nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				introspectionResponseHeaders = map[string]string{
+					"Location": redirectSrv.URL,
+				}
+				introspectionResponseCode = http.StatusFound
+			},
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
+				t.Helper()
+
+				assert.True(t, introspectionEndpointCalled)
+				assert.False(t, redirectEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
+				require.ErrorContains(t, err, "unexpected response code")
+				require.ErrorContains(t, err, "302")
 
 				var identifier HandlerIdentifier
 				require.ErrorAs(t, err, &identifier)
@@ -2673,9 +2736,84 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 				assert.NotEmpty(t, sub.Attributes()["exp"])
 			},
 		},
+		"with default cache, with cache hit and failing scope assertion": {
+			authenticator: &oauth2IntrospectionAuthenticator{
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(
+					func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+						return oauth2.ServerMetadata{
+							IntrospectionEndpoint: endpointtestsupport.NewEndpoint(
+								t,
+								srv.URL,
+								endpoint.WithMethod(http.MethodPost),
+								endpoint.WithHeader(
+									"Content-Type",
+									"application/x-www-form-urlencoded",
+								),
+								endpoint.WithHeader(
+									"Accept",
+									"application/json",
+								),
+							),
+						}, nil
+					},
+				),
+				a: oauth2.Expectation{
+					TrustedIssuers: []string{"foobar"},
+					ScopesMatcher:  oauth2.ExactScopeStrategyMatcher{"write"},
+				},
+				sf:            &PrincipalInfo{IDFrom: "sub"},
+				principalName: DefaultPrincipalName,
+			},
+			configureMocks: func(
+				t *testing.T,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *oauth2IntrospectionAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return(extractors.AuthData{Value: "test_access_token"}, nil)
+
+				rawIntrospectResponse, err := json.Marshal(map[string]any{
+					"active":     true,
+					"scope":      "read",
+					"username":   "unknown",
+					"token_type": "Bearer",
+					"aud":        "bar",
+					"sub":        "foo",
+					"iss":        "foobar",
+					"iat":        time.Now().Unix(),
+					"nbf":        time.Now().Unix(),
+					"exp":        time.Now().Unix() + 30,
+				})
+				require.NoError(t, err)
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawIntrospectResponse, nil)
+			},
+			assert: func(t *testing.T, err error, sub pipeline.Subject) {
+				t.Helper()
+
+				assert.False(t, introspectionEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.ErrorContains(t, err, "assertion conditions")
+				require.ErrorContains(t, err, "cope matching error")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+
+				assert.Empty(t, sub)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			introspectionEndpointCalled = false
+			redirectEndpointCalled = false
+			introspectionResponseHeaders = nil
 			introspectionResponseContentType = ""
 			introspectionResponseContent = nil
 			introspectionResponseCode = 0
@@ -2688,11 +2826,14 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 			checkIntrospectionRequest = func(*http.Request) { t.Helper() }
 			checkMetadataRequest = func(*http.Request) { t.Helper() }
 
-			instructServer := x.IfThenElse(tc.instructServer != nil,
+			instructServer := x.IfThenElse(
+				tc.instructServer != nil,
 				tc.instructServer,
-				func(t *testing.T) { t.Helper() })
+				func(t *testing.T) { t.Helper() },
+			)
 
-			configureMocks := x.IfThenElse(tc.configureMocks != nil,
+			configureMocks := x.IfThenElse(
+				tc.configureMocks != nil,
 				tc.configureMocks,
 				func(
 					t *testing.T,
@@ -2702,7 +2843,8 @@ func TestOauth2IntrospectionAuthenticatorExecute(t *testing.T) {
 					_ *oauth2IntrospectionAuthenticator,
 				) {
 					t.Helper()
-				})
+				},
+			)
 
 			ads := mocks2.NewAuthDataExtractStrategyMock(t)
 			tc.authenticator.ads = ads
@@ -2999,6 +3141,170 @@ func TestOauth2IntrospectionAuthenticatorDecorateErrorResponse(t *testing.T) {
 			}
 
 			assert.Equal(t, []string{tc.expectedHeader}, response.Headers["Www-Authenticate"])
+		})
+	}
+}
+
+func TestOAuth2IntrospectionAuthenticatorCalculateCacheKey(t *testing.T) {
+	t.Parallel()
+
+	authStrategyA := endpointmocks.NewAuthenticationStrategyMock(t)
+	authStrategyA.EXPECT().Hash().Return([]byte("strategy-a"))
+
+	authStrategyB := endpointmocks.NewAuthenticationStrategyMock(t)
+	authStrategyB.EXPECT().Hash().Return([]byte("strategy-b"))
+
+	newRequest := func(method string, rawURL string, headers map[string]string) *http.Request {
+		t.Helper()
+
+		req, err := http.NewRequestWithContext(t.Context(), method, rawURL, nil)
+		require.NoError(t, err)
+
+		for name, value := range headers {
+			req.Header.Set(name, value)
+		}
+
+		return req
+	}
+
+	for uc, tc := range map[string]struct {
+		firstAuthenticator  *oauth2IntrospectionAuthenticator
+		firstEndpoint       *endpoint.Endpoint
+		firstRequest        *http.Request
+		firstToken          string
+		secondAuthenticator *oauth2IntrospectionAuthenticator
+		secondEndpoint      *endpoint.Endpoint
+		secondRequest       *http.Request
+		secondToken         string
+		expectEqual         bool
+	}{
+		"same inputs": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			firstEndpoint:      &endpoint.Endpoint{},
+			firstRequest: newRequest(http.MethodPost, "https://example.com/introspect",
+				map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			),
+			firstToken:          "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			secondEndpoint:      &endpoint.Endpoint{},
+			secondRequest: newRequest(http.MethodPost, "https://example.com/introspect",
+				map[string]string{"Content-Type": "application/x-www-form-urlencoded"},
+			),
+			secondToken: "token",
+			expectEqual: true,
+		},
+		"different effective request method": {
+			firstAuthenticator:  &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			firstEndpoint:       &endpoint.Endpoint{},
+			firstRequest:        newRequest(http.MethodPost, "https://example.com/introspect", nil),
+			firstToken:          "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			secondEndpoint:      &endpoint.Endpoint{},
+			secondRequest:       newRequest(http.MethodPut, "https://example.com/introspect", nil),
+			secondToken:         "token",
+		},
+		"different effective request url": {
+			firstAuthenticator:  &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			firstEndpoint:       &endpoint.Endpoint{},
+			firstRequest:        newRequest(http.MethodPost, "https://example.com/a", nil),
+			firstToken:          "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			secondEndpoint:      &endpoint.Endpoint{},
+			secondRequest:       newRequest(http.MethodPost, "https://example.com/b", nil),
+			secondToken:         "token",
+		},
+		"different effective request header": {
+			firstAuthenticator: &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			firstEndpoint:      &endpoint.Endpoint{},
+			firstRequest: newRequest(http.MethodPost, "https://example.com/introspect",
+				map[string]string{"X-Tenant": "tenant-a"},
+			),
+			firstToken:          "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			secondEndpoint:      &endpoint.Endpoint{},
+			secondRequest: newRequest(http.MethodPost, "https://example.com/introspect",
+				map[string]string{"X-Tenant": "tenant-b"},
+			),
+			secondToken: "token",
+		},
+		"different token": {
+			firstAuthenticator:  &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			firstEndpoint:       &endpoint.Endpoint{},
+			firstRequest:        newRequest(http.MethodPost, "https://example.com/introspect", nil),
+			firstToken:          "token-a",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			secondEndpoint:      &endpoint.Endpoint{},
+			secondRequest:       newRequest(http.MethodPost, "https://example.com/introspect", nil),
+			secondToken:         "token-b",
+		},
+		"without vs with authentication strategy": {
+			firstAuthenticator:  &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			firstEndpoint:       &endpoint.Endpoint{},
+			firstRequest:        newRequest(http.MethodPost, "https://example.com/introspect", nil),
+			firstToken:          "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			secondEndpoint:      &endpoint.Endpoint{AuthStrategy: authStrategyA},
+			secondRequest:       newRequest(http.MethodPost, "https://example.com/introspect", nil),
+			secondToken:         "token",
+		},
+		"different authentication strategy": {
+			firstAuthenticator:  &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			firstEndpoint:       &endpoint.Endpoint{AuthStrategy: authStrategyA},
+			firstRequest:        newRequest(http.MethodPost, "https://example.com/introspect", nil),
+			firstToken:          "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			secondEndpoint:      &endpoint.Endpoint{AuthStrategy: authStrategyB},
+			secondRequest:       newRequest(http.MethodPost, "https://example.com/introspect", nil),
+			secondToken:         "token",
+		},
+		"default vs configured ttl": {
+			firstAuthenticator:  &oauth2IntrospectionAuthenticator{},
+			firstEndpoint:       &endpoint.Endpoint{},
+			firstRequest:        newRequest(http.MethodPost, "https://example.com/introspect", nil),
+			firstToken:          "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			secondEndpoint:      &endpoint.Endpoint{},
+			secondRequest:       newRequest(http.MethodPost, "https://example.com/introspect", nil),
+			secondToken:         "token",
+		},
+		"different ttl": {
+			firstAuthenticator:  &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			firstEndpoint:       &endpoint.Endpoint{},
+			firstRequest:        newRequest(http.MethodPost, "https://example.com/introspect", nil),
+			firstToken:          "token",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{ttl: new(15 * time.Second)},
+			secondEndpoint:      &endpoint.Endpoint{},
+			secondRequest:       newRequest(http.MethodPost, "https://example.com/introspect", nil),
+			secondToken:         "token",
+		},
+		"url and token boundaries do not collide": {
+			firstAuthenticator:  &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			firstEndpoint:       &endpoint.Endpoint{},
+			firstRequest:        newRequest(http.MethodPost, "https://example.com/a", nil),
+			firstToken:          "bc",
+			secondAuthenticator: &oauth2IntrospectionAuthenticator{ttl: new(5 * time.Second)},
+			secondEndpoint:      &endpoint.Endpoint{},
+			secondRequest:       newRequest(http.MethodPost, "https://example.com/ab", nil),
+			secondToken:         "c",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			first := tc.firstAuthenticator.calculateCacheKey(
+				tc.firstEndpoint,
+				tc.firstRequest,
+				tc.firstToken,
+			)
+			second := tc.secondAuthenticator.calculateCacheKey(
+				tc.secondEndpoint,
+				tc.secondRequest,
+				tc.secondToken,
+			)
+
+			if tc.expectEqual {
+				assert.Equal(t, first, second)
+			} else {
+				assert.NotEqual(t, first, second)
+			}
 		})
 	}
 }

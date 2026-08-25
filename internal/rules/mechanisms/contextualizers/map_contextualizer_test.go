@@ -63,7 +63,7 @@ foo: bar
 items:
   method:
     foo: bar
-values: 
+values:
   foo: bar
 `),
 			assert: func(t *testing.T, err error, _ *mapContextualizer) {
@@ -79,7 +79,7 @@ values:
 			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
-values: 
+values:
   foo: http://foo.bar
 `),
 			assert: func(t *testing.T, err error, contextualizer *mapContextualizer) {
@@ -91,7 +91,7 @@ values:
 				assert.Equal(t, "with minimal valid configuration", contextualizer.ID())
 				assert.Equal(t, contextualizer.Name(), contextualizer.ID())
 				assert.Equal(t, contextualizer.ID(), contextualizer.Type())
-				assert.Equal(t, pipeline.KindContextualizer, contextualizer.Kind())
+				assert.Equal(t, types.KindContextualizer, contextualizer.Kind())
 				assert.Len(t, contextualizer.items, 1)
 				assert.Len(t, contextualizer.values, 1)
 				assert.Equal(t, "http://foo.bar", contextualizer.values["foo"].String())
@@ -155,7 +155,7 @@ func TestMapContextualizerCreateStep(t *testing.T) {
 			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
-values: 
+values:
   foo: http://foo.bar
 `),
 			assert: func(t *testing.T, err error, prototype, configured *mapContextualizer) {
@@ -170,7 +170,7 @@ values:
 			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
-values: 
+values:
   foo: http://foo.bar
 `),
 			stepDef: types.StepDefinition{ID: "foo"},
@@ -188,7 +188,7 @@ values:
 			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
-values: 
+values:
   foo: http://foo.bar
 `),
 			stepDef: types.StepDefinition{Config: config.MechanismConfig{"foo": "bar"}},
@@ -203,7 +203,7 @@ values:
 			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
-values: 
+values:
   foo: http://foo.bar
 `),
 			stepDef: types.StepDefinition{
@@ -223,7 +223,7 @@ values:
 			config: []byte(`
 items:
   url: "{{ .Values.foo }}"
-values: 
+values:
   foo: http://foo.bar
 `),
 			stepDef: types.StepDefinition{
@@ -243,17 +243,20 @@ values:
 				assert.Equal(t, "with only values reconfigured", configured.ID())
 				assert.NotEqual(t, prototype.values, configured.values)
 				require.NotNil(t, configured.values)
+
 				val, err := configured.values.Render(map[string]any{
 					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
+
 				resp, err := configured.items["url"].Render(map[string]any{
 					"Values":  val,
 					"Subject": pipeline.Subject{"default": &pipeline.Principal{ID: "baz"}},
 				})
 				require.NoError(t, err)
+
 				assert.Equal(t, "http://bar.foo", resp)
-				assert.Equal(t, pipeline.KindContextualizer, configured.Kind())
+				assert.Equal(t, types.KindContextualizer, configured.Kind())
 				assert.Equal(t, prototype.Type(), configured.Type())
 			},
 		},
@@ -302,7 +305,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 		contextualizer   *mapContextualizer
 		subject          pipeline.Subject
 		configureContext func(t *testing.T, ctx *pipelinemocks.ContextMock)
-		assert           func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any)
+		assert           func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results)
 	}{
 		"with error in values rendering": {
 			contextualizer: &mapContextualizer{
@@ -325,7 +328,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -366,7 +369,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -406,6 +409,12 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 						return tpl
 					}(),
+					"results": func() template.Template {
+						tpl, err := template.New("{{ .Results.foo.Payload }}")
+						require.NoError(t, err)
+
+						return tpl
+					}(),
 				},
 			},
 			subject: pipeline.Subject{
@@ -419,25 +428,51 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, outputs map[string]any, results pipeline.Results) {
 				t.Helper()
 
 				require.NoError(t, err)
 
-				assert.NotNil(t, outputs["contextualizer1"])
-				assert.Equal(t, "http://foo.bar", outputs["contextualizer1"].(map[string]string)["urlValues"])
-				assert.Equal(t, "Foo", outputs["contextualizer1"].(map[string]string)["identity"])
-				assert.Equal(t, "bar", outputs["contextualizer1"].(map[string]string)["outputs"])
+				output, ok := outputs["contextualizer1"].(map[string]string)
+				require.True(t, ok)
+
+				assert.Equal(t, "http://foo.bar", output["urlValues"])
+				assert.Equal(t, "Foo", output["identity"])
+				assert.Equal(t, "bar", output["outputs"])
+				assert.Equal(t, "bar", output["results"])
+
+				result := results["contextualizer1"]
+				require.NotNil(t, result)
+
+				payload, ok := result.Payload.(map[string]string)
+				require.True(t, ok)
+
+				assert.Equal(t, "http://foo.bar", payload["urlValues"])
+				assert.Equal(t, "Foo", payload["identity"])
+				assert.Equal(t, "bar", payload["outputs"])
+				assert.Equal(t, "bar", payload["results"])
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			configureContext := x.IfThenElse(tc.configureContext != nil,
+			configureContext := x.IfThenElse(
+				tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *pipelinemocks.ContextMock) { t.Helper() })
+				func(t *testing.T, _ *pipelinemocks.ContextMock) {
+					t.Helper()
+				},
+			)
+
+			outputs := map[string]any{
+				"foo": "bar",
+			}
+			results := pipeline.Results{
+				"foo": pipeline.NewResult("bar"),
+			}
 
 			ctx := pipelinemocks.NewContextMock(t)
-			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
+			ctx.EXPECT().Outputs().Return(outputs)
+			ctx.EXPECT().Results().Return(results)
 			ctx.EXPECT().Context().Return(t.Context())
 
 			configureContext(t, ctx)
@@ -446,7 +481,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 			err := tc.contextualizer.Execute(ctx, tc.subject)
 
 			// THEN
-			tc.assert(t, err, tc.subject, ctx.Outputs())
+			tc.assert(t, err, tc.subject, outputs, results)
 		})
 	}
 }

@@ -18,19 +18,18 @@ package authstrategy
 
 import (
 	"context"
-	"crypto/sha256"
 	"net/http"
 	"sync/atomic"
 
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/encoding"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type basicAuthCredentials struct {
@@ -39,14 +38,11 @@ type basicAuthCredentials struct {
 }
 
 func (c basicAuthCredentials) Hash() []byte {
-	hash := sha256.New()
+	key := cachekey.New("auth-strategy:basic")
+	key.WriteString(c.UserID)
+	key.WriteString(c.Password)
 
-	hash.Write(stringx.ToBytes(c.UserID))
-	hash.Write(stringx.ToBytes(c.Password))
-
-	var result [sha256.Size]byte
-
-	return hash.Sum(result[:0])
+	return key.Sum()
 }
 
 type BasicAuth struct {
@@ -68,6 +64,7 @@ func (c *BasicAuth) Apply(req *http.Request) error {
 		)
 	}
 
+	req.Header = req.Header.Clone()
 	req.SetBasicAuth(creds.UserID, creds.Password)
 
 	return nil

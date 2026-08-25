@@ -40,11 +40,13 @@ func (heimdallLibrary) CompileOptions() []cel.EnvOption {
 		Strings(),
 		Urls(),
 		Requests(),
+		Results(),
 		Errors(),
 		Networks(),
 		Subjects(),
 		cel.Variable("Payload", cel.DynType),
 		cel.Variable("Outputs", cel.MapType(cel.StringType, cel.DynType)),
+		cel.Variable("Results", cel.MapType(cel.StringType, cel.DynType)),
 		cel.Variable("Values", cel.MapType(cel.StringType, cel.DynType)),
 	}
 }

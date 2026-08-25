@@ -17,8 +17,6 @@
 package authenticators
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
@@ -30,6 +28,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
@@ -39,7 +38,6 @@ import (
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 // by intention. Used only during application bootstrap
@@ -227,13 +225,18 @@ func (a *genericAuthenticator) getPrincipalInformation(ctx pipeline.Context, aut
 	logger := zerolog.Ctx(ctx.Context())
 	cch := cache.Ctx(ctx.Context())
 
+	req, renderedPayload, err := a.createRequest(ctx, authData)
+	if err != nil {
+		return nil, err
+	}
+
 	var (
 		cacheKey string
 		session  *SessionLifespan
 	)
 
 	if a.ttl > 0 {
-		cacheKey = a.calculateCacheKey(authData)
+		cacheKey = a.calculateCacheKey(req, renderedPayload)
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			logger.Debug().Msg("Reusing principal information from cache")
 
@@ -241,7 +244,7 @@ func (a *genericAuthenticator) getPrincipalInformation(ctx pipeline.Context, aut
 		}
 	}
 
-	payload, err := a.fetchPrincipalInformation(ctx, authData)
+	payload, err := a.fetchPrincipalInformation(req)
 	if err != nil {
 		return nil, err
 	}
@@ -268,26 +271,30 @@ func (a *genericAuthenticator) getPrincipalInformation(ctx pipeline.Context, aut
 	return payload, nil
 }
 
-func (a *genericAuthenticator) fetchPrincipalInformation(ctx pipeline.Context, authData string) ([]byte, error) {
-	req, err := a.createRequest(ctx, authData)
-	if err != nil {
-		return nil, err
+func (a *genericAuthenticator) fetchPrincipalInformation(req *http.Request) ([]byte, error) {
+	client := a.e.CreateClient(req.URL.Hostname())
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
 	}
 
-	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.
-				NewWithMessage(pipeline.ErrCommunicationTimeout,
-					"request to the endpoint to get information about the user timed out").
+				NewWithMessage(
+					pipeline.ErrCommunicationTimeout,
+					"request to the endpoint to get information about the user timed out",
+				).
 				WithAspects(a).
 				CausedBy(err)
 		}
 
 		return nil, errorchain.
-			NewWithMessage(pipeline.ErrCommunication,
-				"request to the endpoint to get information about the user failed").
+			NewWithMessage(
+				pipeline.ErrCommunication,
+				"request to the endpoint to get information about the user failed",
+			).
 			WithAspects(a).
 			CausedBy(err)
 	}
@@ -297,10 +304,13 @@ func (a *genericAuthenticator) fetchPrincipalInformation(ctx pipeline.Context, a
 	return a.readResponse(resp)
 }
 
-func (a *genericAuthenticator) createRequest(ctx pipeline.Context, authData string) (*http.Request, error) {
+func (a *genericAuthenticator) createRequest(ctx pipeline.Context, authData string) (*http.Request, string, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
-	var body io.Reader
+	var (
+		body    io.Reader
+		payload string
+	)
 
 	templateData := map[string]any{
 		"AuthenticationData": authData,
@@ -309,7 +319,7 @@ func (a *genericAuthenticator) createRequest(ctx pipeline.Context, authData stri
 	if a.payload != nil {
 		value, err := a.payload.Render(templateData)
 		if err != nil {
-			return nil, errorchain.NewWithMessage(
+			return nil, "", errorchain.NewWithMessage(
 				pipeline.ErrInternal,
 				"failed to render payload for the authenticator endpoint",
 			).
@@ -317,12 +327,13 @@ func (a *genericAuthenticator) createRequest(ctx pipeline.Context, authData stri
 				CausedBy(err)
 		}
 
-		body = strings.NewReader(value)
+		payload = value
+		body = strings.NewReader(payload)
 	}
 
 	req, err := a.e.CreateRequest(ctx.Context(), body, templateData)
 	if err != nil {
-		return nil, errorchain.
+		return nil, "", errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed creating request").
 			WithAspects(a).
 			CausedBy(err)
@@ -350,7 +361,7 @@ func (a *genericAuthenticator) createRequest(ctx pipeline.Context, authData stri
 		}
 	}
 
-	return req, nil
+	return req, payload, nil
 }
 
 func (a *genericAuthenticator) readResponse(resp *http.Response) ([]byte, error) {
@@ -395,12 +406,21 @@ func (a *genericAuthenticator) getCacheTTL(sessionLifespan *SessionLifespan) tim
 	return a.ttl
 }
 
-func (a *genericAuthenticator) calculateCacheKey(reference string) string {
-	digest := sha256.New()
-	digest.Write(a.e.Hash())
-	digest.Write(stringx.ToBytes(reference))
+func (a *genericAuthenticator) calculateCacheKey(req *http.Request, payload string) string {
+	key := cachekey.New("generic-authenticator:response")
 
-	var result [sha256.Size]byte
+	key.WriteString(a.name)
+	key.WriteInt64(int64(a.ttl))
+	key.WriteString(req.Method)
+	key.WriteString(req.URL.String())
+	key.WriteHeader(req.Header)
+	key.WriteString(payload)
 
-	return hex.EncodeToString(digest.Sum(result[:0]))
+	key.WriteBool(a.e.AuthStrategy != nil)
+
+	if a.e.AuthStrategy != nil {
+		key.WriteBytes(a.e.AuthStrategy.Hash())
+	}
+
+	return key.SumString()
 }

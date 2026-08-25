@@ -18,8 +18,6 @@ package clientcredentials
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"io"
 	"net/http"
 	"net/url"
@@ -30,6 +28,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/x"
@@ -66,6 +65,7 @@ func (a clientCredentialsAuthStrategy) Apply(req *http.Request) error {
 		req.GetBody = func() (io.ReadCloser, error) { return io.NopCloser(body), nil }
 		req.ContentLength = int64(body.Len())
 	} else {
+		req.Header = req.Header.Clone()
 		req.SetBasicAuth(url.QueryEscape(a.ClientID), url.QueryEscape(a.ClientSecret))
 	}
 
@@ -73,14 +73,12 @@ func (a clientCredentialsAuthStrategy) Apply(req *http.Request) error {
 }
 
 func (a clientCredentialsAuthStrategy) Hash() []byte {
-	digest := sha256.New()
-	digest.Write(stringx.ToBytes(a.ClientID))
-	digest.Write(stringx.ToBytes(a.ClientSecret))
-	digest.Write(stringx.ToBytes(string(a.AuthMethod)))
+	key := cachekey.New("auth-strategy:oauth2-client-credentials-token-endpoint")
+	key.WriteString(a.ClientID)
+	key.WriteString(a.ClientSecret)
+	key.WriteString(string(effectiveAuthMethod(a.AuthMethod)))
 
-	var result [sha256.Size]byte
-
-	return digest.Sum(result[:0])
+	return key.Sum()
 }
 
 type Config struct {
@@ -130,20 +128,34 @@ func (c Config) Token(ctx context.Context) (*TokenInfo, error) {
 }
 
 func (c Config) Hash() []byte {
-	digest := sha256.New()
-	digest.Write(stringx.ToBytes(c.ClientID))
-	digest.Write(stringx.ToBytes(c.ClientSecret))
-	digest.Write(stringx.ToBytes(c.TokenURL))
-	digest.Write(stringx.ToBytes(string(c.AuthMethod)))
-	digest.Write(stringx.ToBytes(strings.Join(c.Scopes, "")))
+	key := cachekey.New("oauth2-client-credentials")
+	key.WriteString(c.TokenURL)
+	key.WriteString(c.ClientID)
+	key.WriteString(c.ClientSecret)
+	key.WriteString(string(effectiveAuthMethod(c.AuthMethod)))
+	key.WriteStrings(c.Scopes)
 
-	var result [sha256.Size]byte
-
-	return digest.Sum(result[:0])
+	return key.Sum()
 }
 
 func (c Config) calculateCacheKey() string {
-	return hex.EncodeToString(c.Hash())
+	key := cachekey.New("oauth2-client-credentials:token")
+	key.WriteBytes(c.Hash())
+	key.WriteBool(c.TTL != nil)
+
+	if c.TTL != nil {
+		key.WriteInt64(int64(*c.TTL))
+	}
+
+	return key.SumString()
+}
+
+func effectiveAuthMethod(method AuthMethod) AuthMethod {
+	if method == "" {
+		return AuthMethodBasicAuth
+	}
+
+	return method
 }
 
 func (c Config) getCacheTTL(resp *TokenInfo) time.Duration {

@@ -17,9 +17,6 @@
 package authorizers
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
@@ -33,6 +30,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
@@ -91,6 +89,11 @@ func (ai *authorizationInformation) addResultsTo(key string, ctx pipeline.Contex
 	if ai.Payload != nil {
 		ctx.Outputs()[key] = ai.Payload
 	}
+
+	ctx.Results()[key] = pipeline.NewResultWithHeaders(
+		ai.Payload,
+		ai.Headers,
+	)
 }
 
 func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
@@ -140,6 +143,14 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 			Msg("No TLS configured for the endpoint used in authorizer")
 	}
 
+	if len(conf.ResponseHeadersToForward) > 0 {
+		logger.Warn().
+			Str("_type", AuthorizerRemote).
+			Str("_name", name).
+			Msg("Usage of forward_response_headers_to_upstream is deprecated. " +
+				"Please use Results object in a header finalizer instead")
+	}
+
 	return &remoteAuthorizer{
 		name:               name,
 		id:                 name,
@@ -154,6 +165,7 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 	}, nil
 }
 
+//nolint:cyclop
 func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().
@@ -167,6 +179,7 @@ func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 	var (
 		cacheKey string
 		authInfo *authorizationInformation
+		fetched  bool
 	)
 
 	vals, payload, err := a.renderTemplates(ctx, sub)
@@ -174,8 +187,14 @@ func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 		return err
 	}
 
+	req, err := a.createRequest(ctx, sub, vals, payload)
+	if err != nil {
+		return err
+	}
+
 	if a.ttl > 0 {
-		cacheKey = a.calculateCacheKey(sub, vals, payload)
+		cacheKey = a.calculateCacheKey(req, payload)
+
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
 			var ai authorizationInformation
 
@@ -188,17 +207,23 @@ func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 	}
 
 	if authInfo == nil {
-		authInfo, err = a.doAuthorize(ctx, sub, vals, payload)
+		authInfo, err = a.fetchAuthorizationInformation(ctx, req)
 		if err != nil {
 			return err
 		}
 
-		if a.ttl > 0 && len(cacheKey) != 0 {
-			data, _ := json.Marshal(authInfo)
+		fetched = true
+	}
 
-			if err = cch.Set(ctx.Context(), cacheKey, data, a.ttl); err != nil {
-				logger.Warn().Err(err).Msg("Failed to cache authorization information")
-			}
+	if err = a.verify(ctx, authInfo.Payload); err != nil {
+		return err
+	}
+
+	if fetched && a.ttl > 0 && len(cacheKey) != 0 {
+		data, _ := json.Marshal(authInfo)
+
+		if err = cch.Set(ctx.Context(), cacheKey, data, a.ttl); err != nil {
+			logger.Warn().Err(err).Msg("Failed to cache authorization information")
 		}
 	}
 
@@ -241,6 +266,15 @@ func (a *remoteAuthorizer) CreateStep(
 			"failed decoding config for remote authorizer '%s'", a.name).CausedBy(err)
 	}
 
+	if len(conf.ResponseHeadersToForward) > 0 {
+		logger := a.app.Logger()
+		logger.Warn().
+			Str("_type", AuthorizerRemote).
+			Str("_name", a.name).
+			Msg("Usage of forward_response_headers_to_upstream is deprecated. " +
+				"Please use Results object in a header finalizer instead")
+	}
+
 	expressions, err := compileExpressions(conf.Expressions, a.celEnv)
 	if err != nil {
 		return nil, err
@@ -267,27 +301,44 @@ func (a *remoteAuthorizer) Type() string            { return a.name }
 func (*remoteAuthorizer) Kind() types.Kind          { return types.KindAuthorizer }
 func (*remoteAuthorizer) Accept(_ pipeline.Visitor) {}
 
-func (a *remoteAuthorizer) doAuthorize(
+func (a *remoteAuthorizer) createRequest(
 	ctx pipeline.Context,
 	sub pipeline.Subject,
 	values map[string]string,
 	payload string,
-) (*authorizationInformation, error) {
-	logger := zerolog.Ctx(ctx.Context())
-	logger.Debug().Msg("Calling remote authorization endpoint")
-
-	req, err := a.e.CreateRequest(ctx.Context(), strings.NewReader(payload), map[string]any{
-		"Subject": sub,
-		"Values":  values,
-		"Outputs": ctx.Outputs(),
-	})
+) (*http.Request, error) {
+	req, err := a.e.CreateRequest(
+		ctx.Context(),
+		strings.NewReader(payload),
+		map[string]any{
+			"Subject": sub,
+			"Values":  values,
+			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
+		},
+	)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed creating request").
 			WithAspects(a).
 			CausedBy(err)
 	}
 
-	resp, err := a.e.CreateClient(req.URL.Hostname()).Do(req)
+	return req, nil
+}
+
+func (a *remoteAuthorizer) fetchAuthorizationInformation(
+	ctx pipeline.Context,
+	req *http.Request,
+) (*authorizationInformation, error) {
+	logger := zerolog.Ctx(ctx.Context())
+	logger.Debug().Msg("Calling remote authorization endpoint")
+
+	client := a.e.CreateClient(req.URL.Hostname())
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
@@ -310,12 +361,10 @@ func (a *remoteAuthorizer) doAuthorize(
 		return nil, err
 	}
 
-	err = a.verify(ctx, data)
-	if err != nil {
-		return nil, err
-	}
-
-	return &authorizationInformation{Headers: resp.Header, Payload: data}, nil
+	return &authorizationInformation{
+		Headers: resp.Header,
+		Payload: data,
+	}, nil
 }
 
 func (a *remoteAuthorizer) readResponse(ctx pipeline.Context, resp *http.Response) (any, error) {
@@ -344,10 +393,11 @@ func (a *remoteAuthorizer) readResponse(ctx pipeline.Context, resp *http.Respons
 
 	decoder, err := contenttype.NewDecoder(contentType)
 	if err != nil {
-		logger.Warn().Str("_content_type", contentType).
+		logger.Warn().
+			Str("_content_type", contentType).
 			Msg("Content type is not supported. Treating it as string")
 
-		return stringx.ToString(rawData), nil // nolint: nilerr
+		return stringx.ToString(rawData), nil //nolint:nilerr
 	}
 
 	result, err := decoder.Decode(rawData)
@@ -360,38 +410,33 @@ func (a *remoteAuthorizer) readResponse(ctx pipeline.Context, resp *http.Respons
 	return result, nil
 }
 
-func (a *remoteAuthorizer) calculateCacheKey(sub pipeline.Subject, values map[string]string, payload string) string {
-	const int64BytesCount = 8
+func (a *remoteAuthorizer) calculateCacheKey(req *http.Request, payload string) string {
+	key := cachekey.New("remote-authorizer:response")
 
-	var ttlBytes [int64BytesCount]byte
+	key.WriteString(a.name)
+	key.WriteInt64(int64(a.ttl))
+	key.WriteString(req.Method)
+	key.WriteString(req.URL.String())
+	key.WriteHeader(req.Header)
+	key.WriteString(payload)
 
-	//nolint:gosec
-	// no integer overflow during conversion possible
-	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(a.ttl))
+	key.WriteBool(a.e.AuthStrategy != nil)
 
-	hash := sha256.New()
-	hash.Write(a.e.Hash())
-	hash.Write(stringx.ToBytes(a.id))
-	hash.Write(stringx.ToBytes(strings.Join(a.headersForUpstream, ",")))
-	hash.Write(stringx.ToBytes(payload))
-	hash.Write(ttlBytes[:])
-	hash.Write(sub.Hash())
-
-	for k, v := range values {
-		hash.Write(stringx.ToBytes(k))
-		hash.Write(stringx.ToBytes(v))
+	if a.e.AuthStrategy != nil {
+		key.WriteBytes(a.e.AuthStrategy.Hash())
 	}
 
-	var result [sha256.Size]byte
-
-	return hex.EncodeToString(hash.Sum(result[:0]))
+	return key.SumString()
 }
 
 func (a *remoteAuthorizer) verify(ctx pipeline.Context, result any) error {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Verifying authorization response")
 
-	return a.expressions.eval(map[string]any{"Payload": result}, a)
+	return a.expressions.eval(
+		map[string]any{"Payload": result},
+		a,
+	)
 }
 
 func (a *remoteAuthorizer) renderTemplates(
@@ -404,6 +449,7 @@ func (a *remoteAuthorizer) renderTemplates(
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
+		"Results": ctx.Results(),
 	})
 	if err != nil {
 		return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
@@ -418,6 +464,7 @@ func (a *remoteAuthorizer) renderTemplates(
 			"Subject": sub,
 			"Values":  vals,
 			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
 				"failed to render payload for the authorization endpoint").

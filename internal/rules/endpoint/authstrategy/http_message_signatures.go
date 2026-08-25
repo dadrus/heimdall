@@ -21,9 +21,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
-	"crypto/sha256"
 	"crypto/x509"
-	"encoding/binary"
 	"errors"
 	"net/http"
 	"sync/atomic"
@@ -33,13 +31,12 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/secrets"
-	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 var (
@@ -93,11 +90,22 @@ func (s *HTTPMessageSignatures) Hash() []byte {
 }
 
 func (s *HTTPMessageSignatures) init(appCtx app.Context) error {
-	ref := secrets.Reference{Source: s.Signer.Secret.Source, Selector: s.Signer.Secret.Selector}
+	if len(s.Signer.Name) == 0 {
+		s.Signer.Name = "heimdall"
+	}
+
+	if s.TTL == nil {
+		s.TTL = new(time.Minute)
+	}
+
+	ref := secrets.Reference{
+		Source:   s.Signer.Secret.Source,
+		Selector: s.Signer.Secret.Selector,
+	}
 
 	informer, err := secrets.NewSecretInformer(
 		appCtx.SecretResolver(),
-		secrets.Reference{Source: s.Signer.Secret.Source, Selector: s.Signer.Secret.Selector},
+		ref,
 		secrets.WithConverter(s.createSigner),
 		secrets.WithUpdateCallback(func(_ context.Context, secret secrets.Secret, _ httpsig.Signer) error {
 			aks := secret.(secrets.AsymmetricKeySecret) //nolint:forcetypeassert
@@ -141,13 +149,9 @@ func (s *HTTPMessageSignatures) createSigner(secret secrets.Secret) (httpsig.Sig
 	signer, err := httpsig.NewSigner(
 		key,
 		httpsig.WithComponents(s.Components...),
-		httpsig.WithTag(x.IfThenElse(len(s.Signer.Name) != 0, s.Signer.Name, "heimdall")),
+		httpsig.WithTag(s.Signer.Name),
 		httpsig.WithLabel(s.Label),
-		httpsig.WithTTL(x.IfThenElseExec(
-			s.TTL != nil,
-			func() time.Duration { return *s.TTL },
-			func() time.Duration { return time.Minute },
-		)),
+		httpsig.WithTTL(*s.TTL),
 	)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
@@ -160,31 +164,17 @@ func (s *HTTPMessageSignatures) createSigner(secret secrets.Secret) (httpsig.Sig
 }
 
 func (s *HTTPMessageSignatures) updateHash(secret secrets.AsymmetricKeySecret) {
-	const int64BytesCount = 8
+	key := cachekey.New("auth-strategy:http-message-signatures")
 
-	hash := sha256.New()
-	hash.Write(stringx.ToBytes(s.Label))
+	key.WriteString(s.Label)
+	key.WriteStrings(s.Components)
+	key.WriteInt64(int64(*s.TTL))
+	key.WriteString(s.Signer.Name)
+	key.WriteString(secret.KeyID())
+	key.WriteString(secret.Selector())
+	key.WriteString(string(secret.Kind()))
 
-	for _, component := range s.Components {
-		hash.Write(stringx.ToBytes(component))
-	}
-
-	if s.TTL != nil {
-		var ttlBytes [int64BytesCount]byte
-
-		//nolint:gosec
-		// no integer overflow during conversion possible
-		binary.LittleEndian.PutUint64(ttlBytes[:], uint64(*s.TTL))
-
-		hash.Write(ttlBytes[:])
-	}
-
-	hash.Write(stringx.ToBytes(s.Signer.Name))
-	hash.Write(stringx.ToBytes(secret.KeyID()))
-	hash.Write(stringx.ToBytes(secret.Selector()))
-	hash.Write(stringx.ToBytes(string(secret.Kind())))
-
-	s.hash.Store(hash.Sum(nil))
+	s.hash.Store(key.Sum())
 }
 
 func validateSigningCertificate(secret secrets.AsymmetricKeySecret) error {

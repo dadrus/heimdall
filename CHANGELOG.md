@@ -1,7 +1,56 @@
 # Changelog
 
+## [0.17.21](https://github.com/dadrus/heimdall/compare/v0.17.20...v0.17.21) (2026-08-14)
+
+
+This release deprecates `forward_response_headers_to_upstream` as part of [#3375](https://github.com/dadrus/heimdall/pull/3375). Users relying on this option should start planning their migration (see [#3375](https://github.com/dadrus/heimdall/pull/3375) for details).
+
+It also contains a larger set of bug fixes addressing correctness and robustness in request processing, caching, and communication with external authentication and authorization systems.
+
+### Deprecations
+
+* `forward_response_headers_to_upstream` setting of the `remote` authorizer is deprecated ([#3375](https://github.com/dadrus/heimdall/issues/3375)) ([7ac4f55](https://github.com/dadrus/heimdall/commit/7ac4f55230920835638ffd7a99df108498ba5d09))
+
+
+### Bug Fixes
+
+* Apply OAuth2 introspection assertions to cached responses ([#3453](https://github.com/dadrus/heimdall/issues/3453)) ([57f8860](https://github.com/dadrus/heimdall/commit/57f8860a3e2162f9f33f526312d6abb49dbc97f4))
+* Apply remote authorizer expressions to cached responses ([#3451](https://github.com/dadrus/heimdall/issues/3451)) ([87a2eea](https://github.com/dadrus/heimdall/commit/87a2eeaa1fb0b8f272b4aec5b2a5e075fdf611eb))
+* Avoid ambiguous scope representation in client credentials hashes ([#3448](https://github.com/dadrus/heimdall/issues/3448)) ([0fc3016](https://github.com/dadrus/heimdall/commit/0fc3016f32a72f50e363ee8a0d5a509e94640f0e))
+* Consider forwarded values in generic authenticator cache keys ([#3455](https://github.com/dadrus/heimdall/issues/3455)) ([72508b2](https://github.com/dadrus/heimdall/commit/72508b278e1adc22bd2f61fba9ce4808be30ee34))
+* Consider forwarded values in generic contextualizer cache keys ([#3457](https://github.com/dadrus/heimdall/issues/3457)) ([71daea9](https://github.com/dadrus/heimdall/commit/71daea9d9e5d72eaddd523c74fc6620ef777a3e1))
+* Corrected client IP extraction for Envoy gRPC ext_authz ([#3440](https://github.com/dadrus/heimdall/issues/3440)) ([5dc599c](https://github.com/dadrus/heimdall/commit/5dc599cbc70285bb950b7e10d9535c43d4c26a53))
+* Data race in CEL `networks()` resolved ([#3432](https://github.com/dadrus/heimdall/issues/3432)) ([a737196](https://github.com/dadrus/heimdall/commit/a737196e5c12f69b805b6c2fd28290b315c28123))
+* Enforced trusted proxies for Envoy gRPC ext_authz ([#3437](https://github.com/dadrus/heimdall/issues/3437)) ([427fdc6](https://github.com/dadrus/heimdall/commit/427fdc6ef644f18e5c5ff4ac160de2750994fbf8))
+* Ensure deterministic and unambiguous cache identities ([#3464](https://github.com/dadrus/heimdall/issues/3464)) ([dfbea56](https://github.com/dadrus/heimdall/commit/dfbea560a8e5f634a9ce4832d161d07c06cfd648))
+* Ensuring generic authenticator does not follow redirects ([#3468](https://github.com/dadrus/heimdall/issues/3468)) ([0ef1baf](https://github.com/dadrus/heimdall/commit/0ef1baffc42360e4ba363fe68e8c66a796afcc35))
+* Ensuring oauth2_introspection authenticator does not follow redirects ([#3469](https://github.com/dadrus/heimdall/issues/3469)) ([8b42cc7](https://github.com/dadrus/heimdall/commit/8b42cc7754804dde1315e9841e9c3c4439402ecb))
+* Ensuring remote authorizer does not follow redirects ([#3467](https://github.com/dadrus/heimdall/issues/3467)) ([213e18e](https://github.com/dadrus/heimdall/commit/213e18ea5705249359cb22cc9847b3e7bd1c165a))
+* Error messages in html responses escaped ([#3466](https://github.com/dadrus/heimdall/issues/3466)) ([7c06c48](https://github.com/dadrus/heimdall/commit/7c06c48ac6ac53e0b66bc8260a176eacd4cb6ec3))
+* Generic authenticator respects rule-level cache TTL overrides ([#3447](https://github.com/dadrus/heimdall/issues/3447)) ([c66cce2](https://github.com/dadrus/heimdall/commit/c66cce2f070e5f7f7a08dc78043b66897a4290b1))
+* JWT authenticator respects rule-level cache TTL overrides ([#3447](https://github.com/dadrus/heimdall/issues/3447)) ([c66cce2](https://github.com/dadrus/heimdall/commit/c66cce2f070e5f7f7a08dc78043b66897a4290b1))
+* OAuth2 client credentials finalizer respects rule-level cache TTL overrides ([#3447](https://github.com/dadrus/heimdall/issues/3447)) ([c66cce2](https://github.com/dadrus/heimdall/commit/c66cce2f070e5f7f7a08dc78043b66897a4290b1))
+* OAuth2 introspection authenticator respects rule-level cache TTL overrides ([#3447](https://github.com/dadrus/heimdall/issues/3447)) ([c66cce2](https://github.com/dadrus/heimdall/commit/c66cce2f070e5f7f7a08dc78043b66897a4290b1))
+* Validate cached JWKs before use ([#3449](https://github.com/dadrus/heimdall/issues/3449)) ([3ab18f6](https://github.com/dadrus/heimdall/commit/3ab18f6ecf2b50073b3ed4e590a8fc4cb5d5d71a))
+
+
+### Dependencies
+
+* update golang to v1.26.6 ([#3461](https://github.com/dadrus/heimdall/issues/3461)) ([b4d70fb](https://github.com/dadrus/heimdall/commit/b4d70fb3e1c1892d2b33d4b1bfd14167e2a0c94d))
+* update google.golang.org/genproto/googleapis/rpc digest to ec0a776 ([#3434](https://github.com/dadrus/heimdall/issues/3434)) ([563027d](https://github.com/dadrus/heimdall/commit/563027d084aa52af15ec0aba720d7dd6f712a970))
+* update module github.com/google/cel-go to v0.31.0 ([#3427](https://github.com/dadrus/heimdall/issues/3427)) ([db7757e](https://github.com/dadrus/heimdall/commit/db7757ede0d7b450fd4810ef44479d0865398c5d))
+* update module github.com/knadh/koanf/maps to v0.1.3 ([#3430](https://github.com/dadrus/heimdall/issues/3430)) ([96f55f2](https://github.com/dadrus/heimdall/commit/96f55f2fcfa0fcd156be815445bd36f1efe4a552))
+* update module google.golang.org/protobuf to v1.36.12 ([#3435](https://github.com/dadrus/heimdall/issues/3435)) ([1e26e18](https://github.com/dadrus/heimdall/commit/1e26e1839345d2a0e4e76234650b25e8e446d19a))
+
 ## [0.17.20](https://github.com/dadrus/heimdall/compare/v0.17.19...v0.17.20) (2026-08-07)
 
+In addition to the updates and bug fixes listed below, this release addresses the following security-critical issues:
+
+* Path re-encoding in decision mode may bypass path guards and lead to authorization bypass (https://github.com/dadrus/heimdall/security/advisories/GHSA-r9fw-vxmp-hwf2). Fixed in [#3421](https://github.com/dadrus/heimdall/pull/3421).
+* Inconsistent path captures during route lookup backtracking may lead to incorrect rule selection and authorization bypass ([#3412](https://github.com/dadrus/heimdall/issues/3412)). Fixed in [#3419](https://github.com/dadrus/heimdall/pull/3419).
+* Default JWT and OAuth2 token extraction may buffer unbounded request bodies, allowing unauthenticated clients to cause excessive memory consumption and potentially exhaust process memory ([#3424](https://github.com/dadrus/heimdall/issues/3424)). Fixed in [#3425](https://github.com/dadrus/heimdall/pull/3425).
+
+Please check whether you are affected and update immediately!
 
 ### Bug Fixes
 

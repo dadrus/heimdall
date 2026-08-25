@@ -17,9 +17,6 @@
 package finalizers
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"time"
 
 	"github.com/goccy/go-json"
@@ -27,6 +24,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/registry"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
@@ -243,6 +241,7 @@ func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject)
 		vals, err := f.v.Render(map[string]any{
 			"Subject": sub,
 			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
 		})
 		if err != nil {
 			return "", errorchain.NewWithMessage(pipeline.ErrInternal,
@@ -253,8 +252,9 @@ func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject)
 
 		claims, err := f.claims.Render(map[string]any{
 			"Subject": sub,
-			"Outputs": ctx.Outputs(),
 			"Values":  vals,
+			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
 		})
 		if err != nil {
 			return "", errorchain.
@@ -285,36 +285,34 @@ func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject)
 }
 
 func (f *jwtFinalizer) calculateCacheKey(ctx pipeline.Context, sub pipeline.Subject) string {
-	const int64BytesCount = 8
+	key := cachekey.New("jwt-finalizer:token")
 
-	var ttlBytes [int64BytesCount]byte
+	key.WriteBytes(f.signer.Hash())
 
-	//nolint:gosec
-	// no integer overflow during conversion possible
-	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(f.ttl))
-
-	hash := sha256.New()
-	hash.Write(f.signer.Hash())
+	key.WriteBool(f.claims != nil)
 
 	if f.claims != nil {
-		hash.Write(f.claims.Hash())
+		key.WriteBytes(f.claims.Hash())
 	}
 
-	hash.Write(ttlBytes[:])
-	hash.Write(sub.Hash())
+	key.WriteInt64(int64(f.ttl))
+	key.WriteBytes(sub.Hash())
 
-	for key, val := range f.v {
-		hash.Write(stringx.ToBytes(key))
-		hash.Write(val.Hash())
+	key.WriteUint64(uint64(len(f.v)))
+
+	for name, value := range f.v {
+		key.WriteString(name)
+		key.WriteBytes(value.Hash())
 	}
 
-	if outputs := ctx.Outputs(); len(outputs) != 0 {
-		rawOut, _ := json.Marshal(ctx.Outputs())
+	results := ctx.Results()
 
-		hash.Write(rawOut)
+	key.WriteBool(len(results) != 0)
+
+	if len(results) != 0 {
+		rawResults, _ := json.Marshal(results)
+		key.WriteBytes(rawResults)
 	}
 
-	var result [sha256.Size]byte
-
-	return hex.EncodeToString(hash.Sum(result[:0]))
+	return key.SumString()
 }

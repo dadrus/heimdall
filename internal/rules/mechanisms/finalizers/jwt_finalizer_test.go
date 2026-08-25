@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
@@ -36,7 +37,7 @@ import (
 	"github.com/dadrus/heimdall/internal/encoding"
 	keyregistrymocks "github.com/dadrus/heimdall/internal/keyregistry/mocks"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	heimdallmocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
+	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
 	"github.com/dadrus/heimdall/internal/secrets"
 	secretsmocks "github.com/dadrus/heimdall/internal/secrets/mocks"
@@ -583,6 +584,50 @@ signer:
 	}
 }
 
+func TestJWTFinalizerCacheKeyIncludesResultHeaders(t *testing.T) {
+	t.Parallel()
+
+	finalizer := &jwtFinalizer{
+		ttl: defaultJWTTTL,
+		signer: &jwtSigner{
+			iss: "heimdall",
+		},
+	}
+
+	sub := pipeline.Subject{
+		"default": &pipeline.Principal{
+			ID:         "foo",
+			Attributes: map[string]any{"baz": "bar"},
+		},
+	}
+
+	firstCtx := pipelinemocks.NewContextMock(t)
+	firstCtx.EXPECT().Results().Return(pipeline.Results{
+		"remote": pipeline.NewResultWithHeaders(
+			map[string]any{"foo": "bar"},
+			http.Header{
+				"X-Tenant-ID": []string{"tenant-a"},
+			},
+		),
+	})
+
+	firstKey := finalizer.calculateCacheKey(firstCtx, sub)
+
+	secondCtx := pipelinemocks.NewContextMock(t)
+	secondCtx.EXPECT().Results().Return(pipeline.Results{
+		"remote": pipeline.NewResultWithHeaders(
+			map[string]any{"foo": "bar"},
+			http.Header{
+				"X-Tenant-ID": []string{"tenant-b"},
+			},
+		),
+	})
+
+	secondKey := finalizer.calculateCacheKey(secondCtx, sub)
+
+	assert.NotEqual(t, firstKey, secondKey)
+}
+
 func TestJWTFinalizerExecute(t *testing.T) {
 	t.Parallel()
 
@@ -597,12 +642,14 @@ func TestJWTFinalizerExecute(t *testing.T) {
 		config         []byte
 		subject        pipeline.Subject
 		signingSecret  secrets.Secret
-		configureMocks func(t *testing.T,
+		configureMocks func(
+			t *testing.T,
 			fin *jwtFinalizer,
-			ctx *heimdallmocks.ContextMock,
+			ctx *pipelinemocks.ContextMock,
 			cch *mocks.CacheMock,
 			ssh *secretsmocks.SecretHandleMock,
-			sub pipeline.Subject)
+			sub pipeline.Subject,
+		)
 		assert func(t *testing.T, err error)
 	}{
 		"with 'nil' identity": {
@@ -637,13 +684,24 @@ signer:
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, fin *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, sub pipeline.Subject,
+			configureMocks: func(
+				t *testing.T,
+				fin *jwtFinalizer,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				_ *secretsmocks.SecretHandleMock,
+				sub pipeline.Subject,
 			) {
 				t.Helper()
 
-				outputs := map[string]any{"foo": "bar"}
-				ctx.EXPECT().Outputs().Return(outputs)
+				ctx.EXPECT().Results().Return(
+					pipeline.Results{
+						"remote": pipeline.NewResult(
+							map[string]any{"foo": "bar"},
+						),
+					},
+				)
+
 				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer TestToken")
 
 				cacheKey := fin.calculateCacheKey(ctx, sub)
@@ -670,14 +728,22 @@ ttl: 1m
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+			configureMocks: func(
+				t *testing.T,
+				_ *jwtFinalizer,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ pipeline.Subject,
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(map[string]any{})
+				ctx.EXPECT().Results().Return(
+					pipeline.Results{"remote": pipeline.NewResult(map[string]any{})},
+				)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
+
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, configuredTTL-defaultCacheLeeway).Return(nil)
 			},
@@ -702,12 +768,22 @@ ttl: 2s
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+			configureMocks: func(
+				t *testing.T,
+				_ *jwtFinalizer,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ pipeline.Subject,
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(map[string]any{})
+				ctx.EXPECT().Results().Return(
+					pipeline.Results{
+						"remote": pipeline.NewResult(map[string]any{}),
+					},
+				)
+
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
@@ -729,7 +805,7 @@ header:
   scheme: Bar
 claims: '{
   {{ $val := .Subject.Attributes.baz }}
-  "sub_id": {{ quote .Subject.ID }}, 
+  "sub_id": {{ quote .Subject.ID }},
   {{ quote $val }}: "baz",
   "foo": {{ .Outputs.foo | quote }}
 }'`),
@@ -740,12 +816,24 @@ claims: '{
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+			configureMocks: func(
+				t *testing.T,
+				_ *jwtFinalizer,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ pipeline.Subject,
 			) {
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
+				ctx.EXPECT().Results().Return(
+					pipeline.Results{
+						"remote": pipeline.NewResult(
+							map[string]any{"foo": "bar"},
+						),
+					},
+				)
 				ctx.EXPECT().AddHeaderForUpstream("X-Token",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bar ") }))
 
@@ -776,12 +864,24 @@ values:
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+			configureMocks: func(
+				t *testing.T,
+				_ *jwtFinalizer,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ pipeline.Subject,
 			) {
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{"bar": "baz"})
+				ctx.EXPECT().Results().Return(
+					pipeline.Results{
+						"remote": pipeline.NewResult(
+							map[string]any{"foo": "bar"},
+						),
+					},
+				)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
 
@@ -808,12 +908,23 @@ claims: "foo: bar"
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+			configureMocks: func(
+				t *testing.T,
+				_ *jwtFinalizer,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ pipeline.Subject,
 			) {
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
+				ctx.EXPECT().Results().Return(
+					pipeline.Results{
+						"remote": pipeline.NewResult(map[string]any{}),
+					},
+				)
+
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
@@ -842,12 +953,23 @@ claims: "{{ len .foobar }}"
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+			configureMocks: func(
+				t *testing.T,
+				_ *jwtFinalizer,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ pipeline.Subject,
 			) {
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
+				ctx.EXPECT().Results().Return(
+					pipeline.Results{
+						"remote": pipeline.NewResult(map[string]any{}),
+					},
+				)
+
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
@@ -878,12 +1000,23 @@ values:
 					Attributes: map[string]any{"baz": "bar"},
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+			configureMocks: func(
+				t *testing.T,
+				_ *jwtFinalizer,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ pipeline.Subject,
 			) {
 				t.Helper()
 
 				ctx.EXPECT().Outputs().Return(map[string]any{})
+				ctx.EXPECT().Results().Return(
+					pipeline.Results{
+						"remote": pipeline.NewResult(map[string]any{}),
+					},
+				)
+
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
@@ -910,12 +1043,21 @@ signer:
 					ID: "foo",
 				},
 			},
-			configureMocks: func(t *testing.T, _ *jwtFinalizer, ctx *heimdallmocks.ContextMock,
-				cch *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+			configureMocks: func(
+				t *testing.T,
+				_ *jwtFinalizer,
+				ctx *pipelinemocks.ContextMock,
+				cch *mocks.CacheMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ pipeline.Subject,
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(map[string]any{})
+				ctx.EXPECT().Results().Return(
+					pipeline.Results{
+						"remote": pipeline.NewResult(map[string]any{}),
+					},
+				)
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
@@ -932,19 +1074,26 @@ signer:
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			configureMocks := x.IfThenElse(tc.configureMocks != nil,
+			configureMocks := x.IfThenElse(
+				tc.configureMocks != nil,
 				tc.configureMocks,
-				func(t *testing.T, _ *jwtFinalizer, _ *heimdallmocks.ContextMock,
-					_ *mocks.CacheMock, _ *secretsmocks.SecretHandleMock, _ pipeline.Subject,
+				func(
+					t *testing.T,
+					_ *jwtFinalizer,
+					_ *pipelinemocks.ContextMock,
+					_ *mocks.CacheMock,
+					_ *secretsmocks.SecretHandleMock,
+					_ pipeline.Subject,
 				) {
 					t.Helper()
-				})
+				},
+			)
 
 			conf, err := testsupport.DecodeTestConfig(tc.config)
 			require.NoError(t, err)
 
 			cch := mocks.NewCacheMock(t)
-			mctx := heimdallmocks.NewContextMock(t)
+			mctx := pipelinemocks.NewContextMock(t)
 
 			shm := secretsmocks.NewSecretHandleMock(t)
 			if tc.signingSecret != nil {

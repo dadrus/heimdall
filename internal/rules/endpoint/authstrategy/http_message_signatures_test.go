@@ -27,6 +27,7 @@ import (
 	x509pkix "crypto/x509/pkix"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -52,8 +53,10 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 	require.NoError(t, err)
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock)
-		assert func(t *testing.T, err error, conf *HTTPMessageSignatures)
+		signerName string
+		ttl        *time.Duration
+		setup      func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock)
+		assert     func(t *testing.T, err error, conf *HTTPMessageSignatures)
 	}{
 		"starting resolver fails": {
 			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, _ *secretsmocks.SecretHandleMock) {
@@ -72,9 +75,14 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 
 				assert.Empty(t, hms.Hash())
 				assert.Nil(t, hms.informer)
+
+				// Defaults are normalized before resolving the secret.
+				assert.Equal(t, "heimdall", hms.Signer.Name)
+				require.NotNil(t, hms.TTL)
+				assert.Equal(t, time.Minute, *hms.TTL)
 			},
 		},
-		"successful configuration": {
+		"successful configuration with defaults": {
 			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock) {
 				t.Helper()
 
@@ -96,6 +104,46 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
+
+				assert.Equal(t, "heimdall", hms.Signer.Name)
+				require.NotNil(t, hms.TTL)
+				assert.Equal(t, time.Minute, *hms.TTL)
+
+				assert.NotEmpty(t, hms.Hash())
+
+				_, ok := hms.informer.Get()
+				require.True(t, ok)
+			},
+		},
+		"successful configuration with custom values": {
+			signerName: "custom-signer",
+			ttl:        new(time.Hour),
+			setup: func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock) {
+				t.Helper()
+
+				secret := secrettypes.NewAsymmetricKeySecret("bar", "baz", privKey, nil)
+
+				sr.EXPECT().
+					Secret(secrets.Reference{Source: "foo", Selector: "bar"}).
+					Return(handle, nil)
+
+				handle.EXPECT().
+					OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+						err := cb(t.Context(), secret)
+						require.NoError(t, err)
+
+						return true
+					}))
+			},
+			assert: func(t *testing.T, err error, hms *HTTPMessageSignatures) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.Equal(t, "custom-signer", hms.Signer.Name)
+				require.NotNil(t, hms.TTL)
+				assert.Equal(t, time.Hour, *hms.TTL)
+
 				assert.NotEmpty(t, hms.Hash())
 
 				_, ok := hms.informer.Get()
@@ -121,8 +169,9 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 			appCtx.EXPECT().KeyRegistry().Maybe().Return(reg)
 
 			conf := &HTTPMessageSignatures{
-				Signer:     SignerConfig{Secret: secret},
+				Signer:     SignerConfig{Name: tc.signerName, Secret: secret},
 				Components: []string{"@method"},
+				TTL:        tc.ttl,
 			}
 
 			err := conf.init(appCtx)
@@ -135,40 +184,237 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 func TestHTTPMessageSignaturesHash(t *testing.T) {
 	t.Parallel()
 
-	secret := secrettypes.NewAsymmetricKeySecret("bar", "baz", nil, nil)
+	for uc, tc := range map[string]struct {
+		first       *HTTPMessageSignatures
+		firstSecret secrets.AsymmetricKeySecret
 
-	conf1 := &HTTPMessageSignatures{
-		Signer:     SignerConfig{Name: "foo"},
-		Components: []string{"@method"},
-		TTL:        new(time.Duration),
+		second       *HTTPMessageSignatures
+		secondSecret secrets.AsymmetricKeySecret
+
+		expectEqual bool
+	}{
+		"same configuration": {
+			first: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall"},
+				Label:      "sig",
+				Components: []string{"@method"},
+				TTL:        new(time.Hour),
+			},
+			firstSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"key1",
+				nil,
+				nil,
+			),
+			second: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall"},
+				Label:      "sig",
+				Components: []string{"@method"},
+				TTL:        new(time.Hour),
+			},
+			secondSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"key1",
+				nil,
+				nil,
+			),
+			expectEqual: true,
+		},
+		"different label": {
+			first: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall"},
+				Label:      "foo",
+				Components: []string{"@method"},
+				TTL:        new(time.Hour),
+			},
+			firstSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"key1",
+				nil,
+				nil,
+			),
+			second: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall"},
+				Label:      "bar",
+				Components: []string{"@method"},
+				TTL:        new(time.Hour),
+			},
+			secondSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"key1",
+				nil,
+				nil,
+			),
+		},
+		"different ttl": {
+			first: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall"},
+				Components: []string{"@method"},
+				TTL:        new(time.Hour),
+			},
+			firstSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"key1",
+				nil,
+				nil,
+			),
+			second: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall"},
+				Components: []string{"@method"},
+				TTL:        new(2 * time.Hour),
+			},
+			secondSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"key1",
+				nil,
+				nil,
+			),
+		},
+		"different signer name": {
+			first: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "foo"},
+				Components: []string{"@method"},
+				TTL:        new(time.Hour),
+			},
+			firstSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"key1",
+				nil,
+				nil,
+			),
+			second: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "bar"},
+				Components: []string{"@method"},
+				TTL:        new(time.Hour),
+			},
+			secondSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"key1",
+				nil,
+				nil,
+			),
+		},
+		"different key id": {
+			first: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall"},
+				Components: []string{"@method"},
+				TTL:        new(time.Hour),
+			},
+			firstSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"key1",
+				nil,
+				nil,
+			),
+			second: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall"},
+				Components: []string{"@method"},
+				TTL:        new(time.Hour),
+			},
+			secondSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"key2",
+				nil,
+				nil,
+			),
+		},
+		"different selector": {
+			first: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall"},
+				Components: []string{"@method"},
+				TTL:        new(time.Hour),
+			},
+			firstSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector1",
+				"key1",
+				nil,
+				nil,
+			),
+			second: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall"},
+				Components: []string{"@method"},
+				TTL:        new(time.Hour),
+			},
+			secondSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector2",
+				"key1",
+				nil,
+				nil,
+			),
+		},
+		"component boundaries do not collide": {
+			first: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall"},
+				Components: []string{"ab", "c"},
+				TTL:        new(time.Hour),
+			},
+			firstSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"key1",
+				nil,
+				nil,
+			),
+			second: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "heimdall"},
+				Components: []string{"a", "bc"},
+				TTL:        new(time.Hour),
+			},
+			secondSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"key1",
+				nil,
+				nil,
+			),
+		},
+		"signer boundaries do not collide": {
+			first: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "a"},
+				Components: []string{"@method"},
+				TTL:        new(time.Hour),
+			},
+			firstSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"bc",
+				nil,
+				nil,
+			),
+			second: &HTTPMessageSignatures{
+				Signer:     SignerConfig{Name: "ab"},
+				Components: []string{"@method"},
+				TTL:        new(time.Hour),
+			},
+			secondSecret: secrettypes.NewAsymmetricKeySecret(
+				"selector",
+				"c",
+				nil,
+				nil,
+			),
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			tc.first.updateHash(tc.firstSecret)
+			tc.second.updateHash(tc.secondSecret)
+
+			firstHash := tc.first.Hash()
+			secondHash := tc.second.Hash()
+
+			assert.NotEmpty(t, firstHash)
+			assert.NotEmpty(t, secondHash)
+
+			// Hash() must be stable after it was calculated by the
+			// secret update callback.
+			assert.Equal(t, firstHash, tc.first.Hash())
+			assert.Equal(t, secondHash, tc.second.Hash())
+
+			if tc.expectEqual {
+				assert.Equal(t, firstHash, secondHash)
+			} else {
+				assert.NotEqual(t, firstHash, secondHash)
+			}
+		})
 	}
-	*conf1.TTL = time.Hour
-	conf1.updateHash(secret)
-
-	conf2 := &HTTPMessageSignatures{
-		Label:      "label",
-		Signer:     SignerConfig{Name: "bar"},
-		Components: []string{"@status"},
-		TTL:        new(time.Duration),
-	}
-	*conf2.TTL = time.Hour
-	conf2.updateHash(secret)
-
-	conf3 := &HTTPMessageSignatures{
-		Signer:     SignerConfig{Name: "baz"},
-		Components: []string{"@method"},
-		TTL:        new(time.Duration),
-	}
-	*conf3.TTL = time.Hour
-	conf3.updateHash(secret)
-
-	hash1 := conf1.Hash()
-	hash2 := conf2.Hash()
-	hash3 := conf3.Hash()
-
-	assert.NotEqual(t, hash1, hash2)
-	assert.NotEqual(t, hash1, hash3)
-	assert.NotEmpty(t, hash1)
 }
 
 func TestHTTPMessageSignaturesApply(t *testing.T) {
@@ -177,41 +423,112 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 	privKey, err := ecdsa.GenerateKey(elliptic.P384(), rand.Reader)
 	require.NoError(t, err)
 
-	secret := secrettypes.NewAsymmetricKeySecret("bar", "kid-1", privKey, nil)
+	secret := secrettypes.NewAsymmetricKeySecret(
+		"bar",
+		"kid-1",
+		privKey,
+		nil,
+	)
 
-	sr := secretsmocks.NewResolverMock(t)
-	handle := secretsmocks.NewSecretHandleMock(t)
-	ref := secrets.Reference{Source: "foo", Selector: "bar"}
+	for uc, tc := range map[string]struct {
+		components []string
+		assert     func(t *testing.T, err error, req *http.Request)
+	}{
+		"fails if required component is missing": {
+			components: []string{"x-some-header"},
+			assert: func(t *testing.T, err error, req *http.Request) {
+				t.Helper()
 
-	sr.EXPECT().Secret(ref).Return(handle, nil)
-	handle.EXPECT().
-		OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
-			err := cb(t.Context(), secret)
+				require.Error(t, err)
+				require.ErrorContains(t, err, "x-some-header")
+
+				assert.Empty(t, req.Header.Get("Signature"))
+				assert.Empty(t, req.Header.Get("Signature-Input"))
+				assert.Empty(t, req.Header.Get("Content-Digest"))
+			},
+		},
+		"successful": {
+			components: []string{"@method", "content-digest"},
+			assert: func(t *testing.T, err error, req *http.Request) {
+				t.Helper()
+
+				require.NoError(t, err)
+
+				assert.NotEmpty(t, req.Header.Get("Signature"))
+
+				signatureInput := req.Header.Get("Signature-Input")
+				assert.Contains(
+					t,
+					signatureInput,
+					`("@method" "content-digest")`,
+				)
+				assert.Contains(t, signatureInput, `created=`)
+				assert.Contains(t, signatureInput, `expires=`)
+				assert.Contains(t, signatureInput, `keyid="kid-1"`)
+				assert.Contains(t, signatureInput, `alg="ecdsa-p384-sha384"`)
+				assert.Contains(t, signatureInput, `nonce=`)
+				assert.Contains(t, signatureInput, `tag="heimdall"`)
+
+				assert.NotEmpty(t, req.Header.Get("Content-Digest"))
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			sr := secretsmocks.NewResolverMock(t)
+			handle := secretsmocks.NewSecretHandleMock(t)
+			ref := secrets.Reference{Source: "foo", Selector: "bar"}
+
+			sr.EXPECT().Secret(ref).Return(handle, nil)
+			handle.EXPECT().
+				OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Secret]) bool {
+					err := cb(t.Context(), secret)
+					require.NoError(t, err)
+
+					return true
+				}))
+
+			reg := keyregistrymocks.NewRegistryMock(t)
+			reg.EXPECT().Notify(ref).Maybe()
+
+			appCtx := app.NewContextMock(t)
+			appCtx.EXPECT().SecretResolver().Return(sr)
+			appCtx.EXPECT().KeyRegistry().Maybe().Return(reg)
+
+			conf := &HTTPMessageSignatures{
+				Signer:     SignerConfig{Secret: config.Secret{Source: "foo", Selector: "bar"}},
+				Components: tc.components,
+			}
+
+			err = conf.init(appCtx)
 			require.NoError(t, err)
 
-			return true
-		}))
+			originalReq, err := http.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"http://example.com/test",
+				strings.NewReader(`{"hello":"world"}`),
+			)
+			require.NoError(t, err)
 
-	reg := keyregistrymocks.NewRegistryMock(t)
-	reg.EXPECT().Notify(ref).Maybe()
+			originalReq.Header.Set("Content-Type", "application/json")
+			originalReq.Header.Set("X-Original", "foo")
 
-	appCtx := app.NewContextMock(t)
-	appCtx.EXPECT().SecretResolver().Return(sr)
-	appCtx.EXPECT().KeyRegistry().Maybe().Return(reg)
+			// Intentionally use a shallow copy. Apply must not add signature
+			// related headers to the original request.
+			req := *originalReq
 
-	conf := &HTTPMessageSignatures{
-		Signer:     SignerConfig{Secret: config.Secret{Source: "foo", Selector: "bar"}},
-		Components: []string{"@method"},
+			err = conf.Apply(&req)
+
+			tc.assert(t, err, &req)
+
+			assert.Equal(t, "foo", originalReq.Header.Get("X-Original"))
+			assert.Empty(t, originalReq.Header.Get("Signature"))
+			assert.Empty(t, originalReq.Header.Get("Signature-Input"))
+			assert.Empty(t, originalReq.Header.Get("Content-Digest"))
+		})
 	}
-
-	err = conf.init(appCtx)
-	require.NoError(t, err)
-
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", nil)
-	require.NoError(t, err)
-
-	require.NoError(t, conf.Apply(req))
-	assert.NotEmpty(t, req.Header.Get("Signature"))
 }
 
 func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
@@ -325,9 +642,15 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
+			// createSigner is normally called from init(), after these
+			// defaults have already been normalized.
 			hms := &HTTPMessageSignatures{
+				Signer: SignerConfig{
+					Name: "heimdall",
+				},
 				Components: tc.components,
 				Label:      "label",
+				TTL:        new(time.Hour),
 			}
 
 			signer, err := hms.createSigner(tc.secret)
@@ -339,11 +662,11 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 
 type unsupportedSigner struct{}
 
-func (s unsupportedSigner) Public() crypto.PublicKey {
+func (unsupportedSigner) Public() crypto.PublicKey {
 	return nil
 }
 
-func (s unsupportedSigner) Sign(_ io.Reader, _ []byte, _ crypto.SignerOpts) ([]byte, error) {
+func (unsupportedSigner) Sign(_ io.Reader, _ []byte, _ crypto.SignerOpts) ([]byte, error) {
 	return nil, assert.AnError
 }
 
