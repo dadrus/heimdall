@@ -27,9 +27,9 @@ func TestBuilder(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		cachebuilder1   func() string
-		cachebuilder2   func() string
-		expectEqual bool
+		cachebuilder1 func() string
+		cachebuilder2 func() string
+		expectEqual   bool
 	}{
 		"same values": {
 			cachebuilder1: func() string {
