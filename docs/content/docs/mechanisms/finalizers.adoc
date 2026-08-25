@@ -31,7 +31,9 @@ type: noop
 
 == Header
 
-This finalizer enables transformation of a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] objects into HTTP headers. It can also be used to map information from the original link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] into headers expected by the upstream service.
+This finalizer enables transformation of a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] objects into HTTP headers. It can also be used to map information from the original link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] into headers expected by the upstream service.
+
+NOTE: References to `Outputs` should be migrated to `Results`. See also the corresponding migration note in the description of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] evaluation object.
 
 To enable the usage of this finalizer, you have to set the `type` property to `header`.
 
@@ -63,7 +65,9 @@ config:
 
 == Cookie
 
-This finalizer enables transformation of a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] objects into cookies. It can also be used to map information from the original link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] into cookies expected by the upstream service.
+This finalizer enables transformation of a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] objects into cookies. It can also be used to map information from the original link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] into cookies expected by the upstream service.
+
+NOTE: References to `Outputs` should be migrated to `Results`. See also the corresponding migration note in the description of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] evaluation object.
 
 To enable the usage of this finalizer, you have to set the `type` property to `cookie`.
 
@@ -88,7 +92,9 @@ config:
 
 == JWT
 
-This finalizer enables transformation of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] objects into custom claims within a https://www.rfc-editor.org/rfc/rfc7519[JWT]. The resulting token is then made available to your upstream service in either the HTTP `Authorization` header (using the `Bearer` scheme) or in a custom header. Your upstream service can verify the JWT's signature using heimdall's JWKS endpoint to retrieve the necessary public keys/certificates.
+This finalizer enables transformation of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] objects into custom claims within a https://www.rfc-editor.org/rfc/rfc7519[JWT]. The resulting token is then made available to your upstream service in either the HTTP `Authorization` header (using the `Bearer` scheme) or in a custom header. Your upstream service can verify the JWT's signature using heimdall's JWKS endpoint to retrieve the necessary public keys/certificates.
+
+NOTE: References to `Outputs` should be migrated to `Results`. See also the corresponding migration note in the description of the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] evaluation object.
 
 To enable this finalizer, set the `type` property to `jwt`.
 
@@ -100,11 +106,11 @@ Defines the key material for signing the JWT, as well as the `iss` claim.
 
 * *`claims`*: _string_ (optional, overridable)
 +
-A link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[template] specifying custom claims for the JWT. The template can use link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] objects.
+A link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_templating" >}}[template] specifying custom claims for the JWT. The template can use link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`], and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] objects.
 
 * *`values`*: _map of strings_ (optional, overridable)
 +
-A key-value map accessible as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] in the template engine for rendering claims. Values in this map can also be templated with access to link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`] and link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`].
+A key-value map accessible as link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] in the template engine for rendering claims. Values in this map can also be templated with access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] objects.
 
 * *`ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
@@ -114,7 +120,7 @@ Defines the JWT's validity period. Defaults to 5 minutes. Heimdall automatically
 +
 Specifies the HTTP header `name` and optional `scheme` for passing the JWT. Defaults to `Authorization` with scheme `Bearer`. If defined, `name` is required, and if `scheme` is omitted, the JWT is set as a raw value.
 
-The generated JWT is cached until 5 seconds before expiration. The cache key is computed based on the finalizer's configuration, the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] attributes.
+The generated JWT is cached until 5 seconds before expiration. The cache key is computed based on the finalizer's configuration, the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] attributes.
 
 .JWT finalizer configuration
 ====

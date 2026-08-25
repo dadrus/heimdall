@@ -17,9 +17,7 @@
 package endpoint
 
 import (
-	"bytes"
 	"context"
-	"crypto/sha256"
 	"errors"
 	"io"
 	"net/http"
@@ -35,7 +33,6 @@ import (
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/httpx"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 type HTTPCache struct {
@@ -109,6 +106,13 @@ func (e *Endpoint) CreateClient(peerName string) *http.Client {
 		}
 	}
 
+	if e.AuthStrategy != nil {
+		client.Transport = &authenticationRoundTripper{
+			next:     client.Transport,
+			strategy: e.AuthStrategy,
+		}
+	}
+
 	return client
 }
 
@@ -133,15 +137,6 @@ func (e *Endpoint) CreateRequest(ctx context.Context, body io.Reader, vals map[s
 		return nil, errorchain.
 			NewWithMessage(pipeline.ErrInternal, "failed to create a request instance").
 			CausedBy(err)
-	}
-
-	if e.AuthStrategy != nil {
-		err = e.AuthStrategy.Apply(req)
-		if err != nil {
-			return nil, errorchain.
-				NewWithMessage(pipeline.ErrInternal, "failed to authenticate request").
-				CausedBy(err)
-		}
 	}
 
 	for headerName, valueTemplate := range e.Headers {
@@ -172,6 +167,10 @@ func (e *Endpoint) SendRequest(
 
 	resp, err := e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
+		if errors.Is(err, pipeline.ErrInternal) {
+			return nil, err
+		}
+
 		var clientErr *url.Error
 		if errors.As(err, &clientErr) && clientErr.Timeout() {
 			return nil, errorchain.New(pipeline.ErrCommunicationTimeout).CausedBy(err)
@@ -187,29 +186,6 @@ func (e *Endpoint) SendRequest(
 	}
 
 	return e.readResponse(resp)
-}
-
-func (e *Endpoint) Hash() []byte {
-	hash := sha256.New()
-
-	hash.Write(stringx.ToBytes(e.URL.String()))
-	hash.Write(stringx.ToBytes(e.Method))
-
-	buf := bytes.NewBufferString("")
-	for k, v := range e.Headers {
-		buf.Write(stringx.ToBytes(k))
-		buf.Write(stringx.ToBytes(v.String()))
-	}
-
-	hash.Write(buf.Bytes())
-
-	if e.AuthStrategy != nil {
-		hash.Write(e.AuthStrategy.Hash())
-	}
-
-	var result [sha256.Size]byte
-
-	return hash.Sum(result[:0])
 }
 
 func (e *Endpoint) readResponse(resp *http.Response) ([]byte, error) {

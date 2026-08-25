@@ -34,6 +34,7 @@ type Context interface {
 	Error() error
 
 	Outputs() map[string]any
+	Results() Results
 }
 
 type RequestFunctions interface {

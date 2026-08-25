@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -13,7 +13,6 @@
 // limitations under the License.
 //
 // SPDX-License-Identifier: Apache-2.0
-
 package cellib
 
 import (
@@ -21,6 +20,8 @@ import (
 	"net"
 	"reflect"
 	"slices"
+	"sync"
+	"sync/atomic"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/cel-go/common/operators"
@@ -47,18 +48,17 @@ func newIPNetworks(cidrs []string) (IPNetworks, error) {
 		}
 	}
 
-	return IPNetworks{Ranger: ranger, cidrs: cidrs}, nil
+	return IPNetworks{ranger: ranger}, nil
 }
 
 type IPNetworks struct {
-	cidranger.Ranger
-
-	cidrs []string
+	ranger cidranger.Ranger
 }
 
 func (n IPNetworks) ConvertToNative(typeDesc reflect.Type) (any, error) {
-	if reflect.TypeOf(n.Ranger).AssignableTo(typeDesc) {
-		return n.Ranger, nil
+	rangerType := reflect.TypeOf(n.ranger)
+	if rangerType != nil && rangerType.AssignableTo(typeDesc) {
+		return n.ranger, nil
 	}
 
 	if reflect.TypeFor[IPNetworks]().AssignableTo(typeDesc) {
@@ -80,14 +80,14 @@ func (n IPNetworks) ConvertToType(typeVal ref.Type) ref.Val {
 }
 
 func (n IPNetworks) Equal(other ref.Val) ref.Val {
-	otherDur, ok := other.(IPNetworks)
+	otherNetworks, ok := other.(IPNetworks)
 
-	return types.Bool(ok && n.Ranger == otherDur.Ranger)
+	return types.Bool(ok && n.ranger == otherNetworks.ranger)
 }
 
 func (n IPNetworks) Type() ref.Type { return ipNetworksType }
 
-func (n IPNetworks) Value() any { return n.Ranger }
+func (n IPNetworks) Value() any { return n.ranger }
 
 func (n IPNetworks) Contains(value ref.Val) ref.Val {
 	if singleIP, ok := value.Value().(string); ok {
@@ -107,7 +107,7 @@ func (n IPNetworks) Contains(value ref.Val) ref.Val {
 }
 
 func (n IPNetworks) containsIP(ip string) bool {
-	res, _ := n.Ranger.Contains(net.ParseIP(ip))
+	res, _ := n.ranger.Contains(net.ParseIP(ip))
 
 	return res
 }
@@ -115,6 +115,114 @@ func (n IPNetworks) containsIP(ip string) bool {
 func (n IPNetworks) containsAll(ips []string) bool {
 	for _, ip := range ips {
 		if !n.containsIP(ip) {
+			return false
+		}
+	}
+
+	return true
+}
+
+type networkCache struct {
+	mu       sync.Mutex
+	snapshot atomic.Pointer[networkCacheSnapshot]
+}
+
+type networkCacheSnapshot struct {
+	entries []networkCacheEntry
+}
+
+type networkCacheEntry struct {
+	cidrs    []string
+	networks IPNetworks
+}
+
+func (c *networkCache) getOrCreate(cidrs []string) (IPNetworks, error) {
+	if networks, found := c.get(cidrs); found {
+		return networks, nil
+	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	// Another evaluation might have populated the cache while waiting for the lock.
+	if networks, found := c.get(cidrs); found {
+		return networks, nil
+	}
+
+	// Cache entries are immutable once published and therefore must own their CIDR slice.
+	cidrs = slices.Clone(cidrs)
+
+	networks, err := newIPNetworks(cidrs)
+	if err != nil {
+		return IPNetworks{}, err
+	}
+
+	current := c.snapshot.Load()
+	var entries []networkCacheEntry
+	if current != nil {
+		entries = current.entries
+	}
+
+	next := make([]networkCacheEntry, len(entries)+1)
+	copy(next, entries)
+	next[len(entries)] = networkCacheEntry{
+		cidrs:    cidrs,
+		networks: networks,
+	}
+
+	c.snapshot.Store(&networkCacheSnapshot{entries: next})
+
+	return networks, nil
+}
+
+func (c *networkCache) get(cidrs []string) (IPNetworks, bool) {
+	snapshot := c.snapshot.Load()
+	if snapshot == nil {
+		return IPNetworks{}, false
+	}
+
+	for _, entry := range snapshot.entries {
+		if sameCIDRs(entry.cidrs, cidrs) {
+			return entry.networks, true
+		}
+	}
+
+	return IPNetworks{}, false
+}
+
+// sameCIDRs compares two CIDR lists as multisets. This preserves the previous
+// cache semantics, where CIDRs were sorted before comparison, without sorting
+// or allocating on the cache-hit path.
+func sameCIDRs(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+
+	if slices.Equal(left, right) {
+		return true
+	}
+
+	for idx, cidr := range left {
+		if slices.Contains(left[:idx], cidr) {
+			continue
+		}
+
+		leftCount := 0
+		rightCount := 0
+
+		for _, candidate := range left {
+			if candidate == cidr {
+				leftCount++
+			}
+		}
+
+		for _, candidate := range right {
+			if candidate == cidr {
+				rightCount++
+			}
+		}
+
+		if leftCount != rightCount {
 			return false
 		}
 	}
@@ -137,7 +245,7 @@ func (networksLib) ProgramOptions() []cel.ProgramOption {
 }
 
 func (networksLib) CompileOptions() []cel.EnvOption {
-	var networkInstances []IPNetworks
+	cache := networkCache{}
 
 	return []cel.EnvOption{
 		// IPNetworks specific functions
@@ -147,18 +255,10 @@ func (networksLib) CompileOptions() []cel.EnvOption {
 				cel.UnaryBinding(func(netVal ref.Val) ref.Val {
 					addresses := []string{netVal.Value().(string)} // nolint: forcetypeassert
 
-					for _, net := range networkInstances {
-						if slices.Equal(net.cidrs, addresses) {
-							return net
-						}
-					}
-
-					networks, err := newIPNetworks(addresses)
+					networks, err := cache.getOrCreate(addresses)
 					if err != nil {
 						return types.WrapErr(err)
 					}
-
-					networkInstances = append(networkInstances, networks)
 
 					return networks
 				}),
@@ -171,21 +271,10 @@ func (networksLib) CompileOptions() []cel.EnvOption {
 						return types.WrapErr(err)
 					}
 
-					addresses := cidrs.([]string) // nolint: forcetypeassert
-					slices.Sort(addresses)
-
-					for _, net := range networkInstances {
-						if slices.Equal(net.cidrs, addresses) {
-							return net
-						}
-					}
-
-					networks, err := newIPNetworks(addresses)
+					networks, err := cache.getOrCreate(cidrs.([]string)) // nolint: forcetypeassert
 					if err != nil {
 						return types.WrapErr(err)
 					}
-
-					networkInstances = append(networkInstances, networks)
 
 					return networks
 				}),

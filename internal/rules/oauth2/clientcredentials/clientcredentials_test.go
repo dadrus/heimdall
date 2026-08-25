@@ -18,8 +18,10 @@ package clientcredentials
 
 import (
 	"encoding/base64"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -35,6 +37,164 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 )
+
+func TestClientCredentialsAuthStrategyApply(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		strategy *clientCredentialsAuthStrategy
+		assert   func(t *testing.T, req, original *http.Request)
+	}{
+		"basic auth": {
+			strategy: &clientCredentialsAuthStrategy{
+				ClientID:     "foo",
+				ClientSecret: "bar",
+			},
+			assert: func(t *testing.T, req, original *http.Request) {
+				t.Helper()
+
+				user, password, ok := req.BasicAuth()
+				require.True(t, ok)
+				assert.Equal(t, "foo", user)
+				assert.Equal(t, "bar", password)
+
+				_, _, ok = original.BasicAuth()
+				assert.False(t, ok)
+			},
+		},
+		"request body": {
+			strategy: &clientCredentialsAuthStrategy{
+				ClientID:     "foo",
+				ClientSecret: "bar",
+				AuthMethod:   AuthMethodRequestBody,
+			},
+			assert: func(t *testing.T, req, original *http.Request) {
+				t.Helper()
+
+				data, err := io.ReadAll(req.Body)
+				require.NoError(t, err)
+
+				values, err := url.ParseQuery(string(data))
+				require.NoError(t, err)
+
+				assert.Equal(t, "client_credentials", values.Get("grant_type"))
+				assert.Equal(t, "foo", values.Get("client_id"))
+				assert.Equal(t, "bar", values.Get("client_secret"))
+
+				// Direct fields must only have changed on the shallow copy.
+				assert.NotEqual(t, original.ContentLength, req.ContentLength)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			original, err := http.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"https://example.com",
+				strings.NewReader("grant_type=client_credentials"),
+			)
+			require.NoError(t, err)
+
+			req := *original
+
+			err = tc.strategy.Apply(&req)
+			require.NoError(t, err)
+
+			tc.assert(t, &req, original)
+		})
+	}
+}
+
+func TestClientCredentialsAuthStrategyHash(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		s1, s2      clientCredentialsAuthStrategy
+		expectEqual bool
+	}{
+		"same configuration": {
+			s1: clientCredentialsAuthStrategy{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				AuthMethod:   AuthMethodBasicAuth,
+			},
+			s2: clientCredentialsAuthStrategy{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				AuthMethod:   AuthMethodBasicAuth,
+			},
+			expectEqual: true,
+		},
+		"default and explicit basic auth method": {
+			s1: clientCredentialsAuthStrategy{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+			},
+			s2: clientCredentialsAuthStrategy{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				AuthMethod:   AuthMethodBasicAuth,
+			},
+			expectEqual: true,
+		},
+		"different client ids": {
+			s1: clientCredentialsAuthStrategy{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+			},
+			s2: clientCredentialsAuthStrategy{
+				ClientID:     "Baz",
+				ClientSecret: "Bar",
+			},
+		},
+		"different client secrets": {
+			s1: clientCredentialsAuthStrategy{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+			},
+			s2: clientCredentialsAuthStrategy{
+				ClientID:     "Foo",
+				ClientSecret: "Baz",
+			},
+		},
+		"different authentication methods": {
+			s1: clientCredentialsAuthStrategy{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				AuthMethod:   AuthMethodBasicAuth,
+			},
+			s2: clientCredentialsAuthStrategy{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				AuthMethod:   AuthMethodRequestBody,
+			},
+		},
+		"field boundaries are preserved": {
+			s1: clientCredentialsAuthStrategy{
+				ClientID:     "a",
+				ClientSecret: "bc",
+			},
+			s2: clientCredentialsAuthStrategy{
+				ClientID:     "ab",
+				ClientSecret: "c",
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			hash1 := tc.s1.Hash()
+			hash2 := tc.s2.Hash()
+
+			assert.NotEmpty(t, hash1)
+			assert.NotEmpty(t, hash2)
+
+			if tc.expectEqual {
+				assert.Equal(t, hash1, hash2)
+			} else {
+				assert.NotEqual(t, hash1, hash2)
+			}
+		})
+	}
+}
 
 func TestClientCredentialsToken(t *testing.T) {
 	t.Parallel()
@@ -133,7 +293,9 @@ func TestClientCredentialsToken(t *testing.T) {
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
+				val, err := base64.StdEncoding.DecodeString(
+					strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "),
+				)
 				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
@@ -207,7 +369,11 @@ func TestClientCredentialsToken(t *testing.T) {
 			},
 		},
 		"error while sending request": {
-			cfg: &Config{TokenURL: "http://127.0.0.1:11111", ClientID: "bar", ClientSecret: "foo"},
+			cfg: &Config{
+				TokenURL:     "http://127.0.0.1:11111",
+				ClientID:     "bar",
+				ClientSecret: "foo",
+			},
 			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
 				t.Helper()
 
@@ -237,12 +403,16 @@ func TestClientCredentialsToken(t *testing.T) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return(nil)
+				cch.EXPECT().
+					Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).
+					Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
+				val, err := base64.StdEncoding.DecodeString(
+					strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "),
+				)
 				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
@@ -306,7 +476,9 @@ func TestClientCredentialsToken(t *testing.T) {
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
+				val, err := base64.StdEncoding.DecodeString(
+					strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "),
+				)
 				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
@@ -355,12 +527,16 @@ func TestClientCredentialsToken(t *testing.T) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return(nil)
+				cch.EXPECT().
+					Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).
+					Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
+				val, err := base64.StdEncoding.DecodeString(
+					strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "),
+				)
 				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
@@ -409,7 +585,9 @@ func TestClientCredentialsToken(t *testing.T) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
-				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return(nil)
+				cch.EXPECT().
+					Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).
+					Return(nil)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -455,7 +633,9 @@ func TestClientCredentialsToken(t *testing.T) {
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
+				val, err := base64.StdEncoding.DecodeString(
+					strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "),
+				)
 				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
@@ -535,7 +715,9 @@ func TestClientCredentialsToken(t *testing.T) {
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
+				val, err := base64.StdEncoding.DecodeString(
+					strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "),
+				)
 				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
@@ -566,11 +748,13 @@ func TestClientCredentialsToken(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			endpointCalled = false
-			configureMocks := x.IfThenElse(tc.configureMocks != nil,
+			configureMocks := x.IfThenElse(
+				tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T, _ *mocks.CacheMock) { t.Helper() },
 			)
-			assertRequest = x.IfThenElse(tc.assertRequest != nil,
+			assertRequest = x.IfThenElse(
+				tc.assertRequest != nil,
 				tc.assertRequest,
 				func(t *testing.T, _ *http.Request) { t.Helper() },
 			)
@@ -593,20 +777,246 @@ func TestClientCredentialsToken(t *testing.T) {
 func TestClientCredentialsHash(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	s1 := &Config{
-		ClientID: "Foo", ClientSecret: "Bar",
+	for uc, tc := range map[string]struct {
+		c1, c2      *Config
+		expectEqual bool
+	}{
+		"same configuration": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				Scopes:       []string{"foo", "bar"},
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				Scopes:       []string{"foo", "bar"},
+			},
+			expectEqual: true,
+		},
+		"default and explicit basic auth method": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				AuthMethod:   AuthMethodBasicAuth,
+			},
+			expectEqual: true,
+		},
+		"different token url": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token-a",
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token-b",
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+			},
+		},
+		"different client ids": {
+			c1: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+			},
+			c2: &Config{
+				ClientID:     "Baz",
+				ClientSecret: "Bar",
+			},
+		},
+		"different client secrets": {
+			c1: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+			},
+			c2: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Baz",
+			},
+		},
+		"different authentication methods": {
+			c1: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				AuthMethod:   AuthMethodBasicAuth,
+			},
+			c2: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				AuthMethod:   AuthMethodRequestBody,
+			},
+		},
+		"field boundaries are preserved": {
+			c1: &Config{
+				ClientID:     "a",
+				ClientSecret: "bc",
+			},
+			c2: &Config{
+				ClientID:     "ab",
+				ClientSecret: "c",
+			},
+		},
+		"ambiguous scope sets": {
+			c1: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				Scopes:       []string{"foo", "bar"},
+			},
+			c2: &Config{
+				ClientID:     "Foo",
+				ClientSecret: "Bar",
+				Scopes:       []string{"foobar"},
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			hash1 := tc.c1.Hash()
+			hash2 := tc.c2.Hash()
+
+			assert.NotEmpty(t, hash1)
+			assert.NotEmpty(t, hash2)
+
+			if tc.expectEqual {
+				assert.Equal(t, hash1, hash2)
+			} else {
+				assert.NotEqual(t, hash1, hash2)
+			}
+		})
 	}
-	s2 := &Config{
-		ClientID: "Baz", ClientSecret: "Bar",
+}
+
+func TestClientCredentialsCalculateCacheKey(t *testing.T) {
+	t.Parallel()
+
+	durationPtr := func(value time.Duration) *time.Duration {
+		return &value
 	}
 
-	// WHEN
-	hash1 := s1.Hash()
-	hash2 := s2.Hash()
+	for uc, tc := range map[string]struct {
+		c1, c2      *Config
+		expectEqual bool
+	}{
+		"same configuration": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          durationPtr(5 * time.Second),
+				Scopes:       []string{"foo", "bar"},
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          durationPtr(5 * time.Second),
+				Scopes:       []string{"foo", "bar"},
+			},
+			expectEqual: true,
+		},
+		"default and explicit basic auth method": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				AuthMethod:   AuthMethodBasicAuth,
+			},
+			expectEqual: true,
+		},
+		"different authentication method": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				AuthMethod:   AuthMethodBasicAuth,
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				AuthMethod:   AuthMethodRequestBody,
+			},
+		},
+		"different cache ttl": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          durationPtr(5 * time.Second),
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          durationPtr(15 * time.Second),
+			},
+		},
+		"default and explicit cache ttl": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          durationPtr(5 * time.Second),
+			},
+		},
+		"field boundaries are preserved": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "a",
+				ClientSecret: "bc",
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "ab",
+				ClientSecret: "c",
+			},
+		},
+		"ambiguous scope sets": {
+			c1: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          durationPtr(5 * time.Second),
+				Scopes:       []string{"foo", "bar"},
+			},
+			c2: &Config{
+				TokenURL:     "https://example.com/token",
+				ClientID:     "client",
+				ClientSecret: "secret",
+				TTL:          durationPtr(5 * time.Second),
+				Scopes:       []string{"foobar"},
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			key1 := tc.c1.calculateCacheKey()
+			key2 := tc.c2.calculateCacheKey()
 
-	// THEN
-	assert.NotEmpty(t, hash1)
-	assert.NotEmpty(t, hash2)
-	assert.NotEqual(t, hash1, hash2)
+			assert.NotEmpty(t, key1)
+			assert.NotEmpty(t, key2)
+
+			if tc.expectEqual {
+				assert.Equal(t, key1, key2)
+			} else {
+				assert.NotEqual(t, key1, key2)
+			}
+		})
+	}
 }

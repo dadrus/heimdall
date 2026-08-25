@@ -18,9 +18,7 @@ package authenticators
 
 import (
 	"context"
-	"crypto/sha256"
 	"crypto/x509"
-	"encoding/hex"
 	"errors"
 	"net/http"
 	"net/url"
@@ -33,6 +31,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
@@ -45,7 +44,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/pkix"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 const defaultJWTAuthenticatorTTL = 10 * time.Minute
@@ -479,6 +477,7 @@ func (a *jwtAuthenticator) verifyTokenWithoutKID(
 	return rawClaims, nil
 }
 
+//nolint:cyclop
 func (a *jwtAuthenticator) getKey(
 	ctx pipeline.Context, keyID string, tokenClaims map[string]any, ep *endpoint.Endpoint,
 ) (*jose.JSONWebKey, error) {
@@ -486,8 +485,9 @@ func (a *jwtAuthenticator) getKey(
 	logger := zerolog.Ctx(ctx.Context())
 
 	var (
-		cacheKey string
-		jwks     *jose.JSONWebKeySet
+		cacheKey   string
+		jwk        *jose.JSONWebKey
+		keyFetched bool
 	)
 
 	req, err := a.createRequest(ctx.Context(), ep, tokenClaims)
@@ -496,32 +496,36 @@ func (a *jwtAuthenticator) getKey(
 	}
 
 	if a.isCacheEnabled() {
-		cacheKey = a.calculateCacheKey(ep, req.URL.String(), keyID)
+		cacheKey = a.calculateCacheKey(ep, req, keyID)
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
-			var jwk jose.JSONWebKey
+			var key jose.JSONWebKey
 
-			if err = json.Unmarshal(entry, &jwk); err == nil {
+			if err = json.Unmarshal(entry, &key); err == nil {
 				logger.Debug().Msg("Reusing JWK from cache")
 
-				return &jwk, nil
+				jwk = &key
 			}
 		}
 	}
 
-	jwks, err = a.fetchJWKS(ctx.Context(), ep.CreateClient(req.URL.Hostname()), req)
-	if err != nil {
-		return nil, err
+	if jwk == nil {
+		jwks, err := a.fetchJWKS(ctx.Context(), ep.CreateClient(req.URL.Hostname()), req)
+		if err != nil {
+			return nil, err
+		}
+
+		keys := jwks.Key(keyID)
+		if len(keys) != 1 {
+			return nil, errorchain.
+				NewWithMessagef(pipeline.ErrAuthentication,
+					"no (unique) key found for the keyID='%s' referenced in the JWT", keyID).
+				WithAspects(a)
+		}
+
+		jwk = &keys[0]
+		keyFetched = true
 	}
 
-	keys := jwks.Key(keyID)
-	if len(keys) != 1 {
-		return nil, errorchain.
-			NewWithMessagef(pipeline.ErrAuthentication,
-				"no (unique) key found for the keyID='%s' referenced in the JWT", keyID).
-			WithAspects(a)
-	}
-
-	jwk := &keys[0]
 	if err = a.validateJWK(jwk); err != nil {
 		return nil, errorchain.
 			NewWithMessagef(pipeline.ErrAuthentication, "JWK for keyID=%s is invalid", keyID).
@@ -529,11 +533,13 @@ func (a *jwtAuthenticator) getKey(
 			CausedBy(err)
 	}
 
-	if cacheTTL := a.getCacheTTL(jwk); cacheTTL > 0 {
-		data, _ := json.Marshal(jwk)
+	if keyFetched {
+		if cacheTTL := a.getCacheTTL(jwk); cacheTTL > 0 {
+			data, _ := json.Marshal(jwk)
 
-		if err = cch.Set(ctx.Context(), cacheKey, data, cacheTTL); err != nil {
-			logger.Warn().Err(err).Msg("Failed to cache JWK")
+			if err = cch.Set(ctx.Context(), cacheKey, data, cacheTTL); err != nil {
+				logger.Warn().Err(err).Msg("Failed to cache JWK")
+			}
 		}
 	}
 
@@ -626,15 +632,25 @@ func (a *jwtAuthenticator) verifyTokenWithKey(
 	return rawPayload, nil
 }
 
-func (a *jwtAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, renderedURL, reference string) string {
-	digest := sha256.New()
-	digest.Write(ep.Hash())
-	digest.Write(stringx.ToBytes(renderedURL))
-	digest.Write(stringx.ToBytes(reference))
+func (a *jwtAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, req *http.Request, reference string) string {
+	key := cachekey.New("jwt-authenticator:jwk")
 
-	var result [sha256.Size]byte
+	key.WriteString(req.Method)
+	key.WriteString(req.URL.String())
+	key.WriteHeader(req.Header)
+	key.WriteString(reference)
 
-	return hex.EncodeToString(digest.Sum(result[:0]))
+	key.WriteBool(ep.AuthStrategy != nil)
+	if ep.AuthStrategy != nil {
+		key.WriteBytes(ep.AuthStrategy.Hash())
+	}
+
+	key.WriteBool(a.ttl != nil)
+	if a.ttl != nil {
+		key.WriteInt64(int64(*a.ttl))
+	}
+
+	return key.SumString()
 }
 
 func (a *jwtAuthenticator) validateJWK(jwk *jose.JSONWebKey) error {

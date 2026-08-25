@@ -251,7 +251,10 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "oauth2 client credentials are not available")
-				assert.Empty(t, req.Header)
+
+				assert.Equal(t, "foo", req.Header.Get("X-Existing"))
+				assert.Empty(t, req.Header.Get("Authorization"))
+				assert.Empty(t, req.Header.Get("X-My-Header"))
 			},
 		},
 		"invalid credentials structure": {
@@ -289,7 +292,10 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, pipeline.ErrInternal)
 				require.ErrorContains(t, err, "oauth2 client credentials are not available")
-				assert.Empty(t, req.Header)
+
+				assert.Equal(t, "foo", req.Header.Get("X-Existing"))
+				assert.Empty(t, req.Header.Get("Authorization"))
+				assert.Empty(t, req.Header.Get("X-My-Header"))
 			},
 		},
 		"reusing response from cache, no custom header": {
@@ -333,6 +339,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.False(t, tokenEndpointCalled)
+				assert.Equal(t, "foo", req.Header.Get("X-Existing"))
 				assert.Equal(t, "Bearer foobar", req.Header.Get("Authorization"))
 			},
 		},
@@ -366,7 +373,9 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 					Get(mock.Anything, mock.Anything).
 					Return(nil, assert.AnError)
 			},
-			assertRequest: func(t *testing.T, _ *http.Request) { t.Helper() },
+			assertRequest: func(t *testing.T, _ *http.Request) {
+				t.Helper()
+			},
 			buildResponse: func(t *testing.T) (any, int) {
 				t.Helper()
 
@@ -377,7 +386,10 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 
 				assert.True(t, tokenEndpointCalled)
 				require.Error(t, err)
-				assert.Empty(t, req.Header)
+
+				assert.Equal(t, "foo", req.Header.Get("X-Existing"))
+				assert.Empty(t, req.Header.Get("Authorization"))
+				assert.Empty(t, req.Header.Get("X-My-Header"))
 			},
 		},
 		"full configuration, no cache hit and token has expires_in claim": {
@@ -419,7 +431,9 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				val, err := base64.StdEncoding.DecodeString(strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "))
+				val, err := base64.StdEncoding.DecodeString(
+					strings.TrimPrefix(req.Header.Get("Authorization"), "Basic "),
+				)
 				require.NoError(t, err)
 
 				clientIDAndSecret := strings.Split(string(val), ":")
@@ -448,6 +462,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.True(t, tokenEndpointCalled)
+				assert.Equal(t, "foo", req.Header.Get("X-Existing"))
 				assert.Equal(t, "Foo foobar", req.Header.Get("X-My-Header"))
 			},
 		},
@@ -457,12 +472,14 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 
 			endpointCalled := false
 
-			assertRequest := x.IfThenElse(tc.assertRequest != nil,
+			assertRequest := x.IfThenElse(
+				tc.assertRequest != nil,
 				tc.assertRequest,
 				func(t *testing.T, _ *http.Request) { t.Helper() },
 			)
 
-			buildResponse := x.IfThenElse(tc.buildResponse != nil,
+			buildResponse := x.IfThenElse(
+				tc.buildResponse != nil,
 				tc.buildResponse,
 				func(t *testing.T) (any, int) {
 					t.Helper()
@@ -540,7 +557,7 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 			err = cc.init(appCtx)
 			require.NoError(t, err)
 
-			req, err := http.NewRequestWithContext(
+			originalReq, err := http.NewRequestWithContext(
 				ctx,
 				http.MethodPost,
 				"http://example.com/test?bar=foo",
@@ -548,9 +565,118 @@ func TestOAuth2ClientCredentialsApply(t *testing.T) {
 			)
 			require.NoError(t, err)
 
-			err = cc.Apply(req)
+			originalReq.Header.Set("X-Existing", "foo")
 
-			tc.assert(t, err, endpointCalled, req)
+			// Intentionally use a shallow copy. Apply must not mutate the
+			// original request's Header map.
+			req := *originalReq
+
+			err = cc.Apply(&req)
+
+			tc.assert(t, err, endpointCalled, &req)
+
+			assert.Equal(t, "foo", originalReq.Header.Get("X-Existing"))
+			assert.Empty(t, originalReq.Header.Get("Authorization"))
+			assert.Empty(t, originalReq.Header.Get("X-My-Header"))
+		})
+	}
+}
+
+func TestOAuth2ClientCredentialsHash(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		header1     *headerConfig
+		header2     *headerConfig
+		expectEqual bool
+	}{
+		"same configuration": {
+			header1: &headerConfig{
+				Name:   "X-Token",
+				Scheme: "Bearer",
+			},
+			header2: &headerConfig{
+				Name:   "X-Token",
+				Scheme: "Bearer",
+			},
+			expectEqual: true,
+		},
+		"default and explicit default header": {
+			header1: nil,
+			header2: &headerConfig{
+				Name:   "Authorization",
+				Scheme: "Bearer",
+			},
+			expectEqual: true,
+		},
+		"different header name": {
+			header1: &headerConfig{
+				Name:   "X-Token",
+				Scheme: "Bearer",
+			},
+			header2: &headerConfig{
+				Name:   "X-Access-Token",
+				Scheme: "Bearer",
+			},
+		},
+		"different scheme": {
+			header1: &headerConfig{
+				Name:   "X-Token",
+				Scheme: "Bearer",
+			},
+			header2: &headerConfig{
+				Name:   "X-Token",
+				Scheme: "Token",
+			},
+		},
+		"empty and fixed scheme": {
+			header1: &headerConfig{
+				Name: "X-Token",
+			},
+			header2: &headerConfig{
+				Name:   "X-Token",
+				Scheme: "Bearer",
+			},
+		},
+		"field boundaries are preserved": {
+			header1: &headerConfig{
+				Name:   "a",
+				Scheme: "bc",
+			},
+			header2: &headerConfig{
+				Name:   "ab",
+				Scheme: "c",
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			strategy1 := newInitializedOAuth2ClientCredentials(
+				t,
+				tc.header1,
+				"client",
+				"secret",
+			)
+
+			strategy2 := newInitializedOAuth2ClientCredentials(
+				t,
+				tc.header2,
+				"client",
+				"secret",
+			)
+
+			hash1 := strategy1.Hash()
+			hash2 := strategy2.Hash()
+
+			assert.NotEmpty(t, hash1)
+			assert.NotEmpty(t, hash2)
+
+			if tc.expectEqual {
+				assert.Equal(t, hash1, hash2)
+			} else {
+				assert.NotEqual(t, hash1, hash2)
+			}
 		})
 	}
 }
@@ -621,4 +747,62 @@ func TestOAuth2ClientCredentialsCreateClientCredentialsConfig(t *testing.T) {
 			tc.assert(t, got, err)
 		})
 	}
+}
+
+func newInitializedOAuth2ClientCredentials(
+	t *testing.T,
+	header *headerConfig,
+	clientID string,
+	clientSecret string,
+) *OAuth2ClientCredentials {
+	t.Helper()
+
+	secretConfig := config.Secret{
+		Source:   "foo",
+		Selector: "bar",
+	}
+
+	creds := types.NewCredentials("bar", map[string]any{
+		"client_id":     clientID,
+		"client_secret": clientSecret,
+	})
+
+	sr := secretsmocks.NewResolverMock(t)
+	handle := secretsmocks.NewCredentialsHandleMock(t)
+
+	sr.EXPECT().
+		Credentials(secrets.Reference{
+			Source:   secretConfig.Source,
+			Selector: secretConfig.Selector,
+		}).
+		Return(handle, nil)
+
+	handle.EXPECT().
+		OnUpdate(mock.MatchedBy(func(cb secrets.UpdateFunc[secrets.Credentials]) bool {
+			err := cb(t.Context(), creds)
+			require.NoError(t, err)
+
+			return true
+		}))
+
+	validator, err := validation.NewValidator(
+		validation.WithTagValidator(config.EnforcementSettings{}),
+	)
+	require.NoError(t, err)
+
+	appCtx := app.NewContextMock(t)
+	appCtx.EXPECT().SecretResolver().Return(sr)
+	appCtx.EXPECT().DecoderFactory().Maybe().
+		Return(encoding.NewDecoderFactory(encoding.ValidatorFunc(validator.ValidateStruct)))
+
+	strategy := &OAuth2ClientCredentials{
+		TokenURL:    "https://example.com/token",
+		Credentials: secretConfig,
+		AuthMethod:  clientcredentials.AuthMethodBasicAuth,
+		Header:      header,
+	}
+
+	require.NoError(t, strategy.init(appCtx))
+
+	return strategy
 }

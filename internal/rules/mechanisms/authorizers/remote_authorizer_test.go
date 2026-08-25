@@ -41,6 +41,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	endpointmocks "github.com/dadrus/heimdall/internal/rules/endpoint/mocks"
 	endpointtestsupport "github.com/dadrus/heimdall/internal/rules/endpoint/testsupport"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
@@ -464,14 +465,18 @@ values:
 				assert.NotNil(t, configured)
 				assert.Equal(t, prototype.e, configured.e)
 				require.NotNil(t, configured.payload)
+
 				val, err := configured.payload.Render(nil)
 				require.NoError(t, err)
+
 				assert.Empty(t, prototype.expressions)
 				require.NotEmpty(t, configured.expressions)
+
 				err = configured.expressions.eval(map[string]any{
 					"Payload": map[string]any{"foo": "bar"},
 				}, configured)
 				require.NoError(t, err)
+
 				assert.Equal(t, "Baz", val)
 				assert.Len(t, configured.headersForUpstream, 2)
 				assert.Contains(t, configured.headersForUpstream, "Bar")
@@ -523,15 +528,20 @@ values:
 				res, err := configured.v.Render(map[string]any{})
 				require.NoError(t, err)
 				assert.Equal(t, map[string]string{"bar": "foo", "foo": "bar"}, res)
+
 				require.NotNil(t, configured.payload)
+
 				val, err := configured.payload.Render(nil)
 				require.NoError(t, err)
+
 				assert.Empty(t, prototype.expressions)
 				require.NotEmpty(t, configured.expressions)
+
 				err = configured.expressions.eval(map[string]any{
 					"Payload": map[string]any{"foo": "bar"},
 				}, configured)
 				require.NoError(t, err)
+
 				assert.Equal(t, "Baz", val)
 				assert.Len(t, configured.headersForUpstream, 2)
 				assert.Contains(t, configured.headersForUpstream, "Bar")
@@ -591,6 +601,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 	var (
 		authorizationEndpointCalled bool
+		redirectEndpointCalled      bool
 		checkRequest                func(req *http.Request)
 
 		responseHeaders     map[string]string
@@ -601,6 +612,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 	env, err := cel.NewEnv(cellib.Library())
 	require.NoError(t, err)
+
+	redirectSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		redirectEndpointCalled = true
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer redirectSrv.Close()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authorizationEndpointCalled = true
@@ -614,6 +632,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		if responseContent != nil {
 			w.Header().Set("Content-Type", responseContentType)
 			w.Header().Set("Content-Length", strconv.Itoa(len(responseContent)))
+
 			_, err := w.Write(responseContent)
 			assert.NoError(t, err)
 		}
@@ -628,11 +647,12 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		instructServer   func(t *testing.T)
 		configureContext func(t *testing.T, ctx *pipelinemocks.ContextMock)
 		configureCache   func(t *testing.T, cch *mocks.CacheMock, authorizer *remoteAuthorizer, sub pipeline.Subject)
-		assert           func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any)
+		assert           func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results)
 	}{
 		"successful with payload and with header, without payload from server and without header " +
 			"forwarding and with disabled cache": {
 			authorizer: &remoteAuthorizer{
+				id: "authorizer",
 				e: endpointtestsupport.EndpointValue(t, srv.URL,
 					endpoint.WithHeader("Foo-Bar", "{{ .Subject.Attributes.bar }}"),
 				),
@@ -642,7 +662,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					return values.Values{"foo": tpl}
 				}(),
 				payload: func() template.Template {
-					tpl, _ := template.New("{{ .Subject.ID }}-{{ .Values.foo }}-{{ .Outputs.foo }}")
+					tpl, _ := template.New("{{ .Subject.ID }}-{{ .Values.foo }}-{{ .Outputs.foo }}-{{ .Results.foo.Payload }}")
 
 					return tpl
 				}(),
@@ -661,7 +681,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				checkRequest = func(req *http.Request) {
 					t.Helper()
 
-					assert.Equal(t, "POST", req.Method)
+					assert.Equal(t, http.MethodPost, req.Method)
 					assert.Equal(t, "baz", req.Header.Get("Foo-Bar"))
 					assert.Empty(t, req.Header.Get("Content-Type"))
 					assert.Empty(t, req.Header.Get("Accept"))
@@ -669,7 +689,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 					data, err := io.ReadAll(req.Body)
 					require.NoError(t, err)
 
-					assert.Equal(t, "my-id-bar-bar", string(data))
+					assert.Equal(t, "my-id-bar-bar-bar", string(data))
 				}
 			},
 			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
@@ -677,7 +697,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -685,12 +705,21 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.True(t, authorizationEndpointCalled)
 				assert.Len(t, sub.Attributes(), 1)
 				assert.Equal(t, "baz", sub.Attributes()["bar"])
+
 				assert.Len(t, outputs, 1)
 				assert.Equal(t, "bar", outputs["foo"])
+
+				assert.Len(t, results, 2)
+
+				result := results["authorizer"]
+				require.NotNil(t, result)
+				assert.NotEmpty(t, result.Header("Date"))
+				assert.NotEmpty(t, result.Header("Content-Length"))
+				assert.Empty(t, result.Payload)
 			},
 		},
-		"successful with json payload and with header, with json payload from server and with header" +
-			" forwarding and with disabled cache": {
+		"successful with json payload and with header, with json payload from server and with header " +
+			"forwarding and with disabled cache": {
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
 				e: endpointtestsupport.EndpointValue(t, srv.URL,
@@ -717,7 +746,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				checkRequest = func(req *http.Request) {
 					t.Helper()
 
-					assert.Equal(t, "POST", req.Method)
+					assert.Equal(t, http.MethodPost, req.Method)
 					assert.Equal(t, "baz", req.Header.Get("Foo-Bar"))
 					assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
@@ -735,6 +764,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				}
 
 				responseCode = http.StatusOK
+
 				rawData, err := json.Marshal(map[string]any{
 					"access_granted": true,
 					"permissions":    []string{"read_foo", "write_foo"},
@@ -752,7 +782,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -763,10 +793,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				assert.Len(t, outputs, 2)
 				assert.Equal(t, "bar", outputs["foo"])
+
 				attrs := outputs["authorizer"]
 				assert.NotEmpty(t, attrs)
+
 				authorizerAttrs, ok := attrs.(map[string]any)
 				require.True(t, ok)
+
 				assert.Len(t, authorizerAttrs, 3)
 				assert.Equal(t, true, authorizerAttrs["access_granted"]) //nolint:testifylint
 				assert.Len(t, authorizerAttrs["permissions"], 2)
@@ -774,6 +807,24 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.Contains(t, authorizerAttrs["permissions"], "write_foo")
 				assert.Len(t, authorizerAttrs["groups"], 1)
 				assert.Contains(t, authorizerAttrs["groups"], "Foo-Users")
+
+				assert.Len(t, results, 2)
+
+				result := results["authorizer"]
+				require.NotNil(t, result)
+
+				assert.NotEmpty(t, result.Header("Date"))
+				assert.NotEmpty(t, result.Header("Content-Length"))
+				assert.Equal(t, "application/json", result.Header("Content-Type"))
+				assert.NotEmpty(t, result.Header("X-Foo-Bar"))
+
+				payload, ok := result.Payload.(map[string]any)
+				require.True(t, ok)
+
+				assert.Len(t, payload, 3)
+				assert.Contains(t, payload, "access_granted")
+				assert.Contains(t, payload, "groups")
+				assert.Contains(t, payload, "permissions")
 			},
 		},
 		"successful with www-form-urlencoded payload and without header, without payload from server " +
@@ -808,7 +859,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				checkRequest = func(req *http.Request) {
 					t.Helper()
 
-					assert.Equal(t, "POST", req.Method)
+					assert.Equal(t, http.MethodPost, req.Method)
 					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Content-Type"))
 
 					data, err := io.ReadAll(req.Body)
@@ -845,7 +896,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 						return err == nil && ai.Payload == nil && len(ai.Headers.Get("X-Foo-Bar")) != 0
 					}), auth.ttl).Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -855,11 +906,13 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.Equal(t, "baz", sub.Attributes()["bar"])
 
 				assert.Empty(t, outputs["authorizer"])
+				assert.NotEmpty(t, results["authorizer"])
 			},
 		},
 		"successful without headers and payload and with cache": {
 			authorizer: &remoteAuthorizer{
-				id: "authorizer",
+				name: "authorizer",
+				id:   "authorizer",
 				e: endpointtestsupport.EndpointValue(t, srv.URL+"/{{ .Subject.ID }}",
 					endpoint.WithHeader("Accept", "application/x-www-form-urlencoded"),
 				),
@@ -877,7 +930,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				checkRequest = func(req *http.Request) {
 					t.Helper()
 
-					assert.Equal(t, "POST", req.Method)
+					assert.Equal(t, http.MethodPost, req.Method)
 					assert.Equal(t, "application/x-www-form-urlencoded", req.Header.Get("Accept"))
 					assert.True(t, strings.HasSuffix(req.URL.Path, "/foobar"))
 				}
@@ -889,15 +942,25 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, sub pipeline.Subject) {
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, _ pipeline.Subject) {
 				t.Helper()
 
-				cacheKey := auth.calculateCacheKey(sub, nil, "")
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					srv.URL+"/foobar",
+					nil,
+				)
+				require.NoError(t, err)
+
+				req.Header.Set("Accept", "application/x-www-form-urlencoded")
+
+				cacheKey := auth.calculateCacheKey(req, "")
 
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, cacheKey, mock.Anything, auth.ttl).Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -908,6 +971,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				assert.Len(t, outputs, 1)
 				assert.Equal(t, "bar", outputs["foo"])
+				assert.NotEmpty(t, results["authorizer"])
 			},
 		},
 		"successfully reuse cache": {
@@ -952,7 +1016,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawInfo, nil)
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -963,12 +1027,21 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				assert.Len(t, outputs, 2)
 				assert.Equal(t, "bar", outputs["foo"])
+
 				attrs := outputs["authorizer"]
 				assert.NotEmpty(t, attrs)
+
 				authorizerAttrs, ok := attrs.(map[string]any)
 				require.True(t, ok)
+
 				assert.Len(t, authorizerAttrs, 1)
 				assert.Equal(t, "bar", authorizerAttrs["foo"])
+
+				result := results["authorizer"]
+				require.NotNil(t, result)
+				assert.Equal(t, map[string]string{"foo": "bar"}, result.Payload)
+				assert.Equal(t, "HeyFoo", result.Header("X-Foo-Bar"))
+				assert.Equal(t, "HeyBar", result.Header("X-Bar-Foo"))
 			},
 		},
 		"with failed authorization": {
@@ -979,9 +1052,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				),
 			},
 			subject: pipeline.Subject{
-				"default": &pipeline.Principal{
-					ID: "foo",
-				},
+				"default": &pipeline.Principal{ID: "foo"},
 			},
 			instructServer: func(t *testing.T) {
 				t.Helper()
@@ -997,16 +1068,61 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
 				t.Helper()
 
 				require.Error(t, err)
-
 				require.ErrorIs(t, err, pipeline.ErrAuthorization)
 				require.ErrorContains(t, err, "authorization failed")
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
+
+				assert.Equal(t, "authz", identifier.ID())
+			},
+		},
+		"with redirect response": {
+			authorizer: &remoteAuthorizer{
+				id: "authz",
+				e:  endpointtestsupport.EndpointValue(t, srv.URL),
+			},
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{ID: "foo"},
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				responseHeaders = map[string]string{
+					"Location": redirectSrv.URL,
+				}
+				responseCode = http.StatusFound
+			},
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
+			assert: func(
+				t *testing.T,
+				err error,
+				_ pipeline.Subject,
+				_ map[string]any,
+				_ pipeline.Results,
+			) {
+				t.Helper()
+
+				assert.True(t, authorizationEndpointCalled)
+				assert.False(t, redirectEndpointCalled)
+
+				require.Error(t, err)
+
+				require.ErrorIs(t, err, pipeline.ErrAuthorization)
+				require.ErrorContains(t, err, "authorization failed")
+				require.ErrorContains(t, err, strconv.Itoa(http.StatusFound))
+
+				var identifier interface{ ID() string }
+				require.ErrorAs(t, err, &identifier)
+
 				assert.Equal(t, "authz", identifier.ID())
 			},
 		},
@@ -1035,15 +1151,20 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
 				t.Helper()
 
 				require.NoError(t, err)
 
 				assert.True(t, authorizationEndpointCalled)
 				assert.Empty(t, sub.Attributes())
+
 				assert.Len(t, outputs, 1)
 				assert.Equal(t, "Hi Foo", outputs["foo"])
+
+				result := results["foo"]
+				require.NotNil(t, result)
+				assert.Equal(t, "Hi Foo", result.Payload)
 			},
 		},
 		"with communication error (dns)": {
@@ -1057,16 +1178,14 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				}(),
 			},
 			subject: pipeline.Subject{
-				"default": &pipeline.Principal{
-					ID: "foo",
-				},
+				"default": &pipeline.Principal{ID: "foo"},
 			},
 			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -1077,6 +1196,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
+
 				assert.Equal(t, "authz", identifier.ID())
 			},
 		},
@@ -1111,7 +1231,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				checkRequest = func(req *http.Request) {
 					t.Helper()
 
-					assert.Equal(t, "POST", req.Method)
+					assert.Equal(t, http.MethodPost, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 
@@ -1128,6 +1248,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				}
 
 				responseCode = http.StatusOK
+
 				rawData, err := json.Marshal(map[string]any{
 					"access_granted": true,
 					"permissions":    []string{"read_foo", "write_foo"},
@@ -1143,7 +1264,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
 				t.Helper()
 
 				assert.True(t, authorizationEndpointCalled)
@@ -1154,6 +1275,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
+
 				assert.Equal(t, "authz", identifier.ID())
 			},
 		},
@@ -1188,7 +1310,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				checkRequest = func(req *http.Request) {
 					t.Helper()
 
-					assert.Equal(t, "POST", req.Method)
+					assert.Equal(t, http.MethodPost, req.Method)
 					assert.Equal(t, "application/json", req.Header.Get("Content-Type"))
 					assert.Equal(t, "application/json", req.Header.Get("Accept"))
 
@@ -1205,6 +1327,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				}
 
 				responseCode = http.StatusOK
+
 				rawData, err := json.Marshal(map[string]any{
 					"access_granted": true,
 					"permissions":    []string{"read_foo", "write_foo"},
@@ -1220,7 +1343,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
 				t.Helper()
 
 				assert.True(t, authorizationEndpointCalled)
@@ -1228,12 +1351,16 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				require.Empty(t, sub.Attributes())
+
 				assert.Len(t, outputs, 2)
 				assert.Equal(t, "bar", outputs["foo"])
+
 				attrs := outputs["authorizer"]
 				assert.NotEmpty(t, attrs)
+
 				authorizerAttrs, ok := attrs.(map[string]any)
 				require.True(t, ok)
+
 				assert.Len(t, authorizerAttrs, 3)
 				assert.Equal(t, true, authorizerAttrs["access_granted"]) //nolint:testifylint
 				assert.Len(t, authorizerAttrs["permissions"], 2)
@@ -1241,6 +1368,14 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.Contains(t, authorizerAttrs["permissions"], "write_foo")
 				assert.Len(t, authorizerAttrs["groups"], 1)
 				assert.Contains(t, authorizerAttrs["groups"], "Foo-Users")
+
+				result := results["authorizer"]
+				require.NotNil(t, result)
+
+				payload, ok := result.Payload.(map[string]any)
+				require.True(t, ok)
+
+				assert.Equal(t, true, payload["access_granted"]) //nolint:testifylint
 			},
 		},
 		"with payload rendering error": {
@@ -1265,7 +1400,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
 				t.Helper()
 
 				assert.False(t, authorizationEndpointCalled)
@@ -1276,6 +1411,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
+
 				assert.Equal(t, "authorizer", identifier.ID())
 			},
 		},
@@ -1301,7 +1437,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
 				t.Helper()
 
 				assert.False(t, authorizationEndpointCalled)
@@ -1312,38 +1448,200 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				var identifier interface{ ID() string }
 				require.ErrorAs(t, err, &identifier)
+
 				assert.Equal(t, "authorizer", identifier.ID())
+			},
+		},
+		"failed with positive cache hit due to authorization expression": {
+			authorizer: &remoteAuthorizer{
+				name: "authz",
+				id:   "authz",
+				e:    endpointtestsupport.EndpointValue(t, srv.URL),
+				expressions: func() []*cellib.CompiledExpression {
+					exp, err := cellib.CompileExpression(env, "Payload.role == 'admin'", "admin role required")
+					require.NoError(t, err)
+
+					return []*cellib.CompiledExpression{exp}
+				}(),
+				ttl: 20 * time.Second,
+			},
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
+					ID:         "my-id",
+					Attributes: map[string]any{},
+				},
+			},
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, _ pipeline.Subject) {
+				t.Helper()
+
+				rawInfo, err := json.Marshal(authorizationInformation{
+					Payload: map[string]any{
+						"role": "user",
+					},
+				})
+				require.NoError(t, err)
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					srv.URL,
+					nil,
+				)
+				require.NoError(t, err)
+
+				cacheKey := auth.calculateCacheKey(req, "")
+
+				cch.EXPECT().Get(mock.Anything, cacheKey).Return(rawInfo, nil)
+			},
+			assert: func(t *testing.T, err error, _ pipeline.Subject, outputs map[string]any, results pipeline.Results) {
+				t.Helper()
+
+				assert.False(t, authorizationEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrAuthorization)
+				require.ErrorContains(t, err, "admin role required")
+
+				var identifier interface{ ID() string }
+				require.ErrorAs(t, err, &identifier)
+
+				assert.Equal(t, "authz", identifier.ID())
+
+				assert.NotContains(t, outputs, "authz")
+				assert.NotContains(t, results, "authz")
+			},
+		},
+		"with rendered endpoint header and cache miss due to different output": {
+			authorizer: &remoteAuthorizer{
+				name: "authorizer",
+				id:   "authorizer",
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+					endpoint.WithHeader(
+						"X-Tenant-ID",
+						"{{ .Outputs.foo }}",
+					),
+				),
+				ttl: 5 * time.Second,
+			},
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
+					ID:         "Foo",
+					Attributes: map[string]any{"bar": "baz"},
+				},
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "bar", req.Header.Get("X-Tenant-ID"))
+				}
+
+				responseContentType = "application/json"
+				responseContent = []byte(`{"tenant":"bar"}`)
+				responseCode = http.StatusOK
+			},
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, _ pipeline.Subject) {
+				t.Helper()
+
+				previousReq, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodGet,
+					srv.URL,
+					nil,
+				)
+				require.NoError(t, err)
+
+				previousReq.Header.Set("X-Tenant-ID", "tenant-a")
+
+				currentReq, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodGet,
+					srv.URL,
+					nil,
+				)
+				require.NoError(t, err)
+
+				currentReq.Header.Set("X-Tenant-ID", "bar")
+
+				previousCacheKey := auth.calculateCacheKey(previousReq, "")
+				currentCacheKey := auth.calculateCacheKey(currentReq, "")
+
+				require.NotEqual(t, previousCacheKey, currentCacheKey)
+
+				cch.EXPECT().Get(mock.Anything, currentCacheKey).Return(nil, assert.AnError)
+				cch.EXPECT().Set(mock.Anything, currentCacheKey, mock.Anything, auth.ttl).Return(nil)
+			},
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
+				t.Helper()
+
+				assert.True(t, authorizationEndpointCalled)
+
+				require.NoError(t, err)
+				assert.Len(t, sub.Attributes(), 1)
+
+				require.Len(t, outputs, 2)
+				assert.Equal(t, map[string]any{"tenant": "bar"}, outputs["authorizer"])
+
+				require.Len(t, results, 2)
+
+				result := results["authorizer"]
+				require.NotNil(t, result)
+
+				assert.Equal(t, map[string]any{"tenant": "bar"}, result.Payload)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			authorizationEndpointCalled = false
+			redirectEndpointCalled = false
 			responseHeaders = nil
 			responseContentType = ""
 			responseContent = nil
 
 			checkRequest = func(*http.Request) { t.Helper() }
 
-			instructServer := x.IfThenElse(tc.instructServer != nil,
+			instructServer := x.IfThenElse(
+				tc.instructServer != nil,
 				tc.instructServer,
-				func(t *testing.T) { t.Helper() })
+				func(t *testing.T) { t.Helper() },
+			)
 
-			configureContext := x.IfThenElse(tc.configureContext != nil,
+			configureContext := x.IfThenElse(
+				tc.configureContext != nil,
 				tc.configureContext,
-				func(t *testing.T, _ *pipelinemocks.ContextMock) { t.Helper() })
+				func(t *testing.T, _ *pipelinemocks.ContextMock) {
+					t.Helper()
+				},
+			)
 
-			configureCache := x.IfThenElse(tc.configureCache != nil,
+			configureCache := x.IfThenElse(
+				tc.configureCache != nil,
 				tc.configureCache,
 				func(t *testing.T, _ *mocks.CacheMock, _ *remoteAuthorizer, _ pipeline.Subject) {
 					t.Helper()
-				})
+				},
+			)
 
 			cch := mocks.NewCacheMock(t)
 
 			ctx := pipelinemocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
+			ctx.EXPECT().Results().Return(pipeline.Results{"foo": pipeline.NewResult("bar")})
 
 			configureContext(t, ctx)
 			configureCache(t, cch, tc.authorizer, tc.subject)
@@ -1353,7 +1651,372 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			err = tc.authorizer.Execute(ctx, tc.subject)
 
 			// THEN
-			tc.assert(t, err, tc.subject, ctx.Outputs())
+			tc.assert(t, err, tc.subject, ctx.Outputs(), ctx.Results())
+		})
+	}
+}
+
+func TestRemoteAuthorizerCalculateCacheKey(t *testing.T) {
+	t.Parallel()
+
+	authStrategyA := endpointmocks.NewAuthenticationStrategyMock(t)
+	authStrategyA.EXPECT().Hash().Return([]byte("strategy-a"))
+
+	authStrategyB := endpointmocks.NewAuthenticationStrategyMock(t)
+	authStrategyB.EXPECT().Hash().Return([]byte("strategy-b"))
+
+	newAuthorizer := func(name string, id string, ttl time.Duration) *remoteAuthorizer {
+		t.Helper()
+
+		return &remoteAuthorizer{
+			name: name,
+			id:   id,
+			ttl:  ttl,
+		}
+	}
+
+	newRequest := func(method string, rawURL string, headers map[string]string) *http.Request {
+		t.Helper()
+
+		req, err := http.NewRequestWithContext(t.Context(), method, rawURL, nil)
+		require.NoError(t, err)
+
+		for name, value := range headers {
+			req.Header.Set(name, value)
+		}
+
+		return req
+	}
+
+	for uc, tc := range map[string]struct {
+		authorizer1 *remoteAuthorizer
+		authorizer2 *remoteAuthorizer
+		request1    *http.Request
+		request2    *http.Request
+		payload1    string
+		payload2    string
+		expectEqual bool
+	}{
+		"same effective request": {
+			authorizer1: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				5*time.Second,
+			),
+			authorizer2: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodPost,
+				"https://example.com/authorize",
+				map[string]string{
+					"Content-Type": "application/json",
+					"X-Tenant-ID":  "tenant-a",
+				},
+			),
+			request2: newRequest(
+				http.MethodPost,
+				"https://example.com/authorize",
+				map[string]string{
+					"Content-Type": "application/json",
+					"X-Tenant-ID":  "tenant-a",
+				},
+			),
+			payload1:    `{"foo":"bar"}`,
+			payload2:    `{"foo":"bar"}`,
+			expectEqual: true,
+		},
+		"different step id": {
+			authorizer1: newAuthorizer(
+				"authorizer",
+				"step-a",
+				5*time.Second,
+			),
+			authorizer2: newAuthorizer(
+				"authorizer",
+				"step-b",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				nil,
+			),
+			expectEqual: true,
+		},
+		"different authorizer name": {
+			authorizer1: newAuthorizer(
+				"authorizer-a",
+				"step",
+				5*time.Second,
+			),
+			authorizer2: newAuthorizer(
+				"authorizer-b",
+				"step",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				nil,
+			),
+		},
+		"different ttl": {
+			authorizer1: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				5*time.Second,
+			),
+			authorizer2: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				10*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				nil,
+			),
+		},
+		"different request method": {
+			authorizer1: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				5*time.Second,
+			),
+			authorizer2: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				nil,
+			),
+			request2: newRequest(
+				http.MethodPost,
+				"https://example.com/authorize",
+				nil,
+			),
+		},
+		"different rendered url": {
+			authorizer1: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				5*time.Second,
+			),
+			authorizer2: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/tenant-a",
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/tenant-b",
+				nil,
+			),
+		},
+		"different header value": {
+			authorizer1: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				5*time.Second,
+			),
+			authorizer2: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				map[string]string{
+					"X-Tenant-ID": "tenant-a",
+				},
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				map[string]string{
+					"X-Tenant-ID": "tenant-b",
+				},
+			),
+		},
+		"different header name": {
+			authorizer1: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				5*time.Second,
+			),
+			authorizer2: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				map[string]string{
+					"X-Tenant-ID": "foo",
+				},
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				map[string]string{
+					"X-Organization-ID": "foo",
+				},
+			),
+		},
+		"different payload": {
+			authorizer1: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				5*time.Second,
+			),
+			authorizer2: newAuthorizer(
+				"authorizer",
+				"authorizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodPost,
+				"https://example.com/authorize",
+				nil,
+			),
+			request2: newRequest(
+				http.MethodPost,
+				"https://example.com/authorize",
+				nil,
+			),
+			payload1: `{"tenant":"tenant-a"}`,
+			payload2: `{"tenant":"tenant-b"}`,
+		},
+		"different authentication strategy": {
+			authorizer1: &remoteAuthorizer{
+				name: "authorizer",
+				id:   "authorizer",
+				ttl:  5 * time.Second,
+				e: endpoint.Endpoint{
+					AuthStrategy: authStrategyA,
+				},
+			},
+			authorizer2: &remoteAuthorizer{
+				name: "authorizer",
+				id:   "authorizer",
+				ttl:  5 * time.Second,
+				e: endpoint.Endpoint{
+					AuthStrategy: authStrategyB,
+				},
+			},
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				nil,
+			),
+		},
+		"different response headers to forward": {
+			authorizer1: &remoteAuthorizer{
+				name:               "authorizer",
+				id:                 "authorizer",
+				ttl:                5 * time.Second,
+				headersForUpstream: []string{"X-Foo"},
+			},
+			authorizer2: &remoteAuthorizer{
+				name:               "authorizer",
+				id:                 "authorizer",
+				ttl:                5 * time.Second,
+				headersForUpstream: []string{"X-Bar"},
+			},
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				nil,
+			),
+			expectEqual: true,
+		},
+		"same effective request despite different endpoint configuration": {
+			authorizer1: &remoteAuthorizer{
+				name: "authorizer",
+				id:   "authorizer",
+				ttl:  5 * time.Second,
+				e: endpointtestsupport.EndpointValue(
+					t,
+					"https://example.com/{{ .Values.path }}",
+				),
+			},
+			authorizer2: &remoteAuthorizer{
+				name: "authorizer",
+				id:   "authorizer",
+				ttl:  5 * time.Second,
+				e: endpointtestsupport.EndpointValue(
+					t,
+					"https://example.com/authorize",
+				),
+			},
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/authorize",
+				nil,
+			),
+			expectEqual: true,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// WHEN
+			key1 := tc.authorizer1.calculateCacheKey(
+				tc.request1,
+				tc.payload1,
+			)
+			key2 := tc.authorizer2.calculateCacheKey(
+				tc.request2,
+				tc.payload2,
+			)
+
+			// THEN
+			if tc.expectEqual {
+				assert.Equal(t, key1, key2)
+			} else {
+				assert.NotEqual(t, key1, key2)
+			}
 		})
 	}
 }

@@ -17,9 +17,6 @@
 package contextualizers
 
 import (
-	"crypto/sha256"
-	"encoding/binary"
-	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
@@ -32,6 +29,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
@@ -141,7 +139,7 @@ func (c *genericContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subje
 
 	var (
 		cacheKey string
-		response *contextualizerData
+		response *pipeline.Result
 	)
 
 	vals, payload, err := c.renderTemplates(ctx, sub)
@@ -149,21 +147,27 @@ func (c *genericContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subje
 		return err
 	}
 
-	if c.ttl > 0 {
-		cacheKey = c.calculateCacheKey(sub, vals, payload)
-		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
-			var cd contextualizerData
+	req, err := c.createRequest(ctx, sub, vals, payload)
+	if err != nil {
+		return err
+	}
 
-			if err = json.Unmarshal(entry, &cd); err == nil {
+	if c.ttl > 0 {
+		cacheKey = c.calculateCacheKey(req, payload)
+
+		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
+			var result pipeline.Result
+
+			if err = json.Unmarshal(entry, &result); err == nil {
 				logger.Debug().Msg("Reusing contextualizer response from cache")
 
-				response = &cd
+				response = &result
 			}
 		}
 	}
 
 	if response == nil {
-		response, err = c.callEndpoint(ctx, sub, vals, payload)
+		response, err = c.callEndpoint(ctx, req)
 		if err != nil {
 			return err
 		}
@@ -180,6 +184,8 @@ func (c *genericContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subje
 	if response.Payload != nil {
 		ctx.Outputs()[c.id] = response.Payload
 	}
+
+	ctx.Results()[c.id] = response
 
 	return nil
 }
@@ -238,19 +244,9 @@ func (c *genericContextualizer) Type() string            { return c.name }
 func (*genericContextualizer) Kind() types.Kind          { return types.KindContextualizer }
 func (*genericContextualizer) Accept(_ pipeline.Visitor) {}
 
-func (c *genericContextualizer) callEndpoint(
-	ctx pipeline.Context,
-	sub pipeline.Subject,
-	values map[string]string,
-	payload string,
-) (*contextualizerData, error) {
+func (c *genericContextualizer) callEndpoint(ctx pipeline.Context, req *http.Request) (*pipeline.Result, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Calling contextualizer endpoint")
-
-	req, err := c.createRequest(ctx, sub, values, payload)
-	if err != nil {
-		return nil, err
-	}
 
 	resp, err := c.e.CreateClient(req.URL.Hostname()).Do(req)
 	if err != nil {
@@ -275,7 +271,7 @@ func (c *genericContextualizer) callEndpoint(
 		return nil, err
 	}
 
-	return &contextualizerData{Payload: data}, nil
+	return pipeline.NewResultWithHeaders(data, resp.Header), nil
 }
 
 func (c *genericContextualizer) createRequest(
@@ -290,6 +286,7 @@ func (c *genericContextualizer) createRequest(
 		"Subject": sub,
 		"Values":  values,
 		"Outputs": ctx.Outputs(),
+		"Results": ctx.Results(),
 	})
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed creating request").
@@ -365,34 +362,24 @@ func (c *genericContextualizer) readResponse(ctx pipeline.Context, resp *http.Re
 }
 
 func (c *genericContextualizer) calculateCacheKey(
-	sub pipeline.Subject,
-	values map[string]string,
+	req *http.Request,
 	payload string,
 ) string {
-	const int64BytesCount = 8
+	key := cachekey.New("generic-contextualizer:response")
 
-	var ttlBytes [int64BytesCount]byte
-	//nolint:gosec
-	// no integer overflow during conversion possible
-	binary.LittleEndian.PutUint64(ttlBytes[:], uint64(c.ttl))
+	key.WriteString(c.name)
+	key.WriteInt64(int64(c.ttl))
+	key.WriteString(req.Method)
+	key.WriteString(req.URL.String())
+	key.WriteHeader(req.Header)
+	key.WriteString(payload)
 
-	hash := sha256.New()
-	hash.Write(c.e.Hash())
-	hash.Write(stringx.ToBytes(c.id))
-	hash.Write(stringx.ToBytes(strings.Join(c.fwdHeaders, ",")))
-	hash.Write(stringx.ToBytes(strings.Join(c.fwdCookies, ",")))
-	hash.Write(stringx.ToBytes(payload))
-	hash.Write(ttlBytes[:])
-	hash.Write(sub.Hash())
-
-	for k, v := range values {
-		hash.Write(stringx.ToBytes(k))
-		hash.Write(stringx.ToBytes(v))
+	key.WriteBool(c.e.AuthStrategy != nil)
+	if c.e.AuthStrategy != nil {
+		key.WriteBytes(c.e.AuthStrategy.Hash())
 	}
 
-	var result [sha256.Size]byte
-
-	return hex.EncodeToString(hash.Sum(result[:0]))
+	return key.SumString()
 }
 
 func (c *genericContextualizer) renderTemplates(
@@ -405,6 +392,7 @@ func (c *genericContextualizer) renderTemplates(
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
+		"Results": ctx.Results(),
 	})
 	if err != nil {
 		return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
@@ -419,6 +407,7 @@ func (c *genericContextualizer) renderTemplates(
 			"Subject": sub,
 			"Values":  vals,
 			"Outputs": ctx.Outputs(),
+			"Results": ctx.Results(),
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
 				"failed to render payload for the contextualization endpoint").

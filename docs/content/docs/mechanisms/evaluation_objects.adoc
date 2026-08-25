@@ -224,7 +224,7 @@ Request = {
 
 === Outputs
 
-This object represents a pipeline execution-specific key-value map used by pipeline steps to store and share results. Each step stores its result under its own ID as the key.
+This object represents a pipeline-execution-specific key-value map. It is used by pipeline steps to store or read results of particular step executions. Step id is used as a key and the value is the corresponding result.
 
 Example:
 
@@ -234,6 +234,52 @@ Outputs = {
     "id_1": ["a", "b"],
     "id_2": { "foo": "bar", "baz": false }
 }
+----
+
+NOTE: Before upgrading to v0.18.0 (to be released soon), migrate references to `Outputs` to the `Results` object described below. In v0.18.0, `Outputs` will adopt the same structure as `Results`, which would otherwise introduce a breaking change that cannot be migrated automatically. After all heimdall instances have been upgraded to v0.18.0, references to `Results` can be changed back to `Outputs`. v0.18.0 will deprecate the `Results` object.
+
+=== Results
+This object is similar to the `Outputs` object and represents a pipeline-execution-specific key value map. It is used by pipeline steps to store or read results of particular step executions. The step id is used as a key, and the value is the corresponding structured result.
+
+Each result provides the following property and method:
+
+* *`Payload`*: _any_
++
+Contains the result produced by the corresponding pipeline step. For pipeline steps communicating with remote HTTP endpoints, this is the prepared response payload.
+
+* *`Header(name)`*: _method_
++
+Returns the value of the response header with the given name as a `string`. Header names are matched case-insensitively. If the header is not present, or the result was not produced by a pipeline step communicating with a remote HTTP endpoint, an empty string (`""`) is returned. If a header appears multiple times in the response, the returned `string` is a comma separated list of all values.
+
+Example:
+
+[source, javascript]
+----
+Results = {
+  "id_1": { "Payload": ["a", "b"] },
+  "id_2": { "Payload": { "foo": "bar", "baz": false } }
+}
+----
+
+The payload can be accessed from a Go template using:
+
+[source, gotemplate]
+----
+{{ .Results.id_2.Payload }}
+----
+
+Response headers of results produced by remote HTTP endpoints can be accessed using:
+
+[source, gotemplate]
+----
+{{ .Results.id_1.Header "X-Some-Header" }}
+----
+
+or from a CEL expression using:
+
+[source, cel]
+----
+Results.id_1.Header("X-Some-Header")
 ----
 
 === Payload
@@ -294,7 +340,7 @@ Values = {
 
 == Templating
 
-Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on the objects described above — which exactly are available is documented at each mechanism's configuration reference.
+Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_results" >}}[Results], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
 
 To ease the usage, all https://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
 
@@ -327,7 +373,7 @@ Imagine we have a `POST` request for the URL `\https://foobar.baz/zab?foo=bar`, 
   "foo_value": {{ index .Request.URL.Query.foo 0 | quote }}
   "request_method": {{ quote .Request.Method }},
   "x_foo_value": {{ .Request.Header "X-Foo" | quote }},
-  "whatever": {{ .Outputs.whatever | quote }}
+  "whatever": {{ .Results.whatever.Payload | quote }}
 }
 ----
 

@@ -80,6 +80,16 @@ func TestErrorResponse(t *testing.T) {
 			expectedType: "application/json",
 			expBody:      "{\"code\":\"authorizationError\",\"message\":\"test\"}",
 		},
+		"escape error in text/html": {
+			// ensuring that error is escaped if it somehow should contain data from outside
+			// should not be possible (TM)
+			grpcCode:     codes.PermissionDenied,
+			httpCode:     http.StatusForbidden,
+			err:          errorchain.NewWithMessage(pipeline.ErrAuthorization, "<script>alert(1)</script>"),
+			offeredType:  "text/html",
+			expectedType: "text/html",
+			expBody:      "<p>authorization error: &lt;script&gt;alert(1)&lt;/script&gt;</p>",
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// WHEN

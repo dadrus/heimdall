@@ -18,8 +18,6 @@ package authenticators
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"io"
 	"net/http"
@@ -33,6 +31,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/app"
 	"github.com/dadrus/heimdall/internal/cache"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
@@ -43,7 +42,6 @@ import (
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
 // by intention. Used only during application bootstrap
@@ -70,7 +68,7 @@ type oauth2IntrospectionAuthenticator struct {
 	ed            oauth2.TokenUsageErrorDecorator
 }
 
-// nolint: funlen, cyclop
+//nolint:funlen,cyclop
 func newOAuth2IntrospectionAuthenticator(
 	app app.Context,
 	name string,
@@ -284,7 +282,8 @@ func (*oauth2IntrospectionAuthenticator) IsInsecure() bool        { return false
 func (*oauth2IntrospectionAuthenticator) Kind() types.Kind        { return types.KindAuthenticator }
 
 func (a *oauth2IntrospectionAuthenticator) serverMetadata(
-	ctx pipeline.Context, claims map[string]any,
+	ctx pipeline.Context,
+	claims map[string]any,
 ) (oauth2.ServerMetadata, error) {
 	args := map[string]any{}
 
@@ -331,9 +330,10 @@ func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
 	logger := zerolog.Ctx(ctx.Context())
 
 	var (
-		cacheKey string
-		cacheHit bool
-		rawResp  []byte
+		cacheKey       string
+		introspectResp *oauth2.IntrospectionResponse
+		rawResp        []byte
+		fetched        bool
 	)
 
 	claims, err := a.extractTokenClaims(authData.Value)
@@ -352,42 +352,51 @@ func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
 	}
 
 	if a.isCacheEnabled() {
-		cacheKey = a.calculateCacheKey(metadata.IntrospectionEndpoint, req.URL.String(), authData.Value)
-		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
-			logger.Debug().Msg("Reusing introspection response from cache")
+		cacheKey = a.calculateCacheKey(metadata.IntrospectionEndpoint, req, authData.Value)
 
-			cacheHit = true
-			rawResp = entry
+		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
+			var response oauth2.IntrospectionResponse
+
+			if err = json.Unmarshal(entry, &response); err == nil {
+				logger.Debug().Msg("Reusing introspection response from cache")
+
+				introspectResp = &response
+				rawResp = entry
+			}
 		}
 	}
 
-	if rawResp == nil {
-		rawResp, err = a.fetchTokenIntrospectionResponse(
-			ctx,
-			metadata.IntrospectionEndpoint.CreateClient(req.URL.Hostname()),
-			req,
-		)
+	client := metadata.IntrospectionEndpoint.CreateClient(req.URL.Hostname())
+	client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+
+	if introspectResp == nil {
+		rawResp, err = a.fetchTokenIntrospectionResponse(ctx, client, req)
 		if err != nil {
 			return nil, err
 		}
+
+		var response oauth2.IntrospectionResponse
+
+		if err = json.Unmarshal(rawResp, &response); err != nil {
+			return nil, errorchain.NewWithMessage(
+				pipeline.ErrInternal,
+				"failed to unmarshal introspection response",
+			).WithAspects(a).
+				CausedBy(err)
+		}
+
+		introspectResp = &response
+		fetched = true
 	}
 
-	var introspectResp oauth2.IntrospectionResponse
-
-	if err = json.Unmarshal(rawResp, &introspectResp); err != nil {
-		return nil, errorchain.NewWithMessage(
-			pipeline.ErrInternal,
-			"failed to unmarshal introspection response",
-		).WithAspects(a).
-			CausedBy(err)
-	}
-
-	if err = a.validateIntrospectionResponse(ctx, authData, metadata, &introspectResp); err != nil {
+	if err = a.validateIntrospectionResponse(ctx, authData, metadata, introspectResp); err != nil {
 		return nil, err
 	}
 
-	if !cacheHit && len(cacheKey) != 0 {
-		if cacheTTL := a.getCacheTTL(&introspectResp); cacheTTL > 0 {
+	if fetched && len(cacheKey) != 0 {
+		if cacheTTL := a.getCacheTTL(introspectResp); cacheTTL > 0 {
 			if err = cch.Set(ctx.Context(), cacheKey, rawResp, cacheTTL); err != nil {
 				logger.Warn().Err(err).Msg("Failed to cache introspection response")
 			}
@@ -398,7 +407,10 @@ func (a *oauth2IntrospectionAuthenticator) getPrincipalInformation(
 }
 
 func (a *oauth2IntrospectionAuthenticator) createRequest(
-	ctx context.Context, ep *endpoint.Endpoint, token string, claims map[string]any,
+	ctx context.Context,
+	ep *endpoint.Endpoint,
+	token string,
+	claims map[string]any,
 ) (*http.Request, error) {
 	req, err := ep.CreateRequest(ctx,
 		strings.NewReader(
@@ -540,13 +552,27 @@ func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.In
 	}
 }
 
-func (a *oauth2IntrospectionAuthenticator) calculateCacheKey(ep *endpoint.Endpoint, templatedURL, token string) string {
-	digest := sha256.New()
-	digest.Write(ep.Hash())
-	digest.Write(stringx.ToBytes(templatedURL))
-	digest.Write(stringx.ToBytes(token))
+func (a *oauth2IntrospectionAuthenticator) calculateCacheKey(
+	ep *endpoint.Endpoint,
+	req *http.Request,
+	token string,
+) string {
+	key := cachekey.New("oauth2-introspection-authenticator:response")
 
-	var result [sha256.Size]byte
+	key.WriteString(req.Method)
+	key.WriteString(req.URL.String())
+	key.WriteHeader(req.Header)
+	key.WriteString(token)
 
-	return hex.EncodeToString(digest.Sum(result[:0]))
+	key.WriteBool(ep.AuthStrategy != nil)
+	if ep.AuthStrategy != nil {
+		key.WriteBytes(ep.AuthStrategy.Hash())
+	}
+
+	key.WriteBool(a.ttl != nil)
+	if a.ttl != nil {
+		key.WriteInt64(int64(*a.ttl))
+	}
+
+	return key.SumString()
 }

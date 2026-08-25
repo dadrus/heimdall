@@ -39,6 +39,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	endpointmocks "github.com/dadrus/heimdall/internal/rules/endpoint/mocks"
 	endpointtestsupport "github.com/dadrus/heimdall/internal/rules/endpoint/testsupport"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/template"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/types"
@@ -578,6 +579,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		if responseContent != nil {
 			w.Header().Set("Content-Type", responseContentType)
 			w.Header().Set("Content-Length", strconv.Itoa(len(responseContent)))
+
 			_, err := w.Write(responseContent)
 			assert.NoError(t, err)
 		}
@@ -591,9 +593,8 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		subject          pipeline.Subject
 		instructServer   func(t *testing.T)
 		configureContext func(t *testing.T, ctx *pipelinemocks.ContextMock)
-		configureCache   func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
-			sub pipeline.Subject)
-		assert func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any)
+		configureCache   func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer, sub pipeline.Subject)
+		assert           func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results)
 	}{
 		"with successful cache hit": {
 			contextualizer: &genericContextualizer{
@@ -617,17 +618,18 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *genericContextualizer,
-				_ pipeline.Subject,
-			) {
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *genericContextualizer, _ pipeline.Subject) {
 				t.Helper()
 
-				rawData, err := json.Marshal(&contextualizerData{Payload: "Hi Foo"})
+				headers := make(http.Header)
+				headers.Set("foo", "bar")
+
+				rawData, err := json.Marshal(pipeline.NewResultWithHeaders("Hi Foo", headers))
 				require.NoError(t, err)
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawData, nil)
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -639,6 +641,13 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				assert.Len(t, outputs, 2)
 				assert.Equal(t, "Hi Foo", outputs["contextualizer"])
 				assert.Equal(t, "bar", outputs["foo"])
+
+				assert.Len(t, results, 2)
+
+				entry := results["contextualizer"]
+				require.NotNil(t, entry)
+				assert.Equal(t, "Hi Foo", entry.Payload)
+				assert.Equal(t, "bar", entry.Header("foo"))
 			},
 		},
 		"with error in values rendering": {
@@ -663,7 +672,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -699,7 +708,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -729,7 +738,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -764,7 +773,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -812,15 +821,13 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *genericContextualizer,
-				_ pipeline.Subject,
-			) {
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *genericContextualizer, _ pipeline.Subject) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -829,6 +836,14 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				assert.Len(t, sub.Attributes(), 1)
 				assert.Len(t, outputs, 1)
+
+				require.Len(t, results, 2)
+
+				entry := results["test-contextualizer"]
+				require.NotNil(t, entry)
+				assert.Nil(t, entry.Payload)
+				assert.NotEmpty(t, entry.Header("Date"))
+				assert.NotEmpty(t, entry.Header("Content-Length"))
 			},
 		},
 		"without payload, but with cache": {
@@ -843,18 +858,18 @@ func TestGenericContextualizerExecute(t *testing.T) {
 					Attributes: map[string]any{"bar": "baz"},
 				},
 			},
-			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer,
-				_ pipeline.Subject,
-			) {
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer, _ pipeline.Subject) {
 				t.Helper()
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.MatchedBy(func(data []byte) bool {
-					var val contextualizerData
+					var result pipeline.Result
 
-					err := json.Unmarshal(data, &val)
+					if err := json.Unmarshal(data, &result); err != nil {
+						return false
+					}
 
-					return err == nil && val.Payload == "Hi from endpoint"
+					return result.Payload == "Hi from endpoint" && result.Header("Content-Type") == "text/text"
 				}), contextualizer.ttl).Return(nil)
 			},
 			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
@@ -875,7 +890,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				responseContent = []byte(`Hi from endpoint`)
 				responseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, _ pipeline.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -906,7 +921,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 {
 	"user_id": {{ quote .Subject.ID }},
 	"value": {{ quote .Values.foo }},
-    "foo": {{ quote .Outputs.foo }}
+	"foo": {{ quote .Outputs.foo }}
 }
 `)
 
@@ -933,6 +948,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 					assert.Equal(t, "baz", req.Header.Get("X-Bar"))
 					assert.Equal(t, "bar", req.Header.Get("X-Foo"))
 					assert.Equal(t, "Hi Foo", req.Header.Get("X-Bar-Foo"))
+
 					cookie, err := req.Cookie("X-Foo-Session")
 					require.NoError(t, err)
 					assert.Equal(t, "Foo-Session-Value", cookie.Value)
@@ -940,11 +956,11 @@ func TestGenericContextualizerExecute(t *testing.T) {
 					content, err := io.ReadAll(req.Body)
 					require.NoError(t, err)
 
-					assert.JSONEq(t, `{"user_id": "Foo", "value": "bar", "foo":"bar"}`, string(content))
+					assert.JSONEq(t, `{"user_id":"Foo","value":"bar","foo":"bar"}`, string(content))
 				}
 
 				responseContentType = "application/json"
-				responseContent = []byte(`{ "baz": "foo" }`)
+				responseContent = []byte(`{"baz":"foo"}`)
 				responseCode = http.StatusOK
 			},
 			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
@@ -961,7 +977,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 						URL:              &pipeline.URL{URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}},
 					})
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -971,9 +987,179 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				assert.Len(t, sub.Attributes(), 1)
 
 				assert.Len(t, outputs, 2)
+
 				entry := outputs["test-contextualizer"]
 				assert.Len(t, entry, 1)
 				assert.Contains(t, entry, "baz")
+
+				require.Len(t, results, 2)
+
+				result := results["test-contextualizer"]
+				require.NotNil(t, result)
+				assert.Contains(t, result.Payload, "baz")
+				assert.NotEmpty(t, result.Header("Date"))
+				assert.NotEmpty(t, result.Header("Content-Length"))
+				assert.Equal(t, responseContentType, result.Header("Content-Type"))
+			},
+		},
+		"with forwarded header and cache miss due to different value": {
+			contextualizer: &genericContextualizer{
+				id: "test-contextualizer",
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+				),
+				fwdHeaders: []string{"X-Tenant-ID"},
+				ttl:        5 * time.Second,
+			},
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
+					ID:         "Foo",
+					Attributes: map[string]any{"bar": "baz"},
+				},
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "tenant-b", req.Header.Get("X-Tenant-ID"))
+				}
+
+				responseContentType = "application/json"
+				responseContent = []byte(`{"tenant":"tenant-b"}`)
+				responseCode = http.StatusOK
+			},
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
+				t.Helper()
+
+				reqFuns := pipelinemocks.NewRequestFunctionsMock(t)
+				reqFuns.EXPECT().Header("X-Tenant-ID").Return("tenant-b")
+
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqFuns})
+			},
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer, _ pipeline.Subject) {
+				t.Helper()
+
+				cacheKeyFor := func(headerValue string) string {
+					t.Helper()
+
+					req, err := http.NewRequestWithContext(
+						t.Context(),
+						http.MethodGet,
+						srv.URL,
+						nil,
+					)
+					require.NoError(t, err)
+
+					req.Header.Set("X-Tenant-ID", headerValue)
+
+					return contextualizer.calculateCacheKey(req, "")
+				}
+
+				tenantACacheKey := cacheKeyFor("tenant-a")
+				tenantBCacheKey := cacheKeyFor("tenant-b")
+
+				require.NotEqual(t, tenantACacheKey, tenantBCacheKey)
+
+				cch.EXPECT().Get(mock.Anything, tenantBCacheKey).Return(nil, assert.AnError)
+				cch.EXPECT().Set(mock.Anything, tenantBCacheKey, mock.Anything, contextualizer.ttl).
+					Return(nil)
+			},
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
+				t.Helper()
+
+				assert.True(t, remoteEndpointCalled)
+				require.NoError(t, err)
+				assert.Len(t, sub.Attributes(), 1)
+
+				require.Len(t, outputs, 2)
+				assert.Equal(t, map[string]any{"tenant": "tenant-b"}, outputs["test-contextualizer"])
+
+				require.Len(t, results, 2)
+
+				result := results["test-contextualizer"]
+				require.NotNil(t, result)
+				assert.Equal(t, map[string]any{"tenant": "tenant-b"}, result.Payload)
+			},
+		},
+		"with rendered endpoint header and cache miss due to different output": {
+			contextualizer: &genericContextualizer{
+				id: "test-contextualizer",
+				e: endpointtestsupport.EndpointValue(t, srv.URL,
+					endpoint.WithMethod(http.MethodGet),
+					endpoint.WithHeader("X-Tenant-ID", "{{ .Outputs.foo }}"),
+				),
+				ttl: 5 * time.Second,
+			},
+			subject: pipeline.Subject{
+				"default": &pipeline.Principal{
+					ID:         "Foo",
+					Attributes: map[string]any{"bar": "baz"},
+				},
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkRequest = func(req *http.Request) {
+					t.Helper()
+
+					assert.Equal(t, "bar", req.Header.Get("X-Tenant-ID"))
+				}
+
+				responseContentType = "application/json"
+				responseContent = []byte(`{"tenant":"bar"}`)
+				responseCode = http.StatusOK
+			},
+			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(nil)
+			},
+			configureCache: func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer, _ pipeline.Subject) {
+				t.Helper()
+
+				previousReq, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodGet,
+					srv.URL,
+					nil,
+				)
+				require.NoError(t, err)
+				previousReq.Header.Set("X-Tenant-ID", "tenant-a")
+
+				currentReq, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodGet,
+					srv.URL,
+					nil,
+				)
+				require.NoError(t, err)
+				currentReq.Header.Set("X-Tenant-ID", "bar")
+
+				previousCacheKey := contextualizer.calculateCacheKey(previousReq, "")
+				currentCacheKey := contextualizer.calculateCacheKey(currentReq, "")
+
+				require.NotEqual(t, previousCacheKey, currentCacheKey)
+
+				cch.EXPECT().Get(mock.Anything, currentCacheKey).Return(nil, assert.AnError)
+				cch.EXPECT().Set(mock.Anything, currentCacheKey, mock.Anything, contextualizer.ttl).Return(nil)
+			},
+			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
+				t.Helper()
+
+				assert.True(t, remoteEndpointCalled)
+				require.NoError(t, err)
+				assert.Len(t, sub.Attributes(), 1)
+
+				require.Len(t, outputs, 2)
+				assert.Equal(t, map[string]any{"tenant": "bar"}, outputs["test-contextualizer"])
+
+				require.Len(t, results, 2)
+
+				result := results["test-contextualizer"]
+				require.NotNil(t, result)
+				assert.Equal(t, map[string]any{"tenant": "bar"}, result.Payload)
 			},
 		},
 	} {
@@ -982,6 +1168,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			remoteEndpointCalled = false
 			responseContentType = ""
 			responseContent = nil
+			responseCode = 0
 
 			checkRequest = func(*http.Request) { t.Helper() }
 
@@ -1004,6 +1191,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			ctx := pipelinemocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
 			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
+			ctx.EXPECT().Results().Return(pipeline.Results{"foo": pipeline.NewResult("bar")})
 
 			configureContext(t, ctx)
 			configureCache(t, cch, tc.contextualizer, tc.subject)
@@ -1013,7 +1201,435 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			err := tc.contextualizer.Execute(ctx, tc.subject)
 
 			// THEN
-			tc.assert(t, err, tc.subject, ctx.Outputs())
+			tc.assert(t, err, tc.subject, ctx.Outputs(), ctx.Results())
+		})
+	}
+}
+
+func TestGenericContextualizerCalculateCacheKey(t *testing.T) {
+	t.Parallel()
+
+	authStrategyA := endpointmocks.NewAuthenticationStrategyMock(t)
+	authStrategyA.EXPECT().Hash().Return([]byte("strategy-a"))
+
+	authStrategyB := endpointmocks.NewAuthenticationStrategyMock(t)
+	authStrategyB.EXPECT().Hash().Return([]byte("strategy-b"))
+
+	newContextualizer := func(name string, ttl time.Duration) *genericContextualizer {
+		t.Helper()
+
+		return &genericContextualizer{
+			name: name,
+			ttl:  ttl,
+		}
+	}
+
+	newRequest := func(method string, rawURL string, headers map[string]string, cookies map[string]string) *http.Request {
+		t.Helper()
+
+		req, err := http.NewRequestWithContext(t.Context(), method, rawURL, nil)
+		require.NoError(t, err)
+
+		for name, value := range headers {
+			req.Header.Set(name, value)
+		}
+
+		for name, value := range cookies {
+			req.AddCookie(&http.Cookie{
+				Name:  name,
+				Value: value,
+			})
+		}
+
+		return req
+	}
+
+	for uc, tc := range map[string]struct {
+		contextualizer1 *genericContextualizer
+		contextualizer2 *genericContextualizer
+		request1        *http.Request
+		request2        *http.Request
+		payload1        string
+		payload2        string
+		expectEqual     bool
+	}{
+		"same effective request": {
+			contextualizer1: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			contextualizer2: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodPost,
+				"https://example.com/context",
+				map[string]string{
+					"Content-Type": "application/json",
+					"X-Tenant-ID":  "tenant-a",
+				},
+				map[string]string{
+					"tenant": "tenant-a",
+				},
+			),
+			request2: newRequest(
+				http.MethodPost,
+				"https://example.com/context",
+				map[string]string{
+					"Content-Type": "application/json",
+					"X-Tenant-ID":  "tenant-a",
+				},
+				map[string]string{
+					"tenant": "tenant-a",
+				},
+			),
+			payload1:    `{"foo":"bar"}`,
+			payload2:    `{"foo":"bar"}`,
+			expectEqual: true,
+		},
+		"different contextualizer names": {
+			contextualizer1: newContextualizer(
+				"contextualizer-a",
+				5*time.Second,
+			),
+			contextualizer2: newContextualizer(
+				"contextualizer-b",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+		},
+		"different step id": {
+			contextualizer1: &genericContextualizer{
+				name: "contextualizer",
+				id:   "step-a",
+				ttl:  5 * time.Second,
+			},
+			contextualizer2: &genericContextualizer{
+				name: "contextualizer",
+				id:   "step-b",
+				ttl:  5 * time.Second,
+			},
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			expectEqual: true,
+		},
+		"different ttl": {
+			contextualizer1: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			contextualizer2: newContextualizer(
+				"contextualizer",
+				10*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+		},
+		"different request method": {
+			contextualizer1: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			contextualizer2: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodPost,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+		},
+		"different rendered url": {
+			contextualizer1: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			contextualizer2: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/tenant-a",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/tenant-b",
+				nil,
+				nil,
+			),
+		},
+		"different header value": {
+			contextualizer1: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			contextualizer2: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				map[string]string{
+					"X-Tenant-ID": "tenant-a",
+				},
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				map[string]string{
+					"X-Tenant-ID": "tenant-b",
+				},
+				nil,
+			),
+		},
+		"different header name": {
+			contextualizer1: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			contextualizer2: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				map[string]string{
+					"X-Tenant-ID": "foo",
+				},
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				map[string]string{
+					"X-Organization-ID": "foo",
+				},
+				nil,
+			),
+		},
+		"different cookie value": {
+			contextualizer1: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			contextualizer2: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				map[string]string{
+					"tenant": "tenant-a",
+				},
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				map[string]string{
+					"tenant": "tenant-b",
+				},
+			),
+		},
+		"different cookie name": {
+			contextualizer1: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			contextualizer2: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				map[string]string{
+					"tenant": "foo",
+				},
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				map[string]string{
+					"organization": "foo",
+				},
+			),
+		},
+		"different header and cookie": {
+			contextualizer1: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			contextualizer2: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				map[string]string{
+					"tenant": "foo",
+				},
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				map[string]string{
+					"tenant": "foo",
+				},
+			),
+		},
+		"different payload": {
+			contextualizer1: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			contextualizer2: newContextualizer(
+				"contextualizer",
+				5*time.Second,
+			),
+			request1: newRequest(
+				http.MethodPost,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodPost,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			payload1: `{"tenant":"tenant-a"}`,
+			payload2: `{"tenant":"tenant-b"}`,
+		},
+		"same effective request despite different endpoint configuration": {
+			contextualizer1: &genericContextualizer{
+				name: "contextualizer",
+				ttl:  5 * time.Second,
+				e: endpointtestsupport.EndpointValue(
+					t,
+					"https://example.com/{{ .Values.path }}",
+				),
+			},
+			contextualizer2: &genericContextualizer{
+				name: "contextualizer",
+				ttl:  5 * time.Second,
+				e: endpointtestsupport.EndpointValue(
+					t,
+					"https://example.com/context",
+				),
+			},
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			expectEqual: true,
+		},
+		"different authentication strategy": {
+			contextualizer1: &genericContextualizer{
+				name: "contextualizer",
+				ttl:  5 * time.Second,
+				e: endpoint.Endpoint{
+					AuthStrategy: authStrategyA,
+				},
+			},
+			contextualizer2: &genericContextualizer{
+				name: "contextualizer",
+				ttl:  5 * time.Second,
+				e: endpoint.Endpoint{
+					AuthStrategy: authStrategyB,
+				},
+			},
+			request1: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+			request2: newRequest(
+				http.MethodGet,
+				"https://example.com/context",
+				nil,
+				nil,
+			),
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			key1 := tc.contextualizer1.calculateCacheKey(
+				tc.request1,
+				tc.payload1,
+			)
+			key2 := tc.contextualizer2.calculateCacheKey(
+				tc.request2,
+				tc.payload2,
+			)
+
+			if tc.expectEqual {
+				assert.Equal(t, key1, key2)
+			} else {
+				assert.NotEqual(t, key1, key2)
+			}
 		})
 	}
 }

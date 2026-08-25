@@ -25,6 +25,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
+	"github.com/dadrus/heimdall/internal/cache/cachekey"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/oauth2/clientcredentials"
@@ -69,6 +70,7 @@ func (c *OAuth2ClientCredentials) Apply(req *http.Request) error {
 		return err
 	}
 
+	req.Header = req.Header.Clone()
 	req.Header.Set(c.Header.Name, c.Header.Scheme+" "+token.AccessToken)
 
 	return nil
@@ -95,10 +97,18 @@ func (c *OAuth2ClientCredentials) init(appCtx app.Context) error {
 
 	informer, err := secrets.NewCredentialsInformer(
 		appCtx.SecretResolver(),
-		secrets.Reference{Source: c.Credentials.Source, Selector: c.Credentials.Selector},
+		secrets.Reference{
+			Source:   c.Credentials.Source,
+			Selector: c.Credentials.Selector,
+		},
 		secrets.WithConverter(c.createClientCredentialsConfig),
 		secrets.WithUpdateCallback(func(_ context.Context, _ secrets.Credentials, cfg clientcredentials.Config) error {
-			c.hash.Store(cfg.Hash())
+			key := cachekey.New("auth-strategy:oauth2-client-credentials")
+			key.WriteBytes(cfg.Hash())
+			key.WriteString(c.Header.Name)
+			key.WriteString(c.Header.Scheme)
+
+			c.hash.Store(key.Sum())
 
 			return nil
 		}),

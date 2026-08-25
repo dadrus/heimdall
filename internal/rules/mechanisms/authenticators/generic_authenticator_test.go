@@ -38,6 +38,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 	pipelinemocks "github.com/dadrus/heimdall/internal/pipeline/mocks"
 	"github.com/dadrus/heimdall/internal/rules/endpoint"
+	endpointmocks "github.com/dadrus/heimdall/internal/rules/endpoint/mocks"
 	endpointtestsupport "github.com/dadrus/heimdall/internal/rules/endpoint/testsupport"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors"
 	mocks2 "github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors/mocks"
@@ -763,14 +764,22 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 	}
 
 	var (
-		endpointCalled bool
-		checkRequest   func(req *http.Request)
+		endpointCalled         bool
+		redirectEndpointCalled bool
+		checkRequest           func(req *http.Request)
 
 		responseHeaders     map[string]string
 		responseContentType string
 		responseContent     []byte
 		responseCode        int
 	)
+
+	redirectSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		redirectEndpointCalled = true
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer redirectSrv.Close()
 
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		endpointCalled = true
@@ -1392,9 +1401,52 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 				assert.Len(t, sub["foo"].Attributes, 2)
 			},
 		},
+		"with redirect response from server": {
+			authenticator: &genericAuthenticator{
+				id: "auth3",
+				e:  endpointtestsupport.EndpointValue(t, srv.URL),
+			},
+			configureMocks: func(
+				t *testing.T,
+				ctx *pipelinemocks.ContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *genericAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().
+					GetAuthData(ctx).
+					Return(extractors.AuthData{Value: "session_token"}, nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				responseHeaders = map[string]string{
+					"Location": redirectSrv.URL,
+				}
+				responseCode = http.StatusFound
+			},
+			assert: func(t *testing.T, err error, _ pipeline.Subject) {
+				t.Helper()
+
+				assert.True(t, endpointCalled)
+				assert.False(t, redirectEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
+				require.ErrorContains(t, err, "unexpected response code")
+				require.ErrorContains(t, err, strconv.Itoa(http.StatusFound))
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			endpointCalled = false
+			redirectEndpointCalled = false
 			responseHeaders = nil
 			responseContentType = ""
 			responseContent = nil
@@ -1402,11 +1454,14 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 
 			checkRequest = func(*http.Request) { t.Helper() }
 
-			instructServer := x.IfThenElse(tc.instructServer != nil,
+			instructServer := x.IfThenElse(
+				tc.instructServer != nil,
 				tc.instructServer,
-				func(t *testing.T) { t.Helper() })
+				func(t *testing.T) { t.Helper() },
+			)
 
-			configureMocks := x.IfThenElse(tc.configureMocks != nil,
+			configureMocks := x.IfThenElse(
+				tc.configureMocks != nil,
 				tc.configureMocks,
 				func(t *testing.T,
 					_ *pipelinemocks.ContextMock,
@@ -1415,7 +1470,8 @@ func TestGenericAuthenticatorExecute(t *testing.T) {
 					_ *genericAuthenticator,
 				) {
 					t.Helper()
-				})
+				},
+			)
 
 			ads := mocks2.NewAuthDataExtractStrategyMock(t)
 			tc.authenticator.ads = ads
@@ -1549,6 +1605,355 @@ func TestGenericAuthenticatorReadResponse(t *testing.T) {
 				require.ErrorIs(t, err, tc.err)
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
+	t.Parallel()
+
+	authStrategy := endpointmocks.NewAuthenticationStrategyMock(t)
+	authStrategy.EXPECT().Hash().Return([]byte("strategy"))
+
+	authStrategyA := endpointmocks.NewAuthenticationStrategyMock(t)
+	authStrategyA.EXPECT().Hash().Return([]byte("strategy-a"))
+
+	authStrategyB := endpointmocks.NewAuthenticationStrategyMock(t)
+	authStrategyB.EXPECT().Hash().Return([]byte("strategy-b"))
+
+	for uc, tc := range map[string]struct {
+		authenticator1 *genericAuthenticator
+		request1       *http.Request
+		payload1       string
+		authenticator2 *genericAuthenticator
+		request2       *http.Request
+		payload2       string
+		expectEqual    bool
+	}{
+		"same effective input": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2:    `{"foo":"bar"}`,
+			expectEqual: true,
+		},
+		"different authenticator name": {
+			authenticator1: &genericAuthenticator{
+				name: "auth-a",
+				ttl:  5 * time.Second,
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth-b",
+				ttl:  5 * time.Second,
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2: `{"foo":"bar"}`,
+		},
+		"different step id of same authenticator": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				id:   "step-a",
+				ttl:  5 * time.Second,
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				id:   "step-b",
+				ttl:  5 * time.Second,
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2:    `{"foo":"bar"}`,
+			expectEqual: true,
+		},
+		"different cache ttl": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				ttl:  15 * time.Second,
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2: `{"foo":"bar"}`,
+		},
+		"different effective request method": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request2: httptest.NewRequest(
+				http.MethodPut,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2: `{"foo":"bar"}`,
+		},
+		"different effective request url": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity-a",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity-b",
+				nil,
+			),
+			payload2: `{"foo":"bar"}`,
+		},
+		"different effective request header": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request1: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					"https://example.com/identity",
+					nil,
+				)
+				req.Header.Set("X-Tenant-ID", "tenant-a")
+
+				return req
+			}(),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request2: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					"https://example.com/identity",
+					nil,
+				)
+				req.Header.Set("X-Tenant-ID", "tenant-b")
+
+				return req
+			}(),
+			payload2: `{"foo":"bar"}`,
+		},
+		"different effective request cookie": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request1: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					"https://example.com/identity",
+					nil,
+				)
+				req.AddCookie(&http.Cookie{
+					Name:  "tenant",
+					Value: "tenant-a",
+				})
+
+				return req
+			}(),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request2: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					"https://example.com/identity",
+					nil,
+				)
+				req.AddCookie(&http.Cookie{
+					Name:  "tenant",
+					Value: "tenant-b",
+				})
+
+				return req
+			}(),
+			payload2: `{"foo":"bar"}`,
+		},
+		"different rendered payload": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"tenant":"tenant-a"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2: `{"tenant":"tenant-b"}`,
+		},
+		"without vs with authentication strategy": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+				e: endpoint.Endpoint{
+					AuthStrategy: authStrategy,
+				},
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2: `{"foo":"bar"}`,
+		},
+		"different authentication strategy": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+				e: endpoint.Endpoint{
+					AuthStrategy: authStrategyA,
+				},
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+				e: endpoint.Endpoint{
+					AuthStrategy: authStrategyB,
+				},
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2: `{"foo":"bar"}`,
+		},
+		"different endpoint configuration with same effective request": {
+			authenticator1: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+				e: endpointtestsupport.EndpointValue(
+					t,
+					"https://{{ .AuthenticationData }}/identity",
+				),
+			},
+			request1: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload1: `{"foo":"bar"}`,
+			authenticator2: &genericAuthenticator{
+				name: "auth",
+				ttl:  5 * time.Second,
+				e: endpointtestsupport.EndpointValue(
+					t,
+					"https://example.com/{{ .AuthenticationData }}",
+				),
+			},
+			request2: httptest.NewRequest(
+				http.MethodPost,
+				"https://example.com/identity",
+				nil,
+			),
+			payload2:    `{"foo":"bar"}`,
+			expectEqual: true,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// WHEN
+			key1 := tc.authenticator1.calculateCacheKey(tc.request1, tc.payload1)
+			key2 := tc.authenticator2.calculateCacheKey(tc.request2, tc.payload2)
+
+			// THEN
+			if tc.expectEqual {
+				assert.Equal(t, key1, key2)
+			} else {
+				assert.NotEqual(t, key1, key2)
 			}
 		})
 	}
