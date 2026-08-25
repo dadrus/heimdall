@@ -1010,7 +1010,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 						"X-Foo-Bar": {"HeyFoo"},
 						"X-Bar-Foo": {"HeyBar"},
 					},
-					Payload: map[string]string{"foo": "bar"},
+					Payload: map[string]any{"foo": "bar"},
 				})
 				require.NoError(t, err)
 
@@ -1029,7 +1029,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.Equal(t, "bar", outputs["foo"])
 
 				attrs := outputs["authorizer"]
-				assert.NotEmpty(t, attrs)
+				require.NotEmpty(t, attrs)
 
 				authorizerAttrs, ok := attrs.(map[string]any)
 				require.True(t, ok)
@@ -1039,7 +1039,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				result := results["authorizer"]
 				require.NotNil(t, result)
-				assert.Equal(t, map[string]string{"foo": "bar"}, result.Payload)
+
+				assert.Equal(t, map[string]any{"foo": "bar"}, result.Payload)
 				assert.Equal(t, "HeyFoo", result.Header("X-Foo-Bar"))
 				assert.Equal(t, "HeyBar", result.Header("X-Bar-Foo"))
 			},

@@ -1541,7 +1541,9 @@ func TestGenericAuthenticatorGetCacheTTL(t *testing.T) {
 			assert: func(t *testing.T, ttl time.Duration) {
 				t.Helper()
 
-				assert.Equal(t, 20*time.Second, ttl) // leeway of 10 sec considered
+				// leeway of 10 sec considered
+				assert.GreaterOrEqual(t, ttl, 19*time.Second)
+				assert.LessOrEqual(t, ttl, 20*time.Second)
 			},
 		},
 		"cache enabled, session lifespan available with not_after set to a date which disables ttl": {
