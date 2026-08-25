@@ -47,7 +47,7 @@ It also contains a larger set of bug fixes addressing correctness and robustness
 In addition to the updates and bug fixes listed below, this release addresses the following security-critical issues:
 
 * Path re-encoding in decision mode may bypass path guards and lead to authorization bypass (https://github.com/dadrus/heimdall/security/advisories/GHSA-r9fw-vxmp-hwf2). Fixed in [#3421](https://github.com/dadrus/heimdall/pull/3421).
-* Inconsistent path captures during route lookup backtracking may lead to incorrect rule selection and authorization bypass ([#3412](https://github.com/dadrus/heimdall/issues/3412). Fixed in [#3419](https://github.com/dadrus/heimdall/pull/3419).
+* Inconsistent path captures during route lookup backtracking may lead to incorrect rule selection and authorization bypass ([#3412](https://github.com/dadrus/heimdall/issues/3412)). Fixed in [#3419](https://github.com/dadrus/heimdall/pull/3419).
 * Default JWT and OAuth2 token extraction may buffer unbounded request bodies, allowing unauthenticated clients to cause excessive memory consumption and potentially exhaust process memory ([#3424](https://github.com/dadrus/heimdall/issues/3424)). Fixed in [#3425](https://github.com/dadrus/heimdall/pull/3425).
 
 Please check whether you are affected and update immediately!
