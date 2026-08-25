@@ -120,7 +120,7 @@ Defines the JWT's validity period. Defaults to 5 minutes. Heimdall automatically
 +
 Specifies the HTTP header `name` and optional `scheme` for passing the JWT. Defaults to `Authorization` with scheme `Bearer`. If defined, `name` is required, and if `scheme` is omitted, the JWT is set as a raw value.
 
-The generated JWT is cached until 5 seconds before expiration. The cache key is computed based on the finalizer's configuration, the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] attributes.
+The generated JWT is cached until 5 seconds before expiration. The cache key is computed based on the finalizer's configuration, the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] objects.
 
 .JWT finalizer configuration
 ====
