@@ -42,46 +42,46 @@ func New(domain string) *Builder {
 	return result
 }
 
-func (key *Builder) WriteBool(value bool) {
+func (b *Builder) WriteBool(value bool) {
 	if value {
-		key.WriteUint64(1)
+		b.WriteUint64(1)
 	} else {
-		key.WriteUint64(0)
+		b.WriteUint64(0)
 	}
 }
 
-func (key *Builder) WriteUint64(value uint64) {
+func (b *Builder) WriteUint64(value uint64) {
 	var data [8]byte
 	binary.BigEndian.PutUint64(data[:], value)
 
-	_, _ = key.hash.Write(data[:])
+	_, _ = b.hash.Write(data[:])
 }
 
-func (key *Builder) WriteInt64(value int64) {
-	key.WriteUint64(uint64(value)) //nolint:gosec
+func (b *Builder) WriteInt64(value int64) {
+	b.WriteUint64(uint64(value)) //nolint:gosec
 }
 
-func (key *Builder) WriteString(value string) {
-	key.WriteUint64(uint64(len(value)))
+func (b *Builder) WriteString(value string) {
+	b.WriteUint64(uint64(len(value)))
 
-	_, _ = key.hash.Write(stringx.ToBytes(value))
+	_, _ = b.hash.Write(stringx.ToBytes(value))
 }
 
-func (key *Builder) WriteBytes(value []byte) {
-	key.WriteUint64(uint64(len(value)))
+func (b *Builder) WriteBytes(value []byte) {
+	b.WriteUint64(uint64(len(value)))
 
-	_, _ = key.hash.Write(value)
+	_, _ = b.hash.Write(value)
 }
 
-func (key *Builder) WriteStrings(values []string) {
-	key.WriteUint64(uint64(len(values)))
+func (b *Builder) WriteStrings(values []string) {
+	b.WriteUint64(uint64(len(values)))
 
 	for _, value := range values {
-		key.WriteString(value)
+		b.WriteString(value)
 	}
 }
 
-func (key *Builder) WriteHeader(header http.Header) {
+func (b *Builder) WriteHeader(header http.Header) {
 	names := make([]string, 0, len(header))
 
 	for name := range header {
@@ -90,18 +90,18 @@ func (key *Builder) WriteHeader(header http.Header) {
 
 	slices.Sort(names)
 
-	key.WriteUint64(uint64(len(names)))
+	b.WriteUint64(uint64(len(names)))
 
 	for _, name := range names {
-		key.WriteString(name)
-		key.WriteStrings(header[name])
+		b.WriteString(name)
+		b.WriteStrings(header[name])
 	}
 }
 
-func (key *Builder) Sum() []byte {
-	return key.hash.Sum(nil)
+func (b *Builder) Sum() []byte {
+	return b.hash.Sum(nil)
 }
 
-func (key *Builder) SumString() string {
-	return hex.EncodeToString(key.Sum())
+func (b *Builder) SumString() string {
+	return hex.EncodeToString(b.Sum())
 }
