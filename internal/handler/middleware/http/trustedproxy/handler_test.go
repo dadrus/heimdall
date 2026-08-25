@@ -38,14 +38,42 @@ func TestHandlerExecution(t *testing.T) {
 		shouldDrop bool
 		warningLog string
 	}{
-		"bad IP range":                                  {ips: []string{"/128"}, shouldDrop: true, warningLog: "could not be parsed"},
-		"single IP trusted":                             {ips: []string{"127.0.0.1"}, shouldDrop: false},
-		"trusted IP range":                              {ips: []string{"127.0.0.0/24"}, shouldDrop: false},
-		"source in IP range but not trusted IPv4":       {ips: []string{"172.0.0.0/0"}, shouldDrop: false, warningLog: "trusted proxies contains insecure"},
-		"source not in IPv6 range and is not trusted 1": {ips: []string{"::/0"}, shouldDrop: true, warningLog: "trusted proxies contains insecure"},
-		"source not in IPv6 range and is not trusted 2": {ips: []string{"3209:7473:73ed:a31c:0a08:f214:2434:d5ce/0"}, shouldDrop: true, warningLog: "trusted proxies contains insecure"},
-		"source not in IPv4 range":                      {ips: []string{"172.0.0.0/24"}, shouldDrop: true},
-		"empty list":                                    {ips: []string{}, shouldDrop: true},
+		"bad IP range": {
+			ips:        []string{"/128"},
+			shouldDrop: true,
+			warningLog: "could not be parsed",
+		},
+		"single IP trusted": {
+			ips:        []string{"127.0.0.1"},
+			shouldDrop: false,
+		},
+		"trusted IP range": {
+			ips:        []string{"127.0.0.0/24"},
+			shouldDrop: false,
+		},
+		"source in IP range but not trusted IPv4": {
+			ips:        []string{"172.0.0.0/0"},
+			shouldDrop: false,
+			warningLog: "trusted proxies contains insecure",
+		},
+		"source not in IPv6 range and is not trusted 1": {
+			ips:        []string{"::/0"},
+			shouldDrop: true,
+			warningLog: "trusted proxies contains insecure",
+		},
+		"source not in IPv6 range and is not trusted 2": {
+			ips:        []string{"3209:7473:73ed:a31c:0a08:f214:2434:d5ce/0"},
+			shouldDrop: true,
+			warningLog: "trusted proxies contains insecure",
+		},
+		"source not in IPv4 range": {
+			ips:        []string{"172.0.0.0/24"},
+			shouldDrop: true,
+		},
+		"empty list": {
+			ips:        []string{},
+			shouldDrop: true,
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN

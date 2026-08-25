@@ -79,7 +79,7 @@ func TestHandlerServeHTTP(t *testing.T) {
 
 			proxy := NewHandler(rcf, re, eh)
 
-			req := httptest.NewRequest(http.MethodGet, "/test", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", nil)
 			rw := httptest.NewRecorder()
 
 			rcf.EXPECT().Create(rw, req).Return(rc)

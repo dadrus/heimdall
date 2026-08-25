@@ -362,7 +362,7 @@ func (a *genericAuthenticator) createRequest(
 				Str("_cookie", cookieName).
 				Msg("Cookie not present in the request but configured to be forwarded")
 		} else {
-			req.AddCookie(&http.Cookie{Name: cookieName, Value: cookieValue})
+			req.AddCookie(&http.Cookie{Name: cookieName, Value: cookieValue}) //nolint:gosec
 		}
 	}
 

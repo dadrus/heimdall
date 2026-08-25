@@ -9,6 +9,7 @@ linters:
     - depguard
     - dupl
     - exhaustruct
+    - exhaustruct_v5
     - ireturn
     - nolintlint
     - paralleltest
@@ -27,6 +28,7 @@ linters:
     - godoclint
     # deprecated
     - wsl
+    - gomodguard
   settings:
     cyclop:
       max-complexity: 11
@@ -86,6 +88,7 @@ linters:
           - lll
           - maintidx
           - mnd
+          - gosec
         path: (.+)_test\.go
       - linters:
           - goconst

@@ -11,7 +11,7 @@ on:
       - release
 
 env:
-  GOLANGCI_LINT_VERSION: "v2.9.0"
+  GOLANGCI_LINT_VERSION: "v2.13.1"
   HELM_VERSION: "3.18.5"
   HELM_UNITTEST_VERSION: "v1.0.0"
   KUBECONFORM_VERSION: "0.6.7"
@@ -122,7 +122,7 @@ jobs:
       - name: Review code
         uses: reviewdog/action-golangci-lint@c76cceaaab89abe74e649d2e34c6c9adc26662d2 # v2.10.0
         with:
-          go_version: "${{ env.GO_VERSION }}"
+          go_version_file: go.mod
           golangci_lint_version: "${{ env.GOLANGCI_LINT_VERSION }}"
           reporter: github-pr-review
           fail_level: error
