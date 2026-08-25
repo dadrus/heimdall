@@ -57,10 +57,10 @@ func TestRequestTargetIDPartitionsByAuthorization(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			first := httptest.NewRequest(http.MethodGet, "https://example.com/resource", nil)
+			first := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/resource", nil)
 			first.Header.Set("Authorization", tc.firstAuthorization)
 
-			second := httptest.NewRequest(http.MethodGet, "https://example.com/resource", nil)
+			second := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/resource", nil)
 			second.Header.Set("Authorization", tc.secondAuthorization)
 
 			// WHEN

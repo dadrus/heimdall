@@ -34,7 +34,7 @@ func (c *APIKey) Apply(req *http.Request) error {
 	switch c.In {
 	case "cookie":
 		req.Header = req.Header.Clone()
-		req.AddCookie(&http.Cookie{Name: c.Name, Value: c.Value})
+		req.AddCookie(&http.Cookie{Name: c.Name, Value: c.Value}) //nolint:gosec
 
 	case "header":
 		req.Header = req.Header.Clone()

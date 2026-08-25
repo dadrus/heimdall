@@ -72,7 +72,12 @@ func TestHandler(t *testing.T) {
 			rw := httptest.NewRecorder()
 
 			// WHEN
-			handler(next).ServeHTTP(rw, httptest.NewRequest(tc.requestMethod, "http://heimdall.local/foo", nil))
+			handler(next).ServeHTTP(rw, httptest.NewRequestWithContext(
+				t.Context(),
+				tc.requestMethod,
+				"http://heimdall.local/foo",
+				nil,
+			))
 
 			// THEN
 			tc.assert(t, rw)

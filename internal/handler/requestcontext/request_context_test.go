@@ -132,7 +132,7 @@ func TestRequestClientIPs(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodHead, "https://foo.bar/test", nil)
 			tc.configureRequest(t, req)
 
 			rc := New()
@@ -150,7 +150,7 @@ func TestRequestContextHeaders(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequest(http.MethodHead, "https://FoO.Baz/test", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodHead, "https://FoO.Baz/test", nil)
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
 
@@ -170,7 +170,7 @@ func TestRequestContextHeader(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequest(http.MethodHead, "https://Foo.bar/test", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodHead, "https://Foo.bar/test", nil)
 	req.Header.Set("X-Foo-Bar", "foo")
 	req.Header.Add("X-Foo-Bar", "bar")
 	req.Host = "Bar.foo"
@@ -193,7 +193,7 @@ func TestRequestContextCookie(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodHead, "https://foo.bar/test", nil)
 	req.Header.Set("Cookie", "foo=bar; bar=baz")
 
 	ctx := New()
@@ -289,7 +289,7 @@ func TestRequestContextBody(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := httptest.NewRequest(http.MethodPost, "https://foo.bar/test", tc.body)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "https://foo.bar/test", tc.body)
 			req.Header.Set("Content-Type", tc.ct)
 
 			ctx := New()
@@ -309,7 +309,7 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 
 	// GIVEN
 	ctx := New()
-	ctx.Init(httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil))
+	ctx.Init(httptest.NewRequestWithContext(t.Context(), http.MethodHead, "https://foo.bar/test", nil))
 
 	ctx.Request().URL.Captures = map[string]string{"a": "b"}
 
@@ -323,7 +323,9 @@ func TestRequestContextReset(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequest(http.MethodHead,
+	req := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodHead,
 		"https://foo.bar/test",
 		bytes.NewBufferString(`{ "content": "heimdall" }`),
 	)
