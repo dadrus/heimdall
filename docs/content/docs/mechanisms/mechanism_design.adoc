@@ -32,12 +32,12 @@ Consider the following definition:
   type: remote
   config:
     endpoint:
-      url: http://api.internal/entitlements?tenantId={{ .Request.URL.Captures.tenantId }}
+      url: http://api.internal/entitlements?tenantId={{ .Request.URL.Captures.tenantId | urlenc }}
       method: POST
     payload: |
       {
-        "subject": "{{ .Subject.ID }}",
-        "whatever": "{{ .Outputs.foo.something }}"
+        "subject": {{ .Subject.ID | quote }},
+        "whatever": {{ .Outputs.foo.something | quote }}
       }
 ----
 
@@ -63,14 +63,14 @@ Instead of encoding rule-specific assumptions in the mechanism definition, expos
   type: remote
   config:
     endpoint:
-      url: http://api.internal/entitlements?tenantId={{ .Values.tenantID }}
+      url: http://api.internal/entitlements?tenantId={{ .Values.tenantID | urlenc}}
       method: POST
     values:
       tenantID: unknown
     payload: |
       {
-        "subject": "{{ .Subject.ID }}",
-        "whatever": "{{ .Values.whatever }}"
+        "subject": {{ .Subject.ID | quote }},
+        "whatever": {{ .Values.whatever | quote }}
       }
 ----
 
@@ -107,7 +107,7 @@ Another rule can reuse the same mechanism definition while obtaining those input
   config:
     values:
       tenantID: '{{ .Request.Header "X-Tenant-ID" }}'
-      whatever: '{{ .Results.lookup.details.entitlement }}'
+      whatever: '{{ .Results.lookup.Payload.entitlement }}'
 ----
 
 The mechanism definition's interface remains unchanged even though the two rules derive its values differently.
@@ -126,8 +126,8 @@ For example, the rule can override the payload property of a mechanism defined i
       tenantID: '{{ .Request.URL.Captures.foo }}'
     payload: |
       {
-        "subject": "{{ .Subject.ID }}",
-        "whatever": "{{ .Request.Header \"X-Whatever\" }}"
+        "subject": {{ .Subject.ID | quote }},
+        "whatever": {{ .Request.Header "X-Whatever" | quote }}
       }
 ----
 
