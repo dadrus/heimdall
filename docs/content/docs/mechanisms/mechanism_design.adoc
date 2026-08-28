@@ -5,22 +5,21 @@ draft: false
 weight: 53
 menu:
   docs:
-    weight: 6
+    weight: 3
     parent: "Mechanisms"
 description: Explains how to design reusable mechanism definitions by exposing rule-specific inputs through Values and using property overrides deliberately.
 ---
 
 :toc:
 
-When designing a mechanism definition, distinguish between dependencies that are intrinsic to the mechanism and inputs that depend on the rule using it.
+When designing a link:{{< relref "/docs/mechanisms/catalogue.adoc#_general_mechanism_configuration" >}}[mechanism definition], distinguish between dependencies that are intrinsic to the mechanism and inputs that depend on the rule using it.
 
-Stable dependencies on evaluation objects can be referenced directly.
-If an input relies on rule-specific structure, such as a capture name, a pipeline step ID, or the shape of that step's output, expose it through `Values` and let each rule provide it.
+Stable dependencies on link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_objects" >}}[evaluation objects] can be referenced directly. However, if an input relies on rule-specific structure, such as a capture name, a link:{{< relref "/docs/rules/regular_rule.adoc#_authentication_authorization_pipeline" >}}[pipeline step ID], or the shape of that step's output, expose it through link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] and let each rule provide it.
 
 == Keep mechanism definitions independent of rule-specific structure
 
 Mechanisms defined in the catalogue are intended to be reusable building blocks.
-A rule references a mechanism definition, supplies values, and may override properties that are declared overridable.
+A link:{{< relref "/docs/concepts/rules.adoc" >}}[rule] references a mechanism definition, supplies values, and may override properties that are declared overridable.
 
 A mechanism definition may directly use evaluation objects that have stable meaning for its behaviour.
 It should, however, avoid assumptions about the structure of a particular rule, such as route capture names, pipeline step IDs, or the shape of another step's output.
@@ -42,16 +41,15 @@ Consider the following definition:
       }
 ----
 
-The direct reference to `Subject.ID` is not a problem.
-The current subject has stable meaning for this authorizer regardless of which rule uses it.
+The direct reference to link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject.ID`] is not a problem. The current subject has stable meaning for this authorizer regardless of which rule uses it.
 
 The definition is nevertheless coupled to the consuming rule in two other ways:
 
-* The endpoint assumes that the rule defines a URL capture named `tenantId`.
+* The endpoint assumes that the rule defines a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_url_captures" >}}[URL capture] named `tenantId`.
 +
-NOTE: For a remote authorizer, `Request` is intentionally not available to endpoint templates. Even if it were available, the expression would still tie the mechanism definition to that particular capture name.
+NOTE: For a link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[remote authorizer], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] is intentionally not available to endpoint templates. Even if it were available, the expression would still tie the mechanism definition to that particular capture name.
 
-* The payload assumes that the rule executes a previous step with the ID `foo` and that its output contains a field named `something`.
+* The payload assumes that the rule executes a previous step with the ID `foo` and that its entry in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] object contains a field named `something`.
 
 A rule with a differently named capture, another source for the tenant identifier, or a differently structured pipeline cannot reuse this mechanism definition. Such a rule would require a separate definition in the catalogue.
 

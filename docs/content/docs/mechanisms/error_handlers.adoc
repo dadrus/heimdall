@@ -5,7 +5,7 @@ draft: false
 weight: 58
 menu:
   docs:
-    weight: 7
+    weight: 8
     parent: "Mechanisms"
 description: Error handlers kick in when any of the stages of the regular rule pipeline fail and let you define logic to handle such situations. This page describes the available error handler types in detail.
 ---
