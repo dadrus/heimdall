@@ -3,6 +3,10 @@
 ## [0.17.21](https://github.com/dadrus/heimdall/compare/v0.17.20...v0.17.21) (2026-08-14)
 
 
+This release deprecates `forward_response_headers_to_upstream` as part of [#3375](https://github.com/dadrus/heimdall/pull/3375). Users relying on this option should start planning their migration (see [#3375](https://github.com/dadrus/heimdall/pull/3375) for details).
+
+It also contains a larger set of bug fixes addressing correctness and robustness in request processing, caching, and communication with external authentication and authorization systems.
+
 ### Deprecations
 
 * `forward_response_headers_to_upstream` setting of the `remote` authorizer is deprecated ([#3375](https://github.com/dadrus/heimdall/issues/3375)) ([7ac4f55](https://github.com/dadrus/heimdall/commit/7ac4f55230920835638ffd7a99df108498ba5d09))
@@ -40,6 +44,13 @@
 
 ## [0.17.20](https://github.com/dadrus/heimdall/compare/v0.17.19...v0.17.20) (2026-08-07)
 
+In addition to the updates and bug fixes listed below, this release addresses the following security-critical issues:
+
+* Path re-encoding in decision mode may bypass path guards and lead to authorization bypass (https://github.com/dadrus/heimdall/security/advisories/GHSA-r9fw-vxmp-hwf2). Fixed in [#3421](https://github.com/dadrus/heimdall/pull/3421).
+* Inconsistent path captures during route lookup backtracking may lead to incorrect rule selection and authorization bypass ([#3412](https://github.com/dadrus/heimdall/issues/3412)). Fixed in [#3419](https://github.com/dadrus/heimdall/pull/3419).
+* Default JWT and OAuth2 token extraction may buffer unbounded request bodies, allowing unauthenticated clients to cause excessive memory consumption and potentially exhaust process memory ([#3424](https://github.com/dadrus/heimdall/issues/3424)). Fixed in [#3425](https://github.com/dadrus/heimdall/pull/3425).
+
+Please check whether you are affected and update immediately!
 
 ### Bug Fixes
 
@@ -66,6 +77,12 @@
 
 ## [0.17.19](https://github.com/dadrus/heimdall/compare/v0.17.18...v0.17.19) (2026-08-03)
 
+In addition to updated dependencies, this release addresses the following vulnerabilities:
+
+* Missing duplicate-slash normalization, which may lead to policy bypass ([GHSA-647x-xcgh-6rpq](https://github.com/dadrus/heimdall/security/advisories/GHSA-647x-xcgh-6rpq)). Fixed in dc5cd9f.
+* Percent-encoded unreserved path characters may lead to authorization bypass as well ([GHSA-j7gq-v6c3-938j](https://github.com/dadrus/heimdall/security/advisories/GHSA-j7gq-v6c3-938j)). Fixed in 4d1705b.
+
+Please check whether you are affected and update immediately!
 
 ### Bug Fixes
 
@@ -116,7 +133,7 @@
 
 ### Bug Fixes
 
-* Allow operators to disable unavoidable access logs ([#3292](https://github.com/dadrus/heimdall/issues/3292)) ([fa1f0b5](https://github.com/dadrus/heimdall/commit/fa1f0b5cb25b7934b9b19b6fcf1c6583c22a48da))
+* Allow operators to disable unavoidable access logs ([#3292](https://github.com/dadrus/heimdall/issues/3292)) by [@kvlunar](https://github.com/kvlunar) ([fa1f0b5](https://github.com/dadrus/heimdall/commit/fa1f0b5cb25b7934b9b19b6fcf1c6583c22a48da))
 
 
 ### Dependencies
@@ -150,12 +167,13 @@
 * update module github.com/tidwall/gjson to v1.19.0 ([#3245](https://github.com/dadrus/heimdall/issues/3245)) ([a306a33](https://github.com/dadrus/heimdall/commit/a306a33bc51d89ac947079b3d0b4ca57c0745ff1))
 * update module google.golang.org/grpc to v1.81.1 ([#3261](https://github.com/dadrus/heimdall/issues/3261)) ([09cb299](https://github.com/dadrus/heimdall/commit/09cb29993ffef0cd5a6367491917272b2767f40a))
 
+
 ## [0.17.14](https://github.com/dadrus/heimdall/compare/v0.17.13...v0.17.14) (2026-04-19)
 
 
 ### Bug Fixes
 
-* Allow non-object JSON/YAML payloads in contextualizer and authorizer responses ([#3202](https://github.com/dadrus/heimdall/issues/3202)) ([f855bf1](https://github.com/dadrus/heimdall/commit/f855bf14a0e403adb32fc270f150ccb23dd9f87b))
+* Allow non-object JSON/YAML payloads in contextualizer and authorizer responses ([#3202](https://github.com/dadrus/heimdall/issues/3202)) by [@Kakadus](https://github.com/Kakadus) ([f855bf1](https://github.com/dadrus/heimdall/commit/f855bf14a0e403adb32fc270f150ccb23dd9f87b))
 * Case-insensitive handling of URL-encoded slashes ([#3207](https://github.com/dadrus/heimdall/issues/3207)) ([8b0de6a](https://github.com/dadrus/heimdall/commit/8b0de6aba23a047cfee3081df878271bb17f4351))
 * Case-insensitive host matching ([#3208](https://github.com/dadrus/heimdall/issues/3208)) ([3d05e56](https://github.com/dadrus/heimdall/commit/3d05e56a9e7ef0355f17482b4322054af4e85943))
 * Considering all `Forwarded` and `X-Forwarded-For` header values when extracting hop chain ([#3206](https://github.com/dadrus/heimdall/issues/3206)) ([a6fd601](https://github.com/dadrus/heimdall/commit/a6fd601abe806135f43f57a3346096c021b2d726))
@@ -179,7 +197,7 @@
 
 ### Bug Fixes
 
-* reset child pointer in wildcard lookup to prevent false cross-host conflict ([#3170](https://github.com/dadrus/heimdall/issues/3170)) ([aff881c](https://github.com/dadrus/heimdall/commit/aff881ce6fb02649afe4950532eafd041b763610))
+* Reset child pointer in wildcard lookup to prevent false cross-host conflict ([#3170](https://github.com/dadrus/heimdall/issues/3170)) by [@Kakadus](https://github.com/Kakadus) ([aff881c](https://github.com/dadrus/heimdall/commit/aff881ce6fb02649afe4950532eafd041b763610))
 * Strict validation of `log.level` values ([#3168](https://github.com/dadrus/heimdall/issues/3168)) ([f5dcf01](https://github.com/dadrus/heimdall/commit/f5dcf01223d6ec4dd24d24a6854594ade06e6846))
 
 
@@ -218,13 +236,12 @@
 * update module github.com/redis/rueidis/rueidisotel to v1.0.73 ([#3114](https://github.com/dadrus/heimdall/issues/3114)) ([add85c3](https://github.com/dadrus/heimdall/commit/add85c36f8e65e4cbacce95381ab5f8c9d1f889e))
 * update module google.golang.org/grpc to v1.79.3 ([#3122](https://github.com/dadrus/heimdall/issues/3122)) ([69186e0](https://github.com/dadrus/heimdall/commit/69186e0718c9ed8c12b1064380bcc96006d9c9f9))
 
-## [0.17.11](https://github.com/dadrus/heimdall/compare/v0.17.10...v0.17.11) (2026-03-15)
 
+## [0.17.11](https://github.com/dadrus/heimdall/compare/v0.17.10...v0.17.11) (2026-03-15)
 
 ### Bug Fixes
 
-* Split query from path in envoy gRPC based ExtAuth integration ([#3106](https://github.com/dadrus/heimdall/issues/3106)) by by [@Kakadus](https://github.com/Kakadus) ([50321b3](https://github.com/dadrus/heimdall/commit/50321b3007db1ccafdc6b1cfd6bdc3689c19a502))
-
+* Split query from path in envoy gRPC based ExtAuth integration ([#3106](https://github.com/dadrus/heimdall/issues/3106)) by [@Kakadus](https://github.com/Kakadus) ([50321b3](https://github.com/dadrus/heimdall/commit/50321b3007db1ccafdc6b1cfd6bdc3689c19a502))
 
 ### Dependencies
 
@@ -237,6 +254,7 @@
 
 ## [0.17.10](https://github.com/dadrus/heimdall/compare/v0.17.9...v0.17.10) (2026-03-05)
 
+Although this is a regular monthly patch release, the switch to the  [Green Tea garbage collector](https://go.dev/doc/go1.26#new-garbage-collector), which became the default in Go v1.26.0, may result in noticeable performance improvements.
 
 ### Dependencies
 
@@ -347,6 +365,10 @@
 
 ## [0.17.5](https://github.com/dadrus/heimdall/compare/v0.17.4...v0.17.5) (2025-12-05)
 
+Even though this is a regular patch release, there are two noticeable updates:
+
+* The gocloud.dev update in #2896 dropped support for the AWS v1 APIs. This means that if you were using the cloudblob provider to load your rulesets from S3 buckets and configured heimdall to use that API version, you will encounter a breaking change.
+* The Kubernetes-based examples were migrated to Terraform/OpenTofu in #2886, which makes using them a breeze :)
 
 ### Documentation
 
