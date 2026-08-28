@@ -12,7 +12,9 @@ description: Regular rules allow definition and as such execution of arbitrary l
 
 :toc:
 
-In the simplest case, a regular rule reuses mechanisms from the previously defined link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue] in its pipelines. In more complex scenarios, a rule can reconfigure parts of the mechanisms being used. The specific parts that can be reconfigured or overridden depend on the mechanism itself and are described in the mechanism-specific documentation. Reconfiguration is always limited to the particular rule's pipeline and does not affect other rules.
+In the simplest case, a regular rule reuses mechanisms from the previously defined link:{{< relref "/docs/mechanisms/catalogue.adoc" >}}[catalogue] in its pipelines. In more complex scenarios, a rule can reconfigure parts of the mechanisms being used. The specific parts that can be reconfigured or overridden depend on the mechanism itself and are described in the mechanism-specific documentation. Reconfiguration is always limited to the particular rule's pipeline and does not affect other rules. For guidance on deciding which inputs should be part of a mechanism definition,
+which should be supplied through `Values`, and when property overrides are appropriate,
+see link:{{< relref "/docs/mechanisms/mechanism_design.adoc" >}}[Designing Mechanism Definitions].
 
 == Configuration
 

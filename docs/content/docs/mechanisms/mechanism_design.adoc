@@ -1,0 +1,139 @@
+---
+title: "Designing Mechanism Definitions"
+date: 2026-08-26T22:21:12+01:00
+draft: false
+weight: 53
+menu:
+  docs:
+    weight: 3
+    parent: "Mechanisms"
+description: Explains how to design reusable mechanism definitions by exposing rule-specific inputs through Values and using property overrides deliberately.
+---
+
+:toc:
+
+When designing a link:{{< relref "/docs/mechanisms/catalogue.adoc#_general_mechanism_configuration" >}}[mechanism definition], distinguish between dependencies that are intrinsic to the mechanism and inputs that depend on the rule using it.
+
+Stable dependencies on link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_objects" >}}[evaluation objects] can be referenced directly. However, if an input relies on rule-specific structure, such as a capture name, a link:{{< relref "/docs/rules/regular_rule.adoc#_authentication_authorization_pipeline" >}}[pipeline step ID], or the shape of that step's output, expose it through link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_values" >}}[`Values`] and let each rule provide it.
+
+== Keep mechanism definitions independent of rule-specific structure
+
+Mechanisms defined in the catalogue are intended to be reusable building blocks.
+A link:{{< relref "/docs/concepts/rules.adoc" >}}[rule] references a mechanism definition, supplies values, and may override properties that are declared overridable.
+
+A mechanism definition may directly use evaluation objects that have stable meaning for its behaviour.
+It should, however, avoid assumptions about the structure of a particular rule, such as route capture names, pipeline step IDs, or the shape of another step's output.
+
+Consider the following definition:
+
+[source,yaml]
+----
+- id: check_entitlement
+  type: remote
+  config:
+    endpoint:
+      url: http://api.internal/entitlements?tenantId={{ .Request.URL.Captures.tenantId | urlenc }}
+      method: POST
+    payload: |
+      {
+        "subject": {{ .Subject.ID | quote }},
+        "whatever": {{ .Results.foo.Payload.something | quote }}
+      }
+----
+
+The direct reference to link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject.ID`] is not a problem. The current subject has stable meaning for this authorizer regardless of which rule uses it.
+
+The definition is nevertheless coupled to the consuming rule in two other ways:
+
+* The endpoint assumes that the rule defines a link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_url_captures" >}}[URL capture] named `tenantId`.
++
+NOTE: For a link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[remote authorizer], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] is intentionally not available to endpoint templates. Even if it were available, the expression would still tie the mechanism definition to that particular capture name.
+
+* The payload assumes that the rule executes a previous step with the ID `foo` and that its entry in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] object contains a field named `something`.
+
+A rule with a differently named capture, another source for the tenant identifier, or a differently structured pipeline cannot reuse this mechanism definition. Such a rule would require a separate definition in the catalogue.
+
+== Use Values as the mechanism interface
+
+Instead of encoding rule-specific assumptions in the mechanism definition, expose the information required by the mechanism through `Values`:
+
+[source,yaml]
+----
+- id: check_entitlement
+  type: remote
+  config:
+    endpoint:
+      url: http://api.internal/entitlements?tenantId={{ .Values.tenantID | urlenc }}
+      method: POST
+    values:
+      tenantID: unknown
+    payload: |
+      {
+        "subject": {{ .Subject.ID | quote }},
+        "whatever": {{ .Values.whatever | quote }}
+      }
+----
+
+Here, `Values.tenantID` and `Values.whatever` form the parameter interface of the mechanism definition.
+This way, the mechanism definition declares _what_ it needs without prescribing _where_ rule-specific information must come from.
+
+* `Subject.ID` is referenced directly because the current subject is an intrinsic input to the authorizer and does not depend on the structure of the consuming rule.
+
+* `tenantID` has the default value `unknown`.
+A rule may override it, but does not have to provide it.
+
+* `whatever` is used by the catalogue-defined payload and has no default value.
+A rule is therefore expected to provide it so that the payload can be rendered meaningfully.
+
+The rule can map these parameters to its own execution context:
+
+[source,yaml]
+----
+- authorizer: check_entitlement
+  config:
+    values:
+      tenantID: '{{ .Request.URL.Captures.foo }}'
+      whatever: '{{ .Results.bar.Payload.something }}'
+----
+
+The route capture `foo`, the step ID `bar`, and the structure of that step's output now remain details of the rule.
+The mechanism definition in the catalogue only knows its stable inputs: `tenantID` and `whatever`.
+
+Another rule can reuse the same mechanism definition while obtaining those inputs from different sources:
+
+[source,yaml]
+----
+- authorizer: check_entitlement
+  config:
+    values:
+      tenantID: '{{ .Request.Header "X-Tenant-ID" }}'
+      whatever: '{{ .Results.lookup.Payload.entitlement }}'
+----
+
+The mechanism definition's interface remains unchanged even though the two rules derive its values differently.
+
+== Overrides change the effective interface
+
+A value is only required while a catalogue-defined property that references it is in use. If a rule replaces an overridable property, it also replaces that property's dependencies.
+
+For example, the rule can override the payload property of a mechanism defined in the catalogue:
+
+[source,yaml]
+----
+- authorizer: check_entitlement
+  config:
+    values:
+      tenantID: '{{ .Request.URL.Captures.foo }}'
+    payload: |
+      {
+        "subject": {{ .Subject.ID | quote }},
+        "whatever": {{ .Request.Header "X-Whatever" | quote }}
+      }
+----
+
+* `Values.tenantID` is still part of the effective interface because the rule continues to use the catalogue-defined endpoint.
+
+* `Values.whatever`, however, is no longer required because the rule no longer uses the catalogue-defined payload.
+The replacement payload is defined by the rule and can therefore use the evaluation objects available to that property directly.
+
+NOTE: The evaluation objects available for templating differ between mechanisms and properties. Refer to the documentation of the respective mechanism and property for the exact set of objects available in each context.
