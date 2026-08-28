@@ -2,7 +2,7 @@
 title: "Authenticators"
 date: 2022-06-09T18:56:56+02:00
 draft: false
-weight: 53
+weight: 54
 menu:
   docs:
     weight: 3
