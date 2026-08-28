@@ -37,7 +37,7 @@ Consider the following definition:
     payload: |
       {
         "subject": {{ .Subject.ID | quote }},
-        "whatever": {{ .Outputs.foo.something | quote }}
+        "whatever": {{ .Results.foo.Payload.something | quote }}
       }
 ----
 
@@ -49,7 +49,7 @@ The definition is nevertheless coupled to the consuming rule in two other ways:
 +
 NOTE: For a link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[remote authorizer], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] is intentionally not available to endpoint templates. Even if it were available, the expression would still tie the mechanism definition to that particular capture name.
 
-* The payload assumes that the rule executes a previous step with the ID `foo` and that its entry in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] object contains a field named `something`.
+* The payload assumes that the rule executes a previous step with the ID `foo` and that its entry in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] object contains a field named `something`.
 
 A rule with a differently named capture, another source for the tenant identifier, or a differently structured pipeline cannot reuse this mechanism definition. Such a rule would require a separate definition in the catalogue.
 
@@ -63,7 +63,7 @@ Instead of encoding rule-specific assumptions in the mechanism definition, expos
   type: remote
   config:
     endpoint:
-      url: http://api.internal/entitlements?tenantId={{ .Values.tenantID | urlenc}}
+      url: http://api.internal/entitlements?tenantId={{ .Values.tenantID | urlenc }}
       method: POST
     values:
       tenantID: unknown
@@ -93,7 +93,7 @@ The rule can map these parameters to its own execution context:
   config:
     values:
       tenantID: '{{ .Request.URL.Captures.foo }}'
-      whatever: '{{ .Outputs.bar.something }}'
+      whatever: '{{ .Results.bar.Payload.something }}'
 ----
 
 The route capture `foo`, the step ID `bar`, and the structure of that step's output now remain details of the rule.
