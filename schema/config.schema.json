@@ -1847,14 +1847,6 @@
             "expressions": {
               "$ref": "#/definitions/expressionList"
             },
-            "forward_response_headers_to_upstream": {
-              "description": "A list of headers to forward to the upstream service.",
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "uniqueItems": true
-            },
             "cache_ttl": {
               "type": "string",
               "description": "How long to cache the response received from the authorization endpoint. 0 or less means no caching",

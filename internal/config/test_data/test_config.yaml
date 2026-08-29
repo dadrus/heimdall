@@ -418,8 +418,6 @@ mechanisms:
         values:
           key: value
         payload: https://bla.bar
-        forward_response_headers_to_upstream:
-          - bla-bar
         expressions:
           - expression: "Payload.foo == 'bar'"
     - id: attributes_based_authorizer_2

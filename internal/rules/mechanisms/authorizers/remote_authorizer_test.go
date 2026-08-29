@@ -121,7 +121,6 @@ payload: "{{ .Subject.ID }}"
 				})
 				require.NoError(t, err)
 				assert.Equal(t, "bar", val)
-				assert.Empty(t, auth.headersForUpstream)
 				assert.Zero(t, auth.ttl)
 
 				assert.Equal(t, "minimal valid configuration with enforced and used TLS", auth.ID())
@@ -161,7 +160,6 @@ endpoint:
 				require.NotNil(t, auth)
 				require.Equal(t, "Foo", auth.e.Headers["X-My-Header"].String())
 				assert.Nil(t, auth.payload)
-				assert.Empty(t, auth.headersForUpstream)
 				assert.Zero(t, auth.ttl)
 
 				assert.Equal(t, "configuration with endpoint and endpoint header", auth.ID())
@@ -194,9 +192,6 @@ endpoint:
 payload: "{{ .Subject.ID }}: {{ splitList \"/\" .Request.URL.Path | atIndex -1 }}"
 expressions:
   - expression: "Payload.foo == 'bar'"
-forward_response_headers_to_upstream:
-  - Foo
-  - Bar
 cache_ttl: 5s
 values:
   foo: "{{ .Subject.ID }}"
@@ -227,9 +222,6 @@ values:
 				}, auth)
 				require.NoError(t, err)
 				assert.Equal(t, "bar: bar", val)
-				assert.Len(t, auth.headersForUpstream, 2)
-				assert.Contains(t, auth.headersForUpstream, "Foo")
-				assert.Contains(t, auth.headersForUpstream, "Bar")
 				assert.NotNil(t, auth.ttl)
 				assert.Equal(t, 5*time.Second, auth.ttl)
 
@@ -323,7 +315,6 @@ payload: bar
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.payload, configured.payload)
 				assert.Equal(t, prototype.expressions, configured.expressions)
-				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
 				assert.Equal(t, prototype.Type(), configured.Type())
 			},
@@ -379,7 +370,6 @@ payload: bar
 				assert.Equal(t, prototype.e, configured.e)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, prototype.expressions, configured.expressions)
-				assert.Empty(t, configured.headersForUpstream)
 				assert.NotNil(t, configured.ttl)
 				assert.Equal(t, "with overridden empty payload", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
@@ -407,7 +397,6 @@ payload: bar
 				assert.Equal(t, prototype.e, configured.e)
 				assert.Equal(t, prototype.payload, configured.payload)
 				assert.Equal(t, prototype.expressions, configured.expressions)
-				assert.Empty(t, configured.headersForUpstream)
 				assert.Equal(t, 1*time.Second, configured.ttl)
 				assert.Equal(t, "foo", configured.ID())
 				assert.NotEqual(t, prototype.ID(), configured.ID())
@@ -448,8 +437,7 @@ values:
 `),
 			stepDef: types.StepDefinition{
 				Config: config.MechanismConfig{
-					"payload":                              "Baz",
-					"forward_response_headers_to_upstream": []string{"Bar", "Foo"},
+					"payload": "Baz",
 					"expressions": []map[string]any{
 						{"expression": "Payload.foo == 'bar'"},
 					},
@@ -478,14 +466,10 @@ values:
 				require.NoError(t, err)
 
 				assert.Equal(t, "Baz", val)
-				assert.Len(t, configured.headersForUpstream, 2)
-				assert.Contains(t, configured.headersForUpstream, "Bar")
-				assert.Contains(t, configured.headersForUpstream, "Foo")
 				assert.Equal(t, 15*time.Second, configured.ttl)
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
 				assert.Equal(t, prototype.v, configured.v)
-				assert.NotEqual(t, prototype.headersForUpstream, configured.headersForUpstream)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, "with everything possible, but values reconfigured", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
@@ -504,9 +488,8 @@ values:
 `),
 			stepDef: types.StepDefinition{
 				Config: config.MechanismConfig{
-					"values":                               map[string]any{"bar": "foo"},
-					"payload":                              "Baz",
-					"forward_response_headers_to_upstream": []string{"Bar", "Foo"},
+					"values":  map[string]any{"bar": "foo"},
+					"payload": "Baz",
 					"expressions": []map[string]any{
 						{"expression": "Payload.foo == 'bar'"},
 					},
@@ -543,13 +526,9 @@ values:
 				require.NoError(t, err)
 
 				assert.Equal(t, "Baz", val)
-				assert.Len(t, configured.headersForUpstream, 2)
-				assert.Contains(t, configured.headersForUpstream, "Bar")
-				assert.Contains(t, configured.headersForUpstream, "Foo")
 				assert.Equal(t, 15*time.Second, configured.ttl)
 
 				assert.NotEqual(t, prototype.ttl, configured.ttl)
-				assert.NotEqual(t, prototype.headersForUpstream, configured.headersForUpstream)
 				assert.NotEqual(t, prototype.payload, configured.payload)
 				assert.Equal(t, "with everything possible", configured.ID())
 				assert.Equal(t, prototype.Name(), configured.Name())
@@ -649,8 +628,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 		configureCache   func(t *testing.T, cch *mocks.CacheMock, authorizer *remoteAuthorizer, sub pipeline.Subject)
 		assert           func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results)
 	}{
-		"successful with payload and with header, without payload from server and without header " +
-			"forwarding and with disabled cache": {
+		"successful with payload and with header, without payload from server and with disabled cache": {
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
 				e: endpointtestsupport.EndpointValue(t, srv.URL,
@@ -718,8 +696,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.Empty(t, result.Payload)
 			},
 		},
-		"successful with json payload and with header, with json payload from server and with header " +
-			"forwarding and with disabled cache": {
+		"successful with json payload and with header from server and with disabled cache": {
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
 				e: endpointtestsupport.EndpointValue(t, srv.URL,
@@ -732,7 +709,6 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 					return tpl
 				}(),
-				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
 			},
 			subject: pipeline.Subject{
 				"default": &pipeline.Principal{
@@ -779,7 +755,6 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
 				ctx.EXPECT().Request().Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
@@ -827,8 +802,8 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				assert.Contains(t, payload, "permissions")
 			},
 		},
-		"successful with www-form-urlencoded payload and without header, without payload from server " +
-			"and with header forwarding and with failing cache hit": {
+		"successful with www-form-urlencoded payload and without header, without payload, but with headers from server " +
+			"and with failing cache hit": {
 			authorizer: &remoteAuthorizer{
 				id: "authorizer",
 				e: endpointtestsupport.EndpointValue(t, srv.URL,
@@ -844,8 +819,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 					return tpl
 				}(),
-				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
-				ttl:                20 * time.Second,
+				ttl: 20 * time.Second,
 			},
 			subject: pipeline.Subject{
 				"default": &pipeline.Principal{
@@ -880,7 +854,6 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
 				ctx.EXPECT().Request().Return(nil)
 			},
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, _ pipeline.Subject) {
@@ -889,11 +862,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything,
 					mock.MatchedBy(func(data []byte) bool {
-						var ai authorizationInformation
+						var ai pipeline.Result
 
 						err := json.Unmarshal(data, &ai)
 
-						return err == nil && ai.Payload == nil && len(ai.Headers.Get("X-Foo-Bar")) != 0
+						return err == nil && ai.Payload == nil && len(ai.Header("X-Foo-Bar")) != 0
 					}), auth.ttl).Return(nil)
 			},
 			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
@@ -907,6 +880,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 				assert.Empty(t, outputs["authorizer"])
 				assert.NotEmpty(t, results["authorizer"])
+				assert.Equal(t, "HeyFoo", results["authorizer"].Header("X-Foo-Bar"))
 			},
 		},
 		"successful without headers and payload and with cache": {
@@ -986,8 +960,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 					return tpl
 				}(),
-				headersForUpstream: []string{"X-Foo-Bar", "X-Bar-Foo"},
-				ttl:                20 * time.Second,
+				ttl: 20 * time.Second,
 			},
 			subject: pipeline.Subject{
 				"default": &pipeline.Principal{
@@ -998,20 +971,20 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *pipelinemocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().AddHeaderForUpstream("X-Foo-Bar", "HeyFoo")
-				ctx.EXPECT().AddHeaderForUpstream("X-Bar-Foo", "HeyBar")
 				ctx.EXPECT().Request().Return(nil)
 			},
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, _ *remoteAuthorizer, _ pipeline.Subject) {
 				t.Helper()
 
-				rawInfo, err := json.Marshal(authorizationInformation{
-					Headers: http.Header{
+				result := pipeline.NewResultWithHeaders(
+					map[string]any{"foo": "bar"},
+					http.Header{
 						"X-Foo-Bar": {"HeyFoo"},
 						"X-Bar-Foo": {"HeyBar"},
 					},
-					Payload: map[string]any{"foo": "bar"},
-				})
+				)
+
+				rawInfo, err := json.Marshal(result)
 				require.NoError(t, err)
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawInfo, nil)
@@ -1480,11 +1453,11 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			configureCache: func(t *testing.T, cch *mocks.CacheMock, auth *remoteAuthorizer, _ pipeline.Subject) {
 				t.Helper()
 
-				rawInfo, err := json.Marshal(authorizationInformation{
-					Payload: map[string]any{
-						"role": "user",
-					},
-				})
+				result := pipeline.NewResult(
+					map[string]any{"role": "user"},
+				)
+
+				rawInfo, err := json.Marshal(result)
 				require.NoError(t, err)
 
 				req, err := http.NewRequestWithContext(
@@ -1943,31 +1916,6 @@ func TestRemoteAuthorizerCalculateCacheKey(t *testing.T) {
 				"https://example.com/authorize",
 				nil,
 			),
-		},
-		"different response headers to forward": {
-			authorizer1: &remoteAuthorizer{
-				name:               "authorizer",
-				id:                 "authorizer",
-				ttl:                5 * time.Second,
-				headersForUpstream: []string{"X-Foo"},
-			},
-			authorizer2: &remoteAuthorizer{
-				name:               "authorizer",
-				id:                 "authorizer",
-				ttl:                5 * time.Second,
-				headersForUpstream: []string{"X-Bar"},
-			},
-			request1: newRequest(
-				http.MethodGet,
-				"https://example.com/authorize",
-				nil,
-			),
-			request2: newRequest(
-				http.MethodGet,
-				"https://example.com/authorize",
-				nil,
-			),
-			expectEqual: true,
 		},
 		"same effective request despite different endpoint configuration": {
 			authorizer1: &remoteAuthorizer{

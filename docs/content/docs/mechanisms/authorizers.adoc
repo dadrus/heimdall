@@ -166,12 +166,6 @@ List of https://github.com/google/cel-spec[CEL] expressions which define the log
 +
 Each expression has access to the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_payload" >}}[`Payload`] object.
 
-* *`forward_response_headers_to_upstream`*: _string array_ (optional, overridable)
-+
-Enables forwarding of selected response headers returned by the authorization endpoint to the upstream service.
-+
-NOTE: This setting is deprecated and will be removed in the 0.18.0 release. Use the response available through the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] evaluation object together with a `header` finalizer instead.
-
 * *`cache_ttl`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional, overridable)
 +
 Allows caching of the authorization endpoint responses. Defaults to `0s`, which means no caching. The cache identity is derived from the authorizer, the configured cache TTL and the effective request to the endpoint, including the HTTP method, rendered URL and headers, rendered payload and endpoint authentication strategy. Authorization expressions are evaluated for every execution, regardless of whether the authorization endpoint response was obtained remotely or reused from the cache.

@@ -59,41 +59,15 @@ func init() {
 }
 
 type remoteAuthorizer struct {
-	name               string
-	id                 string
-	app                app.Context
-	e                  endpoint.Endpoint
-	payload            template.Template
-	expressions        compiledExpressions
-	headersForUpstream []string
-	ttl                time.Duration
-	celEnv             *cel.Env
-	v                  values.Values
-}
-
-type authorizationInformation struct {
-	Headers http.Header `json:"headers"`
-	Payload any         `json:"payload"`
-}
-
-func (ai *authorizationInformation) addHeadersTo(headerNames []string, ctx pipeline.Context) {
-	for _, headerName := range headerNames {
-		headerValue := ai.Headers.Get(headerName)
-		if len(headerValue) != 0 {
-			ctx.AddHeaderForUpstream(headerName, headerValue)
-		}
-	}
-}
-
-func (ai *authorizationInformation) addResultsTo(key string, ctx pipeline.Context) {
-	if ai.Payload != nil {
-		ctx.Outputs()[key] = ai.Payload
-	}
-
-	ctx.Results()[key] = pipeline.NewResultWithHeaders(
-		ai.Payload,
-		ai.Headers,
-	)
+	name        string
+	id          string
+	app         app.Context
+	e           endpoint.Endpoint
+	payload     template.Template
+	expressions compiledExpressions
+	ttl         time.Duration
+	celEnv      *cel.Env
+	v           values.Values
 }
 
 func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any) (types.Mechanism, error) {
@@ -104,12 +78,11 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 		Msg("Creating authorizer")
 
 	type Config struct {
-		Endpoint                 endpoint.Endpoint `mapstructure:"endpoint"                             validate:"required"` //nolint:lll
-		Expressions              []Expression      `mapstructure:"expressions"                          validate:"dive"`
-		Payload                  template.Template `mapstructure:"payload"                              validate:"required_without=Endpoint.Headers"` //nolint:lll
-		ResponseHeadersToForward []string          `mapstructure:"forward_response_headers_to_upstream"`
-		CacheTTL                 time.Duration     `mapstructure:"cache_ttl"`
-		Values                   values.Values     `mapstructure:"values"`
+		Endpoint    endpoint.Endpoint `mapstructure:"endpoint"    validate:"required"` //nolint:lll
+		Expressions []Expression      `mapstructure:"expressions" validate:"dive"`
+		Payload     template.Template `mapstructure:"payload"     validate:"required_without=Endpoint.Headers"` //nolint:lll
+		CacheTTL    time.Duration     `mapstructure:"cache_ttl"`
+		Values      values.Values     `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -143,25 +116,16 @@ func newRemoteAuthorizer(app app.Context, name string, rawConfig map[string]any)
 			Msg("No TLS configured for the endpoint used in authorizer")
 	}
 
-	if len(conf.ResponseHeadersToForward) > 0 {
-		logger.Warn().
-			Str("_type", AuthorizerRemote).
-			Str("_name", name).
-			Msg("Usage of forward_response_headers_to_upstream is deprecated. " +
-				"Please use Results object in a header finalizer instead")
-	}
-
 	return &remoteAuthorizer{
-		name:               name,
-		id:                 name,
-		app:                app,
-		e:                  conf.Endpoint,
-		payload:            conf.Payload,
-		expressions:        expressions,
-		headersForUpstream: conf.ResponseHeadersToForward,
-		ttl:                conf.CacheTTL,
-		celEnv:             env,
-		v:                  conf.Values,
+		name:        name,
+		id:          name,
+		app:         app,
+		e:           conf.Endpoint,
+		payload:     conf.Payload,
+		expressions: expressions,
+		ttl:         conf.CacheTTL,
+		celEnv:      env,
+		v:           conf.Values,
 	}, nil
 }
 
@@ -178,7 +142,7 @@ func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 
 	var (
 		cacheKey string
-		authInfo *authorizationInformation
+		authInfo *pipeline.Result
 		fetched  bool
 	)
 
@@ -196,7 +160,7 @@ func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 		cacheKey = a.calculateCacheKey(req, payload)
 
 		if entry, err := cch.Get(ctx.Context(), cacheKey); err == nil {
-			var ai authorizationInformation
+			var ai pipeline.Result
 
 			if err = json.Unmarshal(entry, &ai); err == nil {
 				logger.Debug().Msg("Reusing authorization information from cache")
@@ -219,7 +183,7 @@ func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 		return err
 	}
 
-	if fetched && a.ttl > 0 && len(cacheKey) != 0 {
+	if fetched && len(cacheKey) != 0 {
 		data, _ := json.Marshal(authInfo)
 
 		if err = cch.Set(ctx.Context(), cacheKey, data, a.ttl); err != nil {
@@ -227,8 +191,11 @@ func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 		}
 	}
 
-	authInfo.addHeadersTo(a.headersForUpstream, ctx)
-	authInfo.addResultsTo(a.id, ctx)
+	if authInfo.Payload != nil {
+		ctx.Outputs()[a.id] = authInfo.Payload
+	}
+
+	ctx.Results()[a.id] = authInfo
 
 	return nil
 }
@@ -249,12 +216,11 @@ func (a *remoteAuthorizer) CreateStep(
 	}
 
 	type Config struct {
-		Endpoint                 *endpoint.Endpoint `mapstructure:"endpoint"                             validate:"not_allowed"` //nolint:lll
-		Payload                  template.Template  `mapstructure:"payload"`
-		Expressions              []Expression       `mapstructure:"expressions"                          validate:"dive"`
-		ResponseHeadersToForward []string           `mapstructure:"forward_response_headers_to_upstream"`
-		CacheTTL                 time.Duration      `mapstructure:"cache_ttl"`
-		Values                   values.Values      `mapstructure:"values"`
+		Endpoint    *endpoint.Endpoint `mapstructure:"endpoint"    validate:"not_allowed"`
+		Payload     template.Template  `mapstructure:"payload"`
+		Expressions []Expression       `mapstructure:"expressions" validate:"dive"`
+		CacheTTL    time.Duration      `mapstructure:"cache_ttl"`
+		Values      values.Values      `mapstructure:"values"`
 	}
 
 	var conf Config
@@ -264,15 +230,6 @@ func (a *remoteAuthorizer) CreateStep(
 	); err != nil {
 		return nil, errorchain.NewWithMessagef(pipeline.ErrConfiguration,
 			"failed decoding config for remote authorizer '%s'", a.name).CausedBy(err)
-	}
-
-	if len(conf.ResponseHeadersToForward) > 0 {
-		logger := a.app.Logger()
-		logger.Warn().
-			Str("_type", AuthorizerRemote).
-			Str("_name", a.name).
-			Msg("Usage of forward_response_headers_to_upstream is deprecated. " +
-				"Please use Results object in a header finalizer instead")
 	}
 
 	expressions, err := compileExpressions(conf.Expressions, a.celEnv)
@@ -288,10 +245,8 @@ func (a *remoteAuthorizer) CreateStep(
 		payload:     x.IfThenElse(conf.Payload != nil, conf.Payload, a.payload),
 		celEnv:      a.celEnv,
 		expressions: x.IfThenElse(len(expressions) != 0, expressions, a.expressions),
-		headersForUpstream: x.IfThenElse(len(conf.ResponseHeadersToForward) != 0,
-			conf.ResponseHeadersToForward, a.headersForUpstream),
-		ttl: x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
-		v:   a.v.Merge(conf.Values),
+		ttl:         x.IfThenElse(conf.CacheTTL > 0, conf.CacheTTL, a.ttl),
+		v:           a.v.Merge(conf.Values),
 	}, nil
 }
 
@@ -329,7 +284,7 @@ func (a *remoteAuthorizer) createRequest(
 func (a *remoteAuthorizer) fetchAuthorizationInformation(
 	ctx pipeline.Context,
 	req *http.Request,
-) (*authorizationInformation, error) {
+) (*pipeline.Result, error) {
 	logger := zerolog.Ctx(ctx.Context())
 	logger.Debug().Msg("Calling remote authorization endpoint")
 
@@ -361,10 +316,7 @@ func (a *remoteAuthorizer) fetchAuthorizationInformation(
 		return nil, err
 	}
 
-	return &authorizationInformation{
-		Headers: resp.Header,
-		Payload: data,
-	}, nil
+	return pipeline.NewResultWithHeaders(data, resp.Header), nil
 }
 
 func (a *remoteAuthorizer) readResponse(ctx pipeline.Context, resp *http.Response) (any, error) {
