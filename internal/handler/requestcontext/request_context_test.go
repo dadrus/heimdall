@@ -18,6 +18,7 @@ package requestcontext
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -382,9 +383,10 @@ func TestRequestContextWithParent(t *testing.T) {
 	))
 
 	orig := ctx.Context()
+	newParent := context.Background()
 
-	ctx.WithParent(t.Context())
+	ctx.WithParent(newParent)
 
 	assert.NotEqual(t, orig, ctx.ctx)
-	assert.Equal(t, t.Context(), ctx.ctx)
+	assert.Equal(t, newParent, ctx.ctx)
 }
