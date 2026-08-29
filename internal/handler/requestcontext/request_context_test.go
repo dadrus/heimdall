@@ -374,7 +374,12 @@ func TestRequestContextWithParent(t *testing.T) {
 
 	// GIVEN
 	ctx := New()
-	ctx.Init(httptest.NewRequest(http.MethodHead, "https://foo.bar/test", nil))
+	ctx.Init(httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodHead,
+		"https://foo.bar/test",
+		nil,
+	))
 
 	orig := ctx.Context()
 

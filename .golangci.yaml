@@ -95,6 +95,7 @@ linters:
           - mnd
           - goconst
           - unparam
+          - gosec
         path: (.+)_test\.go
     paths:
       - third_party$

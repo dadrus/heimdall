@@ -15,7 +15,9 @@ type noopRepository struct{}
 func (noopRepository) FindRule(_ pipeline.Context) (rule.Rule, error) {
 	return nil, errFunctionNotSupported
 }
+
 func (noopRepository) AddRuleSet(_ context.Context, _ rule.RuleSet, _ []rule.Rule) error { return nil }
+
 func (noopRepository) UpdateRuleSet(_ context.Context, _ rule.RuleSet, _ []rule.Rule) error {
 	return errFunctionNotSupported
 }
