@@ -95,7 +95,7 @@ func (r *requestContext) Finalize(_ pipeline.Backend) error {
 	}
 
 	for k, v := range r.UpstreamCookies() {
-		http.SetCookie(r.rw, &http.Cookie{Name: k, Value: v})
+		http.SetCookie(r.rw, &http.Cookie{Name: k, Value: v}) //nolint:gosec
 	}
 
 	r.rw.WriteHeader(r.responseCode)

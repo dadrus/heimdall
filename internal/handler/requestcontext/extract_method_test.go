@@ -46,7 +46,12 @@ func TestExtractMethod(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := httptest.NewRequest(http.MethodDelete, "/foo", nil)
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodDelete,
+				"/foo",
+				nil,
+			)
 			tc.modify(t, req.Header)
 
 			// WHEN

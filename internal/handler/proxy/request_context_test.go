@@ -390,7 +390,7 @@ func TestRequestContextFinalize(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			upstreamCalled := false
-			req := httptest.NewRequest(http.MethodGet, "https://foo.bar/test", bytes.NewBufferString("Ping"))
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", bytes.NewBufferString("Ping"))
 			req.Header = tc.headers
 
 			if tc.useIPv6 {

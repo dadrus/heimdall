@@ -24,8 +24,8 @@ import (
 	"strings"
 	"time"
 
+	"cel.dev/cel-go/cel"
 	"github.com/goccy/go-json"
-	"github.com/google/cel-go/cel"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"

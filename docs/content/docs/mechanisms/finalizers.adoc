@@ -2,10 +2,10 @@
 title: "Finalizers"
 date: 2022-06-09T18:57:16+02:00
 draft: false
-weight: 56
+weight: 57
 menu:
   docs:
-    weight: 6
+    weight: 7
     parent: "Mechanisms"
 description: Finalizers are the last steps executed in a rule pipeline and can e.g. create a special representation of the subject to be made available to the upstream service. This page describes the available finalizer types in detail.
 ---
@@ -120,7 +120,7 @@ Defines the JWT's validity period. Defaults to 5 minutes. Heimdall automatically
 +
 Specifies the HTTP header `name` and optional `scheme` for passing the JWT. Defaults to `Authorization` with scheme `Bearer`. If defined, `name` is required, and if `scheme` is omitted, the JWT is set as a raw value.
 
-The generated JWT is cached until 5 seconds before expiration. The cache key is computed based on the finalizer's configuration, the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] objects.
+The generated JWT is cached until 5 seconds before expiration. The cache key is computed based on the finalizer's configuration, the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_subject" >}}[`Subject`], the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`], and the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] attributes.
 
 .JWT finalizer configuration
 ====

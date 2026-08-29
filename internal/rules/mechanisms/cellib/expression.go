@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/google/cel-go/cel"
+	"cel.dev/cel-go/cel"
 )
 
 var errCELResultType = errors.New("result type error")

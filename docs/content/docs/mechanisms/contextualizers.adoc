@@ -2,10 +2,10 @@
 title: "Contextualizers"
 date: 2022-06-09T18:57:10+02:00
 draft: false
-weight: 55
+weight: 56
 menu:
   docs:
-    weight: 5
+    weight: 6
     parent: "Mechanisms"
 description: Contextualizers allow you enriching the information about the request and the authenticated subject. This page describes the available contextualizer types in detail.
 ---

@@ -19,7 +19,7 @@ package rules
 import (
 	"errors"
 
-	"github.com/google/cel-go/cel"
+	"cel.dev/cel-go/cel"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/cellib"
