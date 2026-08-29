@@ -188,7 +188,12 @@ func TestHandlerExecution(t *testing.T) {
 				rw.WriteHeader(http.StatusNoContent)
 			})
 
-			req := httptest.NewRequest(http.MethodGet, "http://heimdall.local/test", nil)
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodGet,
+				"http://heimdall.local/test",
+				nil,
+			)
 			req.Host = tc.host
 			req.Header = tc.header.Clone()
 

@@ -261,7 +261,12 @@ func TestHandlerHandle(t *testing.T) {
 			// GIVEN
 			recorder := httptest.NewRecorder()
 
-			req := httptest.NewRequest(http.MethodGet, "/foo", nil)
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodGet,
+				"/foo",
+				nil,
+			)
 			if len(tc.accept) != 0 {
 				req.Header.Set("Accept", tc.accept)
 			}

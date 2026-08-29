@@ -55,7 +55,8 @@ func TestNewCacheableRequest(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := httptest.NewRequest(
+			req := httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodGet,
 				"https://user:password@example.com/resource?foo=bar",
 				nil,
@@ -97,7 +98,12 @@ func TestCacheableRequestSelector(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := httptest.NewRequest(http.MethodGet, "https://example.com/resource", nil)
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodGet,
+				"https://example.com/resource",
+				nil,
+			)
 			req.Header["Accept-Encoding"] = []string{"gzip", "br"}
 			req.Header["Accept-Language"] = []string{"de"}
 			req.Header["X-Tenant"] = []string{"tenant-a"}

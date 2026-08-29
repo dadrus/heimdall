@@ -23,7 +23,7 @@ func TestWebhookServeHTTP(t *testing.T) {
 	}{
 		"unsupported content-type": {
 			req: func() *http.Request {
-				req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`foo`))
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", bytes.NewBufferString(`foo`))
 				req.Header.Set("Content-Type", "text/plain")
 
 				return req
@@ -36,7 +36,7 @@ func TestWebhookServeHTTP(t *testing.T) {
 		},
 		"request unmarshalling failed": {
 			req: func() *http.Request {
-				req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{}`))
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", bytes.NewBufferString(`{}`))
 				req.Header.Set("Content-Type", "application/json")
 
 				return req
@@ -54,7 +54,7 @@ func TestWebhookServeHTTP(t *testing.T) {
 		},
 		"response marshalling failed": {
 			req: func() *http.Request {
-				req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{}`))
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", bytes.NewBufferString(`{}`))
 				req.Header.Set("Content-Type", "application/json")
 
 				return req
@@ -82,7 +82,7 @@ func TestWebhookServeHTTP(t *testing.T) {
 		},
 		"successful execution without setting timeout": {
 			req: func() *http.Request {
-				req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{}`))
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", bytes.NewBufferString(`{}`))
 				req.Header.Set("Content-Type", "application/json")
 
 				return req
@@ -106,7 +106,7 @@ func TestWebhookServeHTTP(t *testing.T) {
 		},
 		"request timed out": {
 			req: func() *http.Request {
-				req := httptest.NewRequest(http.MethodPost, "/?timeout=10ms", bytes.NewBufferString(`{}`))
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/?timeout=10ms", bytes.NewBufferString(`{}`))
 				req.Header.Set("Content-Type", "application/json")
 
 				return req
@@ -131,7 +131,7 @@ func TestWebhookServeHTTP(t *testing.T) {
 		},
 		"successful execution with timeout set": {
 			req: func() *http.Request {
-				req := httptest.NewRequest(http.MethodPost, "/?timeout=10ms", bytes.NewBufferString(`{}`))
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/?timeout=10ms", bytes.NewBufferString(`{}`))
 				req.Header.Set("Content-Type", "application/json")
 
 				return req
@@ -155,7 +155,7 @@ func TestWebhookServeHTTP(t *testing.T) {
 		},
 		"invalid timeout set and not considered during execution": {
 			req: func() *http.Request {
-				req := httptest.NewRequest(http.MethodPost, "/?timeout=foo", bytes.NewBufferString(`{}`))
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/?timeout=foo", bytes.NewBufferString(`{}`))
 				req.Header.Set("Content-Type", "application/json")
 
 				return req

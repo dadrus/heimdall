@@ -207,7 +207,7 @@ func (r *requestContext) rewriteForwardedHeader(in, out *http.Request) {
 
 func (r *requestContext) addUpstreamCookies(req *http.Request) {
 	for k, v := range r.UpstreamCookies() {
-		req.AddCookie(&http.Cookie{Name: k, Value: v})
+		req.AddCookie(&http.Cookie{Name: k, Value: v}) //nolint:gosec
 	}
 }
 

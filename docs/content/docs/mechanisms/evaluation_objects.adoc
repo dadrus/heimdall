@@ -338,6 +338,11 @@ Values = {
 ----
 ====
 
+`Values` are meant to be used as the parameter interface of a reusable mechanism definition,
+allowing rules to provide rule-specific inputs without coupling the definition to their structure.
+See link:{{< relref "/docs/mechanisms/mechanism_design.adoc" >}}[Designing Mechanism Definitions]
+for details.
+
 == Templating
 
 Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_results" >}}[Results], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.

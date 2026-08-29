@@ -58,7 +58,7 @@ func registerTranslations(validate *validator.Validate, trans ut.Translator) err
 				}
 
 				kind = fe.Kind()
-				if kind == reflect.Ptr {
+				if kind == reflect.Pointer {
 					kind = fe.Type().Elem().Kind()
 				}
 

@@ -65,6 +65,10 @@ mechanisms:
 
 The above snippet configures four different instances of the anonymous authenticator mechanism, with `anon1` and `anon2` being configured identically (as no configuration is provided), and `anon3` and `anon4` being different in their configuration. Since the first two mentioned behave the same way (both will set the principal ID to `anonymous`), there is actually no need to define two instances of them.
 
+For guidance on how to keep mechanism definitions reusable and how to separate
+stable mechanism behaviour from rule-specific inputs, see
+link:{{< relref "/docs/mechanisms/mechanism_design.adoc" >}}[Designing Mechanism Definitions].
+
 == Example
 
 Here is an example which defines a mechanism catalogue using some of the available types:

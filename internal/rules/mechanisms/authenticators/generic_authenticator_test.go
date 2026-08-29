@@ -1638,7 +1638,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				name: "auth",
 				ttl:  5 * time.Second,
 			},
-			request1: httptest.NewRequest(
+			request1: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1648,7 +1649,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				name: "auth",
 				ttl:  5 * time.Second,
 			},
-			request2: httptest.NewRequest(
+			request2: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1661,7 +1663,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				name: "auth-a",
 				ttl:  5 * time.Second,
 			},
-			request1: httptest.NewRequest(
+			request1: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1671,7 +1674,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				name: "auth-b",
 				ttl:  5 * time.Second,
 			},
-			request2: httptest.NewRequest(
+			request2: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1684,7 +1688,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				id:   "step-a",
 				ttl:  5 * time.Second,
 			},
-			request1: httptest.NewRequest(
+			request1: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1695,7 +1700,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				id:   "step-b",
 				ttl:  5 * time.Second,
 			},
-			request2: httptest.NewRequest(
+			request2: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1708,7 +1714,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				name: "auth",
 				ttl:  5 * time.Second,
 			},
-			request1: httptest.NewRequest(
+			request1: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1718,7 +1725,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				name: "auth",
 				ttl:  15 * time.Second,
 			},
-			request2: httptest.NewRequest(
+			request2: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1730,7 +1738,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				name: "auth",
 				ttl:  5 * time.Second,
 			},
-			request1: httptest.NewRequest(
+			request1: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1740,7 +1749,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				name: "auth",
 				ttl:  5 * time.Second,
 			},
-			request2: httptest.NewRequest(
+			request2: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPut,
 				"https://example.com/identity",
 				nil,
@@ -1752,7 +1762,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				name: "auth",
 				ttl:  5 * time.Second,
 			},
-			request1: httptest.NewRequest(
+			request1: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity-a",
 				nil,
@@ -1762,7 +1773,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				name: "auth",
 				ttl:  5 * time.Second,
 			},
-			request2: httptest.NewRequest(
+			request2: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity-b",
 				nil,
@@ -1775,7 +1787,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				ttl:  5 * time.Second,
 			},
 			request1: func() *http.Request {
-				req := httptest.NewRequest(
+				req := httptest.NewRequestWithContext(
+					t.Context(),
 					http.MethodPost,
 					"https://example.com/identity",
 					nil,
@@ -1790,7 +1803,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				ttl:  5 * time.Second,
 			},
 			request2: func() *http.Request {
-				req := httptest.NewRequest(
+				req := httptest.NewRequestWithContext(
+					t.Context(),
 					http.MethodPost,
 					"https://example.com/identity",
 					nil,
@@ -1807,7 +1821,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				ttl:  5 * time.Second,
 			},
 			request1: func() *http.Request {
-				req := httptest.NewRequest(
+				req := httptest.NewRequestWithContext(
+					t.Context(),
 					http.MethodPost,
 					"https://example.com/identity",
 					nil,
@@ -1825,7 +1840,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				ttl:  5 * time.Second,
 			},
 			request2: func() *http.Request {
-				req := httptest.NewRequest(
+				req := httptest.NewRequestWithContext(
+					t.Context(),
 					http.MethodPost,
 					"https://example.com/identity",
 					nil,
@@ -1844,7 +1860,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				name: "auth",
 				ttl:  5 * time.Second,
 			},
-			request1: httptest.NewRequest(
+			request1: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1854,7 +1871,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				name: "auth",
 				ttl:  5 * time.Second,
 			},
-			request2: httptest.NewRequest(
+			request2: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1866,7 +1884,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 				name: "auth",
 				ttl:  5 * time.Second,
 			},
-			request1: httptest.NewRequest(
+			request1: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1879,7 +1898,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 					AuthStrategy: authStrategy,
 				},
 			},
-			request2: httptest.NewRequest(
+			request2: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1894,7 +1914,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 					AuthStrategy: authStrategyA,
 				},
 			},
-			request1: httptest.NewRequest(
+			request1: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1907,7 +1928,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 					AuthStrategy: authStrategyB,
 				},
 			},
-			request2: httptest.NewRequest(
+			request2: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1923,7 +1945,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 					"https://{{ .AuthenticationData }}/identity",
 				),
 			},
-			request1: httptest.NewRequest(
+			request1: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,
@@ -1937,7 +1960,8 @@ func TestGenericAuthenticatorCalculateCacheKey(t *testing.T) {
 					"https://example.com/{{ .AuthenticationData }}",
 				),
 			},
-			request2: httptest.NewRequest(
+			request2: httptest.NewRequestWithContext(
+				t.Context(),
 				http.MethodPost,
 				"https://example.com/identity",
 				nil,

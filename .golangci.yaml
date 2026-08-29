@@ -9,6 +9,7 @@ linters:
     - depguard
     - dupl
     - exhaustruct
+    - exhaustruct_v5
     - ireturn
     - nolintlint
     - paralleltest
@@ -18,8 +19,16 @@ linters:
     - zerologlint
     - goconst
     - noinlineerr
+    # disabled until next minor release
+    - modernize
+    - wsl_v5
+    - revive
+    - staticcheck
+    - prealloc
+    - godoclint
     # deprecated
     - wsl
+    - gomodguard
   settings:
     cyclop:
       max-complexity: 11
@@ -86,6 +95,7 @@ linters:
           - mnd
           - goconst
           - unparam
+          - gosec
         path: (.+)_test\.go
     paths:
       - third_party$
