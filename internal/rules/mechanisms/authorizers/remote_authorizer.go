@@ -216,11 +216,11 @@ func (a *remoteAuthorizer) CreateStep(
 	}
 
 	type Config struct {
-		Endpoint                 *endpoint.Endpoint `mapstructure:"endpoint"                             validate:"not_allowed"` //nolint:lll
-		Payload                  template.Template  `mapstructure:"payload"`
-		Expressions              []Expression       `mapstructure:"expressions"                          validate:"dive"` //nolint:lll
-		CacheTTL                 time.Duration      `mapstructure:"cache_ttl"`
-		Values                   values.Values      `mapstructure:"values"`
+		Endpoint    *endpoint.Endpoint `mapstructure:"endpoint"    validate:"not_allowed"`
+		Payload     template.Template  `mapstructure:"payload"`
+		Expressions []Expression       `mapstructure:"expressions" validate:"dive"`
+		CacheTTL    time.Duration      `mapstructure:"cache_ttl"`
+		Values      values.Values      `mapstructure:"values"`
 	}
 
 	var conf Config
