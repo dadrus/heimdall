@@ -331,8 +331,6 @@ mechanisms:
       expressions:
         - expression: |
             Payload.response == true
-      forward_response_headers_to_upstream:
-        - bla-bar
   - id: user_is_admin_authz
     type: cel
     config:

@@ -146,8 +146,6 @@ mechanisms:
           headers:
             foo-bar: "{{ .Subject.ID }}"
         payload: https://bla.bar
-        forward_response_headers_to_upstream:
-          - bla-bar
     - id: attributes_based_authorizer
       type: cel
       config:
