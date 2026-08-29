@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Tue, 25 Aug 2026 17:23:03 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1"&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</title><link>https://dadrus.github.io/</link><description>Recent content in Heimdall - a cloud native Identity Aware Proxy and Access Control Decision service on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sat, 29 Aug 2026 11:24:30 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/index.xml" rel="self" type="application/rss+xml"/><item><title>Discover heimdall</title><link>https://dadrus.github.io/docs/getting_started/discover_heimdall/</link><pubDate>Wed, 29 Nov 2023 22:03:28 +0200</pubDate><guid>https://dadrus.github.io/docs/getting_started/discover_heimdall/</guid><description>&lt;div class="sect1"&gt;
 &lt;h2 id="_what_is_heimdall"&gt;What is heimdall?&lt;/h2&gt;
 &lt;div class="sectionbody"&gt;
 &lt;div class="paragraph"&gt;
@@ -578,6 +578,18 @@ A secret source defines where and how secrets are stored; a secret reference poi
 &lt;div class="sectionbody"&gt;
 &lt;div class="paragraph"&gt;
 &lt;p&gt;Objects represent state during the execution of a particular rule. These are entities either created or used by specific mechanisms, and can represent things like the actual request, the authenticated subject of the request, and many others. Which objects are available in a particular mechanism is documented at each mechanism’s configuration reference.&lt;/p&gt;
+&lt;/div&gt;</description></item><item><title>Designing Mechanism Definitions</title><link>https://dadrus.github.io/docs/mechanisms/mechanism_design/</link><pubDate>Wed, 26 Aug 2026 22:21:12 +0100</pubDate><guid>https://dadrus.github.io/docs/mechanisms/mechanism_design/</guid><description>&lt;div class="paragraph"&gt;
+&lt;p&gt;When designing a &lt;a href="./docs/mechanisms/catalogue/#_general_mechanism_configuration"&gt;mechanism definition&lt;/a&gt;, distinguish between dependencies that are intrinsic to the mechanism and inputs that depend on the rule using it.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;Stable dependencies on &lt;a href="./docs/mechanisms/evaluation_objects/#_objects"&gt;evaluation objects&lt;/a&gt; can be referenced directly. However, if an input relies on rule-specific structure, such as a capture name, a &lt;a href="./docs/rules/regular_rule/#_authentication_authorization_pipeline"&gt;pipeline step ID&lt;/a&gt;, or the shape of that step’s output, expose it through &lt;a href="./docs/mechanisms/evaluation_objects/#_values"&gt;&lt;code&gt;Values&lt;/code&gt;&lt;/a&gt; and let each rule provide it.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="sect1"&gt;
+&lt;h2 id="_keep_mechanism_definitions_independent_of_rule_specific_structure"&gt;Keep mechanism definitions independent of rule-specific structure&lt;/h2&gt;
+&lt;div class="sectionbody"&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;Mechanisms defined in the catalogue are intended to be reusable building blocks.
+A &lt;a href="./docs/concepts/rules/"&gt;rule&lt;/a&gt; references a mechanism definition, supplies values, and may override properties that are declared overridable.&lt;/p&gt;
 &lt;/div&gt;</description></item><item><title>Authenticators</title><link>https://dadrus.github.io/docs/mechanisms/authenticators/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/mechanisms/authenticators/</guid><description>&lt;div class="paragraph"&gt;
 &lt;p&gt;Some of the supported authenticator types may support or require additional configuration. The corresponding properties are annotated with &lt;code&gt;mandatory&lt;/code&gt;, respectively &lt;code&gt;optional&lt;/code&gt; to denote configuration requirement, as well as with &lt;code&gt;overridable&lt;/code&gt;, &lt;code&gt;not overriddable&lt;/code&gt; and &lt;code&gt;partially overridable&lt;/code&gt; to indicate whether the property can be overridden in a rule pipeline.&lt;/p&gt;
 &lt;/div&gt;
@@ -625,13 +637,9 @@ A secret source defines where and how secrets are stored; a secret reference poi
 &lt;div class="paragraph"&gt;
 &lt;p&gt;This error handler is always there and is executed if no other error handler mechanism is responsible for the error. Actually, there is no need to explicitly configure it. The only exception is to allow overriding the &lt;a href="./docs/rules/default_rule/"&gt;default rule’s&lt;/a&gt; error handler chain in a specific rule for performance reasons (if configured error handlers in the default rule should not be considered). This mechanism type doesn’t have any configuration options.&lt;/p&gt;
 &lt;/div&gt;</description></item><item><title>Regular Rule</title><link>https://dadrus.github.io/docs/rules/regular_rule/</link><pubDate>Thu, 09 Jun 2022 22:13:32 +0200</pubDate><guid>https://dadrus.github.io/docs/rules/regular_rule/</guid><description>&lt;div class="paragraph"&gt;
-&lt;p&gt;In the simplest case, a regular rule reuses mechanisms from the previously defined &lt;a href="./docs/mechanisms/catalogue/"&gt;catalogue&lt;/a&gt; in its pipelines. In more complex scenarios, a rule can reconfigure parts of the mechanisms being used. The specific parts that can be reconfigured or overridden depend on the mechanism itself and are described in the mechanism-specific documentation. Reconfiguration is always limited to the particular rule’s pipeline and does not affect other rules.&lt;/p&gt;
-&lt;/div&gt;
-&lt;div class="sect1"&gt;
-&lt;h2 id="_configuration"&gt;Configuration&lt;/h2&gt;
-&lt;div class="sectionbody"&gt;
-&lt;div class="paragraph"&gt;
-&lt;p&gt;A single regular rule consists of the following properties:&lt;/p&gt;
+&lt;p&gt;In the simplest case, a regular rule reuses mechanisms from the previously defined &lt;a href="./docs/mechanisms/catalogue/"&gt;catalogue&lt;/a&gt; in its pipelines. In more complex scenarios, a rule can reconfigure parts of the mechanisms being used. The specific parts that can be reconfigured or overridden depend on the mechanism itself and are described in the mechanism-specific documentation. Reconfiguration is always limited to the particular rule’s pipeline and does not affect other rules. For guidance on deciding which inputs should be part of a mechanism definition,
+which should be supplied through &lt;code&gt;Values&lt;/code&gt;, and when property overrides are appropriate,
+see &lt;a href="./docs/mechanisms/mechanism_design/"&gt;Designing Mechanism Definitions&lt;/a&gt;.&lt;/p&gt;
 &lt;/div&gt;</description></item><item><title>Default Rule</title><link>https://dadrus.github.io/docs/rules/default_rule/</link><pubDate>Thu, 09 Jun 2022 22:13:32 +0200</pubDate><guid>https://dadrus.github.io/docs/rules/default_rule/</guid><description>&lt;div class="sect1"&gt;
 &lt;h2 id="_configuration"&gt;Configuration&lt;/h2&gt;
 &lt;div class="sectionbody"&gt;

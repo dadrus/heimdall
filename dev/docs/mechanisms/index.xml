@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Mechanisms on Heimdall</title><link>https://dadrus.github.io/docs/mechanisms/</link><description>Recent content in Mechanisms on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Tue, 25 Aug 2026 17:23:03 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/mechanisms/index.xml" rel="self" type="application/rss+xml"/><item><title>Catalogue</title><link>https://dadrus.github.io/docs/mechanisms/catalogue/</link><pubDate>Thu, 11 Jan 2024 15:01:21 +0200</pubDate><guid>https://dadrus.github.io/docs/mechanisms/catalogue/</guid><description>&lt;div class="paragraph"&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Mechanisms on Heimdall</title><link>https://dadrus.github.io/docs/mechanisms/</link><description>Recent content in Mechanisms on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sat, 29 Aug 2026 11:24:30 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/mechanisms/index.xml" rel="self" type="application/rss+xml"/><item><title>Catalogue</title><link>https://dadrus.github.io/docs/mechanisms/catalogue/</link><pubDate>Thu, 11 Jan 2024 15:01:21 +0200</pubDate><guid>https://dadrus.github.io/docs/mechanisms/catalogue/</guid><description>&lt;div class="paragraph"&gt;
 &lt;p&gt;As described in &lt;a href="../../docs/concepts/mechanisms/"&gt;Concepts&lt;/a&gt; section, mechanisms must be defined and configured before these can be used in rules. That is happening in the so-called mechanisms catalogue. On start up heimdall instantiates all defined and configured mechanisms and makes these available for usage in rules.&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class="sect1"&gt;
@@ -14,6 +14,18 @@
 &lt;div class="sectionbody"&gt;
 &lt;div class="paragraph"&gt;
 &lt;p&gt;Objects represent state during the execution of a particular rule. These are entities either created or used by specific mechanisms, and can represent things like the actual request, the authenticated subject of the request, and many others. Which objects are available in a particular mechanism is documented at each mechanism’s configuration reference.&lt;/p&gt;
+&lt;/div&gt;</description></item><item><title>Designing Mechanism Definitions</title><link>https://dadrus.github.io/docs/mechanisms/mechanism_design/</link><pubDate>Wed, 26 Aug 2026 22:21:12 +0100</pubDate><guid>https://dadrus.github.io/docs/mechanisms/mechanism_design/</guid><description>&lt;div class="paragraph"&gt;
+&lt;p&gt;When designing a &lt;a href="../../docs/mechanisms/catalogue/#_general_mechanism_configuration"&gt;mechanism definition&lt;/a&gt;, distinguish between dependencies that are intrinsic to the mechanism and inputs that depend on the rule using it.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;Stable dependencies on &lt;a href="../../docs/mechanisms/evaluation_objects/#_objects"&gt;evaluation objects&lt;/a&gt; can be referenced directly. However, if an input relies on rule-specific structure, such as a capture name, a &lt;a href="../../docs/rules/regular_rule/#_authentication_authorization_pipeline"&gt;pipeline step ID&lt;/a&gt;, or the shape of that step’s output, expose it through &lt;a href="../../docs/mechanisms/evaluation_objects/#_values"&gt;&lt;code&gt;Values&lt;/code&gt;&lt;/a&gt; and let each rule provide it.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="sect1"&gt;
+&lt;h2 id="_keep_mechanism_definitions_independent_of_rule_specific_structure"&gt;Keep mechanism definitions independent of rule-specific structure&lt;/h2&gt;
+&lt;div class="sectionbody"&gt;
+&lt;div class="paragraph"&gt;
+&lt;p&gt;Mechanisms defined in the catalogue are intended to be reusable building blocks.
+A &lt;a href="../../docs/concepts/rules/"&gt;rule&lt;/a&gt; references a mechanism definition, supplies values, and may override properties that are declared overridable.&lt;/p&gt;
 &lt;/div&gt;</description></item><item><title>Authenticators</title><link>https://dadrus.github.io/docs/mechanisms/authenticators/</link><pubDate>Thu, 09 Jun 2022 18:56:56 +0200</pubDate><guid>https://dadrus.github.io/docs/mechanisms/authenticators/</guid><description>&lt;div class="paragraph"&gt;
 &lt;p&gt;Some of the supported authenticator types may support or require additional configuration. The corresponding properties are annotated with &lt;code&gt;mandatory&lt;/code&gt;, respectively &lt;code&gt;optional&lt;/code&gt; to denote configuration requirement, as well as with &lt;code&gt;overridable&lt;/code&gt;, &lt;code&gt;not overriddable&lt;/code&gt; and &lt;code&gt;partially overridable&lt;/code&gt; to indicate whether the property can be overridden in a rule pipeline.&lt;/p&gt;
 &lt;/div&gt;
