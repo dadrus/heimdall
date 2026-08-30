@@ -42,7 +42,7 @@ type ruleImpl struct {
 	subjectPool     *sync.Pool
 }
 
-func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
+func (r *ruleImpl) Execute(ctx pipeline.ExecutionContext) (pipeline.Backend, error) {
 	logger := zerolog.Ctx(ctx.Context())
 
 	logger.Info().

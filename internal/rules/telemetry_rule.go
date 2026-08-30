@@ -31,7 +31,7 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type executorFunc func(ctx pipeline.Context) (pipeline.Backend, error)
+type executorFunc func(ctx pipeline.ExecutionContext) (pipeline.Backend, error)
 
 type telemetryRule struct {
 	r  rule.Rule
@@ -63,7 +63,7 @@ func decorateWithTracer(exec executorFunc, tracer trace.Tracer, attrs []attribut
 		return exec
 	}
 
-	return func(hctx pipeline.Context) (pipeline.Backend, error) {
+	return func(hctx pipeline.ExecutionContext) (pipeline.Backend, error) {
 		pctx := hctx.Context()
 		sctx, span := tracer.Start(
 			pctx,
@@ -111,7 +111,7 @@ func decorateWithMeter(exec executorFunc, meter metric.Meter, attrs []attribute.
 
 	attrSet := attribute.NewSet(attrs...)
 
-	return func(ctx pipeline.Context) (pipeline.Backend, error) {
+	return func(ctx pipeline.ExecutionContext) (pipeline.Backend, error) {
 		startTime := time.Now()
 
 		be, err := exec(ctx)
@@ -136,4 +136,6 @@ func (tr *telemetryRule) SameAs(other rule.Rule) bool { return tr.r.SameAs(other
 
 func (tr *telemetryRule) Equals(other rule.Rule) bool { return tr.r.Equals(other) }
 
-func (tr *telemetryRule) Execute(ctx pipeline.Context) (pipeline.Backend, error) { return tr.do(ctx) }
+func (tr *telemetryRule) Execute(ctx pipeline.ExecutionContext) (pipeline.Backend, error) {
+	return tr.do(ctx)
+}

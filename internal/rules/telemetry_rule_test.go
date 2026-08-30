@@ -145,7 +145,7 @@ func TestTelemetryRuleExecute(t *testing.T) {
 			bem := mocks.NewBackendMock(t)
 			parentCtx := t.Context()
 
-			cm := mocks.NewContextMock(t)
+			cm := mocks.NewExecutionContextMock(t)
 			cm.EXPECT().Context().Return(parentCtx)
 			withSpanParent := cm.EXPECT().WithParent(mock.MatchedBy(func(ctx context.Context) bool {
 				return oteltrace.SpanFromContext(ctx).SpanContext().IsValid()

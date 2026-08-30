@@ -43,7 +43,7 @@ func TestRuleExecute(t *testing.T) {
 		slashHandling  v1beta1.EncodedSlashesHandling
 		configureMocks func(
 			t *testing.T,
-			ctx *heimdallmocks.ContextMock,
+			ctx *heimdallmocks.ExecutionContextMock,
 			authenticator *heimdallmocks.StepMock,
 			authorizer *heimdallmocks.StepMock,
 			finalizer *heimdallmocks.StepMock,
@@ -52,7 +52,7 @@ func TestRuleExecute(t *testing.T) {
 		assert func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string)
 	}{
 		"authenticator fails, but error handler succeeds": {
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				_ *heimdallmocks.StepMock, _ *heimdallmocks.StepMock,
 				errHandler *heimdallmocks.StepMock,
 			) {
@@ -78,7 +78,7 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"authenticator fails, and error handler fails": {
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				_ *heimdallmocks.StepMock, _ *heimdallmocks.StepMock,
 				errHandler *heimdallmocks.StepMock,
 			) {
@@ -104,7 +104,7 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"authenticator succeeds, authorizer fails, but error handler succeeds": {
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				authorizer *heimdallmocks.StepMock, _ *heimdallmocks.StepMock,
 				errHandler *heimdallmocks.StepMock,
 			) {
@@ -133,7 +133,7 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"authenticator succeeds, authorizer fails and error handler fails": {
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				authorizer *heimdallmocks.StepMock, _ *heimdallmocks.StepMock,
 				errHandler *heimdallmocks.StepMock,
 			) {
@@ -163,7 +163,7 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"authenticator succeeds, authorizer succeeds, finalizer fails, but error handler succeeds": {
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				authorizer *heimdallmocks.StepMock, finalizer *heimdallmocks.StepMock,
 				errHandler *heimdallmocks.StepMock,
 			) {
@@ -195,7 +195,7 @@ func TestRuleExecute(t *testing.T) {
 			},
 		},
 		"authenticator succeeds, authorizer succeeds, finalizer fails and error handler fails": {
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				authorizer *heimdallmocks.StepMock, finalizer *heimdallmocks.StepMock,
 				errHandler *heimdallmocks.StepMock,
 			) {
@@ -231,7 +231,7 @@ func TestRuleExecute(t *testing.T) {
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, _ *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, _ *heimdallmocks.StepMock,
 				_ *heimdallmocks.StepMock, _ *heimdallmocks.StepMock, _ *heimdallmocks.StepMock,
 			) {
 				t.Helper()
@@ -257,7 +257,7 @@ func TestRuleExecute(t *testing.T) {
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, _ *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, _ *heimdallmocks.StepMock,
 				_ *heimdallmocks.StepMock, _ *heimdallmocks.StepMock, _ *heimdallmocks.StepMock,
 			) {
 				t.Helper()
@@ -283,7 +283,7 @@ func TestRuleExecute(t *testing.T) {
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				authorizer *heimdallmocks.StepMock, finalizer *heimdallmocks.StepMock,
 				_ *heimdallmocks.StepMock,
 			) {
@@ -326,7 +326,7 @@ func TestRuleExecute(t *testing.T) {
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				authorizer *heimdallmocks.StepMock, finalizer *heimdallmocks.StepMock,
 				_ *heimdallmocks.StepMock,
 			) {
@@ -368,7 +368,7 @@ func TestRuleExecute(t *testing.T) {
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				authorizer *heimdallmocks.StepMock, finalizer *heimdallmocks.StepMock, _ *heimdallmocks.StepMock,
 			) {
 				t.Helper()
@@ -409,7 +409,7 @@ func TestRuleExecute(t *testing.T) {
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				authorizer *heimdallmocks.StepMock, finalizer *heimdallmocks.StepMock,
 				_ *heimdallmocks.StepMock,
 			) {
@@ -451,7 +451,7 @@ func TestRuleExecute(t *testing.T) {
 			backend: &v1beta1.Backend{
 				Host: "foo.bar",
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				authorizer *heimdallmocks.StepMock, finalizer *heimdallmocks.StepMock, _ *heimdallmocks.StepMock,
 			) {
 				t.Helper()
@@ -492,7 +492,7 @@ func TestRuleExecute(t *testing.T) {
 				Host:        "foo.bar",
 				URLRewriter: &v1beta1.URLRewriter{PathPrefixToCut: "/api/v1"},
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				authorizer *heimdallmocks.StepMock, finalizer *heimdallmocks.StepMock,
 				_ *heimdallmocks.StepMock,
 			) {
@@ -526,7 +526,7 @@ func TestRuleExecute(t *testing.T) {
 				Host:              "foo.bar",
 				ForwardHostHeader: &falseValue,
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				authorizer *heimdallmocks.StepMock, finalizer *heimdallmocks.StepMock,
 				_ *heimdallmocks.StepMock,
 			) {
@@ -560,7 +560,7 @@ func TestRuleExecute(t *testing.T) {
 				Host:              "foo.bar",
 				ForwardHostHeader: &trueValue,
 			},
-			configureMocks: func(t *testing.T, ctx *heimdallmocks.ContextMock, authenticator *heimdallmocks.StepMock,
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
 				authorizer *heimdallmocks.StepMock, finalizer *heimdallmocks.StepMock,
 				_ *heimdallmocks.StepMock,
 			) {
@@ -592,7 +592,7 @@ func TestRuleExecute(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ctx := heimdallmocks.NewContextMock(t)
+			ctx := heimdallmocks.NewExecutionContextMock(t)
 			ctx.EXPECT().Context().Return(t.Context())
 
 			authenticator := heimdallmocks.NewStepMock(t)
