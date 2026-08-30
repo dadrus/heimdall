@@ -84,7 +84,13 @@ func (r *ruleImpl) Execute(ctx pipeline.ExecutionContext) (pipeline.Backend, err
 		r.subjectPool.Put(sub)
 	}()
 
-	if err := r.p.Execute(ctx, sub, r); err != nil {
+	var target pipeline.UpstreamTarget
+
+	if r.backend != nil {
+		target = r
+	}
+
+	if err := r.p.Execute(ctx, sub, target); err != nil {
 		return nil, err
 	}
 
