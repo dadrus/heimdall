@@ -62,7 +62,7 @@ type ClientMock_Repository_Call struct {
 
 // Repository is a helper method to define mock.On call
 //   - namespace string
-func (_e *ClientMock_Expecter) Repository(namespace interface{}) *ClientMock_Repository_Call {
+func (_e *ClientMock_Expecter) Repository(namespace any) *ClientMock_Repository_Call {
 	return &ClientMock_Repository_Call{Call: _e.mock.On("Repository", namespace)}
 }
 

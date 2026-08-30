@@ -74,7 +74,7 @@ type DependenciesResolverMock_ResolveCertificateBundle_Call struct {
 // ResolveCertificateBundle is a helper method to define mock.On call
 //   - ctx context.Context
 //   - ref provider.Reference
-func (_e *DependenciesResolverMock_Expecter) ResolveCertificateBundle(ctx interface{}, ref interface{}) *DependenciesResolverMock_ResolveCertificateBundle_Call {
+func (_e *DependenciesResolverMock_Expecter) ResolveCertificateBundle(ctx any, ref any) *DependenciesResolverMock_ResolveCertificateBundle_Call {
 	return &DependenciesResolverMock_ResolveCertificateBundle_Call{Call: _e.mock.On("ResolveCertificateBundle", ctx, ref)}
 }
 
@@ -96,8 +96,8 @@ func (_c *DependenciesResolverMock_ResolveCertificateBundle_Call) Run(run func(c
 	return _c
 }
 
-func (_c *DependenciesResolverMock_ResolveCertificateBundle_Call) Return(v provider.CertificateBundle, err error) *DependenciesResolverMock_ResolveCertificateBundle_Call {
-	_c.Call.Return(v, err)
+func (_c *DependenciesResolverMock_ResolveCertificateBundle_Call) Return(certificateBundle provider.CertificateBundle, err error) *DependenciesResolverMock_ResolveCertificateBundle_Call {
+	_c.Call.Return(certificateBundle, err)
 	return _c
 }
 
@@ -142,7 +142,7 @@ type DependenciesResolverMock_ResolveCredentials_Call struct {
 // ResolveCredentials is a helper method to define mock.On call
 //   - ctx context.Context
 //   - ref provider.Reference
-func (_e *DependenciesResolverMock_Expecter) ResolveCredentials(ctx interface{}, ref interface{}) *DependenciesResolverMock_ResolveCredentials_Call {
+func (_e *DependenciesResolverMock_Expecter) ResolveCredentials(ctx any, ref any) *DependenciesResolverMock_ResolveCredentials_Call {
 	return &DependenciesResolverMock_ResolveCredentials_Call{Call: _e.mock.On("ResolveCredentials", ctx, ref)}
 }
 
@@ -164,8 +164,8 @@ func (_c *DependenciesResolverMock_ResolveCredentials_Call) Run(run func(ctx con
 	return _c
 }
 
-func (_c *DependenciesResolverMock_ResolveCredentials_Call) Return(v provider.Credentials, err error) *DependenciesResolverMock_ResolveCredentials_Call {
-	_c.Call.Return(v, err)
+func (_c *DependenciesResolverMock_ResolveCredentials_Call) Return(credentials provider.Credentials, err error) *DependenciesResolverMock_ResolveCredentials_Call {
+	_c.Call.Return(credentials, err)
 	return _c
 }
 
@@ -210,7 +210,7 @@ type DependenciesResolverMock_ResolveSecret_Call struct {
 // ResolveSecret is a helper method to define mock.On call
 //   - ctx context.Context
 //   - ref provider.Reference
-func (_e *DependenciesResolverMock_Expecter) ResolveSecret(ctx interface{}, ref interface{}) *DependenciesResolverMock_ResolveSecret_Call {
+func (_e *DependenciesResolverMock_Expecter) ResolveSecret(ctx any, ref any) *DependenciesResolverMock_ResolveSecret_Call {
 	return &DependenciesResolverMock_ResolveSecret_Call{Call: _e.mock.On("ResolveSecret", ctx, ref)}
 }
 
@@ -232,8 +232,8 @@ func (_c *DependenciesResolverMock_ResolveSecret_Call) Run(run func(ctx context.
 	return _c
 }
 
-func (_c *DependenciesResolverMock_ResolveSecret_Call) Return(v provider.Secret, err error) *DependenciesResolverMock_ResolveSecret_Call {
-	_c.Call.Return(v, err)
+func (_c *DependenciesResolverMock_ResolveSecret_Call) Return(secret provider.Secret, err error) *DependenciesResolverMock_ResolveSecret_Call {
+	_c.Call.Return(secret, err)
 	return _c
 }
 

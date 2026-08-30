@@ -61,7 +61,7 @@ type RuleMock_Equals_Call struct {
 
 // Equals is a helper method to define mock.On call
 //   - other rule.Rule
-func (_e *RuleMock_Expecter) Equals(other interface{}) *RuleMock_Equals_Call {
+func (_e *RuleMock_Expecter) Equals(other any) *RuleMock_Equals_Call {
 	return &RuleMock_Equals_Call{Call: _e.mock.On("Equals", other)}
 }
 
@@ -123,7 +123,7 @@ type RuleMock_Execute_Call struct {
 
 // Execute is a helper method to define mock.On call
 //   - ctx pipeline.Context
-func (_e *RuleMock_Expecter) Execute(ctx interface{}) *RuleMock_Execute_Call {
+func (_e *RuleMock_Expecter) Execute(ctx any) *RuleMock_Execute_Call {
 	return &RuleMock_Execute_Call{Call: _e.mock.On("Execute", ctx)}
 }
 
@@ -264,7 +264,7 @@ type RuleMock_SameAs_Call struct {
 
 // SameAs is a helper method to define mock.On call
 //   - other rule.Rule
-func (_e *RuleMock_Expecter) SameAs(other interface{}) *RuleMock_SameAs_Call {
+func (_e *RuleMock_Expecter) SameAs(other any) *RuleMock_SameAs_Call {
 	return &RuleMock_SameAs_Call{Call: _e.mock.On("SameAs", other)}
 }
 

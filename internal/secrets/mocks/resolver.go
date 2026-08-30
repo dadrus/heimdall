@@ -71,7 +71,7 @@ type ResolverMock_CertificateBundle_Call struct {
 
 // CertificateBundle is a helper method to define mock.On call
 //   - ref secrets.Reference
-func (_e *ResolverMock_Expecter) CertificateBundle(ref interface{}) *ResolverMock_CertificateBundle_Call {
+func (_e *ResolverMock_Expecter) CertificateBundle(ref any) *ResolverMock_CertificateBundle_Call {
 	return &ResolverMock_CertificateBundle_Call{Call: _e.mock.On("CertificateBundle", ref)}
 }
 
@@ -133,7 +133,7 @@ type ResolverMock_Credentials_Call struct {
 
 // Credentials is a helper method to define mock.On call
 //   - ref secrets.Reference
-func (_e *ResolverMock_Expecter) Credentials(ref interface{}) *ResolverMock_Credentials_Call {
+func (_e *ResolverMock_Expecter) Credentials(ref any) *ResolverMock_Credentials_Call {
 	return &ResolverMock_Credentials_Call{Call: _e.mock.On("Credentials", ref)}
 }
 
@@ -195,7 +195,7 @@ type ResolverMock_Secret_Call struct {
 
 // Secret is a helper method to define mock.On call
 //   - ref secrets.Reference
-func (_e *ResolverMock_Expecter) Secret(ref interface{}) *ResolverMock_Secret_Call {
+func (_e *ResolverMock_Expecter) Secret(ref any) *ResolverMock_Secret_Call {
 	return &ResolverMock_Secret_Call{Call: _e.mock.On("Secret", ref)}
 }
 
@@ -257,7 +257,7 @@ type ResolverMock_SecretSet_Call struct {
 
 // SecretSet is a helper method to define mock.On call
 //   - ref secrets.Reference
-func (_e *ResolverMock_Expecter) SecretSet(ref interface{}) *ResolverMock_SecretSet_Call {
+func (_e *ResolverMock_Expecter) SecretSet(ref any) *ResolverMock_SecretSet_Call {
 	return &ResolverMock_SecretSet_Call{Call: _e.mock.On("SecretSet", ref)}
 }
 

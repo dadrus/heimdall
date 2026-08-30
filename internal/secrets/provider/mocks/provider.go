@@ -74,8 +74,8 @@ func (_c *ProviderMock_Dependencies_Call) Run(run func()) *ProviderMock_Dependen
 	return _c
 }
 
-func (_c *ProviderMock_Dependencies_Call) Return(vs []provider.Reference) *ProviderMock_Dependencies_Call {
-	_c.Call.Return(vs)
+func (_c *ProviderMock_Dependencies_Call) Return(references []provider.Reference) *ProviderMock_Dependencies_Call {
+	_c.Call.Return(references)
 	return _c
 }
 
@@ -120,7 +120,7 @@ type ProviderMock_GetCertificateBundle_Call struct {
 // GetCertificateBundle is a helper method to define mock.On call
 //   - ctx context.Context
 //   - selector provider.Selector
-func (_e *ProviderMock_Expecter) GetCertificateBundle(ctx interface{}, selector interface{}) *ProviderMock_GetCertificateBundle_Call {
+func (_e *ProviderMock_Expecter) GetCertificateBundle(ctx any, selector any) *ProviderMock_GetCertificateBundle_Call {
 	return &ProviderMock_GetCertificateBundle_Call{Call: _e.mock.On("GetCertificateBundle", ctx, selector)}
 }
 
@@ -142,8 +142,8 @@ func (_c *ProviderMock_GetCertificateBundle_Call) Run(run func(ctx context.Conte
 	return _c
 }
 
-func (_c *ProviderMock_GetCertificateBundle_Call) Return(v provider.CertificateBundle, err error) *ProviderMock_GetCertificateBundle_Call {
-	_c.Call.Return(v, err)
+func (_c *ProviderMock_GetCertificateBundle_Call) Return(certificateBundle provider.CertificateBundle, err error) *ProviderMock_GetCertificateBundle_Call {
+	_c.Call.Return(certificateBundle, err)
 	return _c
 }
 
@@ -188,7 +188,7 @@ type ProviderMock_GetCredentials_Call struct {
 // GetCredentials is a helper method to define mock.On call
 //   - ctx context.Context
 //   - selector provider.Selector
-func (_e *ProviderMock_Expecter) GetCredentials(ctx interface{}, selector interface{}) *ProviderMock_GetCredentials_Call {
+func (_e *ProviderMock_Expecter) GetCredentials(ctx any, selector any) *ProviderMock_GetCredentials_Call {
 	return &ProviderMock_GetCredentials_Call{Call: _e.mock.On("GetCredentials", ctx, selector)}
 }
 
@@ -210,8 +210,8 @@ func (_c *ProviderMock_GetCredentials_Call) Run(run func(ctx context.Context, se
 	return _c
 }
 
-func (_c *ProviderMock_GetCredentials_Call) Return(v provider.Credentials, err error) *ProviderMock_GetCredentials_Call {
-	_c.Call.Return(v, err)
+func (_c *ProviderMock_GetCredentials_Call) Return(credentials provider.Credentials, err error) *ProviderMock_GetCredentials_Call {
+	_c.Call.Return(credentials, err)
 	return _c
 }
 
@@ -256,7 +256,7 @@ type ProviderMock_GetSecret_Call struct {
 // GetSecret is a helper method to define mock.On call
 //   - ctx context.Context
 //   - selector provider.Selector
-func (_e *ProviderMock_Expecter) GetSecret(ctx interface{}, selector interface{}) *ProviderMock_GetSecret_Call {
+func (_e *ProviderMock_Expecter) GetSecret(ctx any, selector any) *ProviderMock_GetSecret_Call {
 	return &ProviderMock_GetSecret_Call{Call: _e.mock.On("GetSecret", ctx, selector)}
 }
 
@@ -278,8 +278,8 @@ func (_c *ProviderMock_GetSecret_Call) Run(run func(ctx context.Context, selecto
 	return _c
 }
 
-func (_c *ProviderMock_GetSecret_Call) Return(v provider.Secret, err error) *ProviderMock_GetSecret_Call {
-	_c.Call.Return(v, err)
+func (_c *ProviderMock_GetSecret_Call) Return(secret provider.Secret, err error) *ProviderMock_GetSecret_Call {
+	_c.Call.Return(secret, err)
 	return _c
 }
 
@@ -324,7 +324,7 @@ type ProviderMock_GetSecretSet_Call struct {
 // GetSecretSet is a helper method to define mock.On call
 //   - ctx context.Context
 //   - selector provider.Selector
-func (_e *ProviderMock_Expecter) GetSecretSet(ctx interface{}, selector interface{}) *ProviderMock_GetSecretSet_Call {
+func (_e *ProviderMock_Expecter) GetSecretSet(ctx any, selector any) *ProviderMock_GetSecretSet_Call {
 	return &ProviderMock_GetSecretSet_Call{Call: _e.mock.On("GetSecretSet", ctx, selector)}
 }
 
@@ -346,8 +346,8 @@ func (_c *ProviderMock_GetSecretSet_Call) Run(run func(ctx context.Context, sele
 	return _c
 }
 
-func (_c *ProviderMock_GetSecretSet_Call) Return(vs []provider.Secret, err error) *ProviderMock_GetSecretSet_Call {
-	_c.Call.Return(vs, err)
+func (_c *ProviderMock_GetSecretSet_Call) Return(secrets []provider.Secret, err error) *ProviderMock_GetSecretSet_Call {
+	_c.Call.Return(secrets, err)
 	return _c
 }
 
@@ -424,7 +424,7 @@ type ProviderMock_Start_Call struct {
 
 // Start is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *ProviderMock_Expecter) Start(ctx interface{}) *ProviderMock_Start_Call {
+func (_e *ProviderMock_Expecter) Start(ctx any) *ProviderMock_Start_Call {
 	return &ProviderMock_Start_Call{Call: _e.mock.On("Start", ctx)}
 }
 
@@ -475,7 +475,7 @@ type ProviderMock_Stop_Call struct {
 
 // Stop is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *ProviderMock_Expecter) Stop(ctx interface{}) *ProviderMock_Stop_Call {
+func (_e *ProviderMock_Expecter) Stop(ctx any) *ProviderMock_Stop_Call {
 	return &ProviderMock_Stop_Call{Call: _e.mock.On("Stop", ctx)}
 }
 

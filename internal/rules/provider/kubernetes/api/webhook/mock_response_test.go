@@ -48,7 +48,7 @@ type ResponseMock_Complete_Call[Req Request] struct {
 
 // Complete is a helper method to define mock.On call
 //   - req Req
-func (_e *ResponseMock_Expecter[Req]) Complete(req interface{}) *ResponseMock_Complete_Call[Req] {
+func (_e *ResponseMock_Expecter[Req]) Complete(req any) *ResponseMock_Complete_Call[Req] {
 	return &ResponseMock_Complete_Call[Req]{Call: _e.mock.On("Complete", req)}
 }
 

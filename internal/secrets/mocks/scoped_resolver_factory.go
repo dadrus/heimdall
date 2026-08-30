@@ -39,11 +39,11 @@ func (_m *ScopedResolverFactoryMock) EXPECT() *ScopedResolverFactoryMock_Expecte
 // Create provides a mock function for the type ScopedResolverFactoryMock
 func (_mock *ScopedResolverFactoryMock) Create(opts ...secrets.ScopeOption) secrets.ScopedResolver {
 	// secrets.ScopeOption
-	_va := make([]interface{}, len(opts))
+	_va := make([]any, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
 	}
-	var _ca []interface{}
+	var _ca []any
 	_ca = append(_ca, _va...)
 	ret := _mock.Called(_ca...)
 
@@ -69,9 +69,9 @@ type ScopedResolverFactoryMock_Create_Call struct {
 
 // Create is a helper method to define mock.On call
 //   - opts ...secrets.ScopeOption
-func (_e *ScopedResolverFactoryMock_Expecter) Create(opts ...interface{}) *ScopedResolverFactoryMock_Create_Call {
+func (_e *ScopedResolverFactoryMock_Expecter) Create(opts ...any) *ScopedResolverFactoryMock_Create_Call {
 	return &ScopedResolverFactoryMock_Create_Call{Call: _e.mock.On("Create",
-		append([]interface{}{}, opts...)...)}
+		append([]any{}, opts...)...)}
 }
 
 func (_c *ScopedResolverFactoryMock_Create_Call) Run(run func(opts ...secrets.ScopeOption)) *ScopedResolverFactoryMock_Create_Call {

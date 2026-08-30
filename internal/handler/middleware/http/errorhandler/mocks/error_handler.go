@@ -52,7 +52,7 @@ type ErrorHandlerMock_HandleError_Call struct {
 //   - rw http.ResponseWriter
 //   - req *http.Request
 //   - err error
-func (_e *ErrorHandlerMock_Expecter) HandleError(rw interface{}, req interface{}, err interface{}) *ErrorHandlerMock_HandleError_Call {
+func (_e *ErrorHandlerMock_Expecter) HandleError(rw any, req any, err any) *ErrorHandlerMock_HandleError_Call {
 	return &ErrorHandlerMock_HandleError_Call{Call: _e.mock.On("HandleError", rw, req, err)}
 }
 

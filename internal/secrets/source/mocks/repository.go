@@ -51,7 +51,7 @@ type RepositoryMock_AddObserver_Call struct {
 
 // AddObserver is a helper method to define mock.On call
 //   - observer source.Observer
-func (_e *RepositoryMock_Expecter) AddObserver(observer interface{}) *RepositoryMock_AddObserver_Call {
+func (_e *RepositoryMock_Expecter) AddObserver(observer any) *RepositoryMock_AddObserver_Call {
 	return &RepositoryMock_AddObserver_Call{Call: _e.mock.On("AddObserver", observer)}
 }
 
@@ -113,7 +113,7 @@ type RepositoryMock_Lookup_Call struct {
 
 // Lookup is a helper method to define mock.On call
 //   - sourceName string
-func (_e *RepositoryMock_Expecter) Lookup(sourceName interface{}) *RepositoryMock_Lookup_Call {
+func (_e *RepositoryMock_Expecter) Lookup(sourceName any) *RepositoryMock_Lookup_Call {
 	return &RepositoryMock_Lookup_Call{Call: _e.mock.On("Lookup", sourceName)}
 }
 
@@ -164,7 +164,7 @@ type RepositoryMock_Start_Call struct {
 
 // Start is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *RepositoryMock_Expecter) Start(ctx interface{}) *RepositoryMock_Start_Call {
+func (_e *RepositoryMock_Expecter) Start(ctx any) *RepositoryMock_Start_Call {
 	return &RepositoryMock_Start_Call{Call: _e.mock.On("Start", ctx)}
 }
 
@@ -215,7 +215,7 @@ type RepositoryMock_Stop_Call struct {
 
 // Stop is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *RepositoryMock_Expecter) Stop(ctx interface{}) *RepositoryMock_Stop_Call {
+func (_e *RepositoryMock_Expecter) Stop(ctx any) *RepositoryMock_Stop_Call {
 	return &RepositoryMock_Stop_Call{Call: _e.mock.On("Stop", ctx)}
 }
 

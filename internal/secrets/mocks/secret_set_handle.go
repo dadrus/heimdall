@@ -81,8 +81,8 @@ func (_c *SecretSetHandleMock_Get_Call) Run(run func()) *SecretSetHandleMock_Get
 	return _c
 }
 
-func (_c *SecretSetHandleMock_Get_Call) Return(vs []secrets.Secret, b bool) *SecretSetHandleMock_Get_Call {
-	_c.Call.Return(vs, b)
+func (_c *SecretSetHandleMock_Get_Call) Return(secrets1 []secrets.Secret, b bool) *SecretSetHandleMock_Get_Call {
+	_c.Call.Return(secrets1, b)
 	return _c
 }
 
@@ -104,7 +104,7 @@ type SecretSetHandleMock_OnUpdate_Call struct {
 
 // OnUpdate is a helper method to define mock.On call
 //   - callback secrets.UpdateFunc[[]secrets.Secret]
-func (_e *SecretSetHandleMock_Expecter) OnUpdate(callback interface{}) *SecretSetHandleMock_OnUpdate_Call {
+func (_e *SecretSetHandleMock_Expecter) OnUpdate(callback any) *SecretSetHandleMock_OnUpdate_Call {
 	return &SecretSetHandleMock_OnUpdate_Call{Call: _e.mock.On("OnUpdate", callback)}
 }
 

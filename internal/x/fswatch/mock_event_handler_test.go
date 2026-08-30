@@ -59,7 +59,7 @@ type EventHandlerMock_HandleEvent_Call struct {
 
 // HandleEvent is a helper method to define mock.On call
 //   - evt Event
-func (_e *EventHandlerMock_Expecter) HandleEvent(evt interface{}) *EventHandlerMock_HandleEvent_Call {
+func (_e *EventHandlerMock_Expecter) HandleEvent(evt any) *EventHandlerMock_HandleEvent_Call {
 	return &EventHandlerMock_HandleEvent_Call{Call: _e.mock.On("HandleEvent", evt)}
 }
 

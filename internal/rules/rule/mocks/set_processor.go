@@ -63,7 +63,7 @@ type RuleSetProcessorMock_OnCreated_Call struct {
 // OnCreated is a helper method to define mock.On call
 //   - ctx context.Context
 //   - ruleSet v1beta1.RuleSet
-func (_e *RuleSetProcessorMock_Expecter) OnCreated(ctx interface{}, ruleSet interface{}) *RuleSetProcessorMock_OnCreated_Call {
+func (_e *RuleSetProcessorMock_Expecter) OnCreated(ctx any, ruleSet any) *RuleSetProcessorMock_OnCreated_Call {
 	return &RuleSetProcessorMock_OnCreated_Call{Call: _e.mock.On("OnCreated", ctx, ruleSet)}
 }
 
@@ -120,7 +120,7 @@ type RuleSetProcessorMock_OnDeleted_Call struct {
 // OnDeleted is a helper method to define mock.On call
 //   - ctx context.Context
 //   - ruleSet v1beta1.RuleSet
-func (_e *RuleSetProcessorMock_Expecter) OnDeleted(ctx interface{}, ruleSet interface{}) *RuleSetProcessorMock_OnDeleted_Call {
+func (_e *RuleSetProcessorMock_Expecter) OnDeleted(ctx any, ruleSet any) *RuleSetProcessorMock_OnDeleted_Call {
 	return &RuleSetProcessorMock_OnDeleted_Call{Call: _e.mock.On("OnDeleted", ctx, ruleSet)}
 }
 
@@ -177,7 +177,7 @@ type RuleSetProcessorMock_OnUpdated_Call struct {
 // OnUpdated is a helper method to define mock.On call
 //   - ctx context.Context
 //   - ruleSet v1beta1.RuleSet
-func (_e *RuleSetProcessorMock_Expecter) OnUpdated(ctx interface{}, ruleSet interface{}) *RuleSetProcessorMock_OnUpdated_Call {
+func (_e *RuleSetProcessorMock_Expecter) OnUpdated(ctx any, ruleSet any) *RuleSetProcessorMock_OnUpdated_Call {
 	return &RuleSetProcessorMock_OnUpdated_Call{Call: _e.mock.On("OnUpdated", ctx, ruleSet)}
 }
 

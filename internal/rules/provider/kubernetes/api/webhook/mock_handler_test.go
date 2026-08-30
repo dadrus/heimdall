@@ -64,7 +64,7 @@ type HandlerMock_Handle_Call[Req Request, Resp Response[Req]] struct {
 // Handle is a helper method to define mock.On call
 //   - ctx context.Context
 //   - req Req
-func (_e *HandlerMock_Expecter[Req, Resp]) Handle(ctx interface{}, req interface{}) *HandlerMock_Handle_Call[Req, Resp] {
+func (_e *HandlerMock_Expecter[Req, Resp]) Handle(ctx any, req any) *HandlerMock_Handle_Call[Req, Resp] {
 	return &HandlerMock_Handle_Call[Req, Resp]{Call: _e.mock.On("Handle", ctx, req)}
 }
 

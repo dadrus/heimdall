@@ -61,7 +61,7 @@ type PipelineMock_Execute_Call struct {
 // Execute is a helper method to define mock.On call
 //   - ctx pipeline.Context
 //   - subject pipeline.Subject
-func (_e *PipelineMock_Expecter) Execute(ctx interface{}, subject interface{}) *PipelineMock_Execute_Call {
+func (_e *PipelineMock_Expecter) Execute(ctx any, subject any) *PipelineMock_Execute_Call {
 	return &PipelineMock_Execute_Call{Call: _e.mock.On("Execute", ctx, subject)}
 }
 

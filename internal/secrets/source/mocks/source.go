@@ -119,7 +119,7 @@ type SourceMock_GetCertificateBundle_Call struct {
 // GetCertificateBundle is a helper method to define mock.On call
 //   - ctx context.Context
 //   - selector source.Selector
-func (_e *SourceMock_Expecter) GetCertificateBundle(ctx interface{}, selector interface{}) *SourceMock_GetCertificateBundle_Call {
+func (_e *SourceMock_Expecter) GetCertificateBundle(ctx any, selector any) *SourceMock_GetCertificateBundle_Call {
 	return &SourceMock_GetCertificateBundle_Call{Call: _e.mock.On("GetCertificateBundle", ctx, selector)}
 }
 
@@ -187,7 +187,7 @@ type SourceMock_GetCredentials_Call struct {
 // GetCredentials is a helper method to define mock.On call
 //   - ctx context.Context
 //   - selector source.Selector
-func (_e *SourceMock_Expecter) GetCredentials(ctx interface{}, selector interface{}) *SourceMock_GetCredentials_Call {
+func (_e *SourceMock_Expecter) GetCredentials(ctx any, selector any) *SourceMock_GetCredentials_Call {
 	return &SourceMock_GetCredentials_Call{Call: _e.mock.On("GetCredentials", ctx, selector)}
 }
 
@@ -255,7 +255,7 @@ type SourceMock_GetSecret_Call struct {
 // GetSecret is a helper method to define mock.On call
 //   - ctx context.Context
 //   - selector source.Selector
-func (_e *SourceMock_Expecter) GetSecret(ctx interface{}, selector interface{}) *SourceMock_GetSecret_Call {
+func (_e *SourceMock_Expecter) GetSecret(ctx any, selector any) *SourceMock_GetSecret_Call {
 	return &SourceMock_GetSecret_Call{Call: _e.mock.On("GetSecret", ctx, selector)}
 }
 
@@ -323,7 +323,7 @@ type SourceMock_GetSecretSet_Call struct {
 // GetSecretSet is a helper method to define mock.On call
 //   - ctx context.Context
 //   - selector source.Selector
-func (_e *SourceMock_Expecter) GetSecretSet(ctx interface{}, selector interface{}) *SourceMock_GetSecretSet_Call {
+func (_e *SourceMock_Expecter) GetSecretSet(ctx any, selector any) *SourceMock_GetSecretSet_Call {
 	return &SourceMock_GetSecretSet_Call{Call: _e.mock.On("GetSecretSet", ctx, selector)}
 }
 

@@ -62,7 +62,7 @@ type ScopedResolverMock_AwaitReady_Call struct {
 
 // AwaitReady is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *ScopedResolverMock_Expecter) AwaitReady(ctx interface{}) *ScopedResolverMock_AwaitReady_Call {
+func (_e *ScopedResolverMock_Expecter) AwaitReady(ctx any) *ScopedResolverMock_AwaitReady_Call {
 	return &ScopedResolverMock_AwaitReady_Call{Call: _e.mock.On("AwaitReady", ctx)}
 }
 
@@ -124,7 +124,7 @@ type ScopedResolverMock_CertificateBundle_Call struct {
 
 // CertificateBundle is a helper method to define mock.On call
 //   - ref secrets.Reference
-func (_e *ScopedResolverMock_Expecter) CertificateBundle(ref interface{}) *ScopedResolverMock_CertificateBundle_Call {
+func (_e *ScopedResolverMock_Expecter) CertificateBundle(ref any) *ScopedResolverMock_CertificateBundle_Call {
 	return &ScopedResolverMock_CertificateBundle_Call{Call: _e.mock.On("CertificateBundle", ref)}
 }
 
@@ -186,7 +186,7 @@ type ScopedResolverMock_Credentials_Call struct {
 
 // Credentials is a helper method to define mock.On call
 //   - ref secrets.Reference
-func (_e *ScopedResolverMock_Expecter) Credentials(ref interface{}) *ScopedResolverMock_Credentials_Call {
+func (_e *ScopedResolverMock_Expecter) Credentials(ref any) *ScopedResolverMock_Credentials_Call {
 	return &ScopedResolverMock_Credentials_Call{Call: _e.mock.On("Credentials", ref)}
 }
 
@@ -281,7 +281,7 @@ type ScopedResolverMock_Secret_Call struct {
 
 // Secret is a helper method to define mock.On call
 //   - ref secrets.Reference
-func (_e *ScopedResolverMock_Expecter) Secret(ref interface{}) *ScopedResolverMock_Secret_Call {
+func (_e *ScopedResolverMock_Expecter) Secret(ref any) *ScopedResolverMock_Secret_Call {
 	return &ScopedResolverMock_Secret_Call{Call: _e.mock.On("Secret", ref)}
 }
 
@@ -343,7 +343,7 @@ type ScopedResolverMock_SecretSet_Call struct {
 
 // SecretSet is a helper method to define mock.On call
 //   - ref secrets.Reference
-func (_e *ScopedResolverMock_Expecter) SecretSet(ref interface{}) *ScopedResolverMock_SecretSet_Call {
+func (_e *ScopedResolverMock_Expecter) SecretSet(ref any) *ScopedResolverMock_SecretSet_Call {
 	return &ScopedResolverMock_SecretSet_Call{Call: _e.mock.On("SecretSet", ref)}
 }
 

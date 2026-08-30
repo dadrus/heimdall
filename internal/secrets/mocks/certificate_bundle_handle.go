@@ -81,8 +81,8 @@ func (_c *CertificateBundleHandleMock_Get_Call) Run(run func()) *CertificateBund
 	return _c
 }
 
-func (_c *CertificateBundleHandleMock_Get_Call) Return(v secrets.CertificateBundle, b bool) *CertificateBundleHandleMock_Get_Call {
-	_c.Call.Return(v, b)
+func (_c *CertificateBundleHandleMock_Get_Call) Return(certificateBundle secrets.CertificateBundle, b bool) *CertificateBundleHandleMock_Get_Call {
+	_c.Call.Return(certificateBundle, b)
 	return _c
 }
 
@@ -104,7 +104,7 @@ type CertificateBundleHandleMock_OnUpdate_Call struct {
 
 // OnUpdate is a helper method to define mock.On call
 //   - callback secrets.UpdateFunc[secrets.CertificateBundle]
-func (_e *CertificateBundleHandleMock_Expecter) OnUpdate(callback interface{}) *CertificateBundleHandleMock_OnUpdate_Call {
+func (_e *CertificateBundleHandleMock_Expecter) OnUpdate(callback any) *CertificateBundleHandleMock_OnUpdate_Call {
 	return &CertificateBundleHandleMock_OnUpdate_Call{Call: _e.mock.On("OnUpdate", callback)}
 }
 

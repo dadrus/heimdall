@@ -49,7 +49,7 @@ type StepMock_Accept_Call struct {
 
 // Accept is a helper method to define mock.On call
 //   - visitor pipeline.Visitor
-func (_e *StepMock_Expecter) Accept(visitor interface{}) *StepMock_Accept_Call {
+func (_e *StepMock_Expecter) Accept(visitor any) *StepMock_Accept_Call {
 	return &StepMock_Accept_Call{Call: _e.mock.On("Accept", visitor)}
 }
 
@@ -101,7 +101,7 @@ type StepMock_Execute_Call struct {
 // Execute is a helper method to define mock.On call
 //   - ctx pipeline.Context
 //   - sub pipeline.Subject
-func (_e *StepMock_Expecter) Execute(ctx interface{}, sub interface{}) *StepMock_Execute_Call {
+func (_e *StepMock_Expecter) Execute(ctx any, sub any) *StepMock_Execute_Call {
 	return &StepMock_Execute_Call{Call: _e.mock.On("Execute", ctx, sub)}
 }
 

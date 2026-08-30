@@ -70,7 +70,7 @@ type ExecutionConditionMock_CanExecuteOnError_Call struct {
 // CanExecuteOnError is a helper method to define mock.On call
 //   - ctx pipeline.Context
 //   - err error
-func (_e *ExecutionConditionMock_Expecter) CanExecuteOnError(ctx interface{}, err interface{}) *ExecutionConditionMock_CanExecuteOnError_Call {
+func (_e *ExecutionConditionMock_Expecter) CanExecuteOnError(ctx any, err any) *ExecutionConditionMock_CanExecuteOnError_Call {
 	return &ExecutionConditionMock_CanExecuteOnError_Call{Call: _e.mock.On("CanExecuteOnError", ctx, err)}
 }
 
@@ -136,7 +136,7 @@ type ExecutionConditionMock_CanExecuteOnSubject_Call struct {
 // CanExecuteOnSubject is a helper method to define mock.On call
 //   - ctx pipeline.Context
 //   - sub pipeline.Subject
-func (_e *ExecutionConditionMock_Expecter) CanExecuteOnSubject(ctx interface{}, sub interface{}) *ExecutionConditionMock_CanExecuteOnSubject_Call {
+func (_e *ExecutionConditionMock_Expecter) CanExecuteOnSubject(ctx any, sub any) *ExecutionConditionMock_CanExecuteOnSubject_Call {
 	return &ExecutionConditionMock_CanExecuteOnSubject_Call{Call: _e.mock.On("CanExecuteOnSubject", ctx, sub)}
 }
 

@@ -65,7 +65,7 @@ type ContextFactoryMock_Create_Call struct {
 // Create is a helper method to define mock.On call
 //   - rw http.ResponseWriter
 //   - req *http.Request
-func (_e *ContextFactoryMock_Expecter) Create(rw interface{}, req interface{}) *ContextFactoryMock_Create_Call {
+func (_e *ContextFactoryMock_Expecter) Create(rw any, req any) *ContextFactoryMock_Create_Call {
 	return &ContextFactoryMock_Create_Call{Call: _e.mock.On("Create", rw, req)}
 }
 
@@ -110,7 +110,7 @@ type ContextFactoryMock_Destroy_Call struct {
 
 // Destroy is a helper method to define mock.On call
 //   - ctx requestcontext.Context
-func (_e *ContextFactoryMock_Expecter) Destroy(ctx interface{}) *ContextFactoryMock_Destroy_Call {
+func (_e *ContextFactoryMock_Expecter) Destroy(ctx any) *ContextFactoryMock_Destroy_Call {
 	return &ContextFactoryMock_Destroy_Call{Call: _e.mock.On("Destroy", ctx)}
 }
 

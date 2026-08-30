@@ -71,8 +71,8 @@ func (_c *RequestFunctionsMock_Body_Call) Run(run func()) *RequestFunctionsMock_
 	return _c
 }
 
-func (_c *RequestFunctionsMock_Body_Call) Return(v any) *RequestFunctionsMock_Body_Call {
-	_c.Call.Return(v)
+func (_c *RequestFunctionsMock_Body_Call) Return(anyMoqParam any) *RequestFunctionsMock_Body_Call {
+	_c.Call.Return(anyMoqParam)
 	return _c
 }
 
@@ -105,7 +105,7 @@ type RequestFunctionsMock_Cookie_Call struct {
 
 // Cookie is a helper method to define mock.On call
 //   - name string
-func (_e *RequestFunctionsMock_Expecter) Cookie(name interface{}) *RequestFunctionsMock_Cookie_Call {
+func (_e *RequestFunctionsMock_Expecter) Cookie(name any) *RequestFunctionsMock_Cookie_Call {
 	return &RequestFunctionsMock_Cookie_Call{Call: _e.mock.On("Cookie", name)}
 }
 
@@ -156,7 +156,7 @@ type RequestFunctionsMock_Header_Call struct {
 
 // Header is a helper method to define mock.On call
 //   - name string
-func (_e *RequestFunctionsMock_Expecter) Header(name interface{}) *RequestFunctionsMock_Header_Call {
+func (_e *RequestFunctionsMock_Expecter) Header(name any) *RequestFunctionsMock_Header_Call {
 	return &RequestFunctionsMock_Header_Call{Call: _e.mock.On("Header", name)}
 }
 
