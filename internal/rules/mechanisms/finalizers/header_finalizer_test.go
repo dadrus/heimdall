@@ -321,7 +321,6 @@ headers:
 				reqf := mocks.NewRequestFunctionsMock(t)
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqf})
-				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 				ctx.EXPECT().Results().Return(pipeline.Results{"foo": pipeline.NewResult(map[string]any{"foo": "bar"})})
 			},
 			subject: pipeline.Subject{"default": &pipeline.Principal{ID: "FooBar", Attributes: map[string]any{}}},
@@ -344,7 +343,7 @@ headers:
   bar: "{{ .Subject.ID }}"
   baz: bar
   X-Baz: '{{ .Request.Header "X-Foo" }}'
-  X-Foo: '{{ .Outputs.foo }}'
+  X-Foo: '{{ .Outputs.foo.Payload }}'
   X-Result: '{{ .Results.foo.Header "X-My-Header" }}'
 `),
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
@@ -361,16 +360,12 @@ headers:
 				ctx.EXPECT().AddHeaderForUpstream("X-Result", "from-result")
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqf})
-				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 
 				headers := make(http.Header)
 				headers.Set("X-My-Header", "from-result")
 
 				ctx.EXPECT().Results().Return(pipeline.Results{
-					"foo": pipeline.NewResultWithHeaders(
-						map[string]any{"foo": "bar"},
-						headers,
-					),
+					"foo": pipeline.NewResultWithHeaders("bar", headers),
 				})
 			},
 			subject: pipeline.Subject{"default": &pipeline.Principal{ID: "FooBar", Attributes: map[string]any{"bar": "baz"}}},
@@ -396,7 +391,6 @@ headers:
 				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group3")
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{})
-				ctx.EXPECT().Outputs().Return(map[string]any{})
 				ctx.EXPECT().Results().Return(pipeline.Results{"foo": pipeline.NewResult(map[string]any{})})
 			},
 			subject: pipeline.Subject{

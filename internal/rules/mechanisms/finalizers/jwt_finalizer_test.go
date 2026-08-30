@@ -807,7 +807,7 @@ claims: '{
   {{ $val := .Subject.Attributes.baz }}
   "sub_id": {{ quote .Subject.ID }},
   {{ quote $val }}: "baz",
-  "foo": {{ .Outputs.foo | quote }}
+  "foo": {{ .Outputs.foo.Payload | quote }}
 }'`),
 			signingSecret: secret,
 			subject: pipeline.Subject{
@@ -826,12 +826,9 @@ claims: '{
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 				ctx.EXPECT().Results().Return(
 					pipeline.Results{
-						"remote": pipeline.NewResult(
-							map[string]any{"foo": "bar"},
-						),
+						"foo": pipeline.NewResult("bar"),
 					},
 				)
 				ctx.EXPECT().AddHeaderForUpstream("X-Token",
@@ -874,12 +871,9 @@ values:
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(map[string]any{"bar": "baz"})
 				ctx.EXPECT().Results().Return(
 					pipeline.Results{
-						"remote": pipeline.NewResult(
-							map[string]any{"foo": "bar"},
-						),
+						"remote": pipeline.NewResult(map[string]any{"foo": "bar"}),
 					},
 				)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
@@ -918,7 +912,6 @@ claims: "foo: bar"
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(map[string]any{})
 				ctx.EXPECT().Results().Return(
 					pipeline.Results{
 						"remote": pipeline.NewResult(map[string]any{}),
@@ -963,7 +956,6 @@ claims: "{{ len .foobar }}"
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(map[string]any{})
 				ctx.EXPECT().Results().Return(
 					pipeline.Results{
 						"remote": pipeline.NewResult(map[string]any{}),
@@ -1010,7 +1002,6 @@ values:
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(map[string]any{})
 				ctx.EXPECT().Results().Return(
 					pipeline.Results{
 						"remote": pipeline.NewResult(map[string]any{}),

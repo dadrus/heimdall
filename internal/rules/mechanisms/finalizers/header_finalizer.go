@@ -91,7 +91,7 @@ func (f *headerFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 		value, err := tmpl.Render(map[string]any{
 			"Request": ctx.Request(),
 			"Subject": sub,
-			"Outputs": ctx.Outputs(),
+			"Outputs": ctx.Results(),
 			"Results": ctx.Results(),
 		})
 		if err != nil {

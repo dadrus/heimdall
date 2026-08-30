@@ -240,7 +240,7 @@ func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject)
 	if f.claims != nil {
 		vals, err := f.v.Render(map[string]any{
 			"Subject": sub,
-			"Outputs": ctx.Outputs(),
+			"Outputs": ctx.Results(),
 			"Results": ctx.Results(),
 		})
 		if err != nil {
@@ -253,7 +253,7 @@ func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject)
 		claims, err := f.claims.Render(map[string]any{
 			"Subject": sub,
 			"Values":  vals,
-			"Outputs": ctx.Outputs(),
+			"Outputs": ctx.Results(),
 			"Results": ctx.Results(),
 		})
 		if err != nil {

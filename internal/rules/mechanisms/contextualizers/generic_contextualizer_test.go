@@ -594,7 +594,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 		instructServer   func(t *testing.T)
 		configureContext func(t *testing.T, ctx *pipelinemocks.ContextMock)
 		configureCache   func(t *testing.T, cch *mocks.CacheMock, contextualizer *genericContextualizer, sub pipeline.Subject)
-		assert           func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results)
+		assert           func(t *testing.T, err error, sub pipeline.Subject, results pipeline.Results)
 	}{
 		"with successful cache hit": {
 			contextualizer: &genericContextualizer{
@@ -629,7 +629,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawData, nil)
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, results pipeline.Results) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -637,10 +637,6 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				require.NoError(t, err)
 				assert.Len(t, sub.Attributes(), 1)
 				assert.Equal(t, "baz", sub.Attributes()["bar"])
-
-				assert.Len(t, outputs, 2)
-				assert.Equal(t, "Hi Foo", outputs["contextualizer"])
-				assert.Equal(t, "bar", outputs["foo"])
 
 				assert.Len(t, results, 2)
 
@@ -672,7 +668,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ pipeline.Results) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -708,7 +704,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ pipeline.Results) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -738,7 +734,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ pipeline.Results) {
 				t.Helper()
 
 				assert.False(t, remoteEndpointCalled)
@@ -773,7 +769,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ pipeline.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -827,7 +823,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, results pipeline.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -835,7 +831,6 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Len(t, sub.Attributes(), 1)
-				assert.Len(t, outputs, 1)
 
 				require.Len(t, results, 2)
 
@@ -890,7 +885,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				responseContent = []byte(`Hi from endpoint`)
 				responseCode = http.StatusOK
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, _ pipeline.Results) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, results pipeline.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -898,18 +893,18 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Len(t, sub.Attributes(), 1)
-				assert.Len(t, outputs, 2)
-				assert.Equal(t, "Hi from endpoint", outputs["test-contextualizer"])
+				assert.Len(t, results, 2)
+				assert.Equal(t, "Hi from endpoint", results["test-contextualizer"].Payload)
 			},
 		},
 		"with rendered payload and headers, as well as forwarded headers and cookies": {
 			contextualizer: &genericContextualizer{
 				id: "test-contextualizer",
-				e: endpointtestsupport.EndpointValue(t, srv.URL+"/{{ .Subject.ID }}/{{ .Outputs.foo }}",
+				e: endpointtestsupport.EndpointValue(t, srv.URL+"/{{ .Subject.ID }}/{{ .Outputs.foo.Payload }}",
 					endpoint.WithHeader("Content-Type", "application/json"),
 					endpoint.WithHeader("Accept", "application/json"),
 					endpoint.WithHeader("X-Bar", "{{ .Subject.Attributes.bar }}"),
-					endpoint.WithHeader("X-Foo", "{{ .Outputs.foo }}"),
+					endpoint.WithHeader("X-Foo", "{{ .Outputs.foo.Payload }}"),
 				),
 				v: func() values.Values {
 					tpl, _ := template.New("bar")
@@ -921,7 +916,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 {
 	"user_id": {{ quote .Subject.ID }},
 	"value": {{ quote .Values.foo }},
-	"foo": {{ quote .Outputs.foo }}
+	"foo": {{ quote .Outputs.foo.Payload }}
 }
 `)
 
@@ -977,7 +972,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 						URL:              &pipeline.URL{URL: url.URL{Scheme: "http", Host: "foobar.baz", Path: "zab"}},
 					})
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, results pipeline.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
@@ -985,12 +980,6 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Len(t, sub.Attributes(), 1)
-
-				assert.Len(t, outputs, 2)
-
-				entry := outputs["test-contextualizer"]
-				assert.Len(t, entry, 1)
-				assert.Contains(t, entry, "baz")
 
 				require.Len(t, results, 2)
 
@@ -1066,15 +1055,12 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				cch.EXPECT().Set(mock.Anything, tenantBCacheKey, mock.Anything, contextualizer.ttl).
 					Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, results pipeline.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
 				require.NoError(t, err)
 				assert.Len(t, sub.Attributes(), 1)
-
-				require.Len(t, outputs, 2)
-				assert.Equal(t, map[string]any{"tenant": "tenant-b"}, outputs["test-contextualizer"])
 
 				require.Len(t, results, 2)
 
@@ -1088,7 +1074,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				id: "test-contextualizer",
 				e: endpointtestsupport.EndpointValue(t, srv.URL,
 					endpoint.WithMethod(http.MethodGet),
-					endpoint.WithHeader("X-Tenant-ID", "{{ .Outputs.foo }}"),
+					endpoint.WithHeader("X-Tenant-ID", "{{ .Outputs.foo.Payload }}"),
 				),
 				ttl: 5 * time.Second,
 			},
@@ -1145,15 +1131,12 @@ func TestGenericContextualizerExecute(t *testing.T) {
 				cch.EXPECT().Get(mock.Anything, currentCacheKey).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, currentCacheKey, mock.Anything, contextualizer.ttl).Return(nil)
 			},
-			assert: func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results) {
+			assert: func(t *testing.T, err error, sub pipeline.Subject, results pipeline.Results) {
 				t.Helper()
 
 				assert.True(t, remoteEndpointCalled)
 				require.NoError(t, err)
 				assert.Len(t, sub.Attributes(), 1)
-
-				require.Len(t, outputs, 2)
-				assert.Equal(t, map[string]any{"tenant": "bar"}, outputs["test-contextualizer"])
 
 				require.Len(t, results, 2)
 
@@ -1190,7 +1173,6 @@ func TestGenericContextualizerExecute(t *testing.T) {
 
 			ctx := pipelinemocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
-			ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
 			ctx.EXPECT().Results().Return(pipeline.Results{"foo": pipeline.NewResult("bar")})
 
 			configureContext(t, ctx)
@@ -1201,7 +1183,7 @@ func TestGenericContextualizerExecute(t *testing.T) {
 			err := tc.contextualizer.Execute(ctx, tc.subject)
 
 			// THEN
-			tc.assert(t, err, tc.subject, ctx.Outputs(), ctx.Results())
+			tc.assert(t, err, tc.subject, ctx.Results())
 		})
 	}
 }

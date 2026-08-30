@@ -80,10 +80,6 @@ func (c *mapContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subject) 
 			CausedBy(err)
 	}
 
-	if resp != nil {
-		ctx.Outputs()[c.id] = resp
-	}
-
 	ctx.Results()[c.id] = pipeline.NewResult(resp)
 
 	return nil
@@ -142,7 +138,7 @@ func (c *mapContextualizer) renderTemplates(
 	vals, err := c.values.Render(map[string]any{
 		"Request": ctx.Request(),
 		"Subject": sub,
-		"Outputs": ctx.Outputs(),
+		"Outputs": ctx.Results(),
 		"Results": ctx.Results(),
 	})
 	if err != nil {
@@ -159,7 +155,7 @@ func (c *mapContextualizer) renderTemplates(
 			"Request": ctx.Request(),
 			"Subject": sub,
 			"Values":  vals,
-			"Outputs": ctx.Outputs(),
+			"Outputs": ctx.Results(),
 			"Results": ctx.Results(),
 		}); err != nil {
 			return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,

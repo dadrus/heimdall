@@ -177,10 +177,6 @@ func (c *genericContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subje
 		}
 	}
 
-	if response.Payload != nil {
-		ctx.Outputs()[c.id] = response.Payload
-	}
-
 	ctx.Results()[c.id] = response
 
 	return nil
@@ -281,7 +277,7 @@ func (c *genericContextualizer) createRequest(
 	req, err := c.e.CreateRequest(ctx.Context(), strings.NewReader(payload), map[string]any{
 		"Subject": sub,
 		"Values":  values,
-		"Outputs": ctx.Outputs(),
+		"Outputs": ctx.Results(),
 		"Results": ctx.Results(),
 	})
 	if err != nil {
@@ -388,7 +384,7 @@ func (c *genericContextualizer) renderTemplates(
 	vals, err := c.v.Render(map[string]any{
 		"Request": ctx.Request(),
 		"Subject": sub,
-		"Outputs": ctx.Outputs(),
+		"Outputs": ctx.Results(),
 		"Results": ctx.Results(),
 	})
 	if err != nil {
@@ -403,7 +399,7 @@ func (c *genericContextualizer) renderTemplates(
 			"Request": ctx.Request(),
 			"Subject": sub,
 			"Values":  vals,
-			"Outputs": ctx.Outputs(),
+			"Outputs": ctx.Results(),
 			"Results": ctx.Results(),
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,

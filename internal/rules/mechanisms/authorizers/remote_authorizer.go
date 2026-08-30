@@ -191,10 +191,6 @@ func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 		}
 	}
 
-	if authInfo.Payload != nil {
-		ctx.Outputs()[a.id] = authInfo.Payload
-	}
-
 	ctx.Results()[a.id] = authInfo
 
 	return nil
@@ -268,7 +264,7 @@ func (a *remoteAuthorizer) createRequest(
 		map[string]any{
 			"Subject": sub,
 			"Values":  values,
-			"Outputs": ctx.Outputs(),
+			"Outputs": ctx.Results(),
 			"Results": ctx.Results(),
 		},
 	)
@@ -400,7 +396,7 @@ func (a *remoteAuthorizer) renderTemplates(
 	vals, err := a.v.Render(map[string]any{
 		"Request": ctx.Request(),
 		"Subject": sub,
-		"Outputs": ctx.Outputs(),
+		"Outputs": ctx.Results(),
 		"Results": ctx.Results(),
 	})
 	if err != nil {
@@ -415,7 +411,7 @@ func (a *remoteAuthorizer) renderTemplates(
 			"Request": ctx.Request(),
 			"Subject": sub,
 			"Values":  vals,
-			"Outputs": ctx.Outputs(),
+			"Outputs": ctx.Results(),
 			"Results": ctx.Results(),
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
