@@ -37,7 +37,7 @@ Consider the following definition:
     payload: |
       {
         "subject": {{ .Subject.ID | quote }},
-        "whatever": {{ .Results.foo.Payload.something | quote }}
+        "whatever": {{ .Outputs.foo.Payload.something | quote }}
       }
 ----
 
@@ -49,7 +49,7 @@ The definition is nevertheless coupled to the consuming rule in two other ways:
 +
 NOTE: For a link:{{< relref "/docs/mechanisms/authorizers.adoc#_remote" >}}[remote authorizer], link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_request" >}}[`Request`] is intentionally not available to endpoint templates. Even if it were available, the expression would still tie the mechanism definition to that particular capture name.
 
-* The payload assumes that the rule executes a previous step with the ID `foo` and that its entry in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_results" >}}[`Results`] object contains a field named `something`.
+* The payload assumes that the rule executes a previous step with the ID `foo` and that its entry in the link:{{< relref "/docs/mechanisms/evaluation_objects.adoc#_outputs" >}}[`Outputs`] object contains a payload with a field named `something`.
 
 A rule with a differently named capture, another source for the tenant identifier, or a differently structured pipeline cannot reuse this mechanism definition. Such a rule would require a separate definition in the catalogue.
 
@@ -93,7 +93,7 @@ The rule can map these parameters to its own execution context:
   config:
     values:
       tenantID: '{{ .Request.URL.Captures.foo }}'
-      whatever: '{{ .Results.bar.Payload.something }}'
+      whatever: '{{ .Outputs.bar.Payload.something }}'
 ----
 
 The route capture `foo`, the step ID `bar`, and the structure of that step's output now remain details of the rule.
@@ -107,7 +107,7 @@ Another rule can reuse the same mechanism definition while obtaining those input
   config:
     values:
       tenantID: '{{ .Request.Header "X-Tenant-ID" }}'
-      whatever: '{{ .Results.lookup.Payload.entitlement }}'
+      whatever: '{{ .Outputs.lookup.Payload.entitlement }}'
 ----
 
 The mechanism definition's interface remains unchanged even though the two rules derive its values differently.
