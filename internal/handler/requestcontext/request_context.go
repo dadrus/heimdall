@@ -40,8 +40,8 @@ type RequestContext struct {
 	// the following properties are created lazy and cached
 	err       error
 	savedBody any
-	headers map[string]string
-	outputs pipeline.Results
+	headers   map[string]string
+	outputs   pipeline.Results
 }
 
 func New() *RequestContext {
@@ -160,8 +160,8 @@ func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCo
 func (r *RequestContext) UpstreamCookies() map[string]string      { return r.upstreamCookies }
 func (r *RequestContext) Context() context.Context                { return r.ctx }
 func (r *RequestContext) SetError(err error)                      { r.err = err }
-func (r *RequestContext) Error() error              { return r.err }
-func (r *RequestContext) Outputs() pipeline.Results { return r.outputs }
+func (r *RequestContext) Error() error                            { return r.err }
+func (r *RequestContext) Outputs() pipeline.Results               { return r.outputs }
 
 func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
 	r.ctx = ctx
