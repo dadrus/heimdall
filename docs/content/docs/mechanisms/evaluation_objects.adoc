@@ -278,7 +278,7 @@ Outputs.id_1.Header("X-Some-Header")
 Starting with v0.18.0, `Results` is a deprecated alias for link:{{< relref "#_outputs" >}}[`Outputs`].
 Both names reference the same evaluation object and therefore expose exactly the same entries, properties, and methods.
 
-`Results` exists solely to support migration of existing configurations across the breaking change to the `Outputs` structure introduced with v0.18.0. New configurations should use `Outputs`.
+`Results` was introduced in v0.17.21 as a migration aid for the breaking changes planned for v0.18.0. Starting with v0.18.0, it is a deprecated alias for `Outputs` and will be removed in v0.19.0.
 ====
 
 === Payload
@@ -345,7 +345,7 @@ for details.
 == Templating
 
 Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates].
-Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
+Templates can act on evaluation objects such as link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]. Which exactly are supported is mechanism specific.
 
 To ease the usage, all https://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
 
