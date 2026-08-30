@@ -62,20 +62,19 @@ func TestRuleExecutorExecute(t *testing.T) {
 				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)
 				repo.EXPECT().FindRule(ctx).Return(rule, nil)
-				rule.EXPECT().Execute(ctx).Return(nil, pipeline.ErrAuthentication)
+				rule.EXPECT().Execute(ctx).Return(pipeline.ErrAuthentication)
 			},
 		},
 		"rule execution succeeds": {
 			configureMocks: func(t *testing.T, ctx *mocks2.ExecutionContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
-				upstream := mocks2.NewBackendMock(t)
 				req := &pipeline.Request{Method: http.MethodGet, URL: &pipeline.URL{URL: *matchingURL}}
 
 				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)
 				repo.EXPECT().FindRule(ctx).Return(rule, nil)
-				rule.EXPECT().Execute(ctx).Return(upstream, nil)
+				rule.EXPECT().Execute(ctx).Return(nil)
 			},
 		},
 		"request path contains plain dot segments": {
@@ -165,14 +164,13 @@ func TestRuleExecutorExecute(t *testing.T) {
 			exec := newRuleExecutor(repo)
 
 			// WHEN
-			mut, err := exec.Execute(ctx)
+			err = exec.Execute(ctx)
 
 			// THEN
 			if tc.expErr != nil {
 				require.ErrorIs(t, err, tc.expErr)
 			} else {
 				require.NoError(t, err)
-				require.NotNil(t, mut)
 			}
 		})
 	}

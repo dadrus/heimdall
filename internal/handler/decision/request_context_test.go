@@ -156,7 +156,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			tc.setup(t, reqCtx)
 
 			// WHEN
-			err = reqCtx.Finalize(nil)
+			err = reqCtx.Finalize()
 
 			// THEN
 			tc.assert(t, err, rw)

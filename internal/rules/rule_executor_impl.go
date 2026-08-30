@@ -34,7 +34,7 @@ func newRuleExecutor(repository rule.Repository) pipeline.Executor {
 	return &ruleExecutor{r: repository}
 }
 
-func (e *ruleExecutor) Execute(hctx pipeline.ExecutionContext) (pipeline.Backend, error) {
+func (e *ruleExecutor) Execute(hctx pipeline.ExecutionContext) error {
 	request := hctx.Request()
 	logger := zerolog.Ctx(hctx.Context())
 
@@ -44,13 +44,13 @@ func (e *ruleExecutor) Execute(hctx pipeline.ExecutionContext) (pipeline.Backend
 		Msg("Analyzing request")
 
 	if urlx.PathHasDotSegments(x.IfThenElse(len(request.URL.RawPath) != 0, request.URL.RawPath, request.URL.Path)) {
-		return nil, errorchain.NewWithMessage(pipeline.ErrArgument,
+		return errorchain.NewWithMessage(pipeline.ErrArgument,
 			"path contains dot segments, which are not allowed")
 	}
 
 	rul, err := e.r.FindRule(hctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	return rul.Execute(hctx)

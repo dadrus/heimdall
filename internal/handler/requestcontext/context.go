@@ -23,5 +23,5 @@ import (
 type Context interface {
 	pipeline.ExecutionContext
 
-	Finalize(backend pipeline.Backend) error
+	Finalize() error
 }

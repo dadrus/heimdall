@@ -50,7 +50,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
@@ -70,7 +70,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
@@ -90,7 +90,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthentication)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrAuthentication)
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
@@ -110,7 +110,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthorization)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrAuthorization)
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
@@ -130,7 +130,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, &pipeline.RedirectError{
+				exec.EXPECT().Execute(mock.Anything).Return(&pipeline.RedirectError{
 					Code:       http.StatusFound,
 					RedirectTo: "http://foo.bar",
 				})
@@ -162,7 +162,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 						return req.URL.Path == "/test" &&
 							req.Method == http.MethodPost
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()

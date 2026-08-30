@@ -62,7 +62,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -92,7 +92,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -122,7 +122,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthentication)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrAuthentication)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -152,7 +152,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthorization)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrAuthorization)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -198,7 +198,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -257,7 +257,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 						return pathMatched && methodMatched && schemeMatched && hostMatched
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -314,7 +314,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 						return pathMatched && methodMatched && schemeMatched && hostMatched
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -364,7 +364,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 							req.URL.Path == "/foobar" &&
 							req.Method == http.MethodGet
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -403,7 +403,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 							req.URL.Path == "/foobar" &&
 							req.Method == http.MethodPost
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -441,7 +441,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 							req.URL.Path == "/bar" &&
 							req.Method == http.MethodPost
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -479,7 +479,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 							req.URL.Path == "/foobar" &&
 							req.Method == http.MethodPost
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -521,7 +521,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 							req.URL.Path == "/bar" &&
 							req.Method == http.MethodPatch
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()

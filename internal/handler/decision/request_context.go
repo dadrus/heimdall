@@ -82,7 +82,7 @@ func (r *requestContext) Reset() {
 
 func (r *requestContext) PrepareUpstreamRequest(_ pipeline.UpstreamTarget) {}
 
-func (r *requestContext) Finalize(_ pipeline.Backend) error {
+func (r *requestContext) Finalize() error {
 	if err := r.Error(); err != nil {
 		return err
 	}

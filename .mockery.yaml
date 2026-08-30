@@ -50,7 +50,6 @@ packages:
       PrincipalNamer: {}
       RequestFunctions: {}
       Visitor: {}
-      Backend: {}
       Executor: {}
   github.com/dadrus/heimdall/internal/keyregistry:
     interfaces:

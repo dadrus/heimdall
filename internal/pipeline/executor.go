@@ -17,5 +17,5 @@
 package pipeline
 
 type Executor interface {
-	Execute(ctx ExecutionContext) (Backend, error)
+	Execute(ctx ExecutionContext) error
 }

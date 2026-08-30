@@ -37,31 +37,20 @@ func (_m *ExecutorMock) EXPECT() *ExecutorMock_Expecter {
 }
 
 // Execute provides a mock function for the type ExecutorMock
-func (_mock *ExecutorMock) Execute(ctx pipeline.ExecutionContext) (pipeline.Backend, error) {
+func (_mock *ExecutorMock) Execute(ctx pipeline.ExecutionContext) error {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
 		panic("no return value specified for Execute")
 	}
 
-	var r0 pipeline.Backend
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(pipeline.ExecutionContext) (pipeline.Backend, error)); ok {
-		return returnFunc(ctx)
-	}
-	if returnFunc, ok := ret.Get(0).(func(pipeline.ExecutionContext) pipeline.Backend); ok {
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func(pipeline.ExecutionContext) error); ok {
 		r0 = returnFunc(ctx)
 	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(pipeline.Backend)
-		}
+		r0 = ret.Error(0)
 	}
-	if returnFunc, ok := ret.Get(1).(func(pipeline.ExecutionContext) error); ok {
-		r1 = returnFunc(ctx)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
+	return r0
 }
 
 // ExecutorMock_Execute_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Execute'
@@ -88,12 +77,12 @@ func (_c *ExecutorMock_Execute_Call) Run(run func(ctx pipeline.ExecutionContext)
 	return _c
 }
 
-func (_c *ExecutorMock_Execute_Call) Return(backend pipeline.Backend, err error) *ExecutorMock_Execute_Call {
-	_c.Call.Return(backend, err)
+func (_c *ExecutorMock_Execute_Call) Return(err error) *ExecutorMock_Execute_Call {
+	_c.Call.Return(err)
 	return _c
 }
 
-func (_c *ExecutorMock_Execute_Call) RunAndReturn(run func(ctx pipeline.ExecutionContext) (pipeline.Backend, error)) *ExecutorMock_Execute_Call {
+func (_c *ExecutorMock_Execute_Call) RunAndReturn(run func(ctx pipeline.ExecutionContext) error) *ExecutorMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

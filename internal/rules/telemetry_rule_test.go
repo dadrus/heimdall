@@ -142,7 +142,6 @@ func TestTelemetryRuleExecute(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			src := rule.RuleSet{ID: "test ruleset id", Name: "test ruleset name", Provider: "test provider"}
-			bem := mocks.NewBackendMock(t)
 			parentCtx := t.Context()
 
 			cm := mocks.NewExecutionContextMock(t)
@@ -155,7 +154,7 @@ func TestTelemetryRuleExecute(t *testing.T) {
 			rulMock := mocks2.NewRuleMock(t)
 			rulMock.EXPECT().ID().Return("test rule id")
 			rulMock.EXPECT().Source().Return(src)
-			rulMock.EXPECT().Execute(cm).Return(bem, tc.err)
+			rulMock.EXPECT().Execute(cm).Return(tc.err)
 
 			sr := tracetest.NewSpanRecorder()
 			tracer := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)).Tracer("test")
@@ -172,11 +171,9 @@ func TestTelemetryRuleExecute(t *testing.T) {
 			require.NotNil(t, decorated)
 
 			// WHEN
-			be, err := decorated.Execute(cm)
+			err = decorated.Execute(cm)
 
 			// THEN
-			assert.Equal(t, bem, be)
-
 			spans := sr.Ended()
 			require.Len(t, spans, 1)
 

@@ -42,7 +42,7 @@ type ruleImpl struct {
 	subjectPool     *sync.Pool
 }
 
-func (r *ruleImpl) Execute(ctx pipeline.ExecutionContext) (pipeline.Backend, error) {
+func (r *ruleImpl) Execute(ctx pipeline.ExecutionContext) error {
 	logger := zerolog.Ctx(ctx.Context())
 
 	logger.Info().
@@ -60,7 +60,7 @@ func (r *ruleImpl) Execute(ctx pipeline.ExecutionContext) (pipeline.Backend, err
 		request.URL.RawPath = ""
 	case v1beta1.EncodedSlashesOff:
 		if urlx.ContainsEncodedSlash(request.URL.RawPath) {
-			return nil, errorchain.NewWithMessage(pipeline.ErrArgument,
+			return errorchain.NewWithMessage(pipeline.ErrArgument,
 				"path contains encoded slash, which is not allowed")
 		}
 	}
@@ -91,10 +91,10 @@ func (r *ruleImpl) Execute(ctx pipeline.ExecutionContext) (pipeline.Backend, err
 	}
 
 	if err := r.p.Execute(ctx, sub, target); err != nil {
-		return nil, err
+		return err
 	}
 
-	return r.createBackend(request), nil
+	return nil
 }
 
 func (r *ruleImpl) ID() string           { return r.id }
@@ -122,20 +122,6 @@ func (r *ruleImpl) ForwardHostHeader() bool {
 		*r.backend.ForwardHostHeader
 }
 
-func (r *ruleImpl) createBackend(request *pipeline.Request) pipeline.Backend {
-	var upstream pipeline.Backend
-
-	if r.backend != nil {
-		upstream = backend{
-			targetURL: r.backend.CreateURL(&request.URL.URL),
-			forwardHostHeader: r.backend.ForwardHostHeader == nil ||
-				(r.backend.ForwardHostHeader != nil && *r.backend.ForwardHostHeader),
-		}
-	}
-
-	return upstream
-}
-
 type routeImpl struct {
 	rule    *ruleImpl
 	host    string
@@ -156,12 +142,3 @@ func (r *routeImpl) Host() string { return r.host }
 func (r *routeImpl) Path() string { return r.path }
 
 func (r *routeImpl) Rule() rule.Rule { return r.rule }
-
-type backend struct {
-	targetURL         *url.URL
-	forwardHostHeader bool
-}
-
-func (b backend) URL() *url.URL { return b.targetURL }
-
-func (b backend) ForwardHostHeader() bool { return b.forwardHostHeader }

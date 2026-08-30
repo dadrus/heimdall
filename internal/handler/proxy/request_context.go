@@ -96,6 +96,10 @@ type requestContext struct {
 	rw  http.ResponseWriter
 	req *http.Request
 	rt  http.RoundTripper
+
+	upstreamURL       url.URL
+	forwardHostHeader bool
+	hasUpstreamTarget bool
 }
 
 func (r *requestContext) Init(rw http.ResponseWriter, req *http.Request, rt http.RoundTripper) {
@@ -111,25 +115,47 @@ func (r *requestContext) Reset() {
 	r.rt = nil
 	r.req = nil
 
+	r.upstreamURL = url.URL{}
+	r.forwardHostHeader = false
+	r.hasUpstreamTarget = false
+
 	r.RequestContext.Reset()
 }
 
-func (r *requestContext) PrepareUpstreamRequest(_ pipeline.UpstreamTarget) {}
+func (r *requestContext) PrepareUpstreamRequest(target pipeline.UpstreamTarget) {
+	if target == nil {
+		return
+	}
 
-func (r *requestContext) Finalize(upstream pipeline.Backend) error {
+	requestURL := &r.Request().URL.URL
+
+	r.upstreamURL = url.URL{
+		Scheme:   requestURL.Scheme,
+		Path:     requestURL.Path,
+		RawPath:  requestURL.RawPath,
+		RawQuery: requestURL.RawQuery,
+	}
+
+	target.ApplyTo(&r.upstreamURL)
+
+	r.forwardHostHeader = target.ForwardHostHeader()
+	r.hasUpstreamTarget = true
+}
+
+func (r *requestContext) Finalize() error {
 	logger := zerolog.Ctx(r.Context())
 
 	if err := r.Error(); err != nil {
 		return err
 	}
 
-	if upstream == nil {
+	if !r.hasUpstreamTarget {
 		return errorchain.NewWithMessage(pipeline.ErrConfiguration, "No upstream reference defined")
 	}
 
 	logger.Info().
 		Str("_method", r.Request().Method).
-		Str("_upstream", upstream.URL().String()).
+		Str("_upstream", r.upstreamURL.String()).
 		Msg("Forwarding request")
 
 	errHolder := struct{ err error }{}
@@ -141,7 +167,7 @@ func (r *requestContext) Finalize(upstream pipeline.Backend) error {
 			errHolder.err = errorchain.NewWithMessage(pipeline.ErrCommunication, "Failed to proxy request").
 				CausedBy(err)
 		},
-		Rewrite: r.rewriteRequest(upstream.URL(), upstream.ForwardHostHeader()),
+		Rewrite: r.rewriteRequest(&r.upstreamURL, r.forwardHostHeader),
 		Transport: otelhttp.NewTransport(
 			httpx.NewTraceRoundTripper(r.rt),
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {

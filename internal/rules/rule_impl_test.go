@@ -49,7 +49,7 @@ func TestRuleExecute(t *testing.T) {
 			finalizer *heimdallmocks.StepMock,
 			errHandler *heimdallmocks.StepMock,
 		)
-		assert func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string)
+		assert func(t *testing.T, err error, captures map[string]string)
 	}{
 		"authenticator fails, but error handler succeeds": {
 			configureMocks: func(t *testing.T, ctx *heimdallmocks.ExecutionContextMock, authenticator *heimdallmocks.StepMock,
@@ -70,11 +70,10 @@ func TestRuleExecute(t *testing.T) {
 					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Nil(t, backend)
 			},
 		},
 		"authenticator fails, and error handler fails": {
@@ -96,11 +95,10 @@ func TestRuleExecute(t *testing.T) {
 					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(assert.AnError)
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Nil(t, backend)
 			},
 		},
 		"authenticator succeeds, authorizer fails, but error handler succeeds": {
@@ -125,11 +123,10 @@ func TestRuleExecute(t *testing.T) {
 					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Nil(t, backend)
 			},
 		},
 		"authenticator succeeds, authorizer fails and error handler fails": {
@@ -154,12 +151,11 @@ func TestRuleExecute(t *testing.T) {
 					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(errors.New("some error"))
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
 				require.ErrorContains(t, err, "some error")
-				assert.Nil(t, backend)
 			},
 		},
 		"authenticator succeeds, authorizer succeeds, finalizer fails, but error handler succeeds": {
@@ -173,6 +169,7 @@ func TestRuleExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
+				ctx.EXPECT().PrepareUpstreamRequest(nil)
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
 					func(sub pipeline.Subject) bool { return sub != nil },
@@ -187,11 +184,10 @@ func TestRuleExecute(t *testing.T) {
 					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(nil)
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Nil(t, backend)
 			},
 		},
 		"authenticator succeeds, authorizer succeeds, finalizer fails and error handler fails": {
@@ -205,6 +201,7 @@ func TestRuleExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
+				ctx.EXPECT().PrepareUpstreamRequest(nil)
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
 					func(sub pipeline.Subject) bool { return sub != nil },
@@ -219,11 +216,10 @@ func TestRuleExecute(t *testing.T) {
 					func(sub pipeline.Subject) bool { return sub != nil },
 				)).Return(assert.AnError)
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
-				assert.Nil(t, backend)
 			},
 		},
 		"all handler succeed with disallowed uppercase urlencoded slashes": {
@@ -244,7 +240,7 @@ func TestRuleExecute(t *testing.T) {
 					},
 				})
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -270,7 +266,7 @@ func TestRuleExecute(t *testing.T) {
 					},
 				})
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, _ map[string]string) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -300,21 +296,35 @@ func TestRuleExecute(t *testing.T) {
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&pipeline.Request{
+				req := &pipeline.Request{
 					URL: &pipeline.URL{
-						URL:      *targetURL,
-						Captures: map[string]string{"first": "api", "second": "v1", "third": "foo%5Bid%5D"},
+						URL: *targetURL,
+						Captures: map[string]string{
+							"first":  "api",
+							"second": "v1",
+							"third":  "foo%5Bid%5D",
+						},
 					},
-				})
+				}
+
+				ctx.EXPECT().Request().Return(req)
+				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+					Run(func(target pipeline.UpstreamTarget) {
+						require.NotNil(t, target)
+
+						actualURL := req.URL.URL
+						target.ApplyTo(&actualURL)
+
+						expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo%5Bid%5D")
+
+						assert.Equal(t, expectedURL, &actualURL)
+						assert.True(t, target.ForwardHostHeader())
+					})
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string) {
+			assert: func(t *testing.T, err error, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
-
-				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo%5Bid%5D")
-				assert.Equal(t, expectedURL, backend.URL())
-				assert.True(t, backend.ForwardHostHeader())
 
 				assert.Equal(t, "api", captures["first"])
 				assert.Equal(t, "v1", captures["second"])
@@ -343,21 +353,31 @@ func TestRuleExecute(t *testing.T) {
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&pipeline.Request{
+				req := &pipeline.Request{
 					URL: &pipeline.URL{
 						URL:      *targetURL,
 						Captures: map[string]string{"first": "api%2Fv1", "second": "foo%5Bid%5D"},
 					},
-				})
+				}
+
+				ctx.EXPECT().Request().Return(req)
+				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+					Run(func(target pipeline.UpstreamTarget) {
+						require.NotNil(t, target)
+
+						actualURL := req.URL.URL
+						target.ApplyTo(&actualURL)
+
+						expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo%5Bid%5D")
+
+						assert.Equal(t, expectedURL, &actualURL)
+						assert.True(t, target.ForwardHostHeader())
+					})
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string) {
+			assert: func(t *testing.T, err error, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
-
-				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo%5Bid%5D")
-				assert.Equal(t, expectedURL, backend.URL())
-				assert.True(t, backend.ForwardHostHeader())
 
 				assert.Equal(t, "api/v1", captures["first"])
 				assert.Equal(t, "foo[id]", captures["second"])
@@ -384,21 +404,31 @@ func TestRuleExecute(t *testing.T) {
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2fv1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&pipeline.Request{
+				req := &pipeline.Request{
 					URL: &pipeline.URL{
 						URL:      *targetURL,
 						Captures: map[string]string{"first": "api%2fv1", "second": "foo%5Bid%5D"},
 					},
-				})
+				}
+
+				ctx.EXPECT().Request().Return(req)
+				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+					Run(func(target pipeline.UpstreamTarget) {
+						require.NotNil(t, target)
+
+						actualURL := req.URL.URL
+						target.ApplyTo(&actualURL)
+
+						expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo%5Bid%5D")
+
+						assert.Equal(t, expectedURL, &actualURL)
+						assert.True(t, target.ForwardHostHeader())
+					})
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string) {
+			assert: func(t *testing.T, err error, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
-
-				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo%5Bid%5D")
-				assert.Equal(t, expectedURL, backend.URL())
-				assert.True(t, backend.ForwardHostHeader())
 
 				assert.Equal(t, "api/v1", captures["first"])
 				assert.Equal(t, "foo[id]", captures["second"])
@@ -426,21 +456,31 @@ func TestRuleExecute(t *testing.T) {
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&pipeline.Request{
+				req := &pipeline.Request{
 					URL: &pipeline.URL{
 						URL:      *targetURL,
 						Captures: map[string]string{"first": "api%2Fv1", "second": "foo%5Bid%5D"},
 					},
-				})
+				}
+
+				ctx.EXPECT().Request().Return(req)
+				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+					Run(func(target pipeline.UpstreamTarget) {
+						require.NotNil(t, target)
+
+						actualURL := req.URL.URL
+						target.ApplyTo(&actualURL)
+
+						expectedURL, _ := url.Parse("http://foo.bar/api%2Fv1/foo%5Bid%5D")
+
+						assert.Equal(t, expectedURL, &actualURL)
+						assert.True(t, target.ForwardHostHeader())
+					})
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string) {
+			assert: func(t *testing.T, err error, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
-
-				expectedURL, _ := url.Parse("http://foo.bar/api%2Fv1/foo%5Bid%5D")
-				assert.Equal(t, expectedURL, backend.URL())
-				assert.True(t, backend.ForwardHostHeader())
 
 				assert.Equal(t, "api%2Fv1", captures["first"])
 				assert.Equal(t, "foo[id]", captures["second"])
@@ -467,21 +507,31 @@ func TestRuleExecute(t *testing.T) {
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api%2fv1/foo%5Bid%5D")
-				ctx.EXPECT().Request().Return(&pipeline.Request{
+				req := &pipeline.Request{
 					URL: &pipeline.URL{
 						URL:      *targetURL,
 						Captures: map[string]string{"first": "api%2fv1", "second": "foo%5Bid%5D"},
 					},
-				})
+				}
+
+				ctx.EXPECT().Request().Return(req)
+				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+					Run(func(target pipeline.UpstreamTarget) {
+						require.NotNil(t, target)
+
+						actualURL := req.URL.URL
+						target.ApplyTo(&actualURL)
+
+						expectedURL, _ := url.Parse("http://foo.bar/api%2fv1/foo%5Bid%5D")
+
+						assert.Equal(t, expectedURL, &actualURL)
+						assert.True(t, target.ForwardHostHeader())
+					})
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, captures map[string]string) {
+			assert: func(t *testing.T, err error, captures map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
-
-				expectedURL, _ := url.Parse("http://foo.bar/api%2fv1/foo%5Bid%5D")
-				assert.Equal(t, expectedURL, backend.URL())
-				assert.True(t, backend.ForwardHostHeader())
 
 				assert.Equal(t, "api%2fv1", captures["first"])
 				assert.Equal(t, "foo[id]", captures["second"])
@@ -509,16 +559,26 @@ func TestRuleExecute(t *testing.T) {
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
-				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{URL: *targetURL}})
+				req := &pipeline.Request{URL: &pipeline.URL{URL: *targetURL}}
+
+				ctx.EXPECT().Request().Return(req)
+				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+					Run(func(target pipeline.UpstreamTarget) {
+						require.NotNil(t, target)
+
+						actualURL := req.URL.URL
+						target.ApplyTo(&actualURL)
+
+						expectedURL, _ := url.Parse("http://foo.bar/foo")
+
+						assert.Equal(t, expectedURL, &actualURL)
+						assert.True(t, target.ForwardHostHeader())
+					})
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
-
-				expectedURL, _ := url.Parse("http://foo.bar/foo")
-				assert.Equal(t, expectedURL, backend.URL())
-				assert.True(t, backend.ForwardHostHeader())
 			},
 		},
 		"not forwarding Host header": {
@@ -543,16 +603,26 @@ func TestRuleExecute(t *testing.T) {
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
-				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{URL: *targetURL}})
+				req := &pipeline.Request{URL: &pipeline.URL{URL: *targetURL}}
+
+				ctx.EXPECT().Request().Return(req)
+				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+					Run(func(target pipeline.UpstreamTarget) {
+						require.NotNil(t, target)
+
+						actualURL := req.URL.URL
+						target.ApplyTo(&actualURL)
+
+						expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo")
+
+						assert.Equal(t, expectedURL, &actualURL)
+						assert.False(t, target.ForwardHostHeader())
+					})
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
-
-				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo")
-				assert.Equal(t, expectedURL, backend.URL())
-				assert.False(t, backend.ForwardHostHeader())
 			},
 		},
 		"explicitly forwarding Host header": {
@@ -577,16 +647,26 @@ func TestRuleExecute(t *testing.T) {
 				)).Return(nil)
 
 				targetURL, _ := url.Parse("http://foo.local/api/v1/foo")
-				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{URL: *targetURL}})
+				req := &pipeline.Request{URL: &pipeline.URL{URL: *targetURL}}
+
+				ctx.EXPECT().Request().Return(req)
+				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+					Run(func(target pipeline.UpstreamTarget) {
+						require.NotNil(t, target)
+
+						actualURL := req.URL.URL
+						target.ApplyTo(&actualURL)
+
+						expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo")
+
+						assert.Equal(t, expectedURL, &actualURL)
+						assert.True(t, target.ForwardHostHeader())
+					})
 			},
-			assert: func(t *testing.T, err error, backend pipeline.Backend, _ map[string]string) {
+			assert: func(t *testing.T, err error, _ map[string]string) {
 				t.Helper()
 
 				require.NoError(t, err)
-
-				expectedURL, _ := url.Parse("http://foo.bar/api/v1/foo")
-				assert.Equal(t, expectedURL, backend.URL())
-				assert.True(t, backend.ForwardHostHeader())
 			},
 		},
 	} {
@@ -613,10 +693,10 @@ func TestRuleExecute(t *testing.T) {
 			tc.configureMocks(t, ctx, authenticator, authorizer, finalizer, errHandler)
 
 			// WHEN
-			upstream, err := rul.Execute(ctx)
+			err := rul.Execute(ctx)
 
 			// THEN
-			tc.assert(t, err, upstream, ctx.Request().URL.Captures)
+			tc.assert(t, err, ctx.Request().URL.Captures)
 		})
 	}
 }

@@ -39,17 +39,15 @@ func TestHandlerServeHTTP(t *testing.T) {
 			setup: func(t *testing.T, exec *mocks4.ExecutorMock, ctx *mocks3.ContextMock, _ *mocks2.ErrorHandlerMock) {
 				t.Helper()
 
-				upstream := mocks4.NewBackendMock(t)
-
-				exec.EXPECT().Execute(ctx).Return(upstream, nil)
-				ctx.EXPECT().Finalize(upstream).Return(nil)
+				exec.EXPECT().Execute(ctx).Return(nil)
+				ctx.EXPECT().Finalize().Return(nil)
 			},
 		},
 		"with error from executor": {
 			setup: func(t *testing.T, exec *mocks4.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(ctx).Return(nil, assert.AnError)
+				exec.EXPECT().Execute(ctx).Return(assert.AnError)
 				eh.EXPECT().HandleError(mock.Anything, mock.Anything, assert.AnError)
 			},
 		},
@@ -57,10 +55,8 @@ func TestHandlerServeHTTP(t *testing.T) {
 			setup: func(t *testing.T, exec *mocks4.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
 				t.Helper()
 
-				upstream := mocks4.NewBackendMock(t)
-
-				exec.EXPECT().Execute(ctx).Return(upstream, nil)
-				ctx.EXPECT().Finalize(upstream).Return(assert.AnError)
+				exec.EXPECT().Execute(ctx).Return(nil)
+				ctx.EXPECT().Finalize().Return(assert.AnError)
 				eh.EXPECT().HandleError(mock.Anything, mock.Anything, assert.AnError)
 			},
 		},
