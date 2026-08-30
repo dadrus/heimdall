@@ -321,7 +321,7 @@ headers:
 				reqf := mocks.NewRequestFunctionsMock(t)
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqf})
-				ctx.EXPECT().Results().Return(pipeline.Results{"foo": pipeline.NewResult(map[string]any{"foo": "bar"})})
+				ctx.EXPECT().Outputs().Return(pipeline.Results{"foo": pipeline.NewResult(map[string]any{"foo": "bar"})})
 			},
 			subject: pipeline.Subject{"default": &pipeline.Principal{ID: "FooBar", Attributes: map[string]any{}}},
 			assert: func(t *testing.T, err error) {
@@ -364,7 +364,7 @@ headers:
 				headers := make(http.Header)
 				headers.Set("X-My-Header", "from-result")
 
-				ctx.EXPECT().Results().Return(pipeline.Results{
+				ctx.EXPECT().Outputs().Return(pipeline.Results{
 					"foo": pipeline.NewResultWithHeaders("bar", headers),
 				})
 			},
@@ -391,7 +391,7 @@ headers:
 				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group3")
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{})
-				ctx.EXPECT().Results().Return(pipeline.Results{"foo": pipeline.NewResult(map[string]any{})})
+				ctx.EXPECT().Outputs().Return(pipeline.Results{"foo": pipeline.NewResult(map[string]any{})})
 			},
 			subject: pipeline.Subject{
 				"default": &pipeline.Principal{

@@ -460,7 +460,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 			}
 
 			ctx := pipelinemocks.NewContextMock(t)
-			ctx.EXPECT().Results().Return(results)
+			ctx.EXPECT().Outputs().Return(results)
 			ctx.EXPECT().Context().Return(t.Context())
 
 			configureContext(t, ctx)

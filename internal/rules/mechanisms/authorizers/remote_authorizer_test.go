@@ -1549,7 +1549,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 
 			ctx := pipelinemocks.NewContextMock(t)
 			ctx.EXPECT().Context().Return(cache.WithContext(t.Context(), cch))
-			ctx.EXPECT().Results().Return(pipeline.Results{"foo": pipeline.NewResult("bar")})
+			ctx.EXPECT().Outputs().Return(pipeline.Results{"foo": pipeline.NewResult("bar")})
 
 			configureContext(t, ctx)
 			configureCache(t, cch, tc.authorizer, tc.subject)
@@ -1559,7 +1559,7 @@ func TestRemoteAuthorizerExecute(t *testing.T) {
 			err = tc.authorizer.Execute(ctx, tc.subject)
 
 			// THEN
-			tc.assert(t, err, tc.subject, ctx.Results())
+			tc.assert(t, err, tc.subject, ctx.Outputs())
 		})
 	}
 }

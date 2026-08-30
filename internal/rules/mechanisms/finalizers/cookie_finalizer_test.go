@@ -307,7 +307,7 @@ cookies:
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: mocks.NewRequestFunctionsMock(t)})
-				ctx.EXPECT().Results().Return(pipeline.Results{"foo": pipeline.NewResult(map[string]any{})})
+				ctx.EXPECT().Outputs().Return(pipeline.Results{"foo": pipeline.NewResult(map[string]any{})})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -338,7 +338,7 @@ cookies:
 				ctx.EXPECT().AddCookieForUpstream("x_foo", "Bar")
 				ctx.EXPECT().AddCookieForUpstream("x_bar", "bar")
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqf})
-				ctx.EXPECT().Results().Return(pipeline.Results{"foo": pipeline.NewResult("bar")})
+				ctx.EXPECT().Outputs().Return(pipeline.Results{"foo": pipeline.NewResult("bar")})
 			},
 			createSubject: func(t *testing.T) pipeline.Subject {
 				t.Helper()

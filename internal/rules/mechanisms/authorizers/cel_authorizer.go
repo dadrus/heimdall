@@ -101,8 +101,8 @@ func (a *celAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) erro
 	vals, err := a.v.Render(map[string]any{
 		"Request": ctx.Request(),
 		"Subject": sub,
-		"Outputs": ctx.Results(),
-		"Results": ctx.Results(),
+		"Outputs": ctx.Outputs(),
+		"Results": ctx.Outputs(),
 	})
 	if err != nil {
 		return errorchain.NewWithMessage(pipeline.ErrInternal,
@@ -115,8 +115,8 @@ func (a *celAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) erro
 		"Request": ctx.Request(),
 		"Subject": cellib.WrapSubject(sub),
 		"Values":  vals,
-		"Outputs": ctx.Results(),
-		"Results": ctx.Results(),
+		"Outputs": ctx.Outputs(),
+		"Results": ctx.Outputs(),
 	}, a)
 }
 

@@ -403,7 +403,7 @@ expressions:
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
-				ctx.EXPECT().Results().Return(pipeline.Results{})
+				ctx.EXPECT().Outputs().Return(pipeline.Results{})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -429,7 +429,7 @@ expressions:
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
-				ctx.EXPECT().Results().Return(pipeline.Results{})
+				ctx.EXPECT().Outputs().Return(pipeline.Results{})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -501,7 +501,7 @@ expressions:
 					ClientIPAddresses: []string{"127.0.0.1", "10.10.10.10"},
 				})
 
-				ctx.EXPECT().Results().Return(pipeline.Results{
+				ctx.EXPECT().Outputs().Return(pipeline.Results{
 					"foo": pipeline.NewResultWithHeaders(
 						"bar",
 						http.Header{"X-My-Header": {"baz"}},

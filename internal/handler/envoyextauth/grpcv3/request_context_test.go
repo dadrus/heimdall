@@ -551,7 +551,7 @@ func TestRequestContextReset(t *testing.T) {
 	ctx.Request().URL.Captures = map[string]string{"b": "a"}
 	ctx.SetError(errors.New("test error"))
 	_ = ctx.Body()
-	ctx.Results()["b"] = pipeline.NewResult("c")
+	ctx.Outputs()["b"] = pipeline.NewResult("c")
 	ctx.AddCookieForUpstream("foo", "bar")
 	ctx.AddHeaderForUpstream("bar", "foo")
 	_ = ctx.Headers()

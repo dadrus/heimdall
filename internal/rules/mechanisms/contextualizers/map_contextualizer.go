@@ -80,7 +80,7 @@ func (c *mapContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subject) 
 			CausedBy(err)
 	}
 
-	ctx.Results()[c.id] = pipeline.NewResult(resp)
+	ctx.Outputs()[c.id] = pipeline.NewResult(resp)
 
 	return nil
 }
@@ -138,8 +138,8 @@ func (c *mapContextualizer) renderTemplates(
 	vals, err := c.values.Render(map[string]any{
 		"Request": ctx.Request(),
 		"Subject": sub,
-		"Outputs": ctx.Results(),
-		"Results": ctx.Results(),
+		"Outputs": ctx.Outputs(),
+		"Results": ctx.Outputs(),
 	})
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal,
@@ -155,8 +155,8 @@ func (c *mapContextualizer) renderTemplates(
 			"Request": ctx.Request(),
 			"Subject": sub,
 			"Values":  vals,
-			"Outputs": ctx.Results(),
-			"Results": ctx.Results(),
+			"Outputs": ctx.Outputs(),
+			"Results": ctx.Outputs(),
 		}); err != nil {
 			return nil, errorchain.NewWithMessagef(pipeline.ErrInternal,
 				"failed to render item %s for the map contextualizer", key).

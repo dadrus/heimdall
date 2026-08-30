@@ -33,7 +33,7 @@ type Context interface {
 	SetError(err error)
 	Error() error
 
-	Results() Results
+	Outputs() Results
 }
 
 type RequestFunctions interface {

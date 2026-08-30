@@ -240,8 +240,8 @@ func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject)
 	if f.claims != nil {
 		vals, err := f.v.Render(map[string]any{
 			"Subject": sub,
-			"Outputs": ctx.Results(),
-			"Results": ctx.Results(),
+			"Outputs": ctx.Outputs(),
+			"Results": ctx.Outputs(),
 		})
 		if err != nil {
 			return "", errorchain.NewWithMessage(pipeline.ErrInternal,
@@ -253,8 +253,8 @@ func (f *jwtFinalizer) generateToken(ctx pipeline.Context, sub pipeline.Subject)
 		claims, err := f.claims.Render(map[string]any{
 			"Subject": sub,
 			"Values":  vals,
-			"Outputs": ctx.Results(),
-			"Results": ctx.Results(),
+			"Outputs": ctx.Outputs(),
+			"Results": ctx.Outputs(),
 		})
 		if err != nil {
 			return "", errorchain.
@@ -305,7 +305,7 @@ func (f *jwtFinalizer) calculateCacheKey(ctx pipeline.Context, sub pipeline.Subj
 		key.WriteBytes(value.Hash())
 	}
 
-	results := ctx.Results()
+	results := ctx.Outputs()
 
 	key.WriteBool(len(results) != 0)
 
