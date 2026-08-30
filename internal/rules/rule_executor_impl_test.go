@@ -85,11 +85,11 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 				req := &pipeline.Request{
 					Method: http.MethodGet,
-					URL: &pipeline.URL{URL: url.URL{
+					URL: &pipeline.URL{
 						Scheme: "https",
 						Host:   "foo.bar",
 						Path:   "/foo/../admin",
-					}},
+					},
 				}
 
 				ctx.EXPECT().Context().Return(t.Context())
@@ -103,12 +103,12 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 				req := &pipeline.Request{
 					Method: http.MethodGet,
-					URL: &pipeline.URL{URL: url.URL{
+					URL: &pipeline.URL{
 						Scheme:  "https",
 						Host:    "foo.bar",
 						Path:    "/scripts/../Windows/System32/cmd.exe",
 						RawPath: "/scripts/%2e%2e%2fWindows/System32/cmd.exe",
-					}},
+					},
 				}
 
 				ctx.EXPECT().Context().Return(t.Context())
@@ -122,12 +122,12 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 				req := &pipeline.Request{
 					Method: http.MethodGet,
-					URL: &pipeline.URL{URL: url.URL{
+					URL: &pipeline.URL{
 						Scheme:  "https",
 						Host:    "foo.bar",
 						Path:    "/scripts/../Windows/System32/cmd.exe",
 						RawPath: "/scripts/%2E%2E%2FWindows/System32/cmd.exe",
-					}},
+					},
 				}
 
 				ctx.EXPECT().Context().Return(t.Context())
@@ -141,12 +141,12 @@ func TestRuleExecutorExecute(t *testing.T) {
 
 				req := &pipeline.Request{
 					Method: http.MethodGet,
-					URL: &pipeline.URL{URL: url.URL{
+					URL: &pipeline.URL{
 						Scheme:  "https",
 						Host:    "foo.bar",
 						Path:    "/scripts/..\\Windows/System32/cmd.exe",
 						RawPath: "/scripts/%2E%2E%5CWindows/System32/cmd.exe",
-					}},
+					},
 				}
 
 				ctx.EXPECT().Context().Return(t.Context())
