@@ -84,7 +84,7 @@ func (r *ruleImpl) Execute(ctx pipeline.ExecutionContext) (pipeline.Backend, err
 		r.subjectPool.Put(sub)
 	}()
 
-	if err := r.p.Execute(ctx, sub); err != nil {
+	if err := r.p.Execute(ctx, sub, r); err != nil {
 		return nil, err
 	}
 
@@ -101,6 +101,19 @@ func (r *ruleImpl) SameAs(other rule.Rule) bool {
 
 func (r *ruleImpl) Equals(other rule.Rule) bool {
 	return r.SameAs(other) && bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
+}
+
+func (r *ruleImpl) ApplyTo(target *url.URL) {
+	target.Host = r.backend.Host
+
+	if r.backend.URLRewriter != nil {
+		r.backend.URLRewriter.Rewrite(target)
+	}
+}
+
+func (r *ruleImpl) ForwardHostHeader() bool {
+	return r.backend.ForwardHostHeader == nil ||
+		*r.backend.ForwardHostHeader
 }
 
 func (r *ruleImpl) createBackend(request *pipeline.Request) pipeline.Backend {

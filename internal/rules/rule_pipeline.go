@@ -37,7 +37,11 @@ func newExecutePipeline(
 	}
 }
 
-func (p *executePipeline) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
+func (p *executePipeline) Execute(
+	ctx pipeline.ExecutionContext,
+	sub pipeline.Subject,
+	target pipeline.UpstreamTarget,
+) error {
 	if err := p.authenticators.Execute(ctx, sub); err != nil {
 		return err
 	}
@@ -45,6 +49,8 @@ func (p *executePipeline) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 	if err := p.subjectHandlers.Execute(ctx, sub); err != nil {
 		return err
 	}
+
+	ctx.PrepareUpstreamRequest(target)
 
 	return p.finalizers.Execute(ctx, sub)
 }
@@ -111,7 +117,7 @@ func (p *errorPipeline) inheritFrom(template *errorPipeline) *errorPipeline {
 }
 
 type rulePipeline interface {
-	pipeline.Pipeline
+	Execute(ctx pipeline.ExecutionContext, sub pipeline.Subject, target pipeline.UpstreamTarget) error
 
 	inheritFrom(parent rulePipeline) rulePipeline
 	validate() error
@@ -122,8 +128,12 @@ type rulePipelineImpl struct {
 	err     *errorPipeline
 }
 
-func (p rulePipelineImpl) Execute(ctx pipeline.Context, sub pipeline.Subject) error {
-	if err := p.execute.Execute(ctx, sub); err != nil {
+func (p rulePipelineImpl) Execute(
+	ctx pipeline.ExecutionContext,
+	sub pipeline.Subject,
+	target pipeline.UpstreamTarget,
+) error {
+	if err := p.execute.Execute(ctx, sub, target); err != nil {
 		ctx.SetError(err)
 
 		return p.err.Execute(ctx, sub)
