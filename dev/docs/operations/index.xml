@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Operations on Heimdall</title><link>https://dadrus.github.io/docs/operations/</link><description>Recent content in Operations on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sat, 29 Aug 2026 23:50:42 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/operations/index.xml" rel="self" type="application/rss+xml"/><item><title>Configuration</title><link>https://dadrus.github.io/docs/operations/configuration/</link><pubDate>Fri, 08 Jul 2022 09:16:36 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/configuration/</guid><description>&lt;div class="paragraph"&gt;
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Operations on Heimdall</title><link>https://dadrus.github.io/docs/operations/</link><description>Recent content in Operations on Heimdall</description><generator>Hugo</generator><language>en-us</language><lastBuildDate>Sun, 30 Aug 2026 11:21:39 +0000</lastBuildDate><atom:link href="https://dadrus.github.io/docs/operations/index.xml" rel="self" type="application/rss+xml"/><item><title>Configuration</title><link>https://dadrus.github.io/docs/operations/configuration/</link><pubDate>Fri, 08 Jul 2022 09:16:36 +0200</pubDate><guid>https://dadrus.github.io/docs/operations/configuration/</guid><description>&lt;div class="paragraph"&gt;
 &lt;p&gt;In heimdall, configuration encompasses two distinct concepts:&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class="ulist"&gt;
@@ -148,8 +148,20 @@ A secret source defines where and how secrets are stored; a secret reference poi
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;/div&gt;</description></item><item><title>Upgrade &amp; Migration</title><link>https://dadrus.github.io/docs/operations/migration/</link><pubDate>Sat, 11 Oct 2025 11:53:52 +0100</pubDate><guid>https://dadrus.github.io/docs/operations/migration/</guid><description>&lt;div class="paragraph"&gt;
-&lt;p&gt;Over time, heimdall’s configuration and &lt;code&gt;RuleSet&lt;/code&gt; schemas evolve to introduce new capabilities or simplify existing structures. Whenever breaking changes are introduced, they are both announced in the corresponding release notes and described in detail.&lt;/p&gt;
+&lt;p&gt;Over time, heimdall’s configuration and &lt;code&gt;RuleSet&lt;/code&gt; schemas evolve to introduce new capabilities or simplify existing structures. Whenever breaking changes are introduced, they are announced in the corresponding release notes, together with any release-specific manual migration steps that may be required.&lt;/p&gt;
 &lt;/div&gt;
 &lt;div class="paragraph"&gt;
-&lt;p&gt;If a breaking change affects the configuration schema, migration must be performed manually before starting the new heimdall version. The required steps are outlined in the pull requests introducing the change, which are also linked in the release notes.&lt;/p&gt;
+&lt;p&gt;If a breaking change affects heimdall’s configuration, the required manual migration steps must be performed as described in the corresponding release notes before starting the new heimdall version.&lt;/p&gt;
+&lt;/div&gt;
+&lt;div class="admonitionblock note"&gt;
+&lt;table&gt;
+&lt;tbody&gt;&lt;tr&gt;
+&lt;td class="icon"&gt;
+&lt;i class="fa icon-note" title="Note"&gt;&lt;/i&gt;
+&lt;/td&gt;
+&lt;td class="content"&gt;
+If a required configuration migration is skipped, heimdall will fail to start and display errors indicating unknown or invalid configuration properties.
+&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;&lt;/table&gt;
 &lt;/div&gt;</description></item></channel></rss>
