@@ -51,6 +51,7 @@ packages:
       RequestFunctions: {}
       Visitor: {}
       Executor: {}
+      UpstreamTarget: {}
   github.com/dadrus/heimdall/internal/keyregistry:
     interfaces:
       KeyObserver: {}
