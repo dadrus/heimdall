@@ -470,6 +470,7 @@ expressions:
   - expression: Outputs.foo.Payload == "bar"
   - expression: Results.foo.Payload == "bar"
   - expression: Results.foo.Header("X-My-Header") == "baz"
+  - expression: Outputs.foo.Header("X-My-Header") == "baz"
   - expression: Subject.ID == Values.a + Values.b
 `),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub pipeline.Subject) {
