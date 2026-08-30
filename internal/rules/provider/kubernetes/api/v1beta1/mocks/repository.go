@@ -78,7 +78,7 @@ type RepositoryMock_Get_Call struct {
 //   - ctx context.Context
 //   - key types.NamespacedName
 //   - opts v1.GetOptions
-func (_e *RepositoryMock_Expecter) Get(ctx interface{}, key interface{}, opts interface{}) *RepositoryMock_Get_Call {
+func (_e *RepositoryMock_Expecter) Get(ctx any, key any, opts any) *RepositoryMock_Get_Call {
 	return &RepositoryMock_Get_Call{Call: _e.mock.On("Get", ctx, key, opts)}
 }
 
@@ -151,7 +151,7 @@ type RepositoryMock_List_Call struct {
 // List is a helper method to define mock.On call
 //   - ctx context.Context
 //   - opts v1.ListOptions
-func (_e *RepositoryMock_Expecter) List(ctx interface{}, opts interface{}) *RepositoryMock_List_Call {
+func (_e *RepositoryMock_Expecter) List(ctx any, opts any) *RepositoryMock_List_Call {
 	return &RepositoryMock_List_Call{Call: _e.mock.On("List", ctx, opts)}
 }
 
@@ -220,7 +220,7 @@ type RepositoryMock_PatchStatus_Call struct {
 //   - ctx context.Context
 //   - patch v1beta1.Patch
 //   - opts v1.PatchOptions
-func (_e *RepositoryMock_Expecter) PatchStatus(ctx interface{}, patch interface{}, opts interface{}) *RepositoryMock_PatchStatus_Call {
+func (_e *RepositoryMock_Expecter) PatchStatus(ctx any, patch any, opts any) *RepositoryMock_PatchStatus_Call {
 	return &RepositoryMock_PatchStatus_Call{Call: _e.mock.On("PatchStatus", ctx, patch, opts)}
 }
 
@@ -293,7 +293,7 @@ type RepositoryMock_Watch_Call struct {
 // Watch is a helper method to define mock.On call
 //   - ctx context.Context
 //   - opts v1.ListOptions
-func (_e *RepositoryMock_Expecter) Watch(ctx interface{}, opts interface{}) *RepositoryMock_Watch_Call {
+func (_e *RepositoryMock_Expecter) Watch(ctx any, opts any) *RepositoryMock_Watch_Call {
 	return &RepositoryMock_Watch_Call{Call: _e.mock.On("Watch", ctx, opts)}
 }
 

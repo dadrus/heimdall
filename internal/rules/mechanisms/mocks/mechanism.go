@@ -74,7 +74,7 @@ type MechanismMock_CreateStep_Call struct {
 // CreateStep is a helper method to define mock.On call
 //   - resolver secrets.Resolver
 //   - def types.StepDefinition
-func (_e *MechanismMock_Expecter) CreateStep(resolver interface{}, def interface{}) *MechanismMock_CreateStep_Call {
+func (_e *MechanismMock_Expecter) CreateStep(resolver any, def any) *MechanismMock_CreateStep_Call {
 	return &MechanismMock_CreateStep_Call{Call: _e.mock.On("CreateStep", resolver, def)}
 }
 
@@ -140,8 +140,8 @@ func (_c *MechanismMock_Kind_Call) Run(run func()) *MechanismMock_Kind_Call {
 	return _c
 }
 
-func (_c *MechanismMock_Kind_Call) Return(v types.Kind) *MechanismMock_Kind_Call {
-	_c.Call.Return(v)
+func (_c *MechanismMock_Kind_Call) Return(kind types.Kind) *MechanismMock_Kind_Call {
+	_c.Call.Return(kind)
 	return _c
 }
 

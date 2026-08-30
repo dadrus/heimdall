@@ -74,7 +74,7 @@ type CacheMock_Get_Call struct {
 // Get is a helper method to define mock.On call
 //   - ctx context.Context
 //   - key string
-func (_e *CacheMock_Expecter) Get(ctx interface{}, key interface{}) *CacheMock_Get_Call {
+func (_e *CacheMock_Expecter) Get(ctx any, key any) *CacheMock_Get_Call {
 	return &CacheMock_Get_Call{Call: _e.mock.On("Get", ctx, key)}
 }
 
@@ -133,7 +133,7 @@ type CacheMock_Set_Call struct {
 //   - key string
 //   - value []byte
 //   - ttl time.Duration
-func (_e *CacheMock_Expecter) Set(ctx interface{}, key interface{}, value interface{}, ttl interface{}) *CacheMock_Set_Call {
+func (_e *CacheMock_Expecter) Set(ctx any, key any, value any, ttl any) *CacheMock_Set_Call {
 	return &CacheMock_Set_Call{Call: _e.mock.On("Set", ctx, key, value, ttl)}
 }
 
@@ -199,7 +199,7 @@ type CacheMock_Start_Call struct {
 
 // Start is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *CacheMock_Expecter) Start(ctx interface{}) *CacheMock_Start_Call {
+func (_e *CacheMock_Expecter) Start(ctx any) *CacheMock_Start_Call {
 	return &CacheMock_Start_Call{Call: _e.mock.On("Start", ctx)}
 }
 
@@ -250,7 +250,7 @@ type CacheMock_Stop_Call struct {
 
 // Stop is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *CacheMock_Expecter) Stop(ctx interface{}) *CacheMock_Stop_Call {
+func (_e *CacheMock_Expecter) Stop(ctx any) *CacheMock_Stop_Call {
 	return &CacheMock_Stop_Call{Call: _e.mock.On("Stop", ctx)}
 }
 

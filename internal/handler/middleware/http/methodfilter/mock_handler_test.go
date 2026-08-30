@@ -51,7 +51,7 @@ type HandlerMock_ServeHTTP_Call struct {
 // ServeHTTP is a helper method to define mock.On call
 //   - responseWriter http.ResponseWriter
 //   - request *http.Request
-func (_e *HandlerMock_Expecter) ServeHTTP(responseWriter interface{}, request interface{}) *HandlerMock_ServeHTTP_Call {
+func (_e *HandlerMock_Expecter) ServeHTTP(responseWriter any, request any) *HandlerMock_ServeHTTP_Call {
 	return &HandlerMock_ServeHTTP_Call{Call: _e.mock.On("ServeHTTP", responseWriter, request)}
 }
 

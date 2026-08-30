@@ -49,7 +49,7 @@ type VisitorMock_VisitInsecure_Call struct {
 
 // VisitInsecure is a helper method to define mock.On call
 //   - obj pipeline.Insecure
-func (_e *VisitorMock_Expecter) VisitInsecure(obj interface{}) *VisitorMock_VisitInsecure_Call {
+func (_e *VisitorMock_Expecter) VisitInsecure(obj any) *VisitorMock_VisitInsecure_Call {
 	return &VisitorMock_VisitInsecure_Call{Call: _e.mock.On("VisitInsecure", obj)}
 }
 
@@ -89,7 +89,7 @@ type VisitorMock_VisitPrincipalNamer_Call struct {
 
 // VisitPrincipalNamer is a helper method to define mock.On call
 //   - obj pipeline.PrincipalNamer
-func (_e *VisitorMock_Expecter) VisitPrincipalNamer(obj interface{}) *VisitorMock_VisitPrincipalNamer_Call {
+func (_e *VisitorMock_Expecter) VisitPrincipalNamer(obj any) *VisitorMock_VisitPrincipalNamer_Call {
 	return &VisitorMock_VisitPrincipalNamer_Call{Call: _e.mock.On("VisitPrincipalNamer", obj)}
 }
 

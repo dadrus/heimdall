@@ -76,7 +76,7 @@ type BindingProviderMock_certificateBundleBinding_Call struct {
 
 // certificateBundleBinding is a helper method to define mock.On call
 //   - reference scopedReference
-func (_e *BindingProviderMock_Expecter) certificateBundleBinding(reference interface{}) *BindingProviderMock_certificateBundleBinding_Call {
+func (_e *BindingProviderMock_Expecter) certificateBundleBinding(reference any) *BindingProviderMock_certificateBundleBinding_Call {
 	return &BindingProviderMock_certificateBundleBinding_Call{Call: _e.mock.On("certificateBundleBinding", reference)}
 }
 
@@ -144,7 +144,7 @@ type BindingProviderMock_credentialsBinding_Call struct {
 
 // credentialsBinding is a helper method to define mock.On call
 //   - reference scopedReference
-func (_e *BindingProviderMock_Expecter) credentialsBinding(reference interface{}) *BindingProviderMock_credentialsBinding_Call {
+func (_e *BindingProviderMock_Expecter) credentialsBinding(reference any) *BindingProviderMock_credentialsBinding_Call {
 	return &BindingProviderMock_credentialsBinding_Call{Call: _e.mock.On("credentialsBinding", reference)}
 }
 
@@ -185,7 +185,7 @@ type BindingProviderMock_releaseBinding_Call struct {
 // releaseBinding is a helper method to define mock.On call
 //   - key bindingKey
 //   - count int
-func (_e *BindingProviderMock_Expecter) releaseBinding(key interface{}, count interface{}) *BindingProviderMock_releaseBinding_Call {
+func (_e *BindingProviderMock_Expecter) releaseBinding(key any, count any) *BindingProviderMock_releaseBinding_Call {
 	return &BindingProviderMock_releaseBinding_Call{Call: _e.mock.On("releaseBinding", key, count)}
 }
 
@@ -258,7 +258,7 @@ type BindingProviderMock_secretBinding_Call struct {
 
 // secretBinding is a helper method to define mock.On call
 //   - reference scopedReference
-func (_e *BindingProviderMock_Expecter) secretBinding(reference interface{}) *BindingProviderMock_secretBinding_Call {
+func (_e *BindingProviderMock_Expecter) secretBinding(reference any) *BindingProviderMock_secretBinding_Call {
 	return &BindingProviderMock_secretBinding_Call{Call: _e.mock.On("secretBinding", reference)}
 }
 
@@ -326,7 +326,7 @@ type BindingProviderMock_secretSetBinding_Call struct {
 
 // secretSetBinding is a helper method to define mock.On call
 //   - reference scopedReference
-func (_e *BindingProviderMock_Expecter) secretSetBinding(reference interface{}) *BindingProviderMock_secretSetBinding_Call {
+func (_e *BindingProviderMock_Expecter) secretSetBinding(reference any) *BindingProviderMock_secretSetBinding_Call {
 	return &BindingProviderMock_secretSetBinding_Call{Call: _e.mock.On("secretSetBinding", reference)}
 }
 

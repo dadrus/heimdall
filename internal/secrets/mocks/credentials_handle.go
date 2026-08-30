@@ -81,8 +81,8 @@ func (_c *CredentialsHandleMock_Get_Call) Run(run func()) *CredentialsHandleMock
 	return _c
 }
 
-func (_c *CredentialsHandleMock_Get_Call) Return(v secrets.Credentials, b bool) *CredentialsHandleMock_Get_Call {
-	_c.Call.Return(v, b)
+func (_c *CredentialsHandleMock_Get_Call) Return(credentials secrets.Credentials, b bool) *CredentialsHandleMock_Get_Call {
+	_c.Call.Return(credentials, b)
 	return _c
 }
 
@@ -104,7 +104,7 @@ type CredentialsHandleMock_OnUpdate_Call struct {
 
 // OnUpdate is a helper method to define mock.On call
 //   - callback secrets.UpdateFunc[secrets.Credentials]
-func (_e *CredentialsHandleMock_Expecter) OnUpdate(callback interface{}) *CredentialsHandleMock_OnUpdate_Call {
+func (_e *CredentialsHandleMock_Expecter) OnUpdate(callback any) *CredentialsHandleMock_OnUpdate_Call {
 	return &CredentialsHandleMock_OnUpdate_Call{Call: _e.mock.On("OnUpdate", callback)}
 }
 

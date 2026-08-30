@@ -305,7 +305,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 		contextualizer   *mapContextualizer
 		subject          pipeline.Subject
 		configureContext func(t *testing.T, ctx *pipelinemocks.ContextMock)
-		assert           func(t *testing.T, err error, sub pipeline.Subject, outputs map[string]any, results pipeline.Results)
+		assert           func(t *testing.T, err error, sub pipeline.Subject, results pipeline.Results)
 	}{
 		"with error in values rendering": {
 			contextualizer: &mapContextualizer{
@@ -328,7 +328,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ pipeline.Results) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -369,7 +369,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, _ map[string]any, _ pipeline.Results) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, _ pipeline.Results) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -404,7 +404,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 						return tpl
 					}(),
 					"outputs": func() template.Template {
-						tpl, err := template.New("{{ .Outputs.foo }}")
+						tpl, err := template.New("{{ .Outputs.foo.Payload }}")
 						require.NoError(t, err)
 
 						return tpl
@@ -428,18 +428,10 @@ func TestMapContextualizerExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(nil)
 			},
-			assert: func(t *testing.T, err error, _ pipeline.Subject, outputs map[string]any, results pipeline.Results) {
+			assert: func(t *testing.T, err error, _ pipeline.Subject, results pipeline.Results) {
 				t.Helper()
 
 				require.NoError(t, err)
-
-				output, ok := outputs["contextualizer1"].(map[string]string)
-				require.True(t, ok)
-
-				assert.Equal(t, "http://foo.bar", output["urlValues"])
-				assert.Equal(t, "Foo", output["identity"])
-				assert.Equal(t, "bar", output["outputs"])
-				assert.Equal(t, "bar", output["results"])
 
 				result := results["contextualizer1"]
 				require.NotNil(t, result)
@@ -463,16 +455,12 @@ func TestMapContextualizerExecute(t *testing.T) {
 				},
 			)
 
-			outputs := map[string]any{
-				"foo": "bar",
-			}
 			results := pipeline.Results{
 				"foo": pipeline.NewResult("bar"),
 			}
 
 			ctx := pipelinemocks.NewContextMock(t)
-			ctx.EXPECT().Outputs().Return(outputs)
-			ctx.EXPECT().Results().Return(results)
+			ctx.EXPECT().Outputs().Return(results)
 			ctx.EXPECT().Context().Return(t.Context())
 
 			configureContext(t, ctx)
@@ -481,7 +469,7 @@ func TestMapContextualizerExecute(t *testing.T) {
 			err := tc.contextualizer.Execute(ctx, tc.subject)
 
 			// THEN
-			tc.assert(t, err, tc.subject, outputs, results)
+			tc.assert(t, err, tc.subject, results)
 		})
 	}
 }

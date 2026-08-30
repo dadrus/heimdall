@@ -49,7 +49,7 @@ type KeyObserverMock_Notify_Call struct {
 
 // Notify is a helper method to define mock.On call
 //   - ref secrets.Reference
-func (_e *KeyObserverMock_Expecter) Notify(ref interface{}) *KeyObserverMock_Notify_Call {
+func (_e *KeyObserverMock_Expecter) Notify(ref any) *KeyObserverMock_Notify_Call {
 	return &KeyObserverMock_Notify_Call{Call: _e.mock.On("Notify", ref)}
 }
 

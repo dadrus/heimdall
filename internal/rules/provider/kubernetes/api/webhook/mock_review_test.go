@@ -72,7 +72,7 @@ type ReviewMock_Decode_Call[Req Request, Resp Response[Req]] struct {
 
 // Decode is a helper method to define mock.On call
 //   - r *http.Request
-func (_e *ReviewMock_Expecter[Req, Resp]) Decode(r interface{}) *ReviewMock_Decode_Call[Req, Resp] {
+func (_e *ReviewMock_Expecter[Req, Resp]) Decode(r any) *ReviewMock_Decode_Call[Req, Resp] {
 	return &ReviewMock_Decode_Call[Req, Resp]{Call: _e.mock.On("Decode", r)}
 }
 
@@ -125,7 +125,7 @@ type ReviewMock_WrapResponse_Call[Req Request, Resp Response[Req]] struct {
 
 // WrapResponse is a helper method to define mock.On call
 //   - resp Resp
-func (_e *ReviewMock_Expecter[Req, Resp]) WrapResponse(resp interface{}) *ReviewMock_WrapResponse_Call[Req, Resp] {
+func (_e *ReviewMock_Expecter[Req, Resp]) WrapResponse(resp any) *ReviewMock_WrapResponse_Call[Req, Resp] {
 	return &ReviewMock_WrapResponse_Call[Req, Resp]{Call: _e.mock.On("WrapResponse", resp)}
 }
 
@@ -142,8 +142,8 @@ func (_c *ReviewMock_WrapResponse_Call[Req, Resp]) Run(run func(resp Resp)) *Rev
 	return _c
 }
 
-func (_c *ReviewMock_WrapResponse_Call[Req, Resp]) Return(v any) *ReviewMock_WrapResponse_Call[Req, Resp] {
-	_c.Call.Return(v)
+func (_c *ReviewMock_WrapResponse_Call[Req, Resp]) Return(anyMoqParam any) *ReviewMock_WrapResponse_Call[Req, Resp] {
+	_c.Call.Return(anyMoqParam)
 	return _c
 }
 

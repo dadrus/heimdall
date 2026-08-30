@@ -336,8 +336,7 @@ func TestRequestContextReset(t *testing.T) {
 	ctx.Request().URL.Captures = map[string]string{"a": "b"}
 	ctx.SetError(assert.AnError)
 	_ = ctx.Body()
-	ctx.Outputs()["a"] = "b"
-	ctx.Results()["a"] = pipeline.NewResult("b")
+	ctx.Outputs()["a"] = pipeline.NewResult("b")
 	ctx.AddCookieForUpstream("foo", "bar")
 	ctx.AddHeaderForUpstream("bar", "foo")
 	_ = ctx.Headers()
@@ -351,8 +350,6 @@ func TestRequestContextReset(t *testing.T) {
 	require.Nil(t, ctx.req)
 	require.NotNil(t, ctx.outputs)
 	require.Empty(t, ctx.outputs)
-	require.NotNil(t, ctx.results)
-	require.Empty(t, ctx.results)
 	require.NotNil(t, ctx.headers)
 	require.Empty(t, ctx.headers)
 	require.NotNil(t, ctx.upstreamCookies)

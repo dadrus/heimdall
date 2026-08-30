@@ -75,7 +75,7 @@ type FactoryMock_CreateRule_Call struct {
 //   - resolver secrets.Resolver
 //   - source v1beta1.RuleSet
 //   - ruleConfig v1beta1.Rule
-func (_e *FactoryMock_Expecter) CreateRule(resolver interface{}, source interface{}, ruleConfig interface{}) *FactoryMock_CreateRule_Call {
+func (_e *FactoryMock_Expecter) CreateRule(resolver any, source any, ruleConfig any) *FactoryMock_CreateRule_Call {
 	return &FactoryMock_CreateRule_Call{Call: _e.mock.On("CreateRule", resolver, source, ruleConfig)}
 }
 

@@ -65,7 +65,7 @@ type RepositoryMock_AddRuleSet_Call struct {
 //   - ctx context.Context
 //   - src rule.RuleSet
 //   - rules []rule.Rule
-func (_e *RepositoryMock_Expecter) AddRuleSet(ctx interface{}, src interface{}, rules interface{}) *RepositoryMock_AddRuleSet_Call {
+func (_e *RepositoryMock_Expecter) AddRuleSet(ctx any, src any, rules any) *RepositoryMock_AddRuleSet_Call {
 	return &RepositoryMock_AddRuleSet_Call{Call: _e.mock.On("AddRuleSet", ctx, src, rules)}
 }
 
@@ -127,7 +127,7 @@ type RepositoryMock_DeleteRuleSet_Call struct {
 // DeleteRuleSet is a helper method to define mock.On call
 //   - ctx context.Context
 //   - src rule.RuleSet
-func (_e *RepositoryMock_Expecter) DeleteRuleSet(ctx interface{}, src interface{}) *RepositoryMock_DeleteRuleSet_Call {
+func (_e *RepositoryMock_Expecter) DeleteRuleSet(ctx any, src any) *RepositoryMock_DeleteRuleSet_Call {
 	return &RepositoryMock_DeleteRuleSet_Call{Call: _e.mock.On("DeleteRuleSet", ctx, src)}
 }
 
@@ -194,7 +194,7 @@ type RepositoryMock_FindRule_Call struct {
 
 // FindRule is a helper method to define mock.On call
 //   - ctx pipeline.Context
-func (_e *RepositoryMock_Expecter) FindRule(ctx interface{}) *RepositoryMock_FindRule_Call {
+func (_e *RepositoryMock_Expecter) FindRule(ctx any) *RepositoryMock_FindRule_Call {
 	return &RepositoryMock_FindRule_Call{Call: _e.mock.On("FindRule", ctx)}
 }
 
@@ -247,7 +247,7 @@ type RepositoryMock_UpdateRuleSet_Call struct {
 //   - ctx context.Context
 //   - src rule.RuleSet
 //   - rules []rule.Rule
-func (_e *RepositoryMock_Expecter) UpdateRuleSet(ctx interface{}, src interface{}, rules interface{}) *RepositoryMock_UpdateRuleSet_Call {
+func (_e *RepositoryMock_Expecter) UpdateRuleSet(ctx any, src any, rules any) *RepositoryMock_UpdateRuleSet_Call {
 	return &RepositoryMock_UpdateRuleSet_Call{Call: _e.mock.On("UpdateRuleSet", ctx, src, rules)}
 }
 

@@ -90,7 +90,7 @@ func (f *cookieFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 			"Request": ctx.Request(),
 			"Subject": sub,
 			"Outputs": ctx.Outputs(),
-			"Results": ctx.Results(),
+			"Results": ctx.Outputs(),
 		})
 		if err != nil {
 			return errorchain.

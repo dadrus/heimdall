@@ -69,7 +69,7 @@ type NonceHandlerMock_IssueNonce_Call struct {
 
 // IssueNonce is a helper method to define mock.On call
 //   - binding [32]byte
-func (_e *NonceHandlerMock_Expecter) IssueNonce(binding interface{}) *NonceHandlerMock_IssueNonce_Call {
+func (_e *NonceHandlerMock_Expecter) IssueNonce(binding any) *NonceHandlerMock_IssueNonce_Call {
 	return &NonceHandlerMock_IssueNonce_Call{Call: _e.mock.On("IssueNonce", binding)}
 }
 
@@ -129,7 +129,7 @@ type NonceHandlerMock_ResolveKey_Call struct {
 
 // ResolveKey is a helper method to define mock.On call
 //   - kid string
-func (_e *NonceHandlerMock_Expecter) ResolveKey(kid interface{}) *NonceHandlerMock_ResolveKey_Call {
+func (_e *NonceHandlerMock_Expecter) ResolveKey(kid any) *NonceHandlerMock_ResolveKey_Call {
 	return &NonceHandlerMock_ResolveKey_Call{Call: _e.mock.On("ResolveKey", kid)}
 }
 

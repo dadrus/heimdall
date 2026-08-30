@@ -18,7 +18,6 @@ package authorizers
 
 import (
 	"net/http"
-	"net/url"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -404,8 +403,7 @@ expressions:
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
-				ctx.EXPECT().Outputs().Return(nil)
-				ctx.EXPECT().Results().Return(pipeline.Results{})
+				ctx.EXPECT().Outputs().Return(pipeline.Results{})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -431,8 +429,7 @@ expressions:
 				t.Helper()
 
 				ctx.EXPECT().Request().Return(nil)
-				ctx.EXPECT().Outputs().Return(nil)
-				ctx.EXPECT().Results().Return(pipeline.Results{})
+				ctx.EXPECT().Outputs().Return(pipeline.Results{})
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -450,7 +447,7 @@ expressions:
 			config: []byte(`
 values:
   a: "{{ .Request.URL.Captures.foo }}"
-  b: "{{ .Outputs.foo }}"
+  b: "{{ .Outputs.foo.Payload }}"
 expressions:
   - expression: |
       Subject.Attributes.exists(c, c.startsWith('group'))
@@ -470,9 +467,10 @@ expressions:
   - expression: Request.URL.String() == "http://localhost/test?foo=bar&baz=zab"
   - expression: Request.URL.Path.split("/").last() == "test"
   - expression: Request.URL.Captures.foo == "bar"
-  - expression: Outputs.foo == "bar"
-  - expression: Results.foo.Payload.foo == "bar"
+  - expression: Outputs.foo.Payload == "bar"
+  - expression: Results.foo.Payload == "bar"
   - expression: Results.foo.Header("X-My-Header") == "baz"
+  - expression: Outputs.foo.Header("X-My-Header") == "baz"
   - expression: Subject.ID == Values.a + Values.b
 `),
 			configureContextAndSubject: func(t *testing.T, ctx *mocks.ContextMock, sub pipeline.Subject) {
@@ -495,21 +493,18 @@ expressions:
 					RequestFunctions: reqf,
 					Method:           http.MethodGet,
 					URL: &pipeline.URL{
-						URL: url.URL{
-							Scheme:   "http",
-							Host:     "localhost",
-							Path:     "/test",
-							RawQuery: "foo=bar&baz=zab",
-						},
+						Scheme:   "http",
+						Host:     "localhost",
+						Path:     "/test",
+						RawQuery: "foo=bar&baz=zab",
 						Captures: map[string]string{"foo": "bar"},
 					},
 					ClientIPAddresses: []string{"127.0.0.1", "10.10.10.10"},
 				})
 
-				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
-				ctx.EXPECT().Results().Return(pipeline.Results{
+				ctx.EXPECT().Outputs().Return(pipeline.Results{
 					"foo": pipeline.NewResultWithHeaders(
-						map[string]any{"foo": "bar"},
+						"bar",
 						http.Header{"X-My-Header": {"baz"}},
 					),
 				})

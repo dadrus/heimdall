@@ -602,7 +602,7 @@ func TestJWTFinalizerCacheKeyIncludesResultHeaders(t *testing.T) {
 	}
 
 	firstCtx := pipelinemocks.NewContextMock(t)
-	firstCtx.EXPECT().Results().Return(pipeline.Results{
+	firstCtx.EXPECT().Outputs().Return(pipeline.Results{
 		"remote": pipeline.NewResultWithHeaders(
 			map[string]any{"foo": "bar"},
 			http.Header{
@@ -614,7 +614,7 @@ func TestJWTFinalizerCacheKeyIncludesResultHeaders(t *testing.T) {
 	firstKey := finalizer.calculateCacheKey(firstCtx, sub)
 
 	secondCtx := pipelinemocks.NewContextMock(t)
-	secondCtx.EXPECT().Results().Return(pipeline.Results{
+	secondCtx.EXPECT().Outputs().Return(pipeline.Results{
 		"remote": pipeline.NewResultWithHeaders(
 			map[string]any{"foo": "bar"},
 			http.Header{
@@ -694,7 +694,7 @@ signer:
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Results().Return(
+				ctx.EXPECT().Outputs().Return(
 					pipeline.Results{
 						"remote": pipeline.NewResult(
 							map[string]any{"foo": "bar"},
@@ -738,7 +738,7 @@ ttl: 1m
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Results().Return(
+				ctx.EXPECT().Outputs().Return(
 					pipeline.Results{"remote": pipeline.NewResult(map[string]any{})},
 				)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
@@ -778,7 +778,7 @@ ttl: 2s
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Results().Return(
+				ctx.EXPECT().Outputs().Return(
 					pipeline.Results{
 						"remote": pipeline.NewResult(map[string]any{}),
 					},
@@ -807,7 +807,7 @@ claims: '{
   {{ $val := .Subject.Attributes.baz }}
   "sub_id": {{ quote .Subject.ID }},
   {{ quote $val }}: "baz",
-  "foo": {{ .Outputs.foo | quote }}
+  "foo": {{ .Outputs.foo.Payload | quote }}
 }'`),
 			signingSecret: secret,
 			subject: pipeline.Subject{
@@ -826,12 +826,9 @@ claims: '{
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(map[string]any{"foo": "bar"})
-				ctx.EXPECT().Results().Return(
+				ctx.EXPECT().Outputs().Return(
 					pipeline.Results{
-						"remote": pipeline.NewResult(
-							map[string]any{"foo": "bar"},
-						),
+						"foo": pipeline.NewResult("bar"),
 					},
 				)
 				ctx.EXPECT().AddHeaderForUpstream("X-Token",
@@ -874,12 +871,9 @@ values:
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(map[string]any{"bar": "baz"})
-				ctx.EXPECT().Results().Return(
+				ctx.EXPECT().Outputs().Return(
 					pipeline.Results{
-						"remote": pipeline.NewResult(
-							map[string]any{"foo": "bar"},
-						),
+						"remote": pipeline.NewResult(map[string]any{"foo": "bar"}),
 					},
 				)
 				ctx.EXPECT().AddHeaderForUpstream("Authorization",
@@ -918,8 +912,7 @@ claims: "foo: bar"
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(map[string]any{})
-				ctx.EXPECT().Results().Return(
+				ctx.EXPECT().Outputs().Return(
 					pipeline.Results{
 						"remote": pipeline.NewResult(map[string]any{}),
 					},
@@ -963,8 +956,7 @@ claims: "{{ len .foobar }}"
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(map[string]any{})
-				ctx.EXPECT().Results().Return(
+				ctx.EXPECT().Outputs().Return(
 					pipeline.Results{
 						"remote": pipeline.NewResult(map[string]any{}),
 					},
@@ -1010,8 +1002,7 @@ values:
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Outputs().Return(map[string]any{})
-				ctx.EXPECT().Results().Return(
+				ctx.EXPECT().Outputs().Return(
 					pipeline.Results{
 						"remote": pipeline.NewResult(map[string]any{}),
 					},
@@ -1053,7 +1044,7 @@ signer:
 			) {
 				t.Helper()
 
-				ctx.EXPECT().Results().Return(
+				ctx.EXPECT().Outputs().Return(
 					pipeline.Results{
 						"remote": pipeline.NewResult(map[string]any{}),
 					},

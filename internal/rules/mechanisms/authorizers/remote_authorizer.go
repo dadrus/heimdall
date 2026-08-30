@@ -191,11 +191,7 @@ func (a *remoteAuthorizer) Execute(ctx pipeline.Context, sub pipeline.Subject) e
 		}
 	}
 
-	if authInfo.Payload != nil {
-		ctx.Outputs()[a.id] = authInfo.Payload
-	}
-
-	ctx.Results()[a.id] = authInfo
+	ctx.Outputs()[a.id] = authInfo
 
 	return nil
 }
@@ -269,7 +265,7 @@ func (a *remoteAuthorizer) createRequest(
 			"Subject": sub,
 			"Values":  values,
 			"Outputs": ctx.Outputs(),
-			"Results": ctx.Results(),
+			"Results": ctx.Outputs(),
 		},
 	)
 	if err != nil {
@@ -401,7 +397,7 @@ func (a *remoteAuthorizer) renderTemplates(
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
-		"Results": ctx.Results(),
+		"Results": ctx.Outputs(),
 	})
 	if err != nil {
 		return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
@@ -416,7 +412,7 @@ func (a *remoteAuthorizer) renderTemplates(
 			"Subject": sub,
 			"Values":  vals,
 			"Outputs": ctx.Outputs(),
-			"Results": ctx.Results(),
+			"Results": ctx.Outputs(),
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
 				"failed to render payload for the authorization endpoint").

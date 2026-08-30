@@ -66,7 +66,7 @@ type PoPStrategyMock_Assert_Call struct {
 //   - token *Token
 //   - leeway time.Duration
 //   - allowedAlgorithms []jose.SignatureAlgorithm
-func (_e *PoPStrategyMock_Expecter) Assert(ctx interface{}, token interface{}, leeway interface{}, allowedAlgorithms interface{}) *PoPStrategyMock_Assert_Call {
+func (_e *PoPStrategyMock_Expecter) Assert(ctx any, token any, leeway any, allowedAlgorithms any) *PoPStrategyMock_Assert_Call {
 	return &PoPStrategyMock_Assert_Call{Call: _e.mock.On("Assert", ctx, token, leeway, allowedAlgorithms)}
 }
 
@@ -134,7 +134,7 @@ type PoPStrategyMock_Merge_Call struct {
 
 // Merge is a helper method to define mock.On call
 //   - other PoPStrategy
-func (_e *PoPStrategyMock_Expecter) Merge(other interface{}) *PoPStrategyMock_Merge_Call {
+func (_e *PoPStrategyMock_Expecter) Merge(other any) *PoPStrategyMock_Merge_Call {
 	return &PoPStrategyMock_Merge_Call{Call: _e.mock.On("Merge", other)}
 }
 

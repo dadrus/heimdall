@@ -61,7 +61,7 @@ type HandleBindingMock_awaitReady_Call[T any] struct {
 
 // awaitReady is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *HandleBindingMock_Expecter[T]) awaitReady(ctx interface{}) *HandleBindingMock_awaitReady_Call[T] {
+func (_e *HandleBindingMock_Expecter[T]) awaitReady(ctx any) *HandleBindingMock_awaitReady_Call[T] {
 	return &HandleBindingMock_awaitReady_Call[T]{Call: _e.mock.On("awaitReady", ctx)}
 }
 
@@ -169,7 +169,7 @@ type HandleBindingMock_subscribe_Call[T any] struct {
 
 // subscribe is a helper method to define mock.On call
 //   - cb UpdateFunc[T]
-func (_e *HandleBindingMock_Expecter[T]) subscribe(cb interface{}) *HandleBindingMock_subscribe_Call[T] {
+func (_e *HandleBindingMock_Expecter[T]) subscribe(cb any) *HandleBindingMock_subscribe_Call[T] {
 	return &HandleBindingMock_subscribe_Call[T]{Call: _e.mock.On("subscribe", cb)}
 }
 

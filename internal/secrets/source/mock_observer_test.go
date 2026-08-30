@@ -48,7 +48,7 @@ type ObserverMock_Notify_Call struct {
 
 // Notify is a helper method to define mock.On call
 //   - evt Event
-func (_e *ObserverMock_Expecter) Notify(evt interface{}) *ObserverMock_Notify_Call {
+func (_e *ObserverMock_Expecter) Notify(evt any) *ObserverMock_Notify_Call {
 	return &ObserverMock_Notify_Call{Call: _e.mock.On("Notify", evt)}
 }
 

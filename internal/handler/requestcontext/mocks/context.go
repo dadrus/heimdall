@@ -52,7 +52,7 @@ type ContextMock_AddCookieForUpstream_Call struct {
 // AddCookieForUpstream is a helper method to define mock.On call
 //   - name string
 //   - value string
-func (_e *ContextMock_Expecter) AddCookieForUpstream(name interface{}, value interface{}) *ContextMock_AddCookieForUpstream_Call {
+func (_e *ContextMock_Expecter) AddCookieForUpstream(name any, value any) *ContextMock_AddCookieForUpstream_Call {
 	return &ContextMock_AddCookieForUpstream_Call{Call: _e.mock.On("AddCookieForUpstream", name, value)}
 }
 
@@ -98,7 +98,7 @@ type ContextMock_AddHeaderForUpstream_Call struct {
 // AddHeaderForUpstream is a helper method to define mock.On call
 //   - name string
 //   - value string
-func (_e *ContextMock_Expecter) AddHeaderForUpstream(name interface{}, value interface{}) *ContextMock_AddHeaderForUpstream_Call {
+func (_e *ContextMock_Expecter) AddHeaderForUpstream(name any, value any) *ContextMock_AddHeaderForUpstream_Call {
 	return &ContextMock_AddHeaderForUpstream_Call{Call: _e.mock.On("AddHeaderForUpstream", name, value)}
 }
 
@@ -244,7 +244,7 @@ type ContextMock_Finalize_Call struct {
 
 // Finalize is a helper method to define mock.On call
 //   - backend pipeline.Backend
-func (_e *ContextMock_Expecter) Finalize(backend interface{}) *ContextMock_Finalize_Call {
+func (_e *ContextMock_Expecter) Finalize(backend any) *ContextMock_Finalize_Call {
 	return &ContextMock_Finalize_Call{Call: _e.mock.On("Finalize", backend)}
 }
 
@@ -272,19 +272,19 @@ func (_c *ContextMock_Finalize_Call) RunAndReturn(run func(backend pipeline.Back
 }
 
 // Outputs provides a mock function for the type ContextMock
-func (_mock *ContextMock) Outputs() map[string]any {
+func (_mock *ContextMock) Outputs() pipeline.Results {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
 		panic("no return value specified for Outputs")
 	}
 
-	var r0 map[string]any
-	if returnFunc, ok := ret.Get(0).(func() map[string]any); ok {
+	var r0 pipeline.Results
+	if returnFunc, ok := ret.Get(0).(func() pipeline.Results); ok {
 		r0 = returnFunc()
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(map[string]any)
+			r0 = ret.Get(0).(pipeline.Results)
 		}
 	}
 	return r0
@@ -307,12 +307,12 @@ func (_c *ContextMock_Outputs_Call) Run(run func()) *ContextMock_Outputs_Call {
 	return _c
 }
 
-func (_c *ContextMock_Outputs_Call) Return(stringToV map[string]any) *ContextMock_Outputs_Call {
-	_c.Call.Return(stringToV)
+func (_c *ContextMock_Outputs_Call) Return(results pipeline.Results) *ContextMock_Outputs_Call {
+	_c.Call.Return(results)
 	return _c
 }
 
-func (_c *ContextMock_Outputs_Call) RunAndReturn(run func() map[string]any) *ContextMock_Outputs_Call {
+func (_c *ContextMock_Outputs_Call) RunAndReturn(run func() pipeline.Results) *ContextMock_Outputs_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -363,52 +363,6 @@ func (_c *ContextMock_Request_Call) RunAndReturn(run func() *pipeline.Request) *
 	return _c
 }
 
-// Results provides a mock function for the type ContextMock
-func (_mock *ContextMock) Results() pipeline.Results {
-	ret := _mock.Called()
-
-	if len(ret) == 0 {
-		panic("no return value specified for Results")
-	}
-
-	var r0 pipeline.Results
-	if returnFunc, ok := ret.Get(0).(func() pipeline.Results); ok {
-		r0 = returnFunc()
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(pipeline.Results)
-		}
-	}
-	return r0
-}
-
-// ContextMock_Results_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Results'
-type ContextMock_Results_Call struct {
-	*mock.Call
-}
-
-// Results is a helper method to define mock.On call
-func (_e *ContextMock_Expecter) Results() *ContextMock_Results_Call {
-	return &ContextMock_Results_Call{Call: _e.mock.On("Results")}
-}
-
-func (_c *ContextMock_Results_Call) Run(run func()) *ContextMock_Results_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		run()
-	})
-	return _c
-}
-
-func (_c *ContextMock_Results_Call) Return(results pipeline.Results) *ContextMock_Results_Call {
-	_c.Call.Return(results)
-	return _c
-}
-
-func (_c *ContextMock_Results_Call) RunAndReturn(run func() pipeline.Results) *ContextMock_Results_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
 // SetError provides a mock function for the type ContextMock
 func (_mock *ContextMock) SetError(err error) {
 	_mock.Called(err)
@@ -422,7 +376,7 @@ type ContextMock_SetError_Call struct {
 
 // SetError is a helper method to define mock.On call
 //   - err error
-func (_e *ContextMock_Expecter) SetError(err interface{}) *ContextMock_SetError_Call {
+func (_e *ContextMock_Expecter) SetError(err any) *ContextMock_SetError_Call {
 	return &ContextMock_SetError_Call{Call: _e.mock.On("SetError", err)}
 }
 
@@ -475,7 +429,7 @@ type ContextMock_WithParent_Call struct {
 
 // WithParent is a helper method to define mock.On call
 //   - ctx context.Context
-func (_e *ContextMock_Expecter) WithParent(ctx interface{}) *ContextMock_WithParent_Call {
+func (_e *ContextMock_Expecter) WithParent(ctx any) *ContextMock_WithParent_Call {
 	return &ContextMock_WithParent_Call{Call: _e.mock.On("WithParent", ctx)}
 }
 

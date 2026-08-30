@@ -49,7 +49,7 @@ type SecretUsageMock_Track_Call struct {
 
 // Track is a helper method to define mock.On call
 //   - secret types.Secret
-func (_e *SecretUsageMock_Expecter) Track(secret interface{}) *SecretUsageMock_Track_Call {
+func (_e *SecretUsageMock_Expecter) Track(secret any) *SecretUsageMock_Track_Call {
 	return &SecretUsageMock_Track_Call{Call: _e.mock.On("Track", secret)}
 }
 
@@ -89,7 +89,7 @@ type SecretUsageMock_Untrack_Call struct {
 
 // Untrack is a helper method to define mock.On call
 //   - secret types.Secret
-func (_e *SecretUsageMock_Expecter) Untrack(secret interface{}) *SecretUsageMock_Untrack_Call {
+func (_e *SecretUsageMock_Expecter) Untrack(secret any) *SecretUsageMock_Untrack_Call {
 	return &SecretUsageMock_Untrack_Call{Call: _e.mock.On("Untrack", secret)}
 }
 

@@ -96,7 +96,7 @@ type RegistryMock_Notify_Call struct {
 
 // Notify is a helper method to define mock.On call
 //   - ref secrets.Reference
-func (_e *RegistryMock_Expecter) Notify(ref interface{}) *RegistryMock_Notify_Call {
+func (_e *RegistryMock_Expecter) Notify(ref any) *RegistryMock_Notify_Call {
 	return &RegistryMock_Notify_Call{Call: _e.mock.On("Notify", ref)}
 }
 

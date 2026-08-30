@@ -41,16 +41,14 @@ type RequestContext struct {
 	err       error
 	savedBody any
 	headers   map[string]string
-	outputs   map[string]any
-	results   pipeline.Results
+	outputs   pipeline.Results
 }
 
 func New() *RequestContext {
 	rc := &RequestContext{
 		upstreamHeaders: make(http.Header, 6),
 		upstreamCookies: make(map[string]string, 4),
-		outputs:         make(map[string]any, 10),
-		results:         make(pipeline.Results, 10),
+		outputs:         make(pipeline.Results, 10),
 		headers:         make(map[string]string, 10),
 	}
 
@@ -78,7 +76,6 @@ func (r *RequestContext) Reset() {
 	r.ctx = nil
 
 	clear(r.outputs)
-	clear(r.results)
 	clear(r.headers)
 	clear(r.upstreamCookies)
 	clear(r.upstreamHeaders)
@@ -164,8 +161,7 @@ func (r *RequestContext) UpstreamCookies() map[string]string      { return r.ups
 func (r *RequestContext) Context() context.Context                { return r.ctx }
 func (r *RequestContext) SetError(err error)                      { r.err = err }
 func (r *RequestContext) Error() error                            { return r.err }
-func (r *RequestContext) Outputs() map[string]any                 { return r.outputs }
-func (r *RequestContext) Results() pipeline.Results               { return r.results }
+func (r *RequestContext) Outputs() pipeline.Results               { return r.outputs }
 
 func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
 	r.ctx = ctx

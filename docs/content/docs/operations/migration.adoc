@@ -12,24 +12,45 @@ description: Describes the upgrade and migration process for heimdall releases i
 
 :toc:
 
-Over time, heimdall’s configuration and `RuleSet` schemas evolve to introduce new capabilities or simplify existing structures. Whenever breaking changes are introduced, they are both announced in the corresponding release notes and described in detail.
+Over time, heimdall’s configuration and `RuleSet` schemas evolve to introduce new capabilities or simplify existing structures. Whenever breaking changes are introduced, they are announced in the corresponding release notes, together with any release-specific manual migration steps that may be required.
 
-If a breaking change affects the configuration schema, migration must be performed manually before starting the new heimdall version. The required steps are outlined in the pull requests introducing the change, which are also linked in the release notes.
+If a breaking change affects heimdall's configuration, the required manual migration steps must be performed as described in the corresponding release notes before starting the new heimdall version.
 
-NOTE: If migration is skipped, Heimdall will fail to start and display errors indicating unknown or invalid configuration properties.
+NOTE: If a required configuration migration is skipped, heimdall will fail to start and display errors indicating unknown or invalid configuration properties.
 
-If breaking changes affect the `RuleSet` schema, versions prior to v0.18.0 required the same manual migration procedure. Depending on the setup and number of rules, this could become cumbersome — particularly for Kubernetes deployments (See also  link:{{< relref "#_migration_process_for_releases_prior_to_v0_18_0" >}}[Migration process for releases prior to v0.18.0] for details).
+If breaking changes affect the `RuleSet` schema, versions prior to v0.18.0 required the same manual migration procedure. Depending on the setup and number of rules, this could become cumbersome — particularly for Kubernetes deployments (See also link:{{< relref "#_migration_process_for_releases_prior_to_v0_18_0" >}}[Migration process for releases prior to v0.18.0] for details).
 
-Starting with v0.18.0, this issue is addressed through:
+Starting with v0.18.0, structural changes to the `RuleSet` schema can be handled through:
 
 * A new `convert` CLI command that allows conversion of existing `RuleSet` definitions.
 * A conversion controller for Kubernetes, registered with the API server through the `RuleSet` CRD.
 
 [CAUTION]
 ====
-Automatic conversion covers structural changes to the `RuleSet` schema, such as renamed, moved, or restructured properties. It cannot, however, migrate settings that were deprecated and later removed without a well-defined, unambiguous mapping to their replacement. Such settings must be adjusted manually before conversion is attempted.
+Automatic `RuleSet` conversion only covers changes to the structure of the `RuleSet` schema, such as renamed, moved, or restructured properties. It does not interpret or rewrite user-defined content such as Go templates, CEL expressions, or other mechanism-specific values whose semantics may change between releases.
 
-For example, v0.17.0 deprecated the `regex` and `glob` `hosts[].type` values in favor of `exact` and `wildcard`, and v0.18.0 removed support for `regex` and `glob` entirely, while also simplifying the host matcher configuration itself. Conversion therefore migrates `exact` and `wildcard` entries automatically, but fails with an error if a `RuleSet` still uses `regex` or `glob` host types, rather than silently dropping or misconverting them. Such `RuleSets` must be migrated manually first — as described in the release notes of the version that removed the deprecated value — before conversion can succeed.
+A successful schema conversion therefore does not necessarily mean that a `RuleSet` requires no further migration.
+Always review the release notes for every version being upgraded to and apply any documented manual migration steps in addition to the schema conversion described below.
+
+For example, v0.18.0 changes the structure of the `Outputs` evaluation object. Previously, a pipeline step's result was exposed directly through `Outputs`, e.g.:
+
+[source,gotemplate]
+----
+{{ .Outputs.foo.bar }}
+----
+
+Starting with v0.18.0, the result is exposed through the output's `Payload` property:
+
+[source,gotemplate]
+----
+{{ .Outputs.foo.Payload.bar }}
+----
+
+Since references to evaluation objects are part of user-defined Go templates or CEL expressions, the `RuleSet` converter cannot detect or rewrite them. To allow this change to be rolled out without requiring all heimdall instances and `RuleSets` to be migrated at once, v0.17.21 introduced the `Results` evaluation object as a migration aid. The release notes describe the required migration sequence for upgrading across this change.
+
+The converter can, however, detect some structural values for which no well-defined and unambiguous mapping exists. In such cases, conversion fails instead of silently dropping or misconverting the value.
+
+For example, v0.17.0 deprecated the `regex` and `glob` `hosts[].type` values in favor of `exact` and `wildcard`, and v0.18.0 removed support for `regex` and `glob` entirely, while also simplifying the host matcher configuration itself. Conversion therefore migrates `exact` and `wildcard` entries automatically, but fails with an error if a `RuleSet` still uses `regex` or `glob` host types. Such `RuleSets` must first be adjusted manually as described in the corresponding release notes before conversion can succeed.
 ====
 
 The following sections describe both the legacy and the new automated upgrade and migration procedures for heimdall releases introducing breaking changes to existing `RuleSets`, for installations inside and outside Kubernetes.

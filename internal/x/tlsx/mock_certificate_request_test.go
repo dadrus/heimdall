@@ -108,7 +108,7 @@ type certificateRequestMock_SupportsCertificate_Call struct {
 
 // SupportsCertificate is a helper method to define mock.On call
 //   - c *tls.Certificate
-func (_e *certificateRequestMock_Expecter) SupportsCertificate(c interface{}) *certificateRequestMock_SupportsCertificate_Call {
+func (_e *certificateRequestMock_Expecter) SupportsCertificate(c any) *certificateRequestMock_SupportsCertificate_Call {
 	return &certificateRequestMock_SupportsCertificate_Call{Call: _e.mock.On("SupportsCertificate", c)}
 }
 

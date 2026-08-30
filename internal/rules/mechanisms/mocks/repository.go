@@ -71,7 +71,7 @@ type RepositoryMock_Authenticator_Call struct {
 
 // Authenticator is a helper method to define mock.On call
 //   - name string
-func (_e *RepositoryMock_Expecter) Authenticator(name interface{}) *RepositoryMock_Authenticator_Call {
+func (_e *RepositoryMock_Expecter) Authenticator(name any) *RepositoryMock_Authenticator_Call {
 	return &RepositoryMock_Authenticator_Call{Call: _e.mock.On("Authenticator", name)}
 }
 
@@ -133,7 +133,7 @@ type RepositoryMock_Authorizer_Call struct {
 
 // Authorizer is a helper method to define mock.On call
 //   - name string
-func (_e *RepositoryMock_Expecter) Authorizer(name interface{}) *RepositoryMock_Authorizer_Call {
+func (_e *RepositoryMock_Expecter) Authorizer(name any) *RepositoryMock_Authorizer_Call {
 	return &RepositoryMock_Authorizer_Call{Call: _e.mock.On("Authorizer", name)}
 }
 
@@ -195,7 +195,7 @@ type RepositoryMock_Contextualizer_Call struct {
 
 // Contextualizer is a helper method to define mock.On call
 //   - name string
-func (_e *RepositoryMock_Expecter) Contextualizer(name interface{}) *RepositoryMock_Contextualizer_Call {
+func (_e *RepositoryMock_Expecter) Contextualizer(name any) *RepositoryMock_Contextualizer_Call {
 	return &RepositoryMock_Contextualizer_Call{Call: _e.mock.On("Contextualizer", name)}
 }
 
@@ -257,7 +257,7 @@ type RepositoryMock_ErrorHandler_Call struct {
 
 // ErrorHandler is a helper method to define mock.On call
 //   - name string
-func (_e *RepositoryMock_Expecter) ErrorHandler(name interface{}) *RepositoryMock_ErrorHandler_Call {
+func (_e *RepositoryMock_Expecter) ErrorHandler(name any) *RepositoryMock_ErrorHandler_Call {
 	return &RepositoryMock_ErrorHandler_Call{Call: _e.mock.On("ErrorHandler", name)}
 }
 
@@ -319,7 +319,7 @@ type RepositoryMock_Finalizer_Call struct {
 
 // Finalizer is a helper method to define mock.On call
 //   - name string
-func (_e *RepositoryMock_Expecter) Finalizer(name interface{}) *RepositoryMock_Finalizer_Call {
+func (_e *RepositoryMock_Expecter) Finalizer(name any) *RepositoryMock_Finalizer_Call {
 	return &RepositoryMock_Finalizer_Call{Call: _e.mock.On("Finalizer", name)}
 }
 

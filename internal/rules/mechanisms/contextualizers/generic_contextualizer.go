@@ -177,11 +177,7 @@ func (c *genericContextualizer) Execute(ctx pipeline.Context, sub pipeline.Subje
 		}
 	}
 
-	if response.Payload != nil {
-		ctx.Outputs()[c.id] = response.Payload
-	}
-
-	ctx.Results()[c.id] = response
+	ctx.Outputs()[c.id] = response
 
 	return nil
 }
@@ -282,7 +278,7 @@ func (c *genericContextualizer) createRequest(
 		"Subject": sub,
 		"Values":  values,
 		"Outputs": ctx.Outputs(),
-		"Results": ctx.Results(),
+		"Results": ctx.Outputs(),
 	})
 	if err != nil {
 		return nil, errorchain.NewWithMessage(pipeline.ErrInternal, "failed creating request").
@@ -389,7 +385,7 @@ func (c *genericContextualizer) renderTemplates(
 		"Request": ctx.Request(),
 		"Subject": sub,
 		"Outputs": ctx.Outputs(),
-		"Results": ctx.Results(),
+		"Results": ctx.Outputs(),
 	})
 	if err != nil {
 		return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
@@ -404,7 +400,7 @@ func (c *genericContextualizer) renderTemplates(
 			"Subject": sub,
 			"Values":  vals,
 			"Outputs": ctx.Outputs(),
-			"Results": ctx.Results(),
+			"Results": ctx.Outputs(),
 		}); err != nil {
 			return nil, "", errorchain.NewWithMessage(pipeline.ErrInternal,
 				"failed to render payload for the contextualization endpoint").

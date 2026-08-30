@@ -61,7 +61,7 @@ type AuthenticationStrategyMock_Apply_Call struct {
 
 // Apply is a helper method to define mock.On call
 //   - req *http.Request
-func (_e *AuthenticationStrategyMock_Expecter) Apply(req interface{}) *AuthenticationStrategyMock_Apply_Call {
+func (_e *AuthenticationStrategyMock_Expecter) Apply(req any) *AuthenticationStrategyMock_Apply_Call {
 	return &AuthenticationStrategyMock_Apply_Call{Call: _e.mock.On("Apply", req)}
 }
 

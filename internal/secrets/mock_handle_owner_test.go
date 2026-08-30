@@ -50,7 +50,7 @@ type HandleOwnerMock_registerCleanup_Call struct {
 
 // registerCleanup is a helper method to define mock.On call
 //   - cleanup func()
-func (_e *HandleOwnerMock_Expecter) registerCleanup(cleanup interface{}) *HandleOwnerMock_registerCleanup_Call {
+func (_e *HandleOwnerMock_Expecter) registerCleanup(cleanup any) *HandleOwnerMock_registerCleanup_Call {
 	return &HandleOwnerMock_registerCleanup_Call{Call: _e.mock.On("registerCleanup", cleanup)}
 }
 
@@ -90,7 +90,7 @@ type HandleOwnerMock_registerReadiness_Call struct {
 
 // registerReadiness is a helper method to define mock.On call
 //   - await func(context.Context) error
-func (_e *HandleOwnerMock_Expecter) registerReadiness(await interface{}) *HandleOwnerMock_registerReadiness_Call {
+func (_e *HandleOwnerMock_Expecter) registerReadiness(await any) *HandleOwnerMock_registerReadiness_Call {
 	return &HandleOwnerMock_registerReadiness_Call{Call: _e.mock.On("registerReadiness", await)}
 }
 
