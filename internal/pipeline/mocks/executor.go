@@ -37,7 +37,7 @@ func (_m *ExecutorMock) EXPECT() *ExecutorMock_Expecter {
 }
 
 // Execute provides a mock function for the type ExecutorMock
-func (_mock *ExecutorMock) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
+func (_mock *ExecutorMock) Execute(ctx pipeline.ExecutionContext) (pipeline.Backend, error) {
 	ret := _mock.Called(ctx)
 
 	if len(ret) == 0 {
@@ -46,17 +46,17 @@ func (_mock *ExecutorMock) Execute(ctx pipeline.Context) (pipeline.Backend, erro
 
 	var r0 pipeline.Backend
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) (pipeline.Backend, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.ExecutionContext) (pipeline.Backend, error)); ok {
 		return returnFunc(ctx)
 	}
-	if returnFunc, ok := ret.Get(0).(func(pipeline.Context) pipeline.Backend); ok {
+	if returnFunc, ok := ret.Get(0).(func(pipeline.ExecutionContext) pipeline.Backend); ok {
 		r0 = returnFunc(ctx)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(pipeline.Backend)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(pipeline.Context) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(pipeline.ExecutionContext) error); ok {
 		r1 = returnFunc(ctx)
 	} else {
 		r1 = ret.Error(1)
@@ -70,16 +70,16 @@ type ExecutorMock_Execute_Call struct {
 }
 
 // Execute is a helper method to define mock.On call
-//   - ctx pipeline.Context
+//   - ctx pipeline.ExecutionContext
 func (_e *ExecutorMock_Expecter) Execute(ctx any) *ExecutorMock_Execute_Call {
 	return &ExecutorMock_Execute_Call{Call: _e.mock.On("Execute", ctx)}
 }
 
-func (_c *ExecutorMock_Execute_Call) Run(run func(ctx pipeline.Context)) *ExecutorMock_Execute_Call {
+func (_c *ExecutorMock_Execute_Call) Run(run func(ctx pipeline.ExecutionContext)) *ExecutorMock_Execute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 pipeline.Context
+		var arg0 pipeline.ExecutionContext
 		if args[0] != nil {
-			arg0 = args[0].(pipeline.Context)
+			arg0 = args[0].(pipeline.ExecutionContext)
 		}
 		run(
 			arg0,
@@ -93,7 +93,7 @@ func (_c *ExecutorMock_Execute_Call) Return(backend pipeline.Backend, err error)
 	return _c
 }
 
-func (_c *ExecutorMock_Execute_Call) RunAndReturn(run func(ctx pipeline.Context) (pipeline.Backend, error)) *ExecutorMock_Execute_Call {
+func (_c *ExecutorMock_Execute_Call) RunAndReturn(run func(ctx pipeline.ExecutionContext) (pipeline.Backend, error)) *ExecutorMock_Execute_Call {
 	_c.Call.Return(run)
 	return _c
 }

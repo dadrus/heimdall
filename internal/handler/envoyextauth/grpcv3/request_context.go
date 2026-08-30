@@ -170,8 +170,10 @@ func canonicalizeHeaders(headers map[string]string) map[string]string {
 	return result
 }
 
-func (r *RequestContext) Request() *pipeline.Request { return r.hmdlReq }
-func (r *RequestContext) Headers() map[string]string { return r.reqHeaders }
+func (r *RequestContext) Request() *pipeline.Request                       { return r.hmdlReq }
+func (r *RequestContext) UpstreamRequest() pipeline.UpstreamRequest        { return nil }
+func (r *RequestContext) Headers() map[string]string                       { return r.reqHeaders }
+func (r *RequestContext) PrepareUpstreamRequest(_ pipeline.UpstreamTarget) {}
 
 func (r *RequestContext) Header(name string) string {
 	return r.reqHeaders[http.CanonicalHeaderKey(name)]

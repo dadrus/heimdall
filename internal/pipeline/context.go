@@ -18,11 +18,11 @@ package pipeline
 
 import (
 	"context"
-	"net/url"
 )
 
 type Context interface {
 	Request() *Request
+	UpstreamRequest() UpstreamRequest
 
 	AddHeaderForUpstream(name, value string)
 	AddCookieForUpstream(name, value string)
@@ -41,18 +41,4 @@ type RequestFunctions interface {
 	Cookie(name string) string
 	Headers() map[string]string
 	Body() any
-}
-
-type URL struct {
-	url.URL
-
-	Captures map[string]string
-}
-
-type Request struct {
-	RequestFunctions
-
-	Method            string
-	URL               *URL
-	ClientIPAddresses []string
 }

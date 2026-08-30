@@ -34,7 +34,7 @@ func newRuleExecutor(repository rule.Repository) pipeline.Executor {
 	return &ruleExecutor{r: repository}
 }
 
-func (e *ruleExecutor) Execute(hctx pipeline.Context) (pipeline.Backend, error) {
+func (e *ruleExecutor) Execute(hctx pipeline.ExecutionContext) (pipeline.Backend, error) {
 	request := hctx.Request()
 	logger := zerolog.Ctx(hctx.Context())
 

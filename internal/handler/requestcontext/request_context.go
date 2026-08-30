@@ -44,6 +44,10 @@ type RequestContext struct {
 	outputs   pipeline.Results
 }
 
+func (r *RequestContext) UpstreamRequest() pipeline.UpstreamRequest {
+	return nil
+}
+
 func New() *RequestContext {
 	rc := &RequestContext{
 		upstreamHeaders: make(http.Header, 6),

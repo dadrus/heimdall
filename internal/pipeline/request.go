@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,14 +14,20 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package requestcontext
+package pipeline
 
-import (
-	"github.com/dadrus/heimdall/internal/pipeline"
-)
+import "net/url"
 
-type Context interface {
-	pipeline.ExecutionContext
+type URL struct {
+	url.URL
 
-	Finalize(backend pipeline.Backend) error
+	Captures map[string]string
+}
+
+type Request struct {
+	RequestFunctions
+
+	Method            string
+	URL               *URL
+	ClientIPAddresses []string
 }

@@ -114,6 +114,8 @@ func (r *requestContext) Reset() {
 	r.RequestContext.Reset()
 }
 
+func (r *requestContext) PrepareUpstreamRequest(_ pipeline.UpstreamTarget) {}
+
 func (r *requestContext) Finalize(upstream pipeline.Backend) error {
 	logger := zerolog.Ctx(r.Context())
 

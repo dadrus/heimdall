@@ -20,10 +20,10 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
-	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 type contextFactory struct {
@@ -79,6 +79,8 @@ func (r *requestContext) Reset() {
 
 	r.RequestContext.Reset()
 }
+
+func (r *requestContext) PrepareUpstreamRequest(_ pipeline.UpstreamTarget) {}
 
 func (r *requestContext) Finalize(_ pipeline.Backend) error {
 	if err := r.Error(); err != nil {
