@@ -33,7 +33,6 @@ type Context interface {
 	SetError(err error)
 	Error() error
 
-	Outputs() map[string]any
 	Results() Results
 }
 
