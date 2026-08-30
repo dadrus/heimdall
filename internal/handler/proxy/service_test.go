@@ -91,6 +91,7 @@ func TestProxyService(t *testing.T) {
 		configureMocks func(
 			t *testing.T,
 			exec *mocks2.ExecutorMock,
+			target *mocks2.UpstreamTargetMock,
 			sr *secretsmocks.ResolverMock,
 			secretHandle *secretsmocks.SecretHandleMock,
 			upstreamURL *url.URL,
@@ -115,13 +116,14 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(
 				t *testing.T,
 				exec *mocks2.ExecutorMock,
+				_ *mocks2.UpstreamTargetMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
 				_ *url.URL,
 			) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
@@ -153,13 +155,14 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(
 				t *testing.T,
 				exec *mocks2.ExecutorMock,
+				_ *mocks2.UpstreamTargetMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
 				_ *url.URL,
 			) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
@@ -174,7 +177,7 @@ func TestProxyService(t *testing.T) {
 				assert.Empty(t, data)
 			},
 		},
-		"rule execution fails due to not configured upstream url": {
+		"request finalization fails due to not configured upstream url": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -191,13 +194,14 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(
 				t *testing.T,
 				exec *mocks2.ExecutorMock,
+				_ *mocks2.UpstreamTargetMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
 				_ *url.URL,
 			) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrConfiguration)
+				exec.EXPECT().Execute(mock.Anything).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
@@ -229,13 +233,14 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(
 				t *testing.T,
 				exec *mocks2.ExecutorMock,
+				_ *mocks2.UpstreamTargetMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
 				_ *url.URL,
 			) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthentication)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrAuthentication)
 			},
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
@@ -267,13 +272,14 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(
 				t *testing.T,
 				exec *mocks2.ExecutorMock,
+				_ *mocks2.UpstreamTargetMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
 				_ *url.URL,
 			) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthorization)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrAuthorization)
 			},
 			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
 				t.Helper()
@@ -311,22 +317,25 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(
 				t *testing.T,
 				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
 				upstreamURL *url.URL,
 			) {
 				t.Helper()
 
-				backend := mocks2.NewBackendMock(t)
-				backend.EXPECT().URL().Return(&url.URL{
-					Scheme: upstreamURL.Scheme,
-					Host:   upstreamURL.Host,
-					Path:   "/foobar",
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/foobar",
+					}
 				})
-				backend.EXPECT().ForwardHostHeader().Return(true)
+				target.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+						ctx.PrepareUpstreamRequest(target)
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -335,7 +344,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(backend, nil)
+				).Return(nil)
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
@@ -398,22 +407,25 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(
 				t *testing.T,
 				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
 				upstreamURL *url.URL,
 			) {
 				t.Helper()
 
-				backend := mocks2.NewBackendMock(t)
-				backend.EXPECT().URL().Return(&url.URL{
-					Scheme: upstreamURL.Scheme,
-					Host:   upstreamURL.Host,
-					Path:   "/[id]/foobar",
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/[id]/foobar",
+					}
 				})
-				backend.EXPECT().ForwardHostHeader().Return(true)
+				target.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+						ctx.PrepareUpstreamRequest(target)
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -422,7 +434,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(backend, nil)
+				).Return(nil)
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
@@ -485,22 +497,25 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(
 				t *testing.T,
 				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
 				upstreamURL *url.URL,
 			) {
 				t.Helper()
 
-				backend := mocks2.NewBackendMock(t)
-				backend.EXPECT().URL().Return(&url.URL{
-					Scheme: upstreamURL.Scheme,
-					Host:   upstreamURL.Host,
-					Path:   "/[barfoo]",
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/[barfoo]",
+					}
 				})
-				backend.EXPECT().ForwardHostHeader().Return(true)
+				target.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+						ctx.PrepareUpstreamRequest(target)
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
@@ -509,7 +524,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(backend, nil)
+				).Return(nil)
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
@@ -579,22 +594,25 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(
 				t *testing.T,
 				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
 				upstreamURL *url.URL,
 			) {
 				t.Helper()
 
-				backend := mocks2.NewBackendMock(t)
-				backend.EXPECT().URL().Return(&url.URL{
-					Scheme: upstreamURL.Scheme,
-					Host:   upstreamURL.Host,
-					Path:   "/bar",
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
 				})
-				backend.EXPECT().ForwardHostHeader().Return(true)
+				target.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+						ctx.PrepareUpstreamRequest(target)
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
@@ -602,7 +620,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(backend, nil)
+				).Return(nil)
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
@@ -670,6 +688,7 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(
 				t *testing.T,
 				_ *mocks2.ExecutorMock,
+				_ *mocks2.UpstreamTargetMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
 				_ *url.URL,
@@ -720,6 +739,7 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(
 				t *testing.T,
 				_ *mocks2.ExecutorMock,
+				_ *mocks2.UpstreamTargetMock,
 				_ *secretsmocks.ResolverMock,
 				_ *secretsmocks.SecretHandleMock,
 				_ *url.URL,
@@ -773,22 +793,25 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(
 				t *testing.T,
 				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
 				sr *secretsmocks.ResolverMock,
 				secretHandle *secretsmocks.SecretHandleMock,
 				upstreamURL *url.URL,
 			) {
 				t.Helper()
 
-				backend := mocks2.NewBackendMock(t)
-				backend.EXPECT().URL().Return(&url.URL{
-					Scheme: upstreamURL.Scheme,
-					Host:   upstreamURL.Host,
-					Path:   "/bar",
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
 				})
-				backend.EXPECT().ForwardHostHeader().Return(false)
+				target.EXPECT().ForwardHostHeader().Return(false)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+						ctx.PrepareUpstreamRequest(target)
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
@@ -796,7 +819,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(backend, nil)
+				).Return(nil)
 
 				secret := secrettypes.NewAsymmetricKeySecret(
 					"server",
@@ -891,22 +914,25 @@ func TestProxyService(t *testing.T) {
 			configureMocks: func(
 				t *testing.T,
 				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
 				sr *secretsmocks.ResolverMock,
 				secretHandle *secretsmocks.SecretHandleMock,
 				upstreamURL *url.URL,
 			) {
 				t.Helper()
 
-				backend := mocks2.NewBackendMock(t)
-				backend.EXPECT().URL().Return(&url.URL{
-					Scheme: upstreamURL.Scheme,
-					Host:   upstreamURL.Host,
-					Path:   "/bar",
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
 				})
-				backend.EXPECT().ForwardHostHeader().Return(true)
+				target.EXPECT().ForwardHostHeader().Return(true)
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+						ctx.PrepareUpstreamRequest(target)
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
@@ -914,7 +940,7 @@ func TestProxyService(t *testing.T) {
 
 						return pathMatched && methodMatched
 					}),
-				).Return(backend, nil)
+				).Return(nil)
 
 				secret := secrettypes.NewAsymmetricKeySecret(
 					"server",
@@ -1029,10 +1055,11 @@ func TestProxyService(t *testing.T) {
 			}
 			cch := mocks.NewCacheMock(t)
 			exec := mocks2.NewExecutorMock(t)
+			target := mocks2.NewUpstreamTargetMock(t)
 			sr := secretsmocks.NewResolverMock(t)
 			secretHandle := secretsmocks.NewSecretHandleMock(t)
 
-			tc.configureMocks(t, exec, sr, secretHandle, upstreamURL)
+			tc.configureMocks(t, exec, target, sr, secretHandle, upstreamURL)
 
 			factory, err := listener.NewFactory(
 				proxyConf.Address(),
@@ -1120,22 +1147,26 @@ func TestWebSocketSupport(t *testing.T) {
 	require.NoError(t, err)
 
 	exec := mocks2.NewExecutorMock(t)
-	backend := mocks2.NewBackendMock(t)
-	backend.EXPECT().URL().Return(&url.URL{
-		Scheme: upstreamURL.Scheme,
-		Host:   upstreamURL.Host,
-		Path:   "/bar",
+	target := mocks2.NewUpstreamTargetMock(t)
+	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+		*targetURL = url.URL{
+			Scheme: upstreamURL.Scheme,
+			Host:   upstreamURL.Host,
+			Path:   "/bar",
+		}
 	})
-	backend.EXPECT().ForwardHostHeader().Return(true)
+	target.EXPECT().ForwardHostHeader().Return(true)
 
 	exec.EXPECT().Execute(
-		mock.MatchedBy(func(ctx pipeline.Context) bool {
+		mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+			ctx.PrepareUpstreamRequest(target)
+
 			pathMatched := ctx.Request().URL.Path == "/foo"
 			methodMatched := ctx.Request().Method == http.MethodGet
 
 			return pathMatched && methodMatched
 		}),
-	).Return(backend, nil)
+	).Return(nil)
 
 	conf := &config.Configuration{
 		Serve: config.ServeConfig{
@@ -1227,22 +1258,26 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	exec := mocks2.NewExecutorMock(t)
 
-	backend := mocks2.NewBackendMock(t)
-	backend.EXPECT().URL().Return(&url.URL{
-		Scheme: upstreamURL.Scheme,
-		Host:   upstreamURL.Host,
-		Path:   "/bar",
+	target := mocks2.NewUpstreamTargetMock(t)
+	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+		*targetURL = url.URL{
+			Scheme: upstreamURL.Scheme,
+			Host:   upstreamURL.Host,
+			Path:   "/bar",
+		}
 	})
-	backend.EXPECT().ForwardHostHeader().Return(true)
+	target.EXPECT().ForwardHostHeader().Return(true)
 
 	exec.EXPECT().Execute(
-		mock.MatchedBy(func(ctx pipeline.Context) bool {
+		mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+			ctx.PrepareUpstreamRequest(target)
+
 			pathMatched := ctx.Request().URL.Path == "/foo"
 			methodMatched := ctx.Request().Method == http.MethodGet
 
 			return pathMatched && methodMatched
 		}),
-	).Return(backend, nil)
+	).Return(nil)
 
 	conf := &config.Configuration{
 		Serve: config.ServeConfig{
