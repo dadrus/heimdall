@@ -97,8 +97,10 @@ type requestContext struct {
 	req *http.Request
 	rt  http.RoundTripper
 
-	upstreamURL       url.URL
+	routingURL        url.URL
+	authority         string
 	forwardHostHeader bool
+	upstreamPrepared  bool
 	hasUpstreamTarget bool
 }
 
@@ -115,31 +117,34 @@ func (r *requestContext) Reset() {
 	r.rt = nil
 	r.req = nil
 
-	r.upstreamURL = url.URL{}
+	r.routingURL = url.URL{}
+	r.authority = ""
 	r.forwardHostHeader = false
+	r.upstreamPrepared = false
 	r.hasUpstreamTarget = false
 
 	r.RequestContext.Reset()
 }
 
 func (r *requestContext) PrepareUpstreamRequest(target pipeline.UpstreamTarget) {
+	r.upstreamPrepared = true
+	r.hasUpstreamTarget = target != nil
+
 	if target == nil {
 		return
 	}
 
 	requestURL := &r.Request().URL.URL
 
-	r.upstreamURL = url.URL{
+	r.routingURL = url.URL{
 		Scheme:   requestURL.Scheme,
 		Path:     requestURL.Path,
 		RawPath:  requestURL.RawPath,
 		RawQuery: requestURL.RawQuery,
 	}
 
-	target.ApplyTo(&r.upstreamURL)
-
+	target.ApplyTo(&r.routingURL)
 	r.forwardHostHeader = target.ForwardHostHeader()
-	r.hasUpstreamTarget = true
 }
 
 func (r *requestContext) Finalize() error {
@@ -155,7 +160,7 @@ func (r *requestContext) Finalize() error {
 
 	logger.Info().
 		Str("_method", r.Request().Method).
-		Str("_upstream", r.upstreamURL.String()).
+		Str("_upstream", r.routingURL.String()).
 		Msg("Forwarding request")
 
 	errHolder := struct{ err error }{}
@@ -167,7 +172,7 @@ func (r *requestContext) Finalize() error {
 			errHolder.err = errorchain.NewWithMessage(pipeline.ErrCommunication, "Failed to proxy request").
 				CausedBy(err)
 		},
-		Rewrite: r.rewriteRequest(&r.upstreamURL, r.forwardHostHeader),
+		Rewrite: r.rewriteRequest(&r.routingURL, r.forwardHostHeader),
 		Transport: otelhttp.NewTransport(
 			httpx.NewTraceRoundTripper(r.rt),
 			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
