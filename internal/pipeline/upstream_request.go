@@ -28,7 +28,7 @@ type UpstreamRequest interface {
 	URL() url.URL
 
 	HeaderSnapshot() http.Header
-	ReplaceHeaders(http.Header)
+	ReplaceHeaders(header http.Header)
 
 	RawBody() (io.ReadCloser, error)
 

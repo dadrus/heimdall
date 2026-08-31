@@ -19,6 +19,6 @@ package pipeline
 import "net/url"
 
 type UpstreamTarget interface {
-	ApplyTo(*url.URL)
+	ApplyTo(url *url.URL)
 	ForwardHostHeader() bool
 }

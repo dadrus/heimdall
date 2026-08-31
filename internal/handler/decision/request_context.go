@@ -20,10 +20,10 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 type contextFactory struct {
