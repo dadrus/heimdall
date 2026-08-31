@@ -254,10 +254,6 @@ func (r *requestContext) HeaderSnapshot() http.Header {
 	} else {
 		headers = r.req.Header.Clone()
 
-		if headers == nil {
-			headers = make(http.Header)
-		}
-
 		removeHopByHopHeaders(headers)
 		r.applyPreparedHeaders(headers)
 	}
