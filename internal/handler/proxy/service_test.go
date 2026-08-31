@@ -384,6 +384,90 @@ func TestProxyService(t *testing.T) {
 				assert.JSONEq(t, `{ "foo": "bar" }`, string(data))
 			},
 		},
+		"successful rule execution - headers are replaced": {
+			disableHTTP2: true,
+			serviceConf: config.ServeConfig{
+				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodGet,
+					fmt.Sprintf("http://%s/foobar", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				req.Header.Set("X-Foo-Bar", "bar")
+				req.Header.Set("Te", "trailers")
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+						ctx.PrepareUpstreamRequest(target)
+
+						upstreamRequest := ctx.UpstreamRequest()
+						headers := upstreamRequest.HeaderSnapshot()
+
+						headers.Del("X-Foo-Bar")
+						headers.Set("X-Replaced", "foo")
+
+						upstreamRequest.ReplaceHeaders(headers)
+
+						pathMatched := ctx.Request().URL.Path == "/foobar"
+						methodMatched := ctx.Request().Method == http.MethodGet
+
+						return pathMatched && methodMatched
+					}),
+				).Return(nil)
+			},
+			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
+				t.Helper()
+
+				assert.Equal(t, http.MethodGet, req.Method)
+				assert.Equal(t, "/bar", req.URL.Path)
+
+				assert.Empty(t, req.Header.Get("X-Foo-Bar"))
+				assert.Equal(t, "foo", req.Header.Get("X-Replaced"))
+				assert.Equal(t, "trailers", req.Header.Get("Te"))
+
+				rw.WriteHeader(http.StatusOK)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.True(t, upstreamCalled)
+
+				require.NoError(t, err)
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+				data, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
+			},
+		},
 		"successful rule execution - request method is taken from the header (trusted proxy configured)": {
 			serviceConf: config.ServeConfig{
 				Timeout:        config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
@@ -1160,6 +1244,9 @@ func TestWebSocketSupport(t *testing.T) {
 	exec.EXPECT().Execute(
 		mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
 			ctx.PrepareUpstreamRequest(target)
+
+			upstreamRequest := ctx.UpstreamRequest()
+			upstreamRequest.ReplaceHeaders(upstreamRequest.HeaderSnapshot())
 
 			pathMatched := ctx.Request().URL.Path == "/foo"
 			methodMatched := ctx.Request().Method == http.MethodGet
