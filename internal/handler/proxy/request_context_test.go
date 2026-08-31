@@ -701,14 +701,14 @@ func TestRequestContextURL(t *testing.T) {
 
 			// WHEN
 			actual := ctx.URL()
-			targetURL := actual
 
 			// THEN
-			assert.Equal(t, tc.expected, targetURL.String())
-
-			targetURL.Host = "changed.local"
-
 			assert.Equal(t, tc.expected, actual.String())
+
+			actual.Host = "changed.local"
+
+			current := ctx.URL()
+			assert.Equal(t, tc.expected, current.String())
 		})
 	}
 }
