@@ -152,6 +152,7 @@ func (r *requestContext) ReplaceHeaders(headers http.Header) {
 	clear(r.UpstreamCookies())
 }
 
+//nolint:cyclop
 func (r *requestContext) Finalize() error {
 	if err := r.Error(); err != nil {
 		return err
