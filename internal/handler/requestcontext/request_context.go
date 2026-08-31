@@ -38,12 +38,11 @@ type RequestContext struct {
 	ctx             context.Context //nolint: containedctx
 
 	// the following properties are created lazy and cached
-	err        error
-	savedBody  any
-	rawBody    []byte
-	rawBodyErr error
-	headers    map[string]string
-	outputs    pipeline.Results
+	err       error
+	savedBody any
+	rawBody   []byte
+	headers   map[string]string
+	outputs   pipeline.Results
 }
 
 func (r *RequestContext) UpstreamRequest() pipeline.UpstreamRequest {
@@ -78,7 +77,6 @@ func (r *RequestContext) Init(req *http.Request) {
 func (r *RequestContext) Reset() {
 	r.savedBody = nil
 	r.rawBody = nil
-	r.rawBodyErr = nil
 	r.err = nil
 	r.req = nil
 	r.ctx = nil
@@ -179,8 +177,8 @@ func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
 }
 
 func (r *RequestContext) readRawBody() ([]byte, error) {
-	if r.rawBody != nil || r.rawBodyErr != nil {
-		return r.rawBody, r.rawBodyErr
+	if r.rawBody != nil {
+		return r.rawBody, nil
 	}
 
 	if r.req.Body == nil || r.req.Body == http.NoBody {
@@ -191,16 +189,14 @@ func (r *RequestContext) readRawBody() ([]byte, error) {
 
 	body, err := io.ReadAll(r.req.Body)
 	if err != nil {
-		r.rawBodyErr = err
-
 		return nil, err
 	}
 
 	r.rawBody = body
-	r.rawBodyErr = r.req.Body.Close()
+	_ = r.req.Body.Close()
 	r.req.Body = io.NopCloser(bytes.NewReader(body))
 
-	return r.rawBody, r.rawBodyErr
+	return r.rawBody, nil
 }
 
 func requestClientIPs(ips []string, req *http.Request) []string {
