@@ -304,6 +304,77 @@ func TestRequestContextBody(t *testing.T) {
 	}
 }
 
+func TestRequestContextRawBody(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		body     io.Reader
+		prepare  func(t *testing.T, ctx *RequestContext)
+		expected string
+	}{
+		"No body": {
+			expected: "",
+		},
+		"Body present": {
+			body:     bytes.NewBufferString("content=heimdall"),
+			expected: "content=heimdall",
+		},
+		"Body was already requested": {
+			body: bytes.NewBufferString("content=heimdall"),
+			prepare: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				body, err := ctx.RawBody()
+				require.NoError(t, err)
+
+				_, err = io.ReadAll(body)
+				require.NoError(t, err)
+				require.NoError(t, body.Close())
+			},
+			expected: "content=heimdall",
+		},
+		"Body was already decoded": {
+			body: bytes.NewBufferString("content=heimdall"),
+			prepare: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				_ = ctx.Body()
+			},
+			expected: "content=heimdall",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "https://foo.bar/test", tc.body)
+
+			ctx := New()
+			ctx.Init(req)
+
+			if tc.prepare != nil {
+				tc.prepare(t, ctx)
+			}
+
+			// WHEN
+			body, err := ctx.RawBody()
+
+			// THEN
+			require.NoError(t, err)
+			require.NotNil(t, body)
+
+			data, err := io.ReadAll(body)
+			require.NoError(t, err)
+			require.NoError(t, body.Close())
+
+			assert.Equal(t, tc.expected, string(data))
+
+			requestBody, err := io.ReadAll(req.Body)
+			require.NoError(t, err)
+
+			assert.Equal(t, tc.expected, string(requestBody))
+		})
+	}
+}
+
 func TestRequestContextRequestURLCaptures(t *testing.T) {
 	t.Parallel()
 
@@ -346,6 +417,7 @@ func TestRequestContextReset(t *testing.T) {
 
 	// THEN
 	require.Nil(t, ctx.savedBody)
+	require.Nil(t, ctx.rawBody)
 	require.NoError(t, ctx.err)
 	require.Nil(t, ctx.req)
 	require.NotNil(t, ctx.outputs)
