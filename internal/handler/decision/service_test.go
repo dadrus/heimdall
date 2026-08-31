@@ -213,7 +213,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				headerVal := response.Header.Get("X-Foo-Bar")
 				assert.Equal(t, "baz", headerVal)
 
-				cookies := response.Cookies()
+				cookies, err := http.ParseCookie(response.Header.Get("Cookie"))
+				require.NoError(t, err)
 				require.Len(t, cookies, 1)
 				assert.Equal(t, "X-Bar-Foo", cookies[0].Name)
 				assert.Equal(t, "zab", cookies[0].Value)
@@ -247,9 +248,6 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
 						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
 
-						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
-						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
-
 						pathMatched := ctx.Request().URL.Path == "/foobar"
 						methodMatched := ctx.Request().Method == http.MethodPost
 						schemeMatched := ctx.Request().URL.Scheme == "http"
@@ -272,7 +270,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				headerVal := response.Header.Get("X-Foo-Bar")
 				assert.Equal(t, "baz", headerVal)
 
-				cookies := response.Cookies()
+				cookies, err := http.ParseCookie(response.Header.Get("Cookie"))
+				require.NoError(t, err)
 				require.Len(t, cookies, 1)
 				assert.Equal(t, "X-Bar-Foo", cookies[0].Name)
 				assert.Equal(t, "zab", cookies[0].Value)
@@ -329,7 +328,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				headerVal := response.Header.Get("X-Foo-Bar")
 				assert.Equal(t, "baz", headerVal)
 
-				cookies := response.Cookies()
+				cookies, err := http.ParseCookie(response.Header.Get("Cookie"))
+				require.NoError(t, err)
 				require.Len(t, cookies, 1)
 				assert.Equal(t, "X-Bar-Foo", cookies[0].Name)
 				assert.Equal(t, "zab", cookies[0].Value)

@@ -133,8 +133,21 @@ func TestRequestContextFinalize(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Len(t, rec.Header(), 3)
-				assert.Contains(t, rec.Header().Values("Cookie"), "x-bar=foo")
-				assert.Contains(t, rec.Header().Values("Cookie"), "x-foo=bar")
+
+				cookies, err := http.ParseCookie(rec.Header().Get("Cookie"))
+				require.NoError(t, err)
+				require.Len(t, cookies, 2)
+
+				cookieValues := make(map[string]string, len(cookies))
+				for _, cookie := range cookies {
+					cookieValues[cookie.Name] = cookie.Value
+				}
+
+				assert.Equal(t, map[string]string{
+					"x-foo": "bar",
+					"x-bar": "foo",
+				}, cookieValues)
+
 				assert.ElementsMatch(t, rec.Header().Values("X-Foo"), []string{"bar"})
 				assert.ElementsMatch(t, rec.Header().Values("X-Bar"), []string{"bar", "foo"})
 				assert.Equal(t, http.StatusOK, rec.Code)
