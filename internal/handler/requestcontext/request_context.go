@@ -38,10 +38,12 @@ type RequestContext struct {
 	ctx             context.Context //nolint: containedctx
 
 	// the following properties are created lazy and cached
-	err       error
-	savedBody any
-	headers   map[string]string
-	outputs   pipeline.Results
+	err        error
+	savedBody  any
+	rawBody    []byte
+	rawBodyErr error
+	headers    map[string]string
+	outputs    pipeline.Results
 }
 
 func (r *RequestContext) UpstreamRequest() pipeline.UpstreamRequest {
@@ -75,6 +77,8 @@ func (r *RequestContext) Init(req *http.Request) {
 
 func (r *RequestContext) Reset() {
 	r.savedBody = nil
+	r.rawBody = nil
+	r.rawBodyErr = nil
 	r.err = nil
 	r.req = nil
 	r.ctx = nil
@@ -119,23 +123,11 @@ func (r *RequestContext) Headers() map[string]string {
 }
 
 func (r *RequestContext) Body() any {
-	if r.req.Body == nil || r.req.Body == http.NoBody {
-		return ""
-	}
-
 	if r.savedBody == nil {
-		// drain body by reading its contents into memory and preserving
-		var buf bytes.Buffer
-		if _, err := buf.ReadFrom(r.req.Body); err != nil {
+		body, err := r.readRawBody()
+		if err != nil || len(body) == 0 {
 			return ""
 		}
-
-		if err := r.req.Body.Close(); err != nil {
-			return ""
-		}
-
-		body := buf.Bytes()
-		r.req.Body = io.NopCloser(bytes.NewReader(body))
 
 		decoder, err := contenttype.NewDecoder(r.Header("Content-Type"))
 		if err != nil {
@@ -157,6 +149,19 @@ func (r *RequestContext) Body() any {
 	return r.savedBody
 }
 
+func (r *RequestContext) RawBody() (io.ReadCloser, error) {
+	body, err := r.readRawBody()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(body) == 0 {
+		return http.NoBody, nil
+	}
+
+	return io.NopCloser(bytes.NewReader(body)), nil
+}
+
 func (r *RequestContext) Request() *pipeline.Request              { return r.hmdlReq }
 func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
 func (r *RequestContext) UpstreamHeaders() http.Header            { return r.upstreamHeaders }
@@ -171,6 +176,31 @@ func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
 	r.ctx = ctx
 
 	return r
+}
+
+func (r *RequestContext) readRawBody() ([]byte, error) {
+	if r.rawBody != nil || r.rawBodyErr != nil {
+		return r.rawBody, r.rawBodyErr
+	}
+
+	if r.req.Body == nil || r.req.Body == http.NoBody {
+		r.rawBody = []byte{}
+
+		return r.rawBody, nil
+	}
+
+	body, err := io.ReadAll(r.req.Body)
+	if err != nil {
+		r.rawBodyErr = err
+
+		return nil, err
+	}
+
+	r.rawBody = body
+	r.rawBodyErr = r.req.Body.Close()
+	r.req.Body = io.NopCloser(bytes.NewReader(body))
+
+	return r.rawBody, r.rawBodyErr
 }
 
 func requestClientIPs(ips []string, req *http.Request) []string {
