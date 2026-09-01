@@ -109,12 +109,19 @@ func TestRequestContextURL(t *testing.T) {
 		path        string
 		rawPath     string
 		rawQuery    string
+		forceQuery  bool
 	}{
 		"regular path": {
 			requestPath: "/test/baz?bar=moo#foobar",
 			path:        "/test/baz",
 			rawPath:     "/test/baz",
 			rawQuery:    "bar=moo#foobar",
+		},
+		"empty query": {
+			requestPath: "/test?",
+			path:        "/test",
+			rawPath:     "/test",
+			forceQuery:  true,
 		},
 		"escaped characters": {
 			requestPath: "/test%2Ffoo/bar/%5Bval%5D?foo=bar",
@@ -182,6 +189,7 @@ func TestRequestContextURL(t *testing.T) {
 			assert.Equal(t, tc.rawPath, ctx.Request().URL.RawPath)
 			assert.Equal(t, tc.rawPath, ctx.Request().URL.EscapedPath())
 			assert.Equal(t, tc.rawQuery, ctx.Request().URL.RawQuery)
+			assert.Equal(t, tc.forceQuery, ctx.Request().URL.ForceQuery)
 		})
 	}
 }
@@ -568,7 +576,7 @@ func TestRequestContextReset(t *testing.T) {
 	// THEN
 	require.Nil(t, ctx.ctx)
 	require.Nil(t, ctx.reqHeaders)
-	require.Nil(t, ctx.reqRawBody)
+	require.Nil(t, ctx.reqBody)
 	require.Nil(t, ctx.savedBody)
 	require.NoError(t, ctx.err)
 	require.NotNil(t, ctx.results)
