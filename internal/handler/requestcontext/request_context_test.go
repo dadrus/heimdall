@@ -146,7 +146,7 @@ func TestRequestClientIPs(t *testing.T) {
 	}
 }
 
-func TestRequestContextHeaders(t *testing.T) {
+func TestRequestContextRequestHeaders(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -164,6 +164,194 @@ func TestRequestContextHeaders(t *testing.T) {
 	require.Len(t, headers, 2)
 	assert.Equal(t, "foo,bar", headers["X-Foo-Bar"])
 	assert.Equal(t, "foo.baz", headers["Host"])
+}
+
+func TestRequestContextUpstreamRequest(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := New()
+	ctx.Init(httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		"https://foo.bar/test",
+		nil,
+	))
+
+	// WHEN
+	upstreamRequest := ctx.UpstreamRequest()
+
+	// THEN
+	assert.Nil(t, upstreamRequest)
+}
+
+func TestRequestContextMethod(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := New()
+	ctx.Init(httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPatch,
+		"https://foo.bar/test",
+		nil,
+	))
+
+	// WHEN
+	method := ctx.Method()
+
+	// THEN
+	assert.Equal(t, http.MethodPatch, method)
+}
+
+func TestRequestContextURL(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := New()
+	ctx.Init(httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		"https://foo.bar/test?foo=bar",
+		nil,
+	))
+
+	// WHEN
+	upstreamURL := ctx.URL()
+
+	// THEN
+	assert.Equal(t, "https", upstreamURL.Scheme)
+	assert.Equal(t, "foo.bar", upstreamURL.Host)
+	assert.Equal(t, "/test", upstreamURL.Path)
+	assert.Equal(t, "foo=bar", upstreamURL.RawQuery)
+
+	upstreamURL.Host = "changed.local"
+	upstreamURL.Path = "/changed"
+
+	assert.Equal(t, "foo.bar", ctx.URL().Host)
+	assert.Equal(t, "/test", ctx.URL().Path)
+
+	ctx.SetHeader("Host", "bar.foo")
+
+	assert.Equal(t, "bar.foo", ctx.URL().Host)
+	assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
+}
+
+func TestRequestContextAddHeader(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
+	req.Header.Set("X-Foo", "incoming")
+
+	ctx := New()
+	ctx.Init(req)
+
+	// WHEN
+	ctx.AddHeader("X-Foo", "first")
+	ctx.AddHeader("X-Foo", "second")
+	ctx.AddHeader("Host", "bar.foo")
+
+	// THEN
+	assert.Equal(t, []string{"first", "second"}, ctx.Headers().Values("X-Foo"))
+	assert.Equal(t, []string{"bar.foo"}, ctx.Headers().Values("Host"))
+	assert.Equal(t, "bar.foo", ctx.URL().Host)
+
+	assert.Equal(t, "incoming", ctx.Request().Header("X-Foo"))
+	assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
+}
+
+func TestRequestContextSetHeader(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
+	req.Header.Set("X-Foo", "incoming")
+
+	ctx := New()
+	ctx.Init(req)
+	ctx.AddHeader("X-Foo", "first")
+	ctx.AddHeader("X-Foo", "second")
+
+	// WHEN
+	ctx.SetHeader("X-Foo", "replaced")
+	ctx.SetHeader("Host", "bar.foo")
+
+	// THEN
+	assert.Equal(t, []string{"replaced"}, ctx.Headers().Values("X-Foo"))
+	assert.Equal(t, []string{"bar.foo"}, ctx.Headers().Values("Host"))
+	assert.Equal(t, "bar.foo", ctx.URL().Host)
+
+	assert.Equal(t, "incoming", ctx.Request().Header("X-Foo"))
+	assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
+}
+
+func TestRequestContextSetCookie(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
+	req.Header.Add("Cookie", "foo=old; session=abc")
+	req.Header.Add("Cookie", "another=x; foo=older")
+
+	ctx := New()
+	ctx.Init(req)
+
+	// WHEN
+	ctx.SetCookie("foo", "new")
+
+	// THEN
+	require.Len(t, ctx.Headers().Values("Cookie"), 1)
+	assert.Equal(t, "session=abc; another=x; foo=new", ctx.Headers().Get("Cookie"))
+
+	ctx.SetCookie("session", "changed")
+
+	require.Len(t, ctx.Headers().Values("Cookie"), 1)
+	assert.Equal(t, "another=x; foo=new; session=changed", ctx.Headers().Get("Cookie"))
+	assert.Equal(t, "old", ctx.Request().Cookie("foo"))
+	assert.Equal(t, "abc", ctx.Request().Cookie("session"))
+}
+
+func TestRequestContextHeaders(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
+	req.Header.Set("Host", "spoofed")
+	req.Header.Set("X-Foo", "incoming")
+	req.Header.Set("X-Removed", "remove-me")
+	req.Header.Set("Cookie", "foo=bar")
+
+	ctx := New()
+	ctx.Init(req)
+	ctx.AddHeader("X-Foo", "from-heimdall")
+	ctx.SetHeader("X-Set", "set-by-heimdall")
+	ctx.SetCookie("bar", "foo")
+	ctx.upstreamHeaders["X-Removed"] = nil
+
+	// WHEN
+	headers := ctx.Headers()
+
+	// THEN
+	assert.Equal(t, []string{"from-heimdall"}, headers.Values("X-Foo"))
+	assert.Equal(t, "set-by-heimdall", headers.Get("X-Set"))
+	assert.Equal(t, "foo=bar; bar=foo", headers.Get("Cookie"))
+	assert.Equal(t, "foo.bar", headers.Get("Host"))
+	assert.Empty(t, headers.Values("X-Removed"))
+
+	headers.Set("X-Foo", "changed")
+	headers.Set("Host", "changed.local")
+	headers.Set("Cookie", "changed=true")
+
+	current := ctx.Headers()
+
+	assert.Equal(t, []string{"from-heimdall"}, current.Values("X-Foo"))
+	assert.Equal(t, "foo.bar", current.Get("Host"))
+	assert.Equal(t, "foo=bar; bar=foo", current.Get("Cookie"))
+
+	assert.Equal(t, "incoming", ctx.Request().Header("X-Foo"))
+	assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
+	assert.Equal(t, "bar", ctx.Request().Cookie("foo"))
 }
 
 func TestRequestContextHeader(t *testing.T) {
@@ -408,8 +596,9 @@ func TestRequestContextReset(t *testing.T) {
 	ctx.SetError(assert.AnError)
 	_ = ctx.Body()
 	ctx.Outputs()["a"] = pipeline.NewResult("b")
-	ctx.AddCookieForUpstream("foo", "bar")
-	ctx.AddHeaderForUpstream("bar", "foo")
+	ctx.SetCookie("foo", "bar")
+	ctx.SetHeader("bar", "foo")
+	_ = ctx.Request().Headers()
 	_ = ctx.Headers()
 
 	// WHEN
@@ -424,8 +613,6 @@ func TestRequestContextReset(t *testing.T) {
 	require.Empty(t, ctx.outputs)
 	require.NotNil(t, ctx.headers)
 	require.Empty(t, ctx.headers)
-	require.NotNil(t, ctx.upstreamCookies)
-	require.Empty(t, ctx.upstreamCookies)
 	require.NotNil(t, ctx.upstreamHeaders)
 	require.Empty(t, ctx.upstreamHeaders)
 	require.NotNil(t, ctx.hmdlReq)

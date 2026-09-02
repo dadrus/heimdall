@@ -39,6 +39,18 @@ import (
 
 var _ pipeline.UpstreamRequest = (*requestContext)(nil)
 
+var hopByHopHeaders = [...]string{ //nolint: gochecknoglobals
+	"Connection",
+	"Proxy-Connection",
+	"Keep-Alive",
+	"Proxy-Authenticate",
+	"Proxy-Authorization",
+	"Te",
+	"Trailer",
+	"Transfer-Encoding",
+	"Upgrade",
+}
+
 type contextFactory struct {
 	roundTripper http.RoundTripper
 	pool         *sync.Pool
@@ -71,15 +83,15 @@ func newContextFactory(
 			// is possible per upstream
 			Proxy: http.ProxyFromEnvironment,
 			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second, //nolint:mnd
-				KeepAlive: 30 * time.Second, //nolint:mnd
+				Timeout:   30 * time.Second, //nolint: mnd
+				KeepAlive: 30 * time.Second, //nolint: mnd
 			}).DialContext,
 			ResponseHeaderTimeout: cfg.Timeout.Read,
 			MaxIdleConns:          cfg.ConnectionsLimit.MaxIdle,
 			MaxIdleConnsPerHost:   cfg.ConnectionsLimit.MaxIdlePerHost,
 			MaxConnsPerHost:       cfg.ConnectionsLimit.MaxPerHost,
 			IdleConnTimeout:       cfg.Timeout.Idle,
-			TLSHandshakeTimeout:   10 * time.Second, //nolint:mnd
+			TLSHandshakeTimeout:   10 * time.Second, //nolint: mnd
 			ExpectContinueTimeout: 1 * time.Second,
 			ForceAttemptHTTP2:     true,
 			TLSClientConfig:       tlsCfg,
@@ -99,27 +111,9 @@ type requestContext struct {
 	req *http.Request
 	rt  http.RoundTripper
 
-	routingURL            url.URL
-	authority             string
-	replacedHeaders       http.Header
-	forwardedHeader       string
-	xForwardedForHeader   string
-	xForwardedHostHeader  string
-	xForwardedProtoHeader string
-	upstreamPrepared      bool
-	hasUpstreamTarget     bool
-}
-
-var hopByHopHeaders = [...]string{ //nolint:gochecknoglobals
-	"Connection",
-	"Proxy-Connection",
-	"Keep-Alive",
-	"Proxy-Authenticate",
-	"Proxy-Authorization",
-	"Te",
-	"Trailer",
-	"Transfer-Encoding",
-	"Upgrade",
+	routingURL           url.URL
+	upstreamViewPrepared bool
+	hasUpstreamTarget    bool
 }
 
 func (r *requestContext) Init(rw http.ResponseWriter, req *http.Request, rt http.RoundTripper) {
@@ -136,28 +130,22 @@ func (r *requestContext) Reset() {
 	r.req = nil
 
 	r.routingURL = url.URL{}
-	r.authority = ""
-	r.replacedHeaders = nil
-	r.forwardedHeader = ""
-	r.xForwardedForHeader = ""
-	r.xForwardedHostHeader = ""
-	r.xForwardedProtoHeader = ""
-	r.upstreamPrepared = false
+	r.upstreamViewPrepared = false
 	r.hasUpstreamTarget = false
 
 	r.RequestContext.Reset()
 }
 
 func (r *requestContext) UpstreamRequest() pipeline.UpstreamRequest {
-	if !r.upstreamPrepared {
+	if !r.upstreamViewPrepared {
 		return nil
 	}
 
 	return r
 }
 
-func (r *requestContext) PrepareUpstreamRequest(target pipeline.UpstreamTarget) {
-	r.upstreamPrepared = true
+func (r *requestContext) PrepareUpstreamView(target pipeline.UpstreamTarget) {
+	r.upstreamViewPrepared = true
 	r.hasUpstreamTarget = target != nil
 
 	requestURL := &r.Request().URL.URL
@@ -169,18 +157,20 @@ func (r *requestContext) PrepareUpstreamRequest(target pipeline.UpstreamTarget) 
 		ForceQuery: requestURL.ForceQuery,
 	}
 
-	r.authority = r.req.Host
+	r.prepareHeaderSanitization()
 	r.prepareForwardedHeaders()
 
-	if target == nil {
-		return
+	host := r.req.Host
+
+	if target != nil {
+		target.ApplyTo(&r.routingURL)
+
+		if !target.ForwardHostHeader() {
+			host = r.routingURL.Host
+		}
 	}
 
-	target.ApplyTo(&r.routingURL)
-
-	if !target.ForwardHostHeader() {
-		r.authority = r.routingURL.Host
-	}
+	r.SetHeader("Host", host)
 }
 
 func (r *requestContext) Finalize() error {
@@ -222,85 +212,38 @@ func (r *requestContext) Finalize() error {
 	return errHolder.err
 }
 
-func (r *requestContext) Method() string    { return r.Request().Method }
-func (r *requestContext) Authority() string { return r.authority }
-
 func (r *requestContext) URL() url.URL {
 	result := r.routingURL
-	result.Host = r.authority
+	result.Host = r.RequestContext.URL().Host
 
 	return result
-}
-
-func (r *requestContext) AddHeader(name, value string) {
-	if http.CanonicalHeaderKey(name) == "Host" {
-		r.authority = value
-
-		return
-	}
-
-	r.AddHeaderForUpstream(name, value)
-}
-
-func (r *requestContext) SetCookie(name, value string) {
-	r.AddCookieForUpstream(name, value)
-}
-
-func (r *requestContext) HeaderSnapshot() http.Header {
-	var headers http.Header
-
-	if r.replacedHeaders != nil {
-		headers = r.replacedHeaders.Clone()
-	} else {
-		headers = r.req.Header.Clone()
-
-		removeHopByHopHeaders(headers)
-		r.applyPreparedHeaders(headers)
-	}
-
-	req := http.Request{
-		Header: headers,
-	}
-
-	r.addUpstreamHeader(&req)
-	r.addUpstreamCookies(&req)
-
-	req.Header.Del("Host")
-
-	return req.Header
-}
-
-func (r *requestContext) ReplaceHeaders(headers http.Header) {
-	r.replacedHeaders = headers
-
-	if r.replacedHeaders == nil {
-		r.replacedHeaders = make(http.Header)
-	}
-
-	r.replacedHeaders.Del("Host")
-
-	clear(r.UpstreamHeaders())
-	clear(r.UpstreamCookies())
 }
 
 func (r *requestContext) rewriteRequest(proxyReq *httputil.ProxyRequest) {
 	proxyReq.Out.Method = r.Method()
 	proxyReq.Out.URL = &r.routingURL
-	proxyReq.Out.Host = r.authority
 
-	if r.replacedHeaders != nil {
-		r.replaceRequestHeaders(proxyReq.Out)
-	} else {
-		r.applyPreparedHeaders(proxyReq.Out.Header)
+	r.applyUpstreamView(proxyReq.Out)
+}
+
+func (r *requestContext) prepareHeaderSanitization() {
+	for _, value := range r.req.Header.Values("Connection") {
+		for name := range strings.SplitSeq(value, ",") {
+			name = strings.TrimSpace(name)
+
+			if len(name) != 0 {
+				r.removeHeader(name)
+			}
+		}
 	}
 
-	r.addUpstreamHeader(proxyReq.Out)
-	r.addUpstreamCookies(proxyReq.Out)
-
-	if host := proxyReq.Out.Header.Get("Host"); len(host) != 0 {
-		proxyReq.Out.Host = host
-		proxyReq.Out.Header.Del("Host")
+	for _, name := range hopByHopHeaders {
+		r.removeHeader(name)
 	}
+
+	r.removeHeader("X-Forwarded-Method")
+	r.removeHeader("X-Forwarded-Uri")
+	r.removeHeader("X-Forwarded-Path")
 }
 
 func (r *requestContext) prepareForwardedHeaders() {
@@ -310,9 +253,9 @@ func (r *requestContext) prepareForwardedHeaders() {
 	clientIP := httpx.IPFromHostPort(r.req.RemoteAddr)
 	clientIPs := r.Request().ClientIPAddresses
 
-	r.xForwardedForHeader = strings.Join(clientIPs, ", ")
-	r.xForwardedProtoHeader = x.IfThenElse(len(forwardedProto) == 0, proto, forwardedProto)
-	r.xForwardedHostHeader = x.IfThenElse(len(forwardedHost) == 0, r.req.Host, forwardedHost)
+	r.SetHeader("X-Forwarded-For", strings.Join(clientIPs, ", "))
+	r.SetHeader("X-Forwarded-Proto", x.IfThenElse(len(forwardedProto) == 0, proto, forwardedProto))
+	r.SetHeader("X-Forwarded-Host", x.IfThenElse(len(forwardedHost) == 0, r.req.Host, forwardedHost))
 
 	if strings.Contains(clientIP, ":") {
 		// IPv6 must be quoted
@@ -322,82 +265,48 @@ func (r *requestContext) prepareForwardedHeaders() {
 	current := strings.Join(r.req.Header.Values("Forwarded"), ", ")
 	entry := "for=" + clientIP + ";host=\"" + r.req.Host + "\";proto=" + proto
 
-	r.forwardedHeader = x.IfThenElseExec(len(current) == 0,
+	r.SetHeader("Forwarded", x.IfThenElseExec(len(current) == 0,
 		func() string { return entry },
-		func() string { return current + ", " + entry })
+		func() string { return current + ", " + entry }))
 }
 
-func (r *requestContext) applyPreparedHeaders(headers http.Header) {
-	// delete headers, which are useless for the upstream service, before forwarding the request
-	headers.Del("X-Forwarded-Method")
-	headers.Del("X-Forwarded-Uri")
-	headers.Del("X-Forwarded-Path")
-
-	headers.Set("Forwarded", r.forwardedHeader)
-	headers.Set("X-Forwarded-For", r.xForwardedForHeader)
-	headers.Set("X-Forwarded-Host", r.xForwardedHostHeader)
-	headers.Set("X-Forwarded-Proto", r.xForwardedProtoHeader)
+func (r *requestContext) removeHeader(name string) {
+	r.UpstreamHeaders()[http.CanonicalHeaderKey(name)] = nil
 }
 
-func (r *requestContext) replaceRequestHeaders(req *http.Request) {
+func (r *requestContext) applyHeaderOverlay(headers http.Header) {
+	for name, values := range r.UpstreamHeaders() {
+		if values == nil {
+			headers.Del(name)
+
+			continue
+		}
+
+		headers[name] = append([]string(nil), values...)
+	}
+}
+
+func (r *requestContext) applyUpstreamView(req *http.Request) {
 	connection, hasConnection := req.Header["Connection"]
 	upgrade, hasUpgrade := req.Header["Upgrade"]
 	te, hasTE := req.Header["Te"]
 
-	req.Header = r.replacedHeaders.Clone()
+	r.applyHeaderOverlay(req.Header)
 
-	_, connectionReplaced := req.Header["Connection"]
-	_, upgradeReplaced := req.Header["Upgrade"]
+	overlay := r.UpstreamHeaders()
 
-	if !connectionReplaced && !upgradeReplaced {
-		if hasConnection {
-			req.Header["Connection"] = connection
-		}
-
-		if hasUpgrade {
-			req.Header["Upgrade"] = upgrade
-		}
+	if values, ok := overlay["Connection"]; ok && values == nil && hasConnection {
+		req.Header["Connection"] = connection
 	}
 
-	if _, replaced := req.Header["Te"]; !replaced && hasTE {
+	if values, ok := overlay["Upgrade"]; ok && values == nil && hasUpgrade {
+		req.Header["Upgrade"] = upgrade
+	}
+
+	if values, ok := overlay["Te"]; ok && values == nil && hasTE {
 		req.Header["Te"] = te
 	}
-}
 
-func removeHopByHopHeaders(headers http.Header) {
-	for _, value := range headers.Values("Connection") {
-		for name := range strings.SplitSeq(value, ",") {
-			name = strings.TrimSpace(name)
-
-			if len(name) != 0 {
-				headers.Del(name)
-			}
-		}
-	}
-
-	for _, name := range hopByHopHeaders {
-		headers.Del(name)
-	}
-}
-
-func (r *requestContext) addUpstreamCookies(req *http.Request) {
-	for k, v := range r.UpstreamCookies() {
-		req.AddCookie(&http.Cookie{Name: k, Value: v}) //nolint:gosec
-	}
-}
-
-func (r *requestContext) addUpstreamHeader(req *http.Request) {
-	// delete those headers which are set by heimdall first
-	// we do this to prevent spoofing
-	uh := r.UpstreamHeaders()
-	for name := range uh {
-		req.Header.Del(name)
-	}
-
-	// add them now
-	for name, values := range uh {
-		for _, value := range values {
-			req.Header.Add(name, value)
-		}
-	}
+	req.Host = r.RequestContext.URL().Host
+	req.Header.Del("Host")
 }

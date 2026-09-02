@@ -75,7 +75,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				})
 				target.EXPECT().ForwardHostHeader().Return(false)
 
-				ctx.PrepareUpstreamRequest(target)
+				ctx.PrepareUpstreamView(target)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -112,7 +112,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				})
 				target.EXPECT().ForwardHostHeader().Return(false)
 
-				ctx.PrepareUpstreamRequest(target)
+				ctx.PrepareUpstreamView(target)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -143,7 +143,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				})
 				target.EXPECT().ForwardHostHeader().Return(false)
 
-				ctx.PrepareUpstreamRequest(target)
+				ctx.PrepareUpstreamView(target)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -174,7 +174,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				})
 				target.EXPECT().ForwardHostHeader().Return(false)
 
-				ctx.PrepareUpstreamRequest(target)
+				ctx.PrepareUpstreamView(target)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -205,13 +205,13 @@ func TestRequestContextFinalize(t *testing.T) {
 				})
 				target.EXPECT().ForwardHostHeader().Return(false)
 
-				ctx.PrepareUpstreamRequest(target)
+				ctx.PrepareUpstreamView(target)
 
-				ctx.AddHeaderForUpstream("X-User-ID", "someid")
-				ctx.AddHeaderForUpstream("X-Custom", "somevalue")
-				ctx.AddHeaderForUpstream("X-Forwarded-Method", http.MethodDelete)
-				ctx.AddCookieForUpstream("my_cookie_1", "my_value_1")
-				ctx.AddCookieForUpstream("my_cookie_2", "my_value_2")
+				ctx.UpstreamRequest().AddHeader("X-User-ID", "someid")
+				ctx.UpstreamRequest().AddHeader("X-Custom", "somevalue")
+				ctx.UpstreamRequest().AddHeader("X-Forwarded-Method", http.MethodDelete)
+				ctx.UpstreamRequest().SetCookie("my_cookie_1", "my_value_1")
+				ctx.UpstreamRequest().SetCookie("my_cookie_2", "my_value_2")
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -249,15 +249,15 @@ func TestRequestContextFinalize(t *testing.T) {
 				})
 				target.EXPECT().ForwardHostHeader().Return(false)
 
-				ctx.PrepareUpstreamRequest(target)
+				ctx.PrepareUpstreamView(target)
 
-				ctx.AddHeaderForUpstream("X-User-ID", "someid")
-				ctx.AddHeaderForUpstream("X-Custom", "somevalue")
-				ctx.AddHeaderForUpstream("X-Foo-Bar", "from-heimdall-1")
-				ctx.AddHeaderForUpstream("X-Foo-Bar", "from-heimdall-2")
-				ctx.AddHeaderForUpstream("X-Forwarded-Method", http.MethodDelete)
-				ctx.AddCookieForUpstream("my_cookie_1", "my_value_1")
-				ctx.AddCookieForUpstream("my_cookie_2", "my_value_2")
+				ctx.UpstreamRequest().AddHeader("X-User-ID", "someid")
+				ctx.UpstreamRequest().AddHeader("X-Custom", "somevalue")
+				ctx.UpstreamRequest().AddHeader("X-Foo-Bar", "from-heimdall-1")
+				ctx.UpstreamRequest().AddHeader("X-Foo-Bar", "from-heimdall-2")
+				ctx.UpstreamRequest().AddHeader("X-Forwarded-Method", http.MethodDelete)
+				ctx.UpstreamRequest().SetCookie("my_cookie_1", "my_value_1")
+				ctx.UpstreamRequest().SetCookie("my_cookie_2", "my_value_2")
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -291,14 +291,13 @@ func TestRequestContextFinalize(t *testing.T) {
 				})
 				target.EXPECT().ForwardHostHeader().Return(false)
 
-				ctx.PrepareUpstreamRequest(target)
-
-				ctx.AddHeaderForUpstream("Host", "bar.foo")
+				ctx.PrepareUpstreamView(target)
+				ctx.UpstreamRequest().SetHeader("Host", "bar.foo")
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				assert.Contains(t, req.Host, "bar.foo")
+				assert.Equal(t, "bar.foo", req.Host)
 				assert.Equal(t, http.MethodGet, req.Method)
 
 				require.Len(t, req.Header, 6)
@@ -323,7 +322,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				})
 				target.EXPECT().ForwardHostHeader().Return(false)
 
-				ctx.PrepareUpstreamRequest(target)
+				ctx.PrepareUpstreamView(target)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -353,12 +352,12 @@ func TestRequestContextFinalize(t *testing.T) {
 				})
 				target.EXPECT().ForwardHostHeader().Return(true)
 
-				ctx.PrepareUpstreamRequest(target)
+				ctx.PrepareUpstreamView(target)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				assert.Contains(t, req.Host, "foo.bar")
+				assert.Equal(t, "foo.bar", req.Host)
 				assert.Equal(t, http.MethodGet, req.Method)
 
 				require.Len(t, req.Header, 6)
@@ -383,7 +382,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				})
 				target.EXPECT().ForwardHostHeader().Return(false)
 
-				ctx.PrepareUpstreamRequest(target)
+				ctx.PrepareUpstreamView(target)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -400,10 +399,9 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, "172.2.34.1, 192.0.2.1", req.Header.Get("X-Forwarded-For"))
 			},
 		},
-		"headers are replaced": {
+		"header is set for upstream": {
 			upstreamCalled: true,
 			headers: http.Header{
-				"Te":        []string{"trailers"},
 				"X-Foo-Bar": []string{"bar"},
 			},
 			setup: func(t *testing.T, ctx requestcontext.Context, target *mocks.UpstreamTargetMock, upstreamURL *url.URL) {
@@ -414,23 +412,18 @@ func TestRequestContextFinalize(t *testing.T) {
 				})
 				target.EXPECT().ForwardHostHeader().Return(false)
 
-				ctx.PrepareUpstreamRequest(target)
+				ctx.PrepareUpstreamView(target)
 
-				upstreamRequest := ctx.UpstreamRequest()
-				headers := upstreamRequest.HeaderSnapshot()
-				headers.Del("X-Foo-Bar")
-				headers.Set("X-Replaced", "foo")
-
-				upstreamRequest.ReplaceHeaders(headers)
+				ctx.UpstreamRequest().SetHeader("X-Foo-Bar", "baz")
+				ctx.UpstreamRequest().SetHeader("X-Set", "foo")
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
-				assert.Empty(t, req.Header.Get("X-Foo-Bar"))
-				assert.Equal(t, "foo", req.Header.Get("X-Replaced"))
-				assert.Equal(t, "trailers", req.Header.Get("Te"))
+				assert.Equal(t, "baz", req.Header.Get("X-Foo-Bar"))
+				assert.Equal(t, "foo", req.Header.Get("X-Set"))
 				assert.Equal(t, "for=192.0.2.1;host=\"foo.bar\";proto=https", req.Header.Get("Forwarded"))
 				assert.Equal(t, "192.0.2.1", req.Header.Get("X-Forwarded-For"))
 				assert.Equal(t, "foo.bar", req.Header.Get("X-Forwarded-Host"))
@@ -446,7 +439,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				})
 				target.EXPECT().ForwardHostHeader().Return(false)
 
-				ctx.PrepareUpstreamRequest(target)
+				ctx.PrepareUpstreamView(target)
 
 				ctx.(*requestContext).rt = roundTripperFunc(func(_ *http.Request) (*http.Response, error) {
 					return nil, assert.AnError
@@ -511,10 +504,9 @@ func TestRequestContextReset(t *testing.T) {
 	})
 	target.EXPECT().ForwardHostHeader().Return(false)
 
-	ctx.PrepareUpstreamRequest(target)
-	ctx.ReplaceHeaders(http.Header{
-		"X-Foo-Bar": []string{"baz"},
-	})
+	ctx.PrepareUpstreamView(target)
+	ctx.SetHeader("X-Foo-Bar", "baz")
+	ctx.SetCookie("foo", "bar")
 
 	// WHEN
 	ctx.Reset()
@@ -524,14 +516,9 @@ func TestRequestContextReset(t *testing.T) {
 	require.Nil(t, ctx.req)
 	require.Nil(t, ctx.rt)
 	require.Empty(t, ctx.routingURL)
-	require.Empty(t, ctx.authority)
-	require.Nil(t, ctx.replacedHeaders)
-	require.Empty(t, ctx.forwardedHeader)
-	require.Empty(t, ctx.xForwardedForHeader)
-	require.Empty(t, ctx.xForwardedHostHeader)
-	require.Empty(t, ctx.xForwardedProtoHeader)
-	require.False(t, ctx.upstreamPrepared)
+	require.False(t, ctx.upstreamViewPrepared)
 	require.False(t, ctx.hasUpstreamTarget)
+	require.Empty(t, ctx.UpstreamHeaders())
 	require.Nil(t, ctx.UpstreamRequest())
 }
 
@@ -542,11 +529,11 @@ func TestRequestContextUpstreamRequest(t *testing.T) {
 		prepare  bool
 		expected bool
 	}{
-		"upstream request is not prepared": {
+		"upstream view is not prepared": {
 			prepare:  false,
 			expected: false,
 		},
-		"upstream request is prepared without target": {
+		"upstream view is prepared without target": {
 			prepare:  true,
 			expected: true,
 		},
@@ -558,7 +545,7 @@ func TestRequestContextUpstreamRequest(t *testing.T) {
 			ctx.Init(httptest.NewRecorder(), req, nil)
 
 			if tc.prepare {
-				ctx.PrepareUpstreamRequest(nil)
+				ctx.PrepareUpstreamView(nil)
 			}
 
 			// WHEN
@@ -570,75 +557,6 @@ func TestRequestContextUpstreamRequest(t *testing.T) {
 			} else {
 				assert.Nil(t, upstreamRequest)
 			}
-		})
-	}
-}
-
-func TestRequestContextMethod(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-	req.Header.Set("X-Forwarded-Method", http.MethodPatch)
-
-	ctx := &requestContext{RequestContext: requestcontext.New()}
-	ctx.Init(httptest.NewRecorder(), req, nil)
-	ctx.PrepareUpstreamRequest(nil)
-
-	// WHEN
-	method := ctx.Method()
-
-	// THEN
-	assert.Equal(t, http.MethodPatch, method)
-}
-
-func TestRequestContextAuthority(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		targetHost        string
-		forwardHostHeader bool
-		expected          string
-	}{
-		"without upstream target": {
-			expected: "foo.bar",
-		},
-		"host is forwarded": {
-			targetHost:        "upstream.local:8080",
-			forwardHostHeader: true,
-			expected:          "foo.bar",
-		},
-		"host is not forwarded": {
-			targetHost:        "upstream.local:8080",
-			forwardHostHeader: false,
-			expected:          "upstream.local:8080",
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-			req.Header.Set("X-Forwarded-Host", "bar.foo")
-
-			ctx := &requestContext{RequestContext: requestcontext.New()}
-			ctx.Init(httptest.NewRecorder(), req, nil)
-
-			if len(tc.targetHost) == 0 {
-				ctx.PrepareUpstreamRequest(nil)
-			} else {
-				target := mocks.NewUpstreamTargetMock(t)
-				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
-					targetURL.Host = tc.targetHost
-				})
-				target.EXPECT().ForwardHostHeader().Return(tc.forwardHostHeader)
-
-				ctx.PrepareUpstreamRequest(target)
-			}
-
-			// WHEN
-			authority := ctx.Authority()
-
-			// THEN
-			assert.Equal(t, tc.expected, authority)
 		})
 	}
 }
@@ -688,7 +606,7 @@ func TestRequestContextURL(t *testing.T) {
 			ctx.Init(httptest.NewRecorder(), req, nil)
 
 			if tc.target == nil {
-				ctx.PrepareUpstreamRequest(nil)
+				ctx.PrepareUpstreamView(nil)
 			} else {
 				target := mocks.NewUpstreamTargetMock(t)
 				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
@@ -696,7 +614,7 @@ func TestRequestContextURL(t *testing.T) {
 				})
 				target.EXPECT().ForwardHostHeader().Return(tc.forwardHostHeader)
 
-				ctx.PrepareUpstreamRequest(target)
+				ctx.PrepareUpstreamView(target)
 			}
 
 			// WHEN
@@ -713,53 +631,7 @@ func TestRequestContextURL(t *testing.T) {
 	}
 }
 
-func TestRequestContextAddHeader(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		name   string
-		value  string
-		assert func(t *testing.T, ctx *requestContext)
-	}{
-		"regular header": {
-			name:  "X-Foo-Bar",
-			value: "baz",
-			assert: func(t *testing.T, ctx *requestContext) {
-				t.Helper()
-
-				assert.Equal(t, []string{"baz"}, ctx.UpstreamHeaders().Values("X-Foo-Bar"))
-				assert.Equal(t, "foo.bar", ctx.Authority())
-			},
-		},
-		"Host header": {
-			name:  "host",
-			value: "bar.foo",
-			assert: func(t *testing.T, ctx *requestContext) {
-				t.Helper()
-
-				assert.Empty(t, ctx.UpstreamHeaders().Values("Host"))
-				assert.Equal(t, "bar.foo", ctx.Authority())
-			},
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-
-			ctx := &requestContext{RequestContext: requestcontext.New()}
-			ctx.Init(httptest.NewRecorder(), req, nil)
-			ctx.PrepareUpstreamRequest(nil)
-
-			// WHEN
-			ctx.AddHeader(tc.name, tc.value)
-
-			// THEN
-			tc.assert(t, ctx)
-		})
-	}
-}
-
-func TestRequestContextSetCookie(t *testing.T) {
+func TestRequestContextURLUsesEffectiveHost(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -767,27 +639,35 @@ func TestRequestContextSetCookie(t *testing.T) {
 
 	ctx := &requestContext{RequestContext: requestcontext.New()}
 	ctx.Init(httptest.NewRecorder(), req, nil)
-	ctx.PrepareUpstreamRequest(nil)
 
-	ctx.AddCookieForUpstream("foo", "bar")
+	target := mocks.NewUpstreamTargetMock(t)
+	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+		targetURL.Scheme = "http"
+		targetURL.Host = "upstream.local:8080"
+	})
+	target.EXPECT().ForwardHostHeader().Return(false)
+
+	ctx.PrepareUpstreamView(target)
 
 	// WHEN
-	ctx.SetCookie("foo", "baz")
+	ctx.SetHeader("Host", "bar.foo")
 
 	// THEN
-	require.Len(t, ctx.UpstreamCookies(), 1)
-	assert.Equal(t, "baz", ctx.UpstreamCookies()["foo"])
+	actual := ctx.URL()
+
+	assert.Equal(t, "bar.foo", actual.Host)
+	assert.Equal(t, "upstream.local:8080", ctx.routingURL.Host)
 }
 
-func TestRequestContextHeaderSnapshot(t *testing.T) {
+func TestRequestContextPreparedHeaders(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
 		configureRequest func(t *testing.T, req *http.Request)
 		updateContext    func(t *testing.T, ctx *requestContext)
-		assert           func(t *testing.T, ctx *requestContext, headers http.Header)
+		assert           func(t *testing.T, headers http.Header)
 	}{
-		"prepared headers are returned": {
+		"prepared headers reflect proxy sanitization and forwarding": {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -800,11 +680,11 @@ func TestRequestContextHeaderSnapshot(t *testing.T) {
 				req.Header.Set("X-Forwarded-Uri", "/foo")
 				req.Header.Set("X-Forwarded-Path", "/foo")
 			},
-			assert: func(t *testing.T, _ *requestContext, headers http.Header) {
+			assert: func(t *testing.T, headers http.Header) {
 				t.Helper()
 
 				assert.Equal(t, "baz", headers.Get("X-Foo-Bar"))
-				assert.Empty(t, headers.Get("Host"))
+				assert.Equal(t, "foo.bar", headers.Get("Host"))
 				assert.Empty(t, headers.Get("Connection"))
 				assert.Empty(t, headers.Get("X-Hop"))
 				assert.Empty(t, headers.Get("Keep-Alive"))
@@ -821,39 +701,21 @@ func TestRequestContextHeaderSnapshot(t *testing.T) {
 				assert.Equal(t, "https", headers.Get("X-Forwarded-Proto"))
 			},
 		},
-		"upstream changes are applied": {
+		"sanitized header can be added again by a finalizer": {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
-				req.Header.Set("X-Foo-Bar", "incoming")
-				req.Header.Set("Cookie", "foo=bar")
+				req.Header.Set("X-Forwarded-Method", http.MethodPatch)
 			},
 			updateContext: func(t *testing.T, ctx *requestContext) {
 				t.Helper()
 
-				ctx.AddHeader("X-Foo-Bar", "from-heimdall")
-				ctx.SetCookie("bar", "foo")
+				ctx.AddHeader("X-Forwarded-Method", http.MethodDelete)
 			},
-			assert: func(t *testing.T, _ *requestContext, headers http.Header) {
+			assert: func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				assert.Equal(t, []string{"from-heimdall"}, headers.Values("X-Foo-Bar"))
-				assert.Contains(t, headers.Get("Cookie"), "foo=bar")
-				assert.Contains(t, headers.Get("Cookie"), "bar=foo")
-			},
-		},
-		"snapshot is detached": {
-			configureRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				req.Header.Set("X-Foo-Bar", "bar")
-			},
-			assert: func(t *testing.T, ctx *requestContext, headers http.Header) {
-				t.Helper()
-
-				headers.Set("X-Foo-Bar", "changed")
-
-				assert.Equal(t, "bar", ctx.HeaderSnapshot().Get("X-Foo-Bar"))
+				assert.Equal(t, http.MethodDelete, headers.Get("X-Forwarded-Method"))
 			},
 		},
 	} {
@@ -867,61 +729,17 @@ func TestRequestContextHeaderSnapshot(t *testing.T) {
 
 			ctx := &requestContext{RequestContext: requestcontext.New()}
 			ctx.Init(httptest.NewRecorder(), req, nil)
-			ctx.PrepareUpstreamRequest(nil)
+			ctx.PrepareUpstreamView(nil)
 
 			if tc.updateContext != nil {
 				tc.updateContext(t, ctx)
 			}
 
 			// WHEN
-			headers := ctx.HeaderSnapshot()
+			headers := ctx.Headers()
 
 			// THEN
-			tc.assert(t, ctx, headers)
-		})
-	}
-}
-
-func TestRequestContextReplaceHeaders(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		headers  http.Header
-		expected http.Header
-	}{
-		"headers are replaced": {
-			headers: http.Header{
-				"X-Foo-Bar": []string{"baz"},
-				"Host":      []string{"bar.foo"},
-			},
-			expected: http.Header{
-				"X-Foo-Bar": []string{"baz"},
-			},
-		},
-		"headers are replaced with empty headers": {
-			headers:  nil,
-			expected: http.Header{},
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-			req.Header.Set("X-Original", "original")
-
-			ctx := &requestContext{RequestContext: requestcontext.New()}
-			ctx.Init(httptest.NewRecorder(), req, nil)
-			ctx.PrepareUpstreamRequest(nil)
-
-			ctx.AddHeader("X-From-Heimdall", "foo")
-			ctx.SetCookie("foo", "bar")
-
-			// WHEN
-			ctx.ReplaceHeaders(tc.headers)
-
-			// THEN
-			assert.Empty(t, ctx.UpstreamHeaders())
-			assert.Empty(t, ctx.UpstreamCookies())
-			assert.Equal(t, tc.expected, ctx.HeaderSnapshot())
+			tc.assert(t, headers)
 		})
 	}
 }

@@ -335,9 +335,9 @@ func TestProxyService(t *testing.T) {
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
-						ctx.PrepareUpstreamRequest(target)
-						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
-						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
+						ctx.PrepareUpstreamView(target)
+						ctx.UpstreamRequest().AddHeader("X-Foo-Bar", "baz")
+						ctx.UpstreamRequest().SetCookie("X-Bar-Foo", "zab")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
 						methodMatched := ctx.Request().Method == http.MethodPost
@@ -384,7 +384,7 @@ func TestProxyService(t *testing.T) {
 				assert.JSONEq(t, `{ "foo": "bar" }`, string(data))
 			},
 		},
-		"successful rule execution - headers are replaced": {
+		"successful rule execution - headers are set": {
 			disableHTTP2: true,
 			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
@@ -426,15 +426,11 @@ func TestProxyService(t *testing.T) {
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
-						ctx.PrepareUpstreamRequest(target)
+						ctx.PrepareUpstreamView(target)
 
 						upstreamRequest := ctx.UpstreamRequest()
-						headers := upstreamRequest.HeaderSnapshot()
-
-						headers.Del("X-Foo-Bar")
-						headers.Set("X-Replaced", "foo")
-
-						upstreamRequest.ReplaceHeaders(headers)
+						upstreamRequest.SetHeader("X-Foo-Bar", "baz")
+						upstreamRequest.SetHeader("X-Set", "foo")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
 						methodMatched := ctx.Request().Method == http.MethodGet
@@ -449,8 +445,8 @@ func TestProxyService(t *testing.T) {
 				assert.Equal(t, http.MethodGet, req.Method)
 				assert.Equal(t, "/bar", req.URL.Path)
 
-				assert.Empty(t, req.Header.Get("X-Foo-Bar"))
-				assert.Equal(t, "foo", req.Header.Get("X-Replaced"))
+				assert.Equal(t, "baz", req.Header.Get("X-Foo-Bar"))
+				assert.Equal(t, "foo", req.Header.Get("X-Set"))
 				assert.Equal(t, "trailers", req.Header.Get("Te"))
 
 				rw.WriteHeader(http.StatusOK)
@@ -509,9 +505,9 @@ func TestProxyService(t *testing.T) {
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
-						ctx.PrepareUpstreamRequest(target)
-						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
-						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
+						ctx.PrepareUpstreamView(target)
+						ctx.UpstreamRequest().AddHeader("X-Foo-Bar", "baz")
+						ctx.UpstreamRequest().SetCookie("X-Bar-Foo", "zab")
 
 						pathMatched := ctx.Request().URL.Path == "/[id]/foobar"
 						methodMatched := ctx.Request().Method == http.MethodGet
@@ -599,9 +595,9 @@ func TestProxyService(t *testing.T) {
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
-						ctx.PrepareUpstreamRequest(target)
-						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
-						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
+						ctx.PrepareUpstreamView(target)
+						ctx.UpstreamRequest().AddHeader("X-Foo-Bar", "baz")
+						ctx.UpstreamRequest().SetCookie("X-Bar-Foo", "zab")
 
 						pathMatched := ctx.Request().URL.Path == "/[barfoo]"
 						methodMatched := ctx.Request().Method == http.MethodPost
@@ -696,8 +692,8 @@ func TestProxyService(t *testing.T) {
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
-						ctx.PrepareUpstreamRequest(target)
-						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
+						ctx.PrepareUpstreamView(target)
+						ctx.UpstreamRequest().AddHeader("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
 						methodMatched := ctx.Request().Method == http.MethodGet
@@ -895,8 +891,8 @@ func TestProxyService(t *testing.T) {
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
-						ctx.PrepareUpstreamRequest(target)
-						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
+						ctx.PrepareUpstreamView(target)
+						ctx.UpstreamRequest().AddHeader("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
 						methodMatched := ctx.Request().Method == http.MethodGet
@@ -1016,8 +1012,8 @@ func TestProxyService(t *testing.T) {
 
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
-						ctx.PrepareUpstreamRequest(target)
-						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
+						ctx.PrepareUpstreamView(target)
+						ctx.UpstreamRequest().AddHeader("X-Foo-Bar", "baz")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
 						methodMatched := ctx.Request().Method == http.MethodGet
@@ -1243,10 +1239,7 @@ func TestWebSocketSupport(t *testing.T) {
 
 	exec.EXPECT().Execute(
 		mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
-			ctx.PrepareUpstreamRequest(target)
-
-			upstreamRequest := ctx.UpstreamRequest()
-			upstreamRequest.ReplaceHeaders(upstreamRequest.HeaderSnapshot())
+			ctx.PrepareUpstreamView(target)
 
 			pathMatched := ctx.Request().URL.Path == "/foo"
 			methodMatched := ctx.Request().Method == http.MethodGet
@@ -1357,7 +1350,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	exec.EXPECT().Execute(
 		mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
-			ctx.PrepareUpstreamRequest(target)
+			ctx.PrepareUpstreamView(target)
 
 			pathMatched := ctx.Request().URL.Path == "/foo"
 			methodMatched := ctx.Request().Method == http.MethodGet

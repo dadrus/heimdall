@@ -30,9 +30,19 @@ import (
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
+var _ pipeline.UpstreamRequest = (*RequestContext)(nil)
+
+type requestFunctions struct {
+	ctx *RequestContext
+}
+
+func (f *requestFunctions) Header(name string) string  { return f.ctx.Header(name) }
+func (f *requestFunctions) Cookie(name string) string  { return f.ctx.Cookie(name) }
+func (f *requestFunctions) Headers() map[string]string { return f.ctx.requestHeaders() }
+func (f *requestFunctions) Body() any                  { return f.ctx.Body() }
+
 type RequestContext struct {
 	upstreamHeaders http.Header
-	upstreamCookies map[string]string
 	hmdlReq         *pipeline.Request
 	req             *http.Request
 	ctx             context.Context //nolint: containedctx
@@ -52,13 +62,12 @@ func (r *RequestContext) UpstreamRequest() pipeline.UpstreamRequest {
 func New() *RequestContext {
 	rc := &RequestContext{
 		upstreamHeaders: make(http.Header, 6),
-		upstreamCookies: make(map[string]string, 4),
 		outputs:         make(pipeline.Results, 10),
 		headers:         make(map[string]string, 10),
 	}
 
 	rc.hmdlReq = &pipeline.Request{
-		RequestFunctions:  rc,
+		RequestFunctions:  &requestFunctions{ctx: rc},
 		URL:               &pipeline.URL{},
 		ClientIPAddresses: make([]string, 0, 10),
 	}
@@ -83,13 +92,64 @@ func (r *RequestContext) Reset() {
 
 	clear(r.outputs)
 	clear(r.headers)
-	clear(r.upstreamCookies)
 	clear(r.upstreamHeaders)
 
 	r.hmdlReq.URL.URL = url.URL{}
 	r.hmdlReq.Method = ""
 	r.hmdlReq.ClientIPAddresses = r.hmdlReq.ClientIPAddresses[:0]
 	clear(r.hmdlReq.URL.Captures)
+}
+
+func (r *RequestContext) Method() string {
+	return r.hmdlReq.Method
+}
+
+func (r *RequestContext) URL() url.URL {
+	result := r.hmdlReq.URL.URL
+	result.Host = r.effectiveHost()
+
+	return result
+}
+
+func (r *RequestContext) Headers() http.Header {
+	headers := r.req.Header.Clone()
+	headers.Set("Host", r.hmdlReq.URL.Host)
+
+	r.applyHeaderOverlay(headers)
+
+	return headers
+}
+
+func (r *RequestContext) AddHeader(name, value string) {
+	r.upstreamHeaders.Add(name, value)
+}
+
+func (r *RequestContext) SetHeader(name, value string) {
+	r.upstreamHeaders.Set(name, value)
+}
+
+func (r *RequestContext) SetCookie(name, value string) {
+	req := http.Request{
+		Header: make(http.Header, 1),
+	}
+
+	if values := r.effectiveHeaderValues("Cookie"); len(values) != 0 {
+		req.Header["Cookie"] = values
+	}
+
+	cookies := req.Cookies()
+
+	req.Header.Del("Cookie")
+
+	for _, cookie := range cookies {
+		if cookie.Name != name {
+			req.AddCookie(cookie)
+		}
+	}
+
+	req.AddCookie(&http.Cookie{Name: name, Value: value}) //nolint:gosec
+
+	r.upstreamHeaders["Cookie"] = req.Header.Values("Cookie")
 }
 
 func (r *RequestContext) Header(name string) string {
@@ -109,7 +169,7 @@ func (r *RequestContext) Cookie(name string) string {
 	return ""
 }
 
-func (r *RequestContext) Headers() map[string]string {
+func (r *RequestContext) requestHeaders() map[string]string {
 	if len(r.headers) == 0 {
 		r.headers["Host"] = r.hmdlReq.URL.Host
 		for k, v := range r.req.Header {
@@ -160,20 +220,47 @@ func (r *RequestContext) RawBody() (io.ReadCloser, error) {
 	return io.NopCloser(bytes.NewReader(body)), nil
 }
 
-func (r *RequestContext) Request() *pipeline.Request              { return r.hmdlReq }
-func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
-func (r *RequestContext) UpstreamHeaders() http.Header            { return r.upstreamHeaders }
-func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
-func (r *RequestContext) UpstreamCookies() map[string]string      { return r.upstreamCookies }
-func (r *RequestContext) Context() context.Context                { return r.ctx }
-func (r *RequestContext) SetError(err error)                      { r.err = err }
-func (r *RequestContext) Error() error                            { return r.err }
-func (r *RequestContext) Outputs() pipeline.Results               { return r.outputs }
+func (r *RequestContext) Request() *pipeline.Request   { return r.hmdlReq }
+func (r *RequestContext) UpstreamHeaders() http.Header { return r.upstreamHeaders }
+func (r *RequestContext) Context() context.Context     { return r.ctx }
+func (r *RequestContext) SetError(err error)           { r.err = err }
+func (r *RequestContext) Error() error                 { return r.err }
+func (r *RequestContext) Outputs() pipeline.Results    { return r.outputs }
 
 func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
 	r.ctx = ctx
 
 	return r
+}
+
+func (r *RequestContext) effectiveHeaderValues(name string) []string {
+	name = http.CanonicalHeaderKey(name)
+
+	if values, ok := r.upstreamHeaders[name]; ok {
+		return values
+	}
+
+	if name == "Host" {
+		return []string{r.hmdlReq.URL.Host}
+	}
+
+	return r.req.Header[name]
+}
+
+func (r *RequestContext) effectiveHost() string {
+	return strings.Join(r.effectiveHeaderValues("Host"), ",")
+}
+
+func (r *RequestContext) applyHeaderOverlay(headers http.Header) {
+	for name, values := range r.upstreamHeaders {
+		if values == nil {
+			headers.Del(name)
+
+			continue
+		}
+
+		headers[name] = append([]string(nil), values...)
+	}
 }
 
 func (r *RequestContext) readRawBody() ([]byte, error) {
