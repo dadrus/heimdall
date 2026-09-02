@@ -50,7 +50,7 @@ func (p *executePipeline) Execute(
 		return err
 	}
 
-	ctx.PrepareUpstreamRequest(target)
+	ctx.PrepareUpstreamView(target)
 
 	return p.finalizers.Execute(ctx, sub)
 }

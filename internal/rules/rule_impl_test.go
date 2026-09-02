@@ -169,7 +169,7 @@ func TestRuleExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
-				ctx.EXPECT().PrepareUpstreamRequest(nil)
+				ctx.EXPECT().PrepareUpstreamView(nil)
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
 					func(sub pipeline.Subject) bool { return sub != nil },
@@ -201,7 +201,7 @@ func TestRuleExecute(t *testing.T) {
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{URL: &pipeline.URL{}})
 				ctx.EXPECT().SetError(testErr)
-				ctx.EXPECT().PrepareUpstreamRequest(nil)
+				ctx.EXPECT().PrepareUpstreamView(nil)
 
 				authenticator.EXPECT().Execute(ctx, mock.MatchedBy(
 					func(sub pipeline.Subject) bool { return sub != nil },
@@ -308,7 +308,7 @@ func TestRuleExecute(t *testing.T) {
 				}
 
 				ctx.EXPECT().Request().Return(req)
-				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+				ctx.EXPECT().PrepareUpstreamView(mock.Anything).
 					Run(func(target pipeline.UpstreamTarget) {
 						require.NotNil(t, target)
 
@@ -361,7 +361,7 @@ func TestRuleExecute(t *testing.T) {
 				}
 
 				ctx.EXPECT().Request().Return(req)
-				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+				ctx.EXPECT().PrepareUpstreamView(mock.Anything).
 					Run(func(target pipeline.UpstreamTarget) {
 						require.NotNil(t, target)
 
@@ -412,7 +412,7 @@ func TestRuleExecute(t *testing.T) {
 				}
 
 				ctx.EXPECT().Request().Return(req)
-				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+				ctx.EXPECT().PrepareUpstreamView(mock.Anything).
 					Run(func(target pipeline.UpstreamTarget) {
 						require.NotNil(t, target)
 
@@ -464,7 +464,7 @@ func TestRuleExecute(t *testing.T) {
 				}
 
 				ctx.EXPECT().Request().Return(req)
-				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+				ctx.EXPECT().PrepareUpstreamView(mock.Anything).
 					Run(func(target pipeline.UpstreamTarget) {
 						require.NotNil(t, target)
 
@@ -515,7 +515,7 @@ func TestRuleExecute(t *testing.T) {
 				}
 
 				ctx.EXPECT().Request().Return(req)
-				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+				ctx.EXPECT().PrepareUpstreamView(mock.Anything).
 					Run(func(target pipeline.UpstreamTarget) {
 						require.NotNil(t, target)
 
@@ -562,7 +562,7 @@ func TestRuleExecute(t *testing.T) {
 				req := &pipeline.Request{URL: &pipeline.URL{URL: *targetURL}}
 
 				ctx.EXPECT().Request().Return(req)
-				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+				ctx.EXPECT().PrepareUpstreamView(mock.Anything).
 					Run(func(target pipeline.UpstreamTarget) {
 						require.NotNil(t, target)
 
@@ -606,7 +606,7 @@ func TestRuleExecute(t *testing.T) {
 				req := &pipeline.Request{URL: &pipeline.URL{URL: *targetURL}}
 
 				ctx.EXPECT().Request().Return(req)
-				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+				ctx.EXPECT().PrepareUpstreamView(mock.Anything).
 					Run(func(target pipeline.UpstreamTarget) {
 						require.NotNil(t, target)
 
@@ -650,7 +650,7 @@ func TestRuleExecute(t *testing.T) {
 				req := &pipeline.Request{URL: &pipeline.URL{URL: *targetURL}}
 
 				ctx.EXPECT().Request().Return(req)
-				ctx.EXPECT().PrepareUpstreamRequest(mock.Anything).
+				ctx.EXPECT().PrepareUpstreamView(mock.Anything).
 					Run(func(target pipeline.UpstreamTarget) {
 						require.NotNil(t, target)
 
