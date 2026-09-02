@@ -169,17 +169,6 @@ func (r *RequestContext) Cookie(name string) string {
 	return ""
 }
 
-func (r *RequestContext) requestHeaders() map[string]string {
-	if len(r.headers) == 0 {
-		r.headers["Host"] = r.hmdlReq.URL.Host
-		for k, v := range r.req.Header {
-			r.headers[textproto.CanonicalMIMEHeaderKey(k)] = strings.Join(v, ",")
-		}
-	}
-
-	return r.headers
-}
-
 func (r *RequestContext) Body() any {
 	if r.savedBody == nil {
 		body, err := r.readRawBody()
@@ -284,6 +273,17 @@ func (r *RequestContext) readRawBody() ([]byte, error) {
 	r.req.Body = io.NopCloser(bytes.NewReader(body))
 
 	return r.rawBody, nil
+}
+
+func (r *RequestContext) requestHeaders() map[string]string {
+	if len(r.headers) == 0 {
+		r.headers["Host"] = r.hmdlReq.URL.Host
+		for k, v := range r.req.Header {
+			r.headers[textproto.CanonicalMIMEHeaderKey(k)] = strings.Join(v, ",")
+		}
+	}
+
+	return r.headers
 }
 
 func requestClientIPs(ips []string, req *http.Request) []string {

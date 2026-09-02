@@ -250,7 +250,7 @@ func (r *RequestContext) SetCookie(name, value string) {
 		}
 	}
 
-	req.AddCookie(&http.Cookie{Name: name, Value: value})
+	req.AddCookie(&http.Cookie{Name: name, Value: value}) //nolint:gosec
 
 	r.upstreamHeaders["Cookie"] = req.Header.Values("Cookie")
 }
