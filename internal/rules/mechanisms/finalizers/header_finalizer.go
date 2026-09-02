@@ -106,7 +106,7 @@ func (f *headerFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 		// Split the rendered value into multiple values if newline-separated
 		for v := range strings.SplitSeq(value, "\n") {
 			if len(v) != 0 {
-				ctx.AddHeaderForUpstream(name, v)
+				ctx.UpstreamRequest().AddHeader(name, v)
 			}
 		}
 	}

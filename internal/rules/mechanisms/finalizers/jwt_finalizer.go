@@ -166,7 +166,7 @@ func (f *jwtFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error
 		}
 	}
 
-	ctx.AddHeaderForUpstream(f.headerName, f.headerScheme+" "+jwtToken)
+	ctx.UpstreamRequest().AddHeader(f.headerName, f.headerScheme+" "+jwtToken)
 
 	return nil
 }

@@ -332,11 +332,14 @@ cookies:
 				reqf := mocks.NewRequestFunctionsMock(t)
 				reqf.EXPECT().Header("X-Foo").Return("Bar")
 
-				ctx.EXPECT().AddCookieForUpstream("foo", "baz")
-				ctx.EXPECT().AddCookieForUpstream("bar", "FooBar")
-				ctx.EXPECT().AddCookieForUpstream("baz", "bar")
-				ctx.EXPECT().AddCookieForUpstream("x_foo", "Bar")
-				ctx.EXPECT().AddCookieForUpstream("x_bar", "bar")
+				upstreamRequest := mocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().SetCookie("foo", "baz")
+				upstreamRequest.EXPECT().SetCookie("bar", "FooBar")
+				upstreamRequest.EXPECT().SetCookie("baz", "bar")
+				upstreamRequest.EXPECT().SetCookie("x_foo", "Bar")
+				upstreamRequest.EXPECT().SetCookie("x_bar", "bar")
+
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqf})
 				ctx.EXPECT().Outputs().Return(pipeline.Results{"foo": pipeline.NewResult("bar")})
 			},

@@ -101,7 +101,7 @@ func (f *cookieFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 
 		logger.Debug().Str("_value", value).Msg("Rendered template")
 
-		ctx.AddCookieForUpstream(name, value)
+		ctx.UpstreamRequest().SetCookie(name, value)
 	}
 
 	return nil

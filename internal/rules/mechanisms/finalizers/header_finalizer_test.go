@@ -352,13 +352,15 @@ headers:
 				reqf := mocks.NewRequestFunctionsMock(t)
 				reqf.EXPECT().Header("X-Foo").Return("Bar")
 
-				ctx.EXPECT().AddHeaderForUpstream("foo", "baz")
-				ctx.EXPECT().AddHeaderForUpstream("bar", "FooBar")
-				ctx.EXPECT().AddHeaderForUpstream("baz", "bar")
-				ctx.EXPECT().AddHeaderForUpstream("X-Baz", "Bar")
-				ctx.EXPECT().AddHeaderForUpstream("X-Foo", "bar")
-				ctx.EXPECT().AddHeaderForUpstream("X-Result", "from-result")
+				upstreamRequest := mocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().AddHeader("foo", "baz")
+				upstreamRequest.EXPECT().AddHeader("bar", "FooBar")
+				upstreamRequest.EXPECT().AddHeader("baz", "bar")
+				upstreamRequest.EXPECT().AddHeader("X-Baz", "Bar")
+				upstreamRequest.EXPECT().AddHeader("X-Foo", "bar")
+				upstreamRequest.EXPECT().AddHeader("X-Result", "from-result")
 
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqf})
 
 				headers := make(http.Header)
@@ -386,10 +388,12 @@ headers:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group1")
-				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group2")
-				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group3")
+				upstreamRequest := mocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().AddHeader("Impersonation-Group", "group1")
+				upstreamRequest.EXPECT().AddHeader("Impersonation-Group", "group2")
+				upstreamRequest.EXPECT().AddHeader("Impersonation-Group", "group3")
 
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
 				ctx.EXPECT().Request().Return(&pipeline.Request{})
 				ctx.EXPECT().Outputs().Return(pipeline.Results{"foo": pipeline.NewResult(map[string]any{})})
 			},

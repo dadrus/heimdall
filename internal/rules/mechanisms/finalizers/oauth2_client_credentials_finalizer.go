@@ -229,7 +229,7 @@ func (f *oauth2ClientCredentialsFinalizer) Execute(ctx pipeline.Context, _ pipel
 		headerScheme = f.headerScheme
 	}
 
-	ctx.AddHeaderForUpstream(f.headerName, headerScheme+" "+token.AccessToken)
+	ctx.UpstreamRequest().AddHeader(f.headerName, headerScheme+" "+token.AccessToken)
 
 	return nil
 }
