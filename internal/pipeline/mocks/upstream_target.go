@@ -38,8 +38,8 @@ func (_m *UpstreamTargetMock) EXPECT() *UpstreamTargetMock_Expecter {
 }
 
 // ApplyTo provides a mock function for the type UpstreamTargetMock
-func (_mock *UpstreamTargetMock) ApplyTo(uRL *url.URL) {
-	_mock.Called(uRL)
+func (_mock *UpstreamTargetMock) ApplyTo(url1 *url.URL) {
+	_mock.Called(url1)
 	return
 }
 
@@ -49,12 +49,12 @@ type UpstreamTargetMock_ApplyTo_Call struct {
 }
 
 // ApplyTo is a helper method to define mock.On call
-//   - uRL *url.URL
-func (_e *UpstreamTargetMock_Expecter) ApplyTo(uRL any) *UpstreamTargetMock_ApplyTo_Call {
-	return &UpstreamTargetMock_ApplyTo_Call{Call: _e.mock.On("ApplyTo", uRL)}
+//   - url1 *url.URL
+func (_e *UpstreamTargetMock_Expecter) ApplyTo(url1 any) *UpstreamTargetMock_ApplyTo_Call {
+	return &UpstreamTargetMock_ApplyTo_Call{Call: _e.mock.On("ApplyTo", url1)}
 }
 
-func (_c *UpstreamTargetMock_ApplyTo_Call) Run(run func(uRL *url.URL)) *UpstreamTargetMock_ApplyTo_Call {
+func (_c *UpstreamTargetMock_ApplyTo_Call) Run(run func(url1 *url.URL)) *UpstreamTargetMock_ApplyTo_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 *url.URL
 		if args[0] != nil {
@@ -72,7 +72,7 @@ func (_c *UpstreamTargetMock_ApplyTo_Call) Return() *UpstreamTargetMock_ApplyTo_
 	return _c
 }
 
-func (_c *UpstreamTargetMock_ApplyTo_Call) RunAndReturn(run func(uRL *url.URL)) *UpstreamTargetMock_ApplyTo_Call {
+func (_c *UpstreamTargetMock_ApplyTo_Call) RunAndReturn(run func(url1 *url.URL)) *UpstreamTargetMock_ApplyTo_Call {
 	_c.Run(run)
 	return _c
 }

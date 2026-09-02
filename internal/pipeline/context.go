@@ -24,9 +24,6 @@ type Context interface {
 	Request() *Request
 	UpstreamRequest() UpstreamRequest
 
-	AddHeaderForUpstream(name, value string)
-	AddCookieForUpstream(name, value string)
-
 	Context() context.Context
 	WithParent(ctx context.Context) Context
 

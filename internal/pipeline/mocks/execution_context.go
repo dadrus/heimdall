@@ -38,98 +38,6 @@ func (_m *ExecutionContextMock) EXPECT() *ExecutionContextMock_Expecter {
 	return &ExecutionContextMock_Expecter{mock: &_m.Mock}
 }
 
-// AddCookieForUpstream provides a mock function for the type ExecutionContextMock
-func (_mock *ExecutionContextMock) AddCookieForUpstream(name string, value string) {
-	_mock.Called(name, value)
-	return
-}
-
-// ExecutionContextMock_AddCookieForUpstream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddCookieForUpstream'
-type ExecutionContextMock_AddCookieForUpstream_Call struct {
-	*mock.Call
-}
-
-// AddCookieForUpstream is a helper method to define mock.On call
-//   - name string
-//   - value string
-func (_e *ExecutionContextMock_Expecter) AddCookieForUpstream(name any, value any) *ExecutionContextMock_AddCookieForUpstream_Call {
-	return &ExecutionContextMock_AddCookieForUpstream_Call{Call: _e.mock.On("AddCookieForUpstream", name, value)}
-}
-
-func (_c *ExecutionContextMock_AddCookieForUpstream_Call) Run(run func(name string, value string)) *ExecutionContextMock_AddCookieForUpstream_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ExecutionContextMock_AddCookieForUpstream_Call) Return() *ExecutionContextMock_AddCookieForUpstream_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *ExecutionContextMock_AddCookieForUpstream_Call) RunAndReturn(run func(name string, value string)) *ExecutionContextMock_AddCookieForUpstream_Call {
-	_c.Run(run)
-	return _c
-}
-
-// AddHeaderForUpstream provides a mock function for the type ExecutionContextMock
-func (_mock *ExecutionContextMock) AddHeaderForUpstream(name string, value string) {
-	_mock.Called(name, value)
-	return
-}
-
-// ExecutionContextMock_AddHeaderForUpstream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddHeaderForUpstream'
-type ExecutionContextMock_AddHeaderForUpstream_Call struct {
-	*mock.Call
-}
-
-// AddHeaderForUpstream is a helper method to define mock.On call
-//   - name string
-//   - value string
-func (_e *ExecutionContextMock_Expecter) AddHeaderForUpstream(name any, value any) *ExecutionContextMock_AddHeaderForUpstream_Call {
-	return &ExecutionContextMock_AddHeaderForUpstream_Call{Call: _e.mock.On("AddHeaderForUpstream", name, value)}
-}
-
-func (_c *ExecutionContextMock_AddHeaderForUpstream_Call) Run(run func(name string, value string)) *ExecutionContextMock_AddHeaderForUpstream_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ExecutionContextMock_AddHeaderForUpstream_Call) Return() *ExecutionContextMock_AddHeaderForUpstream_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *ExecutionContextMock_AddHeaderForUpstream_Call) RunAndReturn(run func(name string, value string)) *ExecutionContextMock_AddHeaderForUpstream_Call {
-	_c.Run(run)
-	return _c
-}
-
 // Context provides a mock function for the type ExecutionContextMock
 func (_mock *ExecutionContextMock) Context() context.Context {
 	ret := _mock.Called()
@@ -266,24 +174,24 @@ func (_c *ExecutionContextMock_Outputs_Call) RunAndReturn(run func() pipeline.Re
 	return _c
 }
 
-// PrepareUpstreamRequest provides a mock function for the type ExecutionContextMock
-func (_mock *ExecutionContextMock) PrepareUpstreamRequest(target pipeline.UpstreamTarget) {
+// PrepareUpstreamView provides a mock function for the type ExecutionContextMock
+func (_mock *ExecutionContextMock) PrepareUpstreamView(target pipeline.UpstreamTarget) {
 	_mock.Called(target)
 	return
 }
 
-// ExecutionContextMock_PrepareUpstreamRequest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PrepareUpstreamRequest'
-type ExecutionContextMock_PrepareUpstreamRequest_Call struct {
+// ExecutionContextMock_PrepareUpstreamView_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'PrepareUpstreamView'
+type ExecutionContextMock_PrepareUpstreamView_Call struct {
 	*mock.Call
 }
 
-// PrepareUpstreamRequest is a helper method to define mock.On call
+// PrepareUpstreamView is a helper method to define mock.On call
 //   - target pipeline.UpstreamTarget
-func (_e *ExecutionContextMock_Expecter) PrepareUpstreamRequest(target any) *ExecutionContextMock_PrepareUpstreamRequest_Call {
-	return &ExecutionContextMock_PrepareUpstreamRequest_Call{Call: _e.mock.On("PrepareUpstreamRequest", target)}
+func (_e *ExecutionContextMock_Expecter) PrepareUpstreamView(target any) *ExecutionContextMock_PrepareUpstreamView_Call {
+	return &ExecutionContextMock_PrepareUpstreamView_Call{Call: _e.mock.On("PrepareUpstreamView", target)}
 }
 
-func (_c *ExecutionContextMock_PrepareUpstreamRequest_Call) Run(run func(target pipeline.UpstreamTarget)) *ExecutionContextMock_PrepareUpstreamRequest_Call {
+func (_c *ExecutionContextMock_PrepareUpstreamView_Call) Run(run func(target pipeline.UpstreamTarget)) *ExecutionContextMock_PrepareUpstreamView_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 pipeline.UpstreamTarget
 		if args[0] != nil {
@@ -296,12 +204,12 @@ func (_c *ExecutionContextMock_PrepareUpstreamRequest_Call) Run(run func(target 
 	return _c
 }
 
-func (_c *ExecutionContextMock_PrepareUpstreamRequest_Call) Return() *ExecutionContextMock_PrepareUpstreamRequest_Call {
+func (_c *ExecutionContextMock_PrepareUpstreamView_Call) Return() *ExecutionContextMock_PrepareUpstreamView_Call {
 	_c.Call.Return()
 	return _c
 }
 
-func (_c *ExecutionContextMock_PrepareUpstreamRequest_Call) RunAndReturn(run func(target pipeline.UpstreamTarget)) *ExecutionContextMock_PrepareUpstreamRequest_Call {
+func (_c *ExecutionContextMock_PrepareUpstreamView_Call) RunAndReturn(run func(target pipeline.UpstreamTarget)) *ExecutionContextMock_PrepareUpstreamView_Call {
 	_c.Run(run)
 	return _c
 }

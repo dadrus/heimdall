@@ -24,14 +24,11 @@ import (
 
 type UpstreamRequest interface {
 	Method() string
-	Authority() string
 	URL() url.URL
-
-	HeaderSnapshot() http.Header
-	ReplaceHeaders(header http.Header)
-
+	Headers() http.Header
 	RawBody() (io.ReadCloser, error)
 
 	AddHeader(name, value string)
+	SetHeader(name, value string)
 	SetCookie(name, value string)
 }

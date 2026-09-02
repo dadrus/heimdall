@@ -19,5 +19,5 @@ package pipeline
 type ExecutionContext interface {
 	Context
 
-	PrepareUpstreamRequest(target UpstreamTarget)
+	PrepareUpstreamView(target UpstreamTarget)
 }
