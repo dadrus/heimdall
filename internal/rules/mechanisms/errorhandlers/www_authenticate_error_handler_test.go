@@ -240,8 +240,8 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().SetError(pipeline.ErrAuthentication)
-				ctx.EXPECT().AddHeaderForUpstream("WWW-Authenticate",
+				upstreamRequest := mocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().AddHeader("WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
 						assert.True(t, strings.HasPrefix(val, "Basic "))
 						realm := strings.TrimLeft(val, "Basic ")
@@ -249,6 +249,9 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 
 						return true
 					}))
+
+				ctx.EXPECT().SetError(pipeline.ErrAuthentication)
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
@@ -261,8 +264,8 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().SetError(pipeline.ErrAuthentication)
-				ctx.EXPECT().AddHeaderForUpstream("WWW-Authenticate",
+				upstreamRequest := mocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().AddHeader("WWW-Authenticate",
 					mock.MatchedBy(func(val string) bool {
 						assert.True(t, strings.HasPrefix(val, "Basic "))
 						realm := strings.TrimLeft(val, "Basic ")
@@ -270,6 +273,9 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 
 						return true
 					}))
+
+				ctx.EXPECT().SetError(pipeline.ErrAuthentication)
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
 			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
