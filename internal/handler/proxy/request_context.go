@@ -212,12 +212,7 @@ func (r *requestContext) Finalize() error {
 	return errHolder.err
 }
 
-func (r *requestContext) URL() url.URL {
-	result := r.routingURL
-	result.Host = r.RequestContext.URL().Host
-
-	return result
-}
+func (r *requestContext) URL() url.URL { return r.routingURL }
 
 func (r *requestContext) rewriteRequest(proxyReq *httputil.ProxyRequest) {
 	proxyReq.Out.Method = r.Method()
@@ -307,6 +302,6 @@ func (r *requestContext) applyUpstreamView(req *http.Request) {
 		req.Header["Te"] = te
 	}
 
-	req.Host = r.RequestContext.URL().Host
+	req.Host = overlay.Get("Host")
 	req.Header.Del("Host")
 }

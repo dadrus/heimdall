@@ -199,12 +199,7 @@ func (r *RequestContext) PrepareUpstreamView(_ pipeline.UpstreamTarget) {
 
 func (r *RequestContext) Method() string { return r.hmdlReq.Method }
 
-func (r *RequestContext) URL() url.URL {
-	result := r.hmdlReq.URL.URL
-	result.Host = r.effectiveHost()
-
-	return result
-}
+func (r *RequestContext) URL() url.URL { return r.hmdlReq.URL.URL }
 
 func (r *RequestContext) Headers() http.Header {
 	headers := make(http.Header, len(r.reqHeaders)+len(r.upstreamHeaders))
@@ -224,6 +219,12 @@ func (r *RequestContext) Headers() http.Header {
 }
 
 func (r *RequestContext) AddHeader(name, value string) {
+	if strings.EqualFold(name, "Host") {
+		r.upstreamHeaders.Set(name, value)
+
+		return
+	}
+
 	r.upstreamHeaders.Add(name, value)
 }
 
@@ -367,10 +368,6 @@ func (r *RequestContext) effectiveHeaderValues(name string) []string {
 	}
 
 	return nil
-}
-
-func (r *RequestContext) effectiveHost() string {
-	return strings.Join(r.effectiveHeaderValues("Host"), ",")
 }
 
 func (r *RequestContext) applyHeaderOverlay(headers http.Header) {

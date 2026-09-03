@@ -281,7 +281,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, "someid", req.Header.Get("X-User-Id"))
 			},
 		},
-		"Host header is manually set for upstream": {
+		"Host header is manually added for upstream": {
 			upstreamCalled: true,
 			setup: func(t *testing.T, ctx requestcontext.Context, target *mocks.UpstreamTargetMock, upstreamURL *url.URL) {
 				t.Helper()
@@ -292,7 +292,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				target.EXPECT().ForwardHostHeader().Return(false)
 
 				ctx.PrepareUpstreamView(target)
-				ctx.UpstreamRequest().SetHeader("Host", "bar.foo")
+				ctx.UpstreamRequest().AddHeader("Host", "bar.foo")
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -567,10 +567,12 @@ func TestRequestContextURL(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		target            *url.URL
 		forwardHostHeader bool
-		expected          string
+		expectedURL       string
+		expectedHost      string
 	}{
 		"without upstream target": {
-			expected: "https://foo.bar/test?bar=baz",
+			expectedURL:  "https:///test?bar=baz",
+			expectedHost: "foo.bar",
 		},
 		"host is forwarded": {
 			target: &url.URL{
@@ -580,7 +582,8 @@ func TestRequestContextURL(t *testing.T) {
 				RawQuery: "foo=bar",
 			},
 			forwardHostHeader: true,
-			expected:          "http://foo.bar/rewritten?foo=bar",
+			expectedURL:       "http://upstream.local:8080/rewritten?foo=bar",
+			expectedHost:      "foo.bar",
 		},
 		"host is not forwarded": {
 			target: &url.URL{
@@ -590,7 +593,8 @@ func TestRequestContextURL(t *testing.T) {
 				RawQuery: "foo=bar",
 			},
 			forwardHostHeader: false,
-			expected:          "http://upstream.local:8080/rewritten?foo=bar",
+			expectedURL:       "http://upstream.local:8080/rewritten?foo=bar",
+			expectedHost:      "upstream.local:8080",
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
@@ -621,17 +625,19 @@ func TestRequestContextURL(t *testing.T) {
 			actual := ctx.URL()
 
 			// THEN
-			assert.Equal(t, tc.expected, actual.String())
+			assert.Equal(t, tc.expectedURL, actual.String())
+			assert.Equal(t, tc.expectedHost, ctx.Headers().Get("Host"))
 
 			actual.Host = "changed.local"
 
 			current := ctx.URL()
-			assert.Equal(t, tc.expected, current.String())
+			assert.Equal(t, tc.expectedURL, current.String())
+			assert.Equal(t, tc.expectedHost, ctx.Headers().Get("Host"))
 		})
 	}
 }
 
-func TestRequestContextURLUsesEffectiveHost(t *testing.T) {
+func TestRequestContextHostMutationDoesNotChangeURL(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -650,13 +656,16 @@ func TestRequestContextURLUsesEffectiveHost(t *testing.T) {
 	ctx.PrepareUpstreamView(target)
 
 	// WHEN
-	ctx.SetHeader("Host", "bar.foo")
+	ctx.AddHeader("Host", "bar.foo")
 
 	// THEN
 	actual := ctx.URL()
 
-	assert.Equal(t, "bar.foo", actual.Host)
+	assert.Equal(t, "upstream.local:8080", actual.Host)
+	assert.Equal(t, "bar.foo", ctx.Headers().Get("Host"))
 	assert.Equal(t, "upstream.local:8080", ctx.routingURL.Host)
+	assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
+	assert.Equal(t, "foo.bar", ctx.Request().Header("Host"))
 }
 
 func TestRequestContextPreparedHeaders(t *testing.T) {

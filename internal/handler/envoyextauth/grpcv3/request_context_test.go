@@ -284,8 +284,10 @@ func TestRequestContextUpstreamURL(t *testing.T) {
 
 	upstreamRequest.SetHeader("Host", "bar.foo")
 
-	assert.Equal(t, "bar.foo", upstreamRequest.URL().Host)
-	assert.Equal(t, "/test", upstreamRequest.URL().Path)
+	assert.Equal(t, "foo.bar:8080", upstreamRequest.URL().Host)
+	assert.Equal(t, "bar.foo", upstreamRequest.Headers().Get("Host"))
+	assert.Equal(t, "foo.bar:8080", ctx.Request().URL.Host)
+	assert.Equal(t, "foo.bar:8080", ctx.Request().Header("Host"))
 }
 
 func TestRequestContextAddHeader(t *testing.T) {
@@ -309,11 +311,11 @@ func TestRequestContextAddHeader(t *testing.T) {
 			expectedHeaderValues: []string{"bar", "foo"},
 			expectedURLHost:      "foo.bar",
 		},
-		"Host is treated as regular upstream header": {
-			name:                 "Host",
-			values:               []string{"bar.foo"},
-			expectedHeaderValues: []string{"bar.foo"},
-			expectedURLHost:      "bar.foo",
+		"Host is treated as singleton upstream header": {
+			name:                 "hOsT",
+			values:               []string{"bar.foo", "baz.foo"},
+			expectedHeaderValues: []string{"baz.foo"},
+			expectedURLHost:      "foo.bar",
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
@@ -349,6 +351,8 @@ func TestRequestContextAddHeader(t *testing.T) {
 				upstreamRequest.Headers().Values(tc.name),
 			)
 			assert.Equal(t, tc.expectedURLHost, upstreamRequest.URL().Host)
+			assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
+			assert.Equal(t, "foo.bar", ctx.Request().Header("Host"))
 		})
 	}
 }
@@ -389,7 +393,9 @@ func TestRequestContextSetHeader(t *testing.T) {
 	// THEN
 	assert.Equal(t, []string{"replaced"}, upstreamRequest.Headers().Values("X-Foo"))
 	assert.Equal(t, []string{"bar.foo"}, upstreamRequest.Headers().Values("Host"))
-	assert.Equal(t, "bar.foo", upstreamRequest.URL().Host)
+	assert.Equal(t, "foo.bar", upstreamRequest.URL().Host)
+	assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
+	assert.Equal(t, "foo.bar", ctx.Request().Header("Host"))
 }
 
 func TestRequestContextSetCookie(t *testing.T) {
@@ -560,6 +566,31 @@ func TestRequestContextFinalize(t *testing.T) {
 				header := findHeader(okResponse.GetHeaders(), "X-For-Upstream-1")
 				require.NotNil(t, header)
 				assert.Equal(t, "some-value-1,some-value-2,some-value-3", header.GetValue())
+			},
+		},
+		"successful with Host mutation": {
+			updateContext: func(t *testing.T, ctx pipeline.ExecutionContext) {
+				t.Helper()
+
+				ctx.PrepareUpstreamView(nil)
+
+				upstreamRequest := ctx.UpstreamRequest()
+				upstreamRequest.AddHeader("Host", "bar.foo")
+				upstreamRequest.AddHeader("hOsT", "baz.foo")
+			},
+			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, response)
+
+				okResponse := response.GetOkResponse()
+				require.NotNil(t, okResponse)
+				require.Len(t, okResponse.GetHeaders(), 1)
+
+				header := findHeader(okResponse.GetHeaders(), "Host")
+				require.NotNil(t, header)
+				assert.Equal(t, "baz.foo", header.GetValue())
 			},
 		},
 		"successful with some cookies": {

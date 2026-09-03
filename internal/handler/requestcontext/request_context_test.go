@@ -233,8 +233,10 @@ func TestRequestContextURL(t *testing.T) {
 
 	ctx.SetHeader("Host", "bar.foo")
 
-	assert.Equal(t, "bar.foo", ctx.URL().Host)
+	assert.Equal(t, "foo.bar", ctx.URL().Host)
+	assert.Equal(t, "bar.foo", ctx.Headers().Get("Host"))
 	assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
+	assert.Equal(t, "foo.bar", ctx.Request().Header("Host"))
 }
 
 func TestRequestContextAddHeader(t *testing.T) {
@@ -251,13 +253,15 @@ func TestRequestContextAddHeader(t *testing.T) {
 	ctx.AddHeader("X-Foo", "first")
 	ctx.AddHeader("X-Foo", "second")
 	ctx.AddHeader("Host", "bar.foo")
+	ctx.AddHeader("hOsT", "baz.foo")
 
 	// THEN
 	assert.Equal(t, []string{"first", "second"}, ctx.Headers().Values("X-Foo"))
-	assert.Equal(t, []string{"bar.foo"}, ctx.Headers().Values("Host"))
-	assert.Equal(t, "bar.foo", ctx.URL().Host)
+	assert.Equal(t, []string{"baz.foo"}, ctx.Headers().Values("Host"))
+	assert.Equal(t, "foo.bar", ctx.URL().Host)
 
 	assert.Equal(t, "incoming", ctx.Request().Header("X-Foo"))
+	assert.Equal(t, "foo.bar", ctx.Request().Header("Host"))
 	assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
 }
 
@@ -280,9 +284,10 @@ func TestRequestContextSetHeader(t *testing.T) {
 	// THEN
 	assert.Equal(t, []string{"replaced"}, ctx.Headers().Values("X-Foo"))
 	assert.Equal(t, []string{"bar.foo"}, ctx.Headers().Values("Host"))
-	assert.Equal(t, "bar.foo", ctx.URL().Host)
+	assert.Equal(t, "foo.bar", ctx.URL().Host)
 
 	assert.Equal(t, "incoming", ctx.Request().Header("X-Foo"))
+	assert.Equal(t, "foo.bar", ctx.Request().Header("Host"))
 	assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
 }
 
