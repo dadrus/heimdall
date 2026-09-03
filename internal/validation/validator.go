@@ -77,6 +77,7 @@ func NewValidator(opts ...Option) (Validator, error) {
 	}{
 		notAllowedValidator{},
 		urlValidator{},
+		mutableUpstreamHeaderValidator{},
 	} {
 		opts = append(opts, WithTagValidator(buildIn), WithErrorTranslator(buildIn))
 	}
