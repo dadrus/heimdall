@@ -17,7 +17,7 @@
 package errorhandlers
 
 import (
-	"strings"
+	"errors"
 	"testing"
 
 	"github.com/rs/zerolog/log"
@@ -232,56 +232,15 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		config           []byte
-		configureContext func(t *testing.T, ctx *mocks.ContextMock)
-		assert           func(t *testing.T, err error)
+		config       []byte
+		expChallenge string
 	}{
 		"with default realm": {
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
-				t.Helper()
-
-				upstreamRequest := mocks.NewUpstreamRequestMock(t)
-				upstreamRequest.EXPECT().AddHeader("WWW-Authenticate",
-					mock.MatchedBy(func(val string) bool {
-						assert.True(t, strings.HasPrefix(val, "Basic "))
-						realm := strings.TrimLeft(val, "Basic ")
-						assert.Equal(t, "realm=Please authenticate", realm)
-
-						return true
-					}))
-
-				ctx.EXPECT().SetError(pipeline.ErrAuthentication)
-				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-			},
+			expChallenge: "Basic realm=Please authenticate",
 		},
 		"with custom realm": {
-			config: []byte(`realm: "Your password please"`),
-			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
-				t.Helper()
-
-				upstreamRequest := mocks.NewUpstreamRequestMock(t)
-				upstreamRequest.EXPECT().AddHeader("WWW-Authenticate",
-					mock.MatchedBy(func(val string) bool {
-						assert.True(t, strings.HasPrefix(val, "Basic "))
-						realm := strings.TrimLeft(val, "Basic ")
-						assert.Equal(t, "realm=Your password please", realm)
-
-						return true
-					}))
-
-				ctx.EXPECT().SetError(pipeline.ErrAuthentication)
-				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
-			},
-			assert: func(t *testing.T, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-			},
+			config:       []byte(`realm: "Your password please"`),
+			expChallenge: "Basic realm=Your password please",
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
@@ -291,8 +250,17 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 
 			mctx := mocks.NewContextMock(t)
 			mctx.EXPECT().Context().Return(t.Context())
+			mctx.EXPECT().SetError(mock.MatchedBy(func(err error) bool {
+				challengeError, ok := errors.AsType[*pipeline.AuthenticationChallengeError](err)
+				if !assert.True(t, ok) {
+					return false
+				}
 
-			tc.configureContext(t, mctx)
+				assert.ErrorIs(t, err, pipeline.ErrAuthentication)
+				assert.Equal(t, tc.expChallenge, challengeError.Challenge())
+
+				return true
+			}))
 
 			validator, err := validation.NewValidator()
 			require.NoError(t, err)
@@ -312,7 +280,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 			err = step.Execute(mctx, nil)
 
 			// THEN
-			tc.assert(t, err)
+			require.NoError(t, err)
 		})
 	}
 }

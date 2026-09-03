@@ -44,6 +44,28 @@ func TestHandlerHandle(t *testing.T) {
 			expCode:   http.StatusUnauthorized,
 			expHeader: http.Header{},
 		},
+		"authentication challenge error default": {
+			handler: New(),
+			err: pipeline.NewAuthenticationChallengeError(
+				pipeline.ErrAuthentication,
+				`Basic realm="Please authenticate"`,
+			),
+			expCode: http.StatusUnauthorized,
+			expHeader: http.Header{
+				"Www-Authenticate": {`Basic realm="Please authenticate"`},
+			},
+		},
+		"authentication challenge error with overridden status code": {
+			handler: New(WithAuthenticationErrorCode(http.StatusContinue)),
+			err: pipeline.NewAuthenticationChallengeError(
+				pipeline.ErrAuthentication,
+				`Basic realm="Please authenticate"`,
+			),
+			expCode: http.StatusContinue,
+			expHeader: http.Header{
+				"Www-Authenticate": {`Basic realm="Please authenticate"`},
+			},
+		},
 		"authentication error overridden": {
 			handler:   New(WithAuthenticationErrorCode(http.StatusContinue)),
 			err:       errorchain.New(pipeline.ErrAuthentication),
@@ -54,7 +76,7 @@ func TestHandlerHandle(t *testing.T) {
 			handler:   New(WithVerboseErrors(true)),
 			err:       errorchain.New(pipeline.ErrAuthentication),
 			expCode:   http.StatusUnauthorized,
-			expHeader: http.Header{"Content-Type": []string{"text/html"}, "X-Content-Type-Options": []string{"nosniff"}},
+			expHeader: http.Header{"Content-Type": {"text/html"}, "X-Content-Type-Options": {"nosniff"}},
 			expBody:   "<p>authentication error</p>",
 		},
 		"authorization error default": {
@@ -73,7 +95,7 @@ func TestHandlerHandle(t *testing.T) {
 			handler:   New(WithVerboseErrors(true)),
 			err:       errorchain.New(pipeline.ErrAuthorization),
 			expCode:   http.StatusForbidden,
-			expHeader: http.Header{"Content-Type": []string{"text/plain"}, "X-Content-Type-Options": []string{"nosniff"}},
+			expHeader: http.Header{"Content-Type": {"text/plain"}, "X-Content-Type-Options": {"nosniff"}},
 			accept:    "text/plain",
 			expBody:   "authorization error: authorization error",
 		},
@@ -93,7 +115,7 @@ func TestHandlerHandle(t *testing.T) {
 			handler:   New(WithVerboseErrors(true)),
 			err:       errorchain.New(pipeline.ErrCommunicationTimeout),
 			expCode:   http.StatusBadGateway,
-			expHeader: http.Header{"Content-Type": []string{"application/xml"}, "X-Content-Type-Options": []string{"nosniff"}},
+			expHeader: http.Header{"Content-Type": {"application/xml"}, "X-Content-Type-Options": {"nosniff"}},
 			accept:    "application/xml",
 			expBody:   "<error><code>communicationTimeoutError</code><message>communication timeout error</message></error>",
 		},
@@ -113,7 +135,7 @@ func TestHandlerHandle(t *testing.T) {
 			handler:   New(WithVerboseErrors(true)),
 			err:       errorchain.New(pipeline.ErrCommunication),
 			expCode:   http.StatusBadGateway,
-			expHeader: http.Header{"Content-Type": []string{"application/json"}, "X-Content-Type-Options": []string{"nosniff"}},
+			expHeader: http.Header{"Content-Type": {"application/json"}, "X-Content-Type-Options": {"nosniff"}},
 			accept:    "application/json",
 			expBody:   `{"code":"communicationError","message":"communication error"}`,
 		},
@@ -133,7 +155,7 @@ func TestHandlerHandle(t *testing.T) {
 			handler:   New(WithVerboseErrors(true)),
 			err:       errorchain.New(pipeline.ErrArgument),
 			expCode:   http.StatusBadRequest,
-			expHeader: http.Header{"Content-Type": []string{"text/html"}, "X-Content-Type-Options": []string{"nosniff"}},
+			expHeader: http.Header{"Content-Type": {"text/html"}, "X-Content-Type-Options": {"nosniff"}},
 			expBody:   "<p>argument error</p>",
 		},
 		"no rule error default": {
@@ -152,20 +174,20 @@ func TestHandlerHandle(t *testing.T) {
 			handler:   New(WithVerboseErrors(true)),
 			err:       errorchain.New(pipeline.ErrNoRuleFound),
 			expCode:   http.StatusNotFound,
-			expHeader: http.Header{"Content-Type": []string{"text/html"}, "X-Content-Type-Options": []string{"nosniff"}},
+			expHeader: http.Header{"Content-Type": {"text/html"}, "X-Content-Type-Options": {"nosniff"}},
 			expBody:   "<p>no rule found</p>",
 		},
 		"redirect error": {
 			handler:   New(),
 			err:       &pipeline.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
 			expCode:   http.StatusFound,
-			expHeader: http.Header{"Location": []string{"http://foo.local"}},
+			expHeader: http.Header{"Location": {"http://foo.local"}},
 		},
 		"redirect error verbose without mime type": {
 			handler:   New(WithVerboseErrors(true)),
 			err:       &pipeline.RedirectError{RedirectTo: "http://foo.local", Code: http.StatusFound},
 			expCode:   http.StatusFound,
-			expHeader: http.Header{"Location": []string{"http://foo.local"}},
+			expHeader: http.Header{"Location": {"http://foo.local"}},
 		},
 		"internal error default": {
 			handler:   New(),
@@ -183,41 +205,35 @@ func TestHandlerHandle(t *testing.T) {
 			handler:   New(WithVerboseErrors(true)),
 			err:       errorchain.New(pipeline.ErrInternal),
 			expCode:   http.StatusInternalServerError,
-			expHeader: http.Header{"Content-Type": []string{"text/html"}, "X-Content-Type-Options": []string{"nosniff"}},
+			expHeader: http.Header{"Content-Type": {"text/html"}, "X-Content-Type-Options": {"nosniff"}},
 			expBody:   "<p>internal error</p>",
 		},
 		"generic error with body": {
 			handler: New(),
 			err: &pipeline.ResponseError{
-				ErrorResponse: pipeline.ErrorResponse{
-					Code:    http.StatusOK,
-					Body:    `{"foo": "bar"}`,
-					Headers: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
-				},
+				Code:    http.StatusOK,
+				Body:    `{"foo": "bar"}`,
+				Headers: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
 			},
 			expCode:   http.StatusOK,
 			expBody:   `{"foo": "bar"}`,
-			expHeader: http.Header{"Content-Type": []string{"application/json; charset=utf-8"}},
+			expHeader: http.Header{"Content-Type": {"application/json; charset=utf-8"}},
 		},
 		"generic error with multiple header values": {
 			handler: New(),
 			err: &pipeline.ResponseError{
-				ErrorResponse: pipeline.ErrorResponse{
-					Code: http.StatusOK,
-					Headers: map[string][]string{
-						"Set-Cookie": {"a=1", "b=2"},
-					},
+				Code: http.StatusOK,
+				Headers: map[string][]string{
+					"Set-Cookie": {"a=1", "b=2"},
 				},
 			},
 			expCode:   http.StatusOK,
-			expHeader: http.Header{"Set-Cookie": []string{"a=1", "b=2"}},
+			expHeader: http.Header{"Set-Cookie": {"a=1", "b=2"}},
 		},
 		"generic error without body and header": {
 			handler: New(),
 			err: &pipeline.ResponseError{
-				ErrorResponse: pipeline.ErrorResponse{
-					Code: http.StatusOK,
-				},
+				Code: http.StatusOK,
 			},
 			expHeader: http.Header{},
 			expCode:   http.StatusOK,
@@ -225,15 +241,13 @@ func TestHandlerHandle(t *testing.T) {
 		"generic error verbose": {
 			handler: New(WithVerboseErrors(true)),
 			err: &pipeline.ResponseError{
-				ErrorResponse: pipeline.ErrorResponse{
-					Code:    http.StatusAccepted,
-					Body:    `{"foo": "bar"}`,
-					Headers: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
-				},
+				Code:    http.StatusAccepted,
+				Body:    `{"foo": "bar"}`,
+				Headers: map[string][]string{"Content-Type": {"application/json; charset=utf-8"}},
 			},
 			expCode:   http.StatusAccepted,
 			expBody:   `{"foo": "bar"}`,
-			expHeader: http.Header{"Content-Type": []string{"application/json; charset=utf-8"}},
+			expHeader: http.Header{"Content-Type": {"application/json; charset=utf-8"}},
 		},
 		"response error without custom response falls back to default mapping": {
 			handler: New(),
@@ -243,6 +257,19 @@ func TestHandlerHandle(t *testing.T) {
 			expCode:   http.StatusUnauthorized,
 			expHeader: http.Header{},
 		},
+		"response error without custom response preserves authentication challenge": {
+			handler: New(),
+			err: &pipeline.ResponseError{
+				Cause: pipeline.NewAuthenticationChallengeError(
+					pipeline.ErrAuthentication,
+					`Basic realm="Please authenticate"`,
+				),
+			},
+			expCode: http.StatusUnauthorized,
+			expHeader: http.Header{
+				"Www-Authenticate": {`Basic realm="Please authenticate"`},
+			},
+		},
 		"escape error in text/html": {
 			// ensuring that error is escaped if it somehow should contain data from outside
 			// should not be possible (TM)
@@ -251,8 +278,8 @@ func TestHandlerHandle(t *testing.T) {
 			expCode: http.StatusForbidden,
 			accept:  "text/html",
 			expHeader: http.Header{
-				"Content-Type":           []string{"text/html"},
-				"X-Content-Type-Options": []string{"nosniff"},
+				"Content-Type":           {"text/html"},
+				"X-Content-Type-Options": {"nosniff"},
 			},
 			expBody: "<p>authorization error: &lt;script&gt;alert(1)&lt;/script&gt;</p>",
 		},

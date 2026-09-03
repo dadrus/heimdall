@@ -89,6 +89,10 @@ func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, er
 		err = responseError.Cause
 	}
 
+	if challengeError, ok := errors.AsType[*pipeline.AuthenticationChallengeError](err); ok {
+		rw.Header().Set("WWW-Authenticate", challengeError.Challenge())
+	}
+
 	switch {
 	case errors.Is(err, pipeline.ErrAuthentication):
 		h.onAuthenticationError(rw, req, err)

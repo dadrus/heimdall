@@ -86,8 +86,12 @@ func (eh *wwwAuthenticateErrorHandler) Execute(ctx pipeline.Context, _ pipeline.
 		Str("_id", eh.id).
 		Msg("Executing deprecated error handler. Migrate to 'generic' error handler.")
 
-	ctx.UpstreamRequest().AddHeader("WWW-Authenticate", "Basic realm="+eh.realm)
-	ctx.SetError(pipeline.ErrAuthentication)
+	ctx.SetError(
+		pipeline.NewAuthenticationChallengeError(
+			pipeline.ErrAuthentication,
+			"Basic realm="+eh.realm,
+		),
+	)
 
 	return nil
 }

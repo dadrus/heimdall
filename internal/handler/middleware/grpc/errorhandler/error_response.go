@@ -18,6 +18,7 @@ package errorhandler
 
 import (
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"html"
 
@@ -29,6 +30,7 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
@@ -69,6 +71,18 @@ func errorResponse(
 			{Header: &envoy_core.HeaderValue{Key: "Content-Type", Value: contentType}},
 		}
 		deniedResponse.Body = body
+	}
+
+	if challengeError, ok := errors.AsType[*pipeline.AuthenticationChallengeError](decErr); ok {
+		deniedResponse.Headers = append(
+			deniedResponse.Headers,
+			&envoy_core.HeaderValueOption{
+				Header: &envoy_core.HeaderValue{
+					Key:   "WWW-Authenticate",
+					Value: challengeError.Challenge(),
+				},
+			},
+		)
 	}
 
 	return &envoy_auth.CheckResponse{
