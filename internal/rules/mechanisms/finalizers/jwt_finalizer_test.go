@@ -108,6 +108,23 @@ signer:
 				require.ErrorContains(t, err, "failed creating secret informer")
 			},
 		},
+		"with non-mutable header": {
+			config: []byte(`
+signer:
+  secret:
+    source: foo
+    selector: bar
+header:
+  name: Connection
+`),
+			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "'header'.'name' is not a mutable upstream header")
+			},
+		},
 		"minimal valid config": {
 			config: []byte(`
 signer:

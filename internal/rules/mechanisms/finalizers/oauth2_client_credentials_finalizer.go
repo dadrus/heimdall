@@ -51,7 +51,7 @@ type oauth2ClientCredentials struct {
 }
 
 type oauth2ClientCredentialsHeaderConfig struct {
-	Name   string `mapstructure:"name"   validate:"required"`
+	Name   string `mapstructure:"name"   validate:"required,mutable_upstream_header"`
 	Scheme string `mapstructure:"scheme"`
 }
 

@@ -108,6 +108,23 @@ auth_method: bar
 				require.ErrorContains(t, err, "'auth_method' must be one of [basic_auth request_body]")
 			},
 		},
+		"with non-mutable header": {
+			config: []byte(`
+token_url: https://foo.bar
+credentials:
+  source: foo
+  selector: bar
+header:
+  name: Connection
+`),
+			assert: func(t *testing.T, err error, _ *oauth2ClientCredentialsFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "'header'.'name' is not a mutable upstream header")
+			},
+		},
 		"with minimal valid config with enforced and used TLS": {
 			enforceTLS: true,
 			config: []byte(`
