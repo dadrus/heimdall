@@ -242,81 +242,356 @@ func TestRequestContextURL(t *testing.T) {
 func TestRequestContextAddHeader(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-	req.Header.Set("X-Foo", "incoming")
+	for uc, tc := range map[string]struct {
+		configureRequest func(t *testing.T, req *http.Request)
+		mutate           func(t *testing.T, ctx *RequestContext)
+		assert           func(t *testing.T, ctx *RequestContext)
+	}{
+		"ordinary and Host headers are added": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
 
-	ctx := New()
-	ctx.Init(req)
+				req.Header.Set("X-Foo", "incoming")
+			},
+			mutate: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
 
-	// WHEN
-	ctx.AddHeader("X-Foo", "first")
-	ctx.AddHeader("X-Foo", "second")
-	ctx.AddHeader("Host", "bar.foo")
-	ctx.AddHeader("hOsT", "baz.foo")
+				ctx.AddHeader("X-Foo", "first")
+				ctx.AddHeader("X-Foo", "second")
+				ctx.AddHeader("Host", "bar.foo")
+				ctx.AddHeader("hOsT", "baz.foo")
+			},
+			assert: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
 
-	// THEN
-	assert.Equal(t, []string{"first", "second"}, ctx.Headers().Values("X-Foo"))
-	assert.Equal(t, []string{"baz.foo"}, ctx.Headers().Values("Host"))
-	assert.Equal(t, "foo.bar", ctx.URL().Host)
+				assert.Equal(t, []string{"first", "second"}, ctx.Headers().Values("X-Foo"))
+				assert.Equal(t, []string{"baz.foo"}, ctx.Headers().Values("Host"))
+				assert.Equal(t, "foo.bar", ctx.URL().Host)
 
-	assert.Equal(t, "incoming", ctx.Request().Header("X-Foo"))
-	assert.Equal(t, "foo.bar", ctx.Request().Header("Host"))
-	assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
+				assert.Equal(t, "incoming", ctx.Request().Header("X-Foo"))
+				assert.Equal(t, "foo.bar", ctx.Request().Header("Host"))
+				assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
+			},
+		},
+		"protected header is ignored": {
+			mutate: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				ctx.AddHeader("X-Forwarded-Method", http.MethodDelete)
+			},
+			assert: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				assert.Empty(t, ctx.Headers().Get("X-Forwarded-Method"))
+				assert.NotContains(t, ctx.UpstreamHeaders(), "X-Forwarded-Method")
+			},
+		},
+		"connection-specific header is ignored": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("Connection", "x-foo")
+				req.Header.Set("X-Foo", "incoming")
+			},
+			mutate: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				ctx.AddHeader("X-Foo", "from-heimdall")
+			},
+			assert: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				assert.Equal(t, "incoming", ctx.Headers().Get("X-Foo"))
+				assert.NotContains(t, ctx.UpstreamHeaders(), "X-Foo")
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
+			if tc.configureRequest != nil {
+				tc.configureRequest(t, req)
+			}
+
+			ctx := New()
+			ctx.Init(req)
+
+			// WHEN
+			tc.mutate(t, ctx)
+
+			// THEN
+			tc.assert(t, ctx)
+		})
+	}
 }
 
 func TestRequestContextSetHeader(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-	req.Header.Set("X-Foo", "incoming")
+	for uc, tc := range map[string]struct {
+		configureRequest func(t *testing.T, req *http.Request)
+		prepareContext   func(t *testing.T, ctx *RequestContext)
+		mutate           func(t *testing.T, ctx *RequestContext)
+		assert           func(t *testing.T, ctx *RequestContext)
+	}{
+		"ordinary and Host headers are set": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
 
-	ctx := New()
-	ctx.Init(req)
-	ctx.AddHeader("X-Foo", "first")
-	ctx.AddHeader("X-Foo", "second")
+				req.Header.Set("X-Foo", "incoming")
+			},
+			prepareContext: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
 
-	// WHEN
-	ctx.SetHeader("X-Foo", "replaced")
-	ctx.SetHeader("Host", "bar.foo")
+				ctx.AddHeader("X-Foo", "first")
+				ctx.AddHeader("X-Foo", "second")
+			},
+			mutate: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
 
-	// THEN
-	assert.Equal(t, []string{"replaced"}, ctx.Headers().Values("X-Foo"))
-	assert.Equal(t, []string{"bar.foo"}, ctx.Headers().Values("Host"))
-	assert.Equal(t, "foo.bar", ctx.URL().Host)
+				ctx.SetHeader("X-Foo", "replaced")
+				ctx.SetHeader("Host", "bar.foo")
+			},
+			assert: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
 
-	assert.Equal(t, "incoming", ctx.Request().Header("X-Foo"))
-	assert.Equal(t, "foo.bar", ctx.Request().Header("Host"))
-	assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
+				assert.Equal(t, []string{"replaced"}, ctx.Headers().Values("X-Foo"))
+				assert.Equal(t, []string{"bar.foo"}, ctx.Headers().Values("Host"))
+				assert.Equal(t, "foo.bar", ctx.URL().Host)
+
+				assert.Equal(t, "incoming", ctx.Request().Header("X-Foo"))
+				assert.Equal(t, "foo.bar", ctx.Request().Header("Host"))
+				assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
+			},
+		},
+		"protected header is ignored": {
+			mutate: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				ctx.SetHeader("Content-Length", "42")
+			},
+			assert: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				assert.Empty(t, ctx.Headers().Get("Content-Length"))
+				assert.NotContains(t, ctx.UpstreamHeaders(), "Content-Length")
+			},
+		},
+		"connection-specific header is ignored": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("Connection", "X-Foo")
+				req.Header.Set("X-Foo", "incoming")
+			},
+			mutate: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				ctx.SetHeader("X-Foo", "from-heimdall")
+			},
+			assert: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				assert.Equal(t, "incoming", ctx.Headers().Get("X-Foo"))
+				assert.NotContains(t, ctx.UpstreamHeaders(), "X-Foo")
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
+			if tc.configureRequest != nil {
+				tc.configureRequest(t, req)
+			}
+
+			ctx := New()
+			ctx.Init(req)
+
+			if tc.prepareContext != nil {
+				tc.prepareContext(t, ctx)
+			}
+
+			// WHEN
+			tc.mutate(t, ctx)
+
+			// THEN
+			tc.assert(t, ctx)
+		})
+	}
 }
-
 func TestRequestContextSetCookie(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-	req.Header.Add("Cookie", "foo=old; session=abc")
-	req.Header.Add("Cookie", "another=x; foo=older")
+	for uc, tc := range map[string]struct {
+		configureRequest func(t *testing.T, req *http.Request)
+		prepareContext   func(t *testing.T, ctx *RequestContext)
+		mutate           func(t *testing.T, ctx *RequestContext)
+		assert           func(t *testing.T, ctx *RequestContext)
+	}{
+		"cookie is set": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
 
-	ctx := New()
-	ctx.Init(req)
+				req.Header.Add("Cookie", "foo=old; session=abc")
+				req.Header.Add("Cookie", "another=x; foo=older")
+			},
+			mutate: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
 
-	// WHEN
-	ctx.SetCookie("foo", "new")
+				ctx.SetCookie("foo", "new")
+			},
+			assert: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
 
-	// THEN
-	require.Len(t, ctx.Headers().Values("Cookie"), 1)
-	assert.Equal(t, "session=abc; another=x; foo=new", ctx.Headers().Get("Cookie"))
+				require.Len(t, ctx.Headers().Values("Cookie"), 1)
+				assert.Equal(t, "session=abc; another=x; foo=new", ctx.Headers().Get("Cookie"))
 
-	ctx.SetCookie("session", "changed")
+				ctx.SetCookie("session", "changed")
 
-	require.Len(t, ctx.Headers().Values("Cookie"), 1)
-	assert.Equal(t, "another=x; foo=new; session=changed", ctx.Headers().Get("Cookie"))
-	assert.Equal(t, "old", ctx.Request().Cookie("foo"))
-	assert.Equal(t, "abc", ctx.Request().Cookie("session"))
+				require.Len(t, ctx.Headers().Values("Cookie"), 1)
+				assert.Equal(t, "another=x; foo=new; session=changed", ctx.Headers().Get("Cookie"))
+				assert.Equal(t, "old", ctx.Request().Cookie("foo"))
+				assert.Equal(t, "abc", ctx.Request().Cookie("session"))
+			},
+		},
+		"cookie is set if no Cookie header is present": {
+			mutate: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				ctx.SetCookie("foo", "bar")
+			},
+			assert: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				require.Len(t, ctx.Headers().Values("Cookie"), 1)
+				assert.Equal(t, "foo=bar", ctx.Headers().Get("Cookie"))
+				assert.Empty(t, ctx.Request().Header("Cookie"))
+			},
+		},
+		"malformed Cookie header is not mutated": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("Cookie", "foo=old; malformed; session=abc")
+			},
+			mutate: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				ctx.SetCookie("foo", "new")
+			},
+			assert: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				assert.Equal(t, "foo=old; malformed; session=abc", ctx.Headers().Get("Cookie"))
+				assert.NotContains(t, ctx.UpstreamHeaders(), "Cookie")
+			},
+		},
+		"malformed Cookie header in overlay is not mutated": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("Cookie", "foo=old; session=abc")
+			},
+			prepareContext: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				ctx.upstreamHeaders.Set("Cookie", "foo=overlay; malformed")
+			},
+			mutate: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				ctx.SetCookie("foo", "new")
+			},
+			assert: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				assert.Equal(t, "foo=overlay; malformed", ctx.Headers().Get("Cookie"))
+				assert.Equal(t, "foo=old; session=abc", ctx.Request().Header("Cookie"))
+			},
+		},
+		"connection-specific Cookie header is not mutated": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("Connection", "Cookie")
+				req.Header.Set("Cookie", "foo=old; session=abc")
+			},
+			mutate: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				ctx.SetCookie("foo", "new")
+			},
+			assert: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				assert.Equal(t, "foo=old; session=abc", ctx.Headers().Get("Cookie"))
+				assert.NotContains(t, ctx.UpstreamHeaders(), "Cookie")
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
+			if tc.configureRequest != nil {
+				tc.configureRequest(t, req)
+			}
+
+			ctx := New()
+			ctx.Init(req)
+
+			if tc.prepareContext != nil {
+				tc.prepareContext(t, ctx)
+			}
+
+			// WHEN
+			tc.mutate(t, ctx)
+
+			// THEN
+			tc.assert(t, ctx)
+		})
+	}
 }
 
+func TestRequestContextConnectionSpecificHeaders(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		configureRequest func(t *testing.T, req *http.Request)
+		expected         []string
+	}{
+		"no connection-specific headers": {},
+		"connection-specific headers are initialized": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Add("Connection", "X-Foo, x-bar")
+				req.Header.Add("Connection", " X-Baz ")
+			},
+			expected: []string{"X-Foo", "X-Bar", "X-Baz"},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
+			if tc.configureRequest != nil {
+				tc.configureRequest(t, req)
+			}
+
+			ctx := New()
+
+			// WHEN
+			ctx.Init(req)
+
+			// THEN
+			actual := make([]string, 0, len(tc.expected))
+			for name := range ctx.ConnectionSpecificHeaders() {
+				actual = append(actual, name)
+			}
+
+			assert.ElementsMatch(t, tc.expected, actual)
+		})
+	}
+}
 func TestRequestContextHeaders(t *testing.T) {
 	t.Parallel()
 

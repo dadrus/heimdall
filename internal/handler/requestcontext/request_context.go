@@ -20,11 +20,16 @@ import (
 	"bytes"
 	"context"
 	"io"
+	"iter"
+	"maps"
 	"net/http"
 	"net/textproto"
 	"net/url"
 	"strings"
 
+	"github.com/rs/zerolog"
+
+	"github.com/dadrus/heimdall/internal/headerpolicy"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
 	"github.com/dadrus/heimdall/internal/x/httpx"
@@ -53,6 +58,8 @@ type RequestContext struct {
 	rawBody   []byte
 	headers   map[string]string
 	outputs   pipeline.Results
+
+	connectionSpecificHeaders map[string]struct{}
 }
 
 func (r *RequestContext) UpstreamRequest() pipeline.UpstreamRequest {
@@ -61,9 +68,10 @@ func (r *RequestContext) UpstreamRequest() pipeline.UpstreamRequest {
 
 func New() *RequestContext {
 	rc := &RequestContext{
-		upstreamHeaders: make(http.Header, 6),
-		outputs:         make(pipeline.Results, 10),
-		headers:         make(map[string]string, 10),
+		upstreamHeaders:           make(http.Header, 6),
+		outputs:                   make(pipeline.Results, 10),
+		headers:                   make(map[string]string, 10),
+		connectionSpecificHeaders: make(map[string]struct{}, 5),
 	}
 
 	rc.hmdlReq = &pipeline.Request{
@@ -81,6 +89,10 @@ func (r *RequestContext) Init(req *http.Request) {
 	r.hmdlReq.URL.URL = extractURL(req)
 	r.hmdlReq.ClientIPAddresses = requestClientIPs(r.hmdlReq.ClientIPAddresses, req)
 	r.ctx = req.Context()
+
+	for name := range ConnectionOptions(req.Header) {
+		r.connectionSpecificHeaders[name] = struct{}{}
+	}
 }
 
 func (r *RequestContext) Reset() {
@@ -93,6 +105,7 @@ func (r *RequestContext) Reset() {
 	clear(r.outputs)
 	clear(r.headers)
 	clear(r.upstreamHeaders)
+	clear(r.connectionSpecificHeaders)
 
 	r.hmdlReq.URL.URL = url.URL{}
 	r.hmdlReq.Method = ""
@@ -116,6 +129,10 @@ func (r *RequestContext) Headers() http.Header {
 }
 
 func (r *RequestContext) AddHeader(name, value string) {
+	if !r.isHeaderMutationAllowed(name) {
+		return
+	}
+
 	if strings.EqualFold(name, "Host") {
 		r.upstreamHeaders.Set(name, value)
 
@@ -126,29 +143,53 @@ func (r *RequestContext) AddHeader(name, value string) {
 }
 
 func (r *RequestContext) SetHeader(name, value string) {
+	if !r.isHeaderMutationAllowed(name) {
+		return
+	}
+
 	r.upstreamHeaders.Set(name, value)
 }
 
 func (r *RequestContext) SetCookie(name, value string) {
+	if !r.isHeaderMutationAllowed("Cookie") {
+		return
+	}
+
+	values := r.req.Header.Values("Cookie")
+	if overlay, ok := r.upstreamHeaders["Cookie"]; ok {
+		values = overlay
+	}
+
+	var cookies []*http.Cookie
+
+	if len(values) != 0 {
+		var err error
+
+		cookies, err = http.ParseCookie(strings.Join(values, "; "))
+		if err != nil {
+			zerolog.Ctx(r.Context()).
+				Warn().
+				Err(err).
+				Msg("Ignoring upstream cookie mutation due to malformed Cookie header")
+
+			return
+		}
+	}
+
 	req := http.Request{
 		Header: make(http.Header, 1),
 	}
 
-	if values := r.effectiveHeaderValues("Cookie"); len(values) != 0 {
-		req.Header["Cookie"] = values
-	}
-
-	cookies := req.Cookies()
-
-	req.Header.Del("Cookie")
-
-	for _, cookie := range cookies {
-		if cookie.Name != name {
-			req.AddCookie(cookie)
+	for _, existing := range cookies {
+		if existing.Name != name {
+			req.AddCookie(existing)
 		}
 	}
 
-	req.AddCookie(&http.Cookie{Name: name, Value: value}) //nolint:gosec
+	req.AddCookie(&http.Cookie{ //nolint:gosec
+		Name:  name,
+		Value: value,
+	})
 
 	r.upstreamHeaders["Cookie"] = req.Header.Values("Cookie")
 }
@@ -223,18 +264,32 @@ func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
 	return r
 }
 
-func (r *RequestContext) effectiveHeaderValues(name string) []string {
+func (r *RequestContext) ConnectionSpecificHeaders() iter.Seq[string] {
+	return maps.Keys(r.connectionSpecificHeaders)
+}
+
+func (r *RequestContext) isHeaderMutationAllowed(name string) bool {
 	name = http.CanonicalHeaderKey(name)
+	_, connectionSpecific := r.connectionSpecificHeaders[name]
 
-	if values, ok := r.upstreamHeaders[name]; ok {
-		return values
+	var reason string
+
+	switch {
+	case headerpolicy.Classify(name) != headerpolicy.Ordinary:
+		reason = "header is protected"
+	case connectionSpecific:
+		reason = "header is connection-specific"
+	default:
+		return true
 	}
 
-	if name == "Host" {
-		return []string{r.hmdlReq.URL.Host}
-	}
+	zerolog.Ctx(r.Context()).
+		Warn().
+		Str("_header", name).
+		Str("_reason", reason).
+		Msg("Ignoring upstream header mutation")
 
-	return r.req.Header[name]
+	return false
 }
 
 func (r *RequestContext) applyHeaderOverlay(headers http.Header) {
