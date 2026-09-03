@@ -31,6 +31,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
+	"github.com/dadrus/heimdall/internal/headerpolicy"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
@@ -39,25 +40,13 @@ import (
 
 var _ pipeline.UpstreamRequest = (*requestContext)(nil)
 
-var hopByHopHeaders = [...]string{ //nolint: gochecknoglobals
-	"Connection",
-	"Proxy-Connection",
-	"Keep-Alive",
-	"Proxy-Authenticate",
-	"Proxy-Authorization",
-	"Te",
-	"Trailer",
-	"Transfer-Encoding",
-	"Upgrade",
-}
-
 type contextFactory struct {
 	roundTripper http.RoundTripper
 	pool         *sync.Pool
 }
 
 func (cf *contextFactory) Create(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
-	rc := cf.pool.Get().(*requestContext) //nolint: forcetypeassert
+	rc := cf.pool.Get().(*requestContext) //nolint:forcetypeassert
 
 	rc.Init(rw, req, cf.roundTripper)
 
@@ -65,7 +54,7 @@ func (cf *contextFactory) Create(rw http.ResponseWriter, req *http.Request) requ
 }
 
 func (cf *contextFactory) Destroy(ctx requestcontext.Context) {
-	rc := ctx.(*requestContext) //nolint: forcetypeassert
+	rc := ctx.(*requestContext) //nolint:forcetypeassert
 
 	rc.Reset()
 
@@ -83,15 +72,15 @@ func newContextFactory(
 			// is possible per upstream
 			Proxy: http.ProxyFromEnvironment,
 			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second, //nolint: mnd
-				KeepAlive: 30 * time.Second, //nolint: mnd
+				Timeout:   30 * time.Second, //nolint:mnd
+				KeepAlive: 30 * time.Second, //nolint:mnd
 			}).DialContext,
 			ResponseHeaderTimeout: cfg.Timeout.Read,
 			MaxIdleConns:          cfg.ConnectionsLimit.MaxIdle,
 			MaxIdleConnsPerHost:   cfg.ConnectionsLimit.MaxIdlePerHost,
 			MaxConnsPerHost:       cfg.ConnectionsLimit.MaxPerHost,
 			IdleConnTimeout:       cfg.Timeout.Idle,
-			TLSHandshakeTimeout:   10 * time.Second, //nolint: mnd
+			TLSHandshakeTimeout:   10 * time.Second, //nolint:mnd
 			ExpectContinueTimeout: 1 * time.Second,
 			ForceAttemptHTTP2:     true,
 			TLSClientConfig:       tlsCfg,
@@ -170,7 +159,7 @@ func (r *requestContext) PrepareUpstreamView(target pipeline.UpstreamTarget) {
 		}
 	}
 
-	r.SetHeader("Host", host)
+	r.UpstreamHeaders().Set("Host", host)
 }
 
 func (r *requestContext) Finalize() error {
@@ -222,23 +211,15 @@ func (r *requestContext) rewriteRequest(proxyReq *httputil.ProxyRequest) {
 }
 
 func (r *requestContext) prepareHeaderSanitization() {
-	for _, value := range r.req.Header.Values("Connection") {
-		for name := range strings.SplitSeq(value, ",") {
-			name = strings.TrimSpace(name)
-
-			if len(name) != 0 {
-				r.removeHeader(name)
-			}
-		}
-	}
-
-	for _, name := range hopByHopHeaders {
+	for name := range r.ConnectionSpecificHeaders() {
 		r.removeHeader(name)
 	}
 
-	r.removeHeader("X-Forwarded-Method")
-	r.removeHeader("X-Forwarded-Uri")
-	r.removeHeader("X-Forwarded-Path")
+	for name := range r.req.Header {
+		if headerpolicy.ShouldSanitizeInput(name) {
+			r.removeHeader(name)
+		}
+	}
 }
 
 func (r *requestContext) prepareForwardedHeaders() {
@@ -248,9 +229,9 @@ func (r *requestContext) prepareForwardedHeaders() {
 	clientIP := httpx.IPFromHostPort(r.req.RemoteAddr)
 	clientIPs := r.Request().ClientIPAddresses
 
-	r.SetHeader("X-Forwarded-For", strings.Join(clientIPs, ", "))
-	r.SetHeader("X-Forwarded-Proto", x.IfThenElse(len(forwardedProto) == 0, proto, forwardedProto))
-	r.SetHeader("X-Forwarded-Host", x.IfThenElse(len(forwardedHost) == 0, r.req.Host, forwardedHost))
+	r.UpstreamHeaders().Set("X-Forwarded-For", strings.Join(clientIPs, ", "))
+	r.UpstreamHeaders().Set("X-Forwarded-Proto", x.IfThenElse(len(forwardedProto) == 0, proto, forwardedProto))
+	r.UpstreamHeaders().Set("X-Forwarded-Host", x.IfThenElse(len(forwardedHost) == 0, r.req.Host, forwardedHost))
 
 	if strings.Contains(clientIP, ":") {
 		// IPv6 must be quoted
@@ -260,7 +241,7 @@ func (r *requestContext) prepareForwardedHeaders() {
 	current := strings.Join(r.req.Header.Values("Forwarded"), ", ")
 	entry := "for=" + clientIP + ";host=\"" + r.req.Host + "\";proto=" + proto
 
-	r.SetHeader("Forwarded", x.IfThenElseExec(len(current) == 0,
+	r.UpstreamHeaders().Set("Forwarded", x.IfThenElseExec(len(current) == 0,
 		func() string { return entry },
 		func() string { return current + ", " + entry }))
 }

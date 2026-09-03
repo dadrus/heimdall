@@ -191,7 +191,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
 			},
 		},
-		"only custom headers and results from rule execution are present (custom header are not dropped)": {
+		"only custom headers and results from rule execution are present (custom header are not dropped, but proxy owned)": {
 			upstreamCalled: true,
 			headers: http.Header{
 				"X-Foo-Bar": []string{"bar", "foo"},
@@ -219,7 +219,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
 
-				require.Len(t, req.Header, 12)
+				require.Len(t, req.Header, 11)
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
 				assert.Contains(t, req.Header.Get("Cookie"), "my_cookie_1=my_value_1")
@@ -231,11 +231,11 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, "somevalue", req.Header.Get("X-Custom"))
 				assert.ElementsMatch(t, req.Header.Values("X-Foo-Bar"), []string{"bar", "foo"})
 				assert.ElementsMatch(t, req.Header.Values("X-Bar"), []string{"bar"})
-				assert.Equal(t, http.MethodDelete, req.Header.Get("X-Forwarded-Method"))
+				assert.Empty(t, req.Header.Get("X-Forwarded-Method"))
 				assert.Equal(t, "someid", req.Header.Get("X-User-Id"))
 			},
 		},
-		"only custom headers and results from rule execution are present (custom header are dropped)": {
+		"only custom headers and results from rule execution are present (custom header and proxy-owned header are dropped)": {
 			upstreamCalled: true,
 			headers: http.Header{
 				"X-Foo-Bar": []string{"bar", "foo"},
@@ -265,7 +265,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
 
-				require.Len(t, req.Header, 12)
+				require.Len(t, req.Header, 11)
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
 				assert.Contains(t, req.Header.Get("Cookie"), "my_cookie_1=my_value_1")
@@ -277,7 +277,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, "somevalue", req.Header.Get("X-Custom"))
 				assert.ElementsMatch(t, req.Header.Values("X-Foo-Bar"), []string{"from-heimdall-1", "from-heimdall-2"})
 				assert.ElementsMatch(t, req.Header.Values("X-Bar"), []string{"bar"})
-				assert.Equal(t, http.MethodDelete, req.Header.Get("X-Forwarded-Method"))
+				assert.Empty(t, req.Header.Get("X-Forwarded-Method"))
 				assert.Equal(t, "someid", req.Header.Get("X-User-Id"))
 			},
 		},
@@ -710,7 +710,7 @@ func TestRequestContextPreparedHeaders(t *testing.T) {
 				assert.Equal(t, "https", headers.Get("X-Forwarded-Proto"))
 			},
 		},
-		"sanitized header can be added again by a finalizer": {
+		"sanitized protected header cannot be added again by a finalizer": {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -724,7 +724,7 @@ func TestRequestContextPreparedHeaders(t *testing.T) {
 			assert: func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				assert.Equal(t, http.MethodDelete, headers.Get("X-Forwarded-Method"))
+				assert.Empty(t, headers.Get("X-Forwarded-Method"))
 			},
 		},
 	} {
