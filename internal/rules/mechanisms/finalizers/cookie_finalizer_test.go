@@ -317,6 +317,25 @@ cookies:
 				require.ErrorContains(t, err, "failed to render")
 			},
 		},
+		"rendered cookie value is invalid": {
+			config: []byte(`
+cookies:
+  foo: "foo;bar"
+`),
+			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
+				t.Helper()
+
+				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: mocks.NewRequestFunctionsMock(t)})
+				ctx.EXPECT().Outputs().Return(pipeline.Results{})
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrInternal)
+				require.ErrorContains(t, err, "invalid")
+			},
+		},
 		"all preconditions satisfied": {
 			config: []byte(`
 cookies:

@@ -17,6 +17,8 @@
 package finalizers
 
 import (
+	"net/http"
+
 	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/app"
@@ -93,13 +95,27 @@ func (f *cookieFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 			"Results": ctx.Outputs(),
 		})
 		if err != nil {
-			return errorchain.
-				NewWithMessagef(pipeline.ErrInternal, "failed to render value for '%s' cookie", name).
-				WithAspects(f).
+			return errorchain.NewWithMessagef(
+				pipeline.ErrInternal,
+				"failed to render value for '%s' cookie", name,
+			).WithAspects(f).
 				CausedBy(err)
 		}
 
 		logger.Debug().Str("_value", value).Msg("Rendered template")
+
+		cookie := &http.Cookie{ //nolint:gosec
+			Name:  name,
+			Value: value,
+		}
+
+		if err = cookie.Valid(); err != nil {
+			return errorchain.NewWithMessagef(
+				pipeline.ErrInternal,
+				"rendered value for '%s' cookie is invalid", name,
+			).WithAspects(f).
+				CausedBy(err)
+		}
 
 		ctx.UpstreamRequest().SetCookie(name, value)
 	}
