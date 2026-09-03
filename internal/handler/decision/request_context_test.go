@@ -17,6 +17,7 @@
 package decision
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -237,7 +238,7 @@ func TestRequestContextReset(t *testing.T) {
 
 	// GIVEN
 	ctx := &requestContext{
-		RequestContext: requestcontext.New(),
+		NetHTTPRequestContext: requestcontext.New(),
 	}
 
 	ctx.Init(
@@ -284,4 +285,33 @@ func TestRequestContextReset(t *testing.T) {
 		"Host":  []string{"bar.foo"},
 		"X-New": []string{"bar"},
 	}, ctx.UpstreamRequest().Headers())
+}
+
+func TestRequestContextWithParent(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := &requestContext{
+		NetHTTPRequestContext: requestcontext.New(),
+	}
+	ctx.Init(
+		httptest.NewRecorder(),
+		httptest.NewRequestWithContext(
+			context.TODO(),
+			http.MethodGet,
+			"https://foo.bar/test",
+			nil,
+		),
+		http.StatusOK,
+	)
+
+	orig := ctx.Context()
+
+	// WHEN
+	actual := ctx.WithParent(t.Context())
+
+	// THEN
+	assert.Same(t, ctx, actual)
+	assert.NotEqual(t, orig, ctx.Context())
+	assert.Equal(t, t.Context(), ctx.Context())
 }

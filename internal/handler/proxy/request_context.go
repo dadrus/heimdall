@@ -17,6 +17,7 @@
 package proxy
 
 import (
+	"context"
 	"crypto/tls"
 	"net"
 	"net/http"
@@ -87,14 +88,14 @@ func newContextFactory(
 		},
 		pool: &sync.Pool{New: func() any {
 			return &requestContext{
-				RequestContext: requestcontext.New(),
+				NetHTTPRequestContext: requestcontext.New(),
 			}
 		}},
 	}
 }
 
 type requestContext struct {
-	*requestcontext.RequestContext
+	*requestcontext.NetHTTPRequestContext
 
 	rw  http.ResponseWriter
 	req *http.Request
@@ -110,7 +111,7 @@ func (r *requestContext) Init(rw http.ResponseWriter, req *http.Request, rt http
 	r.rt = rt
 	r.req = req
 
-	r.RequestContext.Init(req)
+	r.NetHTTPRequestContext.Init(req)
 }
 
 func (r *requestContext) Reset() {
@@ -122,7 +123,13 @@ func (r *requestContext) Reset() {
 	r.upstreamViewPrepared = false
 	r.hasUpstreamTarget = false
 
-	r.RequestContext.Reset()
+	r.NetHTTPRequestContext.Reset()
+}
+
+func (r *requestContext) WithParent(ctx context.Context) pipeline.Context {
+	r.SetParent(ctx)
+
+	return r
 }
 
 func (r *requestContext) UpstreamRequest() pipeline.UpstreamRequest {

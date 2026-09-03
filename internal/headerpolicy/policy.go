@@ -43,6 +43,10 @@ func ShouldSanitizeInput(name string) bool {
 }
 
 func metadataFor(name string) metadata {
+	if strings.HasPrefix(name, ":") {
+		return metadata{class: Transport}
+	}
+
 	name = http.CanonicalHeaderKey(name)
 
 	switch name {

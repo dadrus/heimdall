@@ -18,6 +18,7 @@ package proxy
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -495,7 +496,7 @@ func TestRequestContextReset(t *testing.T) {
 	// GIVEN
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
 
-	ctx := &requestContext{RequestContext: requestcontext.New()}
+	ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
 	ctx.Init(httptest.NewRecorder(), req, http.DefaultTransport)
 
 	target := mocks.NewUpstreamTargetMock(t)
@@ -541,7 +542,7 @@ func TestRequestContextUpstreamRequest(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-			ctx := &requestContext{RequestContext: requestcontext.New()}
+			ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
 			ctx.Init(httptest.NewRecorder(), req, nil)
 
 			if tc.prepare {
@@ -606,7 +607,7 @@ func TestRequestContextURL(t *testing.T) {
 				nil,
 			)
 
-			ctx := &requestContext{RequestContext: requestcontext.New()}
+			ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
 			ctx.Init(httptest.NewRecorder(), req, nil)
 
 			if tc.target == nil {
@@ -643,7 +644,7 @@ func TestRequestContextHostMutationDoesNotChangeURL(t *testing.T) {
 	// GIVEN
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
 
-	ctx := &requestContext{RequestContext: requestcontext.New()}
+	ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
 	ctx.Init(httptest.NewRecorder(), req, nil)
 
 	target := mocks.NewUpstreamTargetMock(t)
@@ -736,7 +737,7 @@ func TestRequestContextPreparedHeaders(t *testing.T) {
 				tc.configureRequest(t, req)
 			}
 
-			ctx := &requestContext{RequestContext: requestcontext.New()}
+			ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
 			ctx.Init(httptest.NewRecorder(), req, nil)
 			ctx.PrepareUpstreamView(nil)
 
@@ -751,4 +752,33 @@ func TestRequestContextPreparedHeaders(t *testing.T) {
 			tc.assert(t, headers)
 		})
 	}
+}
+
+func TestRequestContextWithParent(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	ctx := &requestContext{
+		NetHTTPRequestContext: requestcontext.New(),
+	}
+	ctx.Init(
+		httptest.NewRecorder(),
+		httptest.NewRequestWithContext(
+			context.TODO(),
+			http.MethodGet,
+			"https://foo.bar/test",
+			nil,
+		),
+		nil,
+	)
+
+	orig := ctx.Context()
+
+	// WHEN
+	actual := ctx.WithParent(t.Context())
+
+	// THEN
+	assert.Same(t, ctx, actual)
+	assert.NotEqual(t, orig, ctx.Context())
+	assert.Equal(t, t.Context(), ctx.Context())
 }

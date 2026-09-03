@@ -37,6 +37,19 @@ import (
 
 var _ pipeline.UpstreamRequest = (*RequestContext)(nil)
 
+type BodySource interface {
+	ReadRawBody() ([]byte, error)
+}
+
+type Input struct {
+	Context    context.Context
+	Method     string
+	URL        url.URL
+	Headers    http.Header
+	RemoteAddr string
+	Body       BodySource
+}
+
 type requestFunctions struct {
 	ctx *RequestContext
 }
@@ -47,10 +60,11 @@ func (f *requestFunctions) Headers() map[string]string { return f.ctx.requestHea
 func (f *requestFunctions) Body() any                  { return f.ctx.Body() }
 
 type RequestContext struct {
+	inputHeaders    http.Header
 	upstreamHeaders http.Header
 	hmdlReq         *pipeline.Request
-	req             *http.Request
 	ctx             context.Context //nolint: containedctx
+	bodySource      BodySource
 
 	// the following properties are created lazy and cached
 	err       error
@@ -62,11 +76,11 @@ type RequestContext struct {
 	connectionSpecificHeaders map[string]struct{}
 }
 
-func (r *RequestContext) UpstreamRequest() pipeline.UpstreamRequest {
-	return nil
+func NewRequestContext() *RequestContext {
+	return newRequestContext()
 }
 
-func New() *RequestContext {
+func newRequestContext() *RequestContext {
 	rc := &RequestContext{
 		upstreamHeaders:           make(http.Header, 6),
 		outputs:                   make(pipeline.Results, 10),
@@ -83,23 +97,33 @@ func New() *RequestContext {
 	return rc
 }
 
-func (r *RequestContext) Init(req *http.Request) {
-	r.req = req
-	r.hmdlReq.Method = extractMethod(req)
-	r.hmdlReq.URL.URL = extractURL(req)
-	r.hmdlReq.ClientIPAddresses = requestClientIPs(r.hmdlReq.ClientIPAddresses, req)
-	r.ctx = req.Context()
+func (r *RequestContext) Init(input Input) {
+	if input.Headers == nil {
+		r.inputHeaders = make(http.Header)
+	} else {
+		r.inputHeaders = input.Headers
+	}
+	r.hmdlReq.Method = input.Method
+	r.hmdlReq.URL.URL = input.URL
+	r.hmdlReq.ClientIPAddresses = requestClientIPs(
+		r.hmdlReq.ClientIPAddresses,
+		input.Headers,
+		input.RemoteAddr,
+	)
+	r.ctx = input.Context
+	r.bodySource = input.Body
 
-	for name := range ConnectionOptions(req.Header) {
+	for name := range ConnectionOptions(input.Headers) {
 		r.connectionSpecificHeaders[name] = struct{}{}
 	}
 }
 
 func (r *RequestContext) Reset() {
+	r.inputHeaders = nil
+	r.bodySource = nil
 	r.savedBody = nil
 	r.rawBody = nil
 	r.err = nil
-	r.req = nil
 	r.ctx = nil
 
 	clear(r.outputs)
@@ -120,7 +144,7 @@ func (r *RequestContext) Method() string {
 func (r *RequestContext) URL() url.URL { return r.hmdlReq.URL.URL }
 
 func (r *RequestContext) Headers() http.Header {
-	headers := r.req.Header.Clone()
+	headers := r.inputHeaders.Clone()
 	headers.Set("Host", r.hmdlReq.URL.Host)
 
 	r.applyHeaderOverlay(headers)
@@ -155,7 +179,7 @@ func (r *RequestContext) SetCookie(name, value string) {
 		return
 	}
 
-	values := r.req.Header.Values("Cookie")
+	values := r.inputHeaders.Values("Cookie")
 	if overlay, ok := r.upstreamHeaders["Cookie"]; ok {
 		values = overlay
 	}
@@ -200,11 +224,13 @@ func (r *RequestContext) Header(name string) string {
 		return r.hmdlReq.URL.Host
 	}
 
-	return strings.Join(r.req.Header.Values(key), ",")
+	return strings.Join(r.inputHeaders.Values(key), ",")
 }
 
 func (r *RequestContext) Cookie(name string) string {
-	if cookie, err := r.req.Cookie(name); err == nil {
+	req := http.Request{Header: r.inputHeaders}
+
+	if cookie, err := req.Cookie(name); err == nil {
 		return cookie.Value
 	}
 
@@ -258,10 +284,8 @@ func (r *RequestContext) SetError(err error)           { r.err = err }
 func (r *RequestContext) Error() error                 { return r.err }
 func (r *RequestContext) Outputs() pipeline.Results    { return r.outputs }
 
-func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
+func (r *RequestContext) SetParent(ctx context.Context) {
 	r.ctx = ctx
-
-	return r
 }
 
 func (r *RequestContext) ConnectionSpecificHeaders() iter.Seq[string] {
@@ -309,20 +333,22 @@ func (r *RequestContext) readRawBody() ([]byte, error) {
 		return r.rawBody, nil
 	}
 
-	if r.req.Body == nil || r.req.Body == http.NoBody {
+	if r.bodySource == nil {
 		r.rawBody = []byte{}
 
 		return r.rawBody, nil
 	}
 
-	body, err := io.ReadAll(r.req.Body)
+	body, err := r.bodySource.ReadRawBody()
 	if err != nil {
 		return nil, err
 	}
 
+	if body == nil {
+		body = []byte{}
+	}
+
 	r.rawBody = body
-	_ = r.req.Body.Close()
-	r.req.Body = io.NopCloser(bytes.NewReader(body))
 
 	return r.rawBody, nil
 }
@@ -330,7 +356,7 @@ func (r *RequestContext) readRawBody() ([]byte, error) {
 func (r *RequestContext) requestHeaders() map[string]string {
 	if len(r.headers) == 0 {
 		r.headers["Host"] = r.hmdlReq.URL.Host
-		for k, v := range r.req.Header {
+		for k, v := range r.inputHeaders {
 			r.headers[textproto.CanonicalMIMEHeaderKey(k)] = strings.Join(v, ",")
 		}
 	}
@@ -338,17 +364,17 @@ func (r *RequestContext) requestHeaders() map[string]string {
 	return r.headers
 }
 
-func requestClientIPs(ips []string, req *http.Request) []string {
-	res, _ := httpx.IPsFromForwarded(ips, req.Header.Values("Forwarded"))
+func requestClientIPs(ips []string, headers http.Header, remoteAddr string) []string {
+	res, _ := httpx.IPsFromForwarded(ips, headers.Values("Forwarded"))
 	if len(res) == 0 {
-		res, _ = httpx.IPsFromXForwardedFor(ips, req.Header.Values("X-Forwarded-For"))
+		res, _ = httpx.IPsFromXForwardedFor(ips, headers.Values("X-Forwarded-For"))
 	}
 
 	if len(res) == 0 {
 		res = ips
 	}
 
-	res = append(res, httpx.IPFromHostPort(req.RemoteAddr)) // nolint: makezero
+	res = append(res, httpx.IPFromHostPort(remoteAddr)) // nolint: makezero
 
 	return res
 }

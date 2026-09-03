@@ -18,7 +18,6 @@ package grpcv3
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net"
 	"net/http"
@@ -29,7 +28,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
@@ -40,20 +38,13 @@ func TestNewRequestContext(t *testing.T) {
 
 	// GIVEN
 	httpReq := &envoy_auth.AttributeContext_HttpRequest{
-		Method:   http.MethodPatch,
-		Scheme:   "https",
-		Host:     "FoO.Bar:8080",
-		Path:     "/test/baz?bar=moo#foobar",
-		Query:    "", // documented to be empty
-		Fragment: "", // documented to be empty
-		Body:     "content=heimdall",
-		RawBody:  []byte("content=heimdall"),
+		Method: http.MethodPatch,
+		Scheme: "https",
+		Host:   "FoO.Bar:8080",
+		Path:   "/test/baz?bar=moo#foobar",
 		Headers: map[string]string{
-			"x-foo-bar":                 "barfoo",
-			"cookie":                    "bar=foo;foo=baz",
-			"content-type":              "application/x-www-form-urlencoded",
-			"x-forwarded-for":           "127.0.0.1",
-			"x-envoy-auth-partial-body": "false",
+			"x-foo-bar":       "barfoo",
+			"x-forwarded-for": "127.0.0.1",
 		},
 	}
 	checkReq := &envoy_auth.CheckRequest{
@@ -64,11 +55,7 @@ func TestNewRequestContext(t *testing.T) {
 		},
 	}
 
-	md := metadata.New(nil)
-	md.Set("x-forwarded-for", "203.0.113.1")
-
-	grpcCtx := metadata.NewIncomingContext(t.Context(), md)
-	grpcCtx = peer.NewContext(grpcCtx, &peer.Peer{
+	grpcCtx := peer.NewContext(t.Context(), &peer.Peer{
 		Addr: &net.TCPAddr{
 			IP:   net.ParseIP("192.168.1.1"),
 			Port: 12345,
@@ -88,15 +75,9 @@ func TestNewRequestContext(t *testing.T) {
 	assert.Empty(t, ctx.Request().URL.Fragment)
 	assert.Equal(t, "bar=moo#foobar", ctx.Request().URL.RawQuery)
 	assert.Equal(t, "moo#foobar", ctx.Request().URL.URL.Query().Get("bar"))
-	assert.Equal(t, map[string]any{"content": []string{"heimdall"}}, ctx.Request().Body())
-	require.Len(t, ctx.Request().Headers(), 6)
 	assert.Equal(t, "foo.bar:8080", ctx.Request().Header("Host"))
 	assert.Equal(t, "barfoo", ctx.Request().Header("X-Foo-Bar"))
-	assert.Equal(t, "127.0.0.1", ctx.Request().Header("X-Forwarded-For"))
-	assert.Equal(t, "foo", ctx.Request().Cookie("bar"))
-	assert.Equal(t, "baz", ctx.Request().Cookie("foo"))
-	assert.Empty(t, ctx.Request().Cookie("baz"))
-	assert.NotNil(t, ctx.Context())
+	assert.Equal(t, grpcCtx, ctx.Context())
 	assert.Equal(t, []string{"127.0.0.1", "192.168.1.1"}, ctx.Request().ClientIPAddresses)
 }
 
@@ -243,7 +224,7 @@ func TestRequestContextUpstreamRequest(t *testing.T) {
 	}
 }
 
-func TestRequestContextUpstreamURL(t *testing.T) {
+func TestRequestContextHeaders(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -254,206 +235,9 @@ func TestRequestContextUpstreamURL(t *testing.T) {
 			Attributes: &envoy_auth.AttributeContext{
 				Request: &envoy_auth.AttributeContext_Request{
 					Http: &envoy_auth.AttributeContext_HttpRequest{
-						Method: http.MethodGet,
-						Scheme: "https",
-						Host:   "FoO.Bar:8080",
-						Path:   "/test?foo=bar",
-					},
-				},
-			},
-		},
-	)
-	ctx.PrepareUpstreamView(nil)
-
-	upstreamRequest := ctx.UpstreamRequest()
-
-	// WHEN
-	upstreamURL := upstreamRequest.URL()
-
-	// THEN
-	assert.Equal(t, "https", upstreamURL.Scheme)
-	assert.Equal(t, "foo.bar:8080", upstreamURL.Host)
-	assert.Equal(t, "/test", upstreamURL.Path)
-	assert.Equal(t, "foo=bar", upstreamURL.RawQuery)
-
-	upstreamURL.Host = "changed.local"
-	upstreamURL.Path = "/changed"
-
-	assert.Equal(t, "foo.bar:8080", upstreamRequest.URL().Host)
-	assert.Equal(t, "/test", upstreamRequest.URL().Path)
-
-	upstreamRequest.SetHeader("Host", "bar.foo")
-
-	assert.Equal(t, "foo.bar:8080", upstreamRequest.URL().Host)
-	assert.Equal(t, "bar.foo", upstreamRequest.Headers().Get("Host"))
-	assert.Equal(t, "foo.bar:8080", ctx.Request().URL.Host)
-	assert.Equal(t, "foo.bar:8080", ctx.Request().Header("Host"))
-}
-
-func TestRequestContextAddHeader(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		name                 string
-		values               []string
-		expectedHeaderValues []string
-		expectedURLHost      string
-	}{
-		"header is added": {
-			name:                 "X-Foo",
-			values:               []string{"bar"},
-			expectedHeaderValues: []string{"bar"},
-			expectedURLHost:      "foo.bar",
-		},
-		"multiple header values are added": {
-			name:                 "X-Foo",
-			values:               []string{"bar", "foo"},
-			expectedHeaderValues: []string{"bar", "foo"},
-			expectedURLHost:      "foo.bar",
-		},
-		"Host is treated as singleton upstream header": {
-			name:                 "hOsT",
-			values:               []string{"bar.foo", "baz.foo"},
-			expectedHeaderValues: []string{"baz.foo"},
-			expectedURLHost:      "foo.bar",
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			ctx := newRequestContext()
-			ctx.Init(
-				t.Context(),
-				&envoy_auth.CheckRequest{
-					Attributes: &envoy_auth.AttributeContext{
-						Request: &envoy_auth.AttributeContext_Request{
-							Http: &envoy_auth.AttributeContext_HttpRequest{
-								Method: http.MethodGet,
-								Scheme: "https",
-								Host:   "foo.bar",
-								Path:   "/test",
-							},
-						},
-					},
-				},
-			)
-			ctx.PrepareUpstreamView(nil)
-			upstreamRequest := ctx.UpstreamRequest()
-
-			// WHEN
-			for _, value := range tc.values {
-				upstreamRequest.AddHeader(tc.name, value)
-			}
-
-			// THEN
-			assert.ElementsMatch(
-				t,
-				tc.expectedHeaderValues,
-				upstreamRequest.Headers().Values(tc.name),
-			)
-			assert.Equal(t, tc.expectedURLHost, upstreamRequest.URL().Host)
-			assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
-			assert.Equal(t, "foo.bar", ctx.Request().Header("Host"))
-		})
-	}
-}
-
-func TestRequestContextSetHeader(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	ctx := newRequestContext()
-	ctx.Init(
-		t.Context(),
-		&envoy_auth.CheckRequest{
-			Attributes: &envoy_auth.AttributeContext{
-				Request: &envoy_auth.AttributeContext_Request{
-					Http: &envoy_auth.AttributeContext_HttpRequest{
-						Method: http.MethodGet,
-						Scheme: "https",
-						Host:   "foo.bar",
-						Path:   "/test",
+						Host: "foo.bar",
 						Headers: map[string]string{
-							"x-foo": "incoming",
-						},
-					},
-				},
-			},
-		},
-	)
-	ctx.PrepareUpstreamView(nil)
-
-	upstreamRequest := ctx.UpstreamRequest()
-	upstreamRequest.AddHeader("X-Foo", "first")
-	upstreamRequest.AddHeader("X-Foo", "second")
-
-	// WHEN
-	upstreamRequest.SetHeader("X-Foo", "replaced")
-	upstreamRequest.SetHeader("Host", "bar.foo")
-
-	// THEN
-	assert.Equal(t, []string{"replaced"}, upstreamRequest.Headers().Values("X-Foo"))
-	assert.Equal(t, []string{"bar.foo"}, upstreamRequest.Headers().Values("Host"))
-	assert.Equal(t, "foo.bar", upstreamRequest.URL().Host)
-	assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
-	assert.Equal(t, "foo.bar", ctx.Request().Header("Host"))
-}
-
-func TestRequestContextSetCookie(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	ctx := newRequestContext()
-	ctx.Init(
-		t.Context(),
-		&envoy_auth.CheckRequest{
-			Attributes: &envoy_auth.AttributeContext{
-				Request: &envoy_auth.AttributeContext_Request{
-					Http: &envoy_auth.AttributeContext_HttpRequest{
-						Method: http.MethodGet,
-						Scheme: "https",
-						Host:   "foo.bar",
-						Path:   "/test",
-						Headers: map[string]string{
-							"cookie": "foo=old; session=abc",
-						},
-					},
-				},
-			},
-		},
-	)
-	ctx.PrepareUpstreamView(nil)
-
-	upstreamRequest := ctx.UpstreamRequest()
-
-	// WHEN
-	upstreamRequest.SetCookie("foo", "new")
-
-	// THEN
-	assert.Equal(t, "session=abc; foo=new", upstreamRequest.Headers().Get("Cookie"))
-
-	upstreamRequest.SetCookie("session", "changed")
-
-	assert.Equal(t, "foo=new; session=changed", upstreamRequest.Headers().Get("Cookie"))
-}
-
-func TestRequestContextUpstreamHeaders(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	ctx := newRequestContext()
-	ctx.Init(
-		t.Context(),
-		&envoy_auth.CheckRequest{
-			Attributes: &envoy_auth.AttributeContext{
-				Request: &envoy_auth.AttributeContext_Request{
-					Http: &envoy_auth.AttributeContext_HttpRequest{
-						Method: http.MethodGet,
-						Scheme: "https",
-						Host:   "foo.bar",
-						Path:   "/test",
-						Headers: map[string]string{
-							"x-foo":                     "incoming",
-							"cookie":                    "foo=bar",
+							"x-foo":                     "bar",
 							"x-envoy-auth-partial-body": "false",
 						},
 					},
@@ -461,30 +245,14 @@ func TestRequestContextUpstreamHeaders(t *testing.T) {
 			},
 		},
 	)
-	ctx.PrepareUpstreamView(nil)
-
-	upstreamRequest := ctx.UpstreamRequest()
-	upstreamRequest.AddHeader("X-Foo", "from-heimdall")
-	upstreamRequest.SetHeader("X-Set", "set-by-heimdall")
-	upstreamRequest.SetCookie("bar", "foo")
 
 	// WHEN
-	headers := upstreamRequest.Headers()
+	headers := ctx.Headers()
 
 	// THEN
-	assert.Equal(t, []string{"from-heimdall"}, headers.Values("X-Foo"))
-	assert.Equal(t, "set-by-heimdall", headers.Get("X-Set"))
-	assert.Equal(t, "foo=bar; bar=foo", headers.Get("Cookie"))
+	assert.Equal(t, "bar", headers.Get("X-Foo"))
 	assert.Equal(t, "foo.bar", headers.Get("Host"))
 	assert.Empty(t, headers.Get("X-Envoy-Auth-Partial-Body"))
-
-	headers.Set("X-Foo", "changed")
-	headers.Set("Host", "changed.local")
-
-	current := upstreamRequest.Headers()
-
-	assert.Equal(t, []string{"from-heimdall"}, current.Values("X-Foo"))
-	assert.Equal(t, "foo.bar", current.Get("Host"))
 }
 
 func TestRequestContextFinalize(t *testing.T) {
@@ -506,7 +274,7 @@ func TestRequestContextFinalize(t *testing.T) {
 		updateContext func(t *testing.T, ctx pipeline.ExecutionContext)
 		assert        func(t *testing.T, err error, response *envoy_auth.CheckResponse)
 	}{
-		"successful with some different header": {
+		"successful with header mutations": {
 			updateContext: func(t *testing.T, ctx pipeline.ExecutionContext) {
 				t.Helper()
 
@@ -522,12 +290,10 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				require.NoError(t, err)
 				require.NotNil(t, response)
-
 				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
 
 				okResponse := response.GetOkResponse()
 				require.NotNil(t, okResponse)
-
 				require.Len(t, okResponse.GetHeaders(), 2)
 
 				header := findHeader(okResponse.GetHeaders(), "X-For-Upstream-1")
@@ -537,135 +303,6 @@ func TestRequestContextFinalize(t *testing.T) {
 				header = findHeader(okResponse.GetHeaders(), "X-For-Upstream-2")
 				require.NotNil(t, header)
 				assert.Equal(t, "some-value-2", header.GetValue())
-			},
-		},
-		"successful with multiple header with same name but different values": {
-			updateContext: func(t *testing.T, ctx pipeline.ExecutionContext) {
-				t.Helper()
-
-				ctx.PrepareUpstreamView(nil)
-
-				upstreamRequest := ctx.UpstreamRequest()
-				upstreamRequest.AddHeader("x-for-upstream-1", "some-value-1")
-				upstreamRequest.AddHeader("x-for-upstream-1", "some-value-2")
-				upstreamRequest.AddHeader("x-for-upstream-1", "some-value-3")
-			},
-			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, response)
-
-				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
-
-				okResponse := response.GetOkResponse()
-				require.NotNil(t, okResponse)
-
-				require.Len(t, okResponse.GetHeaders(), 1)
-
-				header := findHeader(okResponse.GetHeaders(), "X-For-Upstream-1")
-				require.NotNil(t, header)
-				assert.Equal(t, "some-value-1,some-value-2,some-value-3", header.GetValue())
-			},
-		},
-		"successful with Host mutation": {
-			updateContext: func(t *testing.T, ctx pipeline.ExecutionContext) {
-				t.Helper()
-
-				ctx.PrepareUpstreamView(nil)
-
-				upstreamRequest := ctx.UpstreamRequest()
-				upstreamRequest.AddHeader("Host", "bar.foo")
-				upstreamRequest.AddHeader("hOsT", "baz.foo")
-			},
-			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, response)
-
-				okResponse := response.GetOkResponse()
-				require.NotNil(t, okResponse)
-				require.Len(t, okResponse.GetHeaders(), 1)
-
-				header := findHeader(okResponse.GetHeaders(), "Host")
-				require.NotNil(t, header)
-				assert.Equal(t, "baz.foo", header.GetValue())
-			},
-		},
-		"successful with some cookies": {
-			updateContext: func(t *testing.T, ctx pipeline.ExecutionContext) {
-				t.Helper()
-
-				ctx.PrepareUpstreamView(nil)
-
-				upstreamRequest := ctx.UpstreamRequest()
-				upstreamRequest.SetCookie("some-cookie", "value-1")
-				upstreamRequest.SetCookie("some-other-cookie", "value-2")
-			},
-			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, response)
-
-				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
-
-				okResponse := response.GetOkResponse()
-				require.NotNil(t, okResponse)
-
-				require.Len(t, okResponse.GetHeaders(), 1)
-
-				header := findHeader(okResponse.GetHeaders(), "Cookie")
-				require.NotNil(t, header)
-
-				cookies, err := http.ParseCookie(header.GetValue())
-				require.NoError(t, err)
-				require.Len(t, cookies, 4)
-
-				cookieValues := make(map[string]string, len(cookies))
-				for _, cookie := range cookies {
-					cookieValues[cookie.Name] = cookie.Value
-				}
-
-				assert.Equal(t, map[string]string{
-					"bar":               "foo",
-					"foo":               "baz",
-					"some-cookie":       "value-1",
-					"some-other-cookie": "value-2",
-				}, cookieValues)
-			},
-		},
-		"successful with multiple header and cookie": {
-			updateContext: func(t *testing.T, ctx pipeline.ExecutionContext) {
-				t.Helper()
-
-				ctx.PrepareUpstreamView(nil)
-
-				upstreamRequest := ctx.UpstreamRequest()
-				upstreamRequest.AddHeader("x-for-upstream", "some-value")
-				upstreamRequest.SetCookie("some-cookie", "value-1")
-			},
-			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, response)
-
-				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
-
-				okResponse := response.GetOkResponse()
-				require.NotNil(t, okResponse)
-
-				require.Len(t, okResponse.GetHeaders(), 2)
-
-				header := findHeader(okResponse.GetHeaders(), "X-For-Upstream")
-				require.NotNil(t, header)
-				assert.Equal(t, "some-value", header.GetValue())
-
-				header = findHeader(okResponse.GetHeaders(), "Cookie")
-				require.NotNil(t, header)
-				assert.Equal(t, "bar=foo; foo=baz; some-cookie=value-1", header.GetValue())
 			},
 		},
 		"explicit mutation is returned even if value equals incoming header": {
@@ -708,21 +345,15 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Empty(t, okResponse.GetHeaders())
 			},
 		},
-		"erroneous with header and cookie": {
+		"error is returned": {
 			updateContext: func(t *testing.T, ctx pipeline.ExecutionContext) {
 				t.Helper()
 
-				ctx.PrepareUpstreamView(nil)
-
 				ctx.SetError(assert.AnError)
-				ctx.UpstreamRequest().AddHeader("x-for-upstream", "some-value")
-				ctx.UpstreamRequest().SetCookie("some-cookie", "value-1")
-				ctx.UpstreamRequest().SetCookie("some-other-cookie", "value-2")
 			},
 			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
 
-				require.Error(t, err)
 				require.ErrorIs(t, err, assert.AnError)
 				require.Nil(t, response)
 			},
@@ -731,18 +362,12 @@ func TestRequestContextFinalize(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			httpReq := &envoy_auth.AttributeContext_HttpRequest{
-				Method:   http.MethodPatch,
-				Scheme:   "https",
-				Host:     "foo.bar:8080",
-				Path:     "/test",
-				Query:    "bar=moo",
-				Fragment: "foobar",
-				Body:     "content=heimdall",
-				RawBody:  []byte("content=heimdall"),
+				Method: http.MethodPatch,
+				Scheme: "https",
+				Host:   "foo.bar:8080",
+				Path:   "/test",
 				Headers: map[string]string{
 					"x-foo-bar":                 "barfoo",
-					"cookie":                    "bar=foo;foo=baz",
-					"content-type":              "application/x-www-form-urlencoded",
 					"x-envoy-auth-partial-body": "false",
 				},
 			}
@@ -782,9 +407,10 @@ func TestRequestContextRawBody(t *testing.T) {
 			partialBodyHeader: "false",
 		},
 		"raw body is available": {
-			rawBody:           []byte("content=heimdall"),
+			rawBody:           []byte("raw"),
+			body:              "body",
 			partialBodyHeader: "false",
-			expected:          "content=heimdall",
+			expected:          "raw",
 		},
 		"body is used if raw body is not available": {
 			body:              "content=heimdall",
@@ -822,10 +448,9 @@ func TestRequestContextRawBody(t *testing.T) {
 					},
 				},
 			)
-			ctx.PrepareUpstreamView(nil)
 
 			// WHEN
-			body, err := ctx.UpstreamRequest().RawBody()
+			body, err := ctx.RawBody()
 
 			// THEN
 			require.NoError(t, err)
@@ -836,147 +461,24 @@ func TestRequestContextRawBody(t *testing.T) {
 			require.NoError(t, body.Close())
 
 			assert.Equal(t, tc.expected, string(data))
-
-			body, err = ctx.UpstreamRequest().RawBody()
-			require.NoError(t, err)
-			require.NotNil(t, body)
-
-			data, err = io.ReadAll(body)
-			require.NoError(t, err)
-			require.NoError(t, body.Close())
-
-			assert.Equal(t, tc.expected, string(data))
 		})
 	}
 }
 
-func TestRequestContextBody(t *testing.T) {
-	t.Parallel()
-
-	cf := newContextFactory()
-
-	for uc, tc := range map[string]struct {
-		ct     string
-		body   []byte
-		expect any
-	}{
-		"No body": {
-			ct:     "empty",
-			body:   nil,
-			expect: "",
-		},
-		"Empty body": {
-			ct:     "empty",
-			body:   []byte(""),
-			expect: "",
-		},
-		"Wrong content type": {
-			ct:     "application/json",
-			body:   []byte("foo: bar"),
-			expect: "foo: bar",
-		},
-		"x-www-form-urlencoded encoded": {
-			ct:     "application/x-www-form-urlencoded; charset=utf-8",
-			body:   []byte("content=heimdall"),
-			expect: map[string]any{"content": []string{"heimdall"}},
-		},
-		"json encoded": {
-			ct:     "application/json; charset=utf-8",
-			body:   []byte(`{ "content": "heimdall" }`),
-			expect: map[string]any{"content": "heimdall"},
-		},
-		"json encoded array": {
-			ct:     "application/json; charset=utf-8",
-			body:   []byte(`[{"content": "heimdall"}]`),
-			expect: []any{map[string]any{"content": "heimdall"}},
-		},
-		"json encoded scalar string": {
-			ct:     "application/json; charset=utf-8",
-			body:   []byte(`"heimdall"`),
-			expect: "heimdall",
-		},
-		"json encoded scalar number": {
-			ct:     "application/json; charset=utf-8",
-			body:   []byte(`42`),
-			expect: float64(42),
-		},
-		"json encoded scalar bool": {
-			ct:     "application/json; charset=utf-8",
-			body:   []byte(`true`),
-			expect: true,
-		},
-		"json encoded null": {
-			ct:     "application/json; charset=utf-8",
-			body:   []byte(`null`),
-			expect: nil,
-		},
-		"yaml encoded": {
-			ct:     "application/yaml; charset=utf-8",
-			body:   []byte("content: heimdall"),
-			expect: map[string]any{"content": "heimdall"},
-		},
-		"yaml encoded sequence": {
-			ct:     "application/yaml; charset=utf-8",
-			body:   []byte("- content: heimdall\n"),
-			expect: []any{map[string]any{"content": "heimdall"}},
-		},
-		"yaml encoded scalar": {
-			ct:     "application/yaml; charset=utf-8",
-			body:   []byte("heimdall\n"),
-			expect: "heimdall",
-		},
-		"plain text": {
-			ct:     "text/plain",
-			body:   []byte("content=heimdall"),
-			expect: "content=heimdall",
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			ctx := cf.Create(
-				t.Context(),
-				&envoy_auth.CheckRequest{
-					Attributes: &envoy_auth.AttributeContext{
-						Request: &envoy_auth.AttributeContext_Request{
-							Http: &envoy_auth.AttributeContext_HttpRequest{
-								Path:    "/test",
-								RawBody: tc.body,
-								Headers: map[string]string{
-									"content-type":              tc.ct,
-									"x-envoy-auth-partial-body": "false",
-								},
-							},
-						},
-					},
-				},
-			)
-
-			defer cf.Destroy(ctx)
-
-			// WHEN
-			data := ctx.Request().Body()
-
-			// THEN
-			assert.Equal(t, tc.expect, data)
-		})
-	}
-}
-
-func TestRequestContextRequestURLCaptures(t *testing.T) {
+func TestRequestContextReset(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	cf := newContextFactory()
-	ctx := cf.Create(
+	ctx := newRequestContext()
+	ctx.Init(
 		t.Context(),
 		&envoy_auth.CheckRequest{
 			Attributes: &envoy_auth.AttributeContext{
 				Request: &envoy_auth.AttributeContext_Request{
 					Http: &envoy_auth.AttributeContext_HttpRequest{
 						Path:    "/test",
-						RawBody: []byte("foo"),
+						RawBody: []byte("content=heimdall"),
 						Headers: map[string]string{
-							"content-type":              "application/json",
 							"x-envoy-auth-partial-body": "false",
 						},
 					},
@@ -984,268 +486,110 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 			},
 		},
 	)
-
-	defer cf.Destroy(ctx)
-
-	ctx.Request().URL.Captures = map[string]string{"a": "b"}
-
-	// WHEN
-	captures := ctx.Request().URL.Captures
-
-	// THEN
-	require.Len(t, captures, 1)
-	assert.Equal(t, "b", captures["a"])
-}
-
-func TestRequestContextReset(t *testing.T) {
-	t.Parallel()
-
-	checkReq := &envoy_auth.CheckRequest{
-		Attributes: &envoy_auth.AttributeContext{
-			Request: &envoy_auth.AttributeContext_Request{
-				Http: &envoy_auth.AttributeContext_HttpRequest{
-					Method:  http.MethodPatch,
-					Scheme:  "https",
-					Host:    "foo.bar:8080",
-					Path:    "/test",
-					Query:   "bar=moo",
-					RawBody: []byte(`{ "content": "heimdall" }`),
-					Headers: map[string]string{
-						"content-type":              "application/json",
-						"x-forwarded-for":           "127.0.0.1",
-						"x-envoy-auth-partial-body": "false",
-					},
-				},
-			},
-		},
-	}
-
-	grpcCtx := peer.NewContext(context.TODO(), &peer.Peer{
-		Addr: &net.TCPAddr{
-			IP:   net.ParseIP("192.168.1.1"),
-			Port: 12345,
-		},
-	})
-
-	// GIVEN
-	ctx := newRequestContext()
-	ctx.Init(grpcCtx, checkReq)
-	ctx.Request().URL.Captures = map[string]string{"b": "a"}
-	ctx.SetError(errors.New("test error"))
-	_ = ctx.Body()
-	ctx.Outputs()["b"] = pipeline.NewResult("c")
 	ctx.PrepareUpstreamView(nil)
-	ctx.UpstreamRequest().SetCookie("foo", "bar")
-	ctx.UpstreamRequest().AddHeader("bar", "foo")
-	_ = ctx.UpstreamRequest().Headers()
 
-	require.Equal(
-		t,
-		[]string{"127.0.0.1", "192.168.1.1"},
-		ctx.Request().ClientIPAddresses,
-	)
+	require.NotNil(t, ctx.bodySource.body)
+	require.NotNil(t, ctx.UpstreamRequest())
 
 	// WHEN
 	ctx.Reset()
 
 	// THEN
-	require.Nil(t, ctx.ctx)
-	require.Nil(t, ctx.reqHeaders)
-	require.Nil(t, ctx.reqBody)
-	require.Nil(t, ctx.savedBody)
-	require.NoError(t, ctx.err)
+	require.Nil(t, ctx.bodySource.body)
 	require.False(t, ctx.upstreamViewPrepared)
 	require.Nil(t, ctx.UpstreamRequest())
-	require.NotNil(t, ctx.results)
-	require.Empty(t, ctx.results)
-	require.NotNil(t, ctx.upstreamHeaders)
-	require.Empty(t, ctx.upstreamHeaders)
-	require.NotNil(t, ctx.hmdlReq)
-	require.NotNil(t, ctx.hmdlReq.URL)
-	require.Empty(t, ctx.hmdlReq.URL.URL)
-	require.Empty(t, ctx.hmdlReq.Method)
-	require.NotNil(t, ctx.hmdlReq.URL.Captures)
-	require.Empty(t, ctx.hmdlReq.URL.Captures)
-	require.NotNil(t, ctx.hmdlReq.ClientIPAddresses)
-	require.Empty(t, ctx.hmdlReq.ClientIPAddresses)
-	require.Equal(t, 10, cap(ctx.hmdlReq.ClientIPAddresses))
+	require.Nil(t, ctx.Context())
 }
 
 func TestRequestContextWithParent(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	checkReq := &envoy_auth.CheckRequest{
-		Attributes: &envoy_auth.AttributeContext{
-			Request: &envoy_auth.AttributeContext_Request{
-				Http: &envoy_auth.AttributeContext_HttpRequest{
-					Method:  http.MethodPatch,
-					Scheme:  "https",
-					Host:    "foo.bar:8080",
-					Path:    "/test",
-					Query:   "bar=moo",
-					RawBody: []byte(`{ "content": "heimdall" }`),
-					Headers: map[string]string{
-						"content-type":              "application/json",
-						"x-envoy-auth-partial-body": "false",
-					},
+	ctx := newRequestContext()
+	ctx.Init(
+		context.TODO(),
+		&envoy_auth.CheckRequest{
+			Attributes: &envoy_auth.AttributeContext{
+				Request: &envoy_auth.AttributeContext_Request{
+					Http: &envoy_auth.AttributeContext_HttpRequest{},
 				},
 			},
 		},
-	}
-
-	md := metadata.MD{
-		"x-forwarded-for": []string{"127.0.0.1"},
-	}
-
-	ctx := newRequestContext()
-	ctx.Init(metadata.NewIncomingContext(context.TODO(), md), checkReq)
+	)
 
 	orig := ctx.Context()
 
-	ctx.WithParent(t.Context())
+	// WHEN
+	actual := ctx.WithParent(t.Context())
 
-	assert.NotEqual(t, orig, ctx.ctx)
-	assert.Equal(t, t.Context(), ctx.ctx)
+	// THEN
+	assert.Same(t, ctx, actual)
+	assert.NotEqual(t, orig, ctx.Context())
+	assert.Equal(t, t.Context(), ctx.Context())
 }
 
-func TestRequestContextHeader(t *testing.T) {
+func TestCanonicalizeHeaders(t *testing.T) {
 	t.Parallel()
 
-	cf := newContextFactory()
+	// GIVEN
+	headers := map[string]string{
+		"x-foo":   "bar",
+		"X-bAZ":   "foo",
+		"cOntEnT": "value",
+	}
+
+	// WHEN
+	actual := canonicalizeHeaders(headers)
+
+	// THEN
+	assert.Equal(t, http.Header{
+		"X-Foo":   []string{"bar"},
+		"X-Baz":   []string{"foo"},
+		"Content": []string{"value"},
+	}, actual)
+}
+
+func TestPeerAddress(t *testing.T) {
+	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		name     string
+		ctx      func(t *testing.T) context.Context
 		expected string
 	}{
-		"canonical header name": {
-			name:     "X-Foo",
-			expected: "bar",
-		},
-		"lowercase header name": {
-			name:     "x-foo",
-			expected: "bar",
-		},
-		"uppercase header name": {
-			name:     "X-FOO",
-			expected: "bar",
-		},
-		"mixed case header name": {
-			name:     "x-FoO",
-			expected: "bar",
-		},
-		"unknown header": {
-			name:     "X-Bar",
-			expected: "",
-		},
-		"lowercase host header": {
-			name:     "host",
-			expected: "foo.bar",
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			t.Parallel()
+		"peer address is available": {
+			ctx: func(t *testing.T) context.Context {
+				t.Helper()
 
-			ctx := cf.Create(
-				t.Context(),
-				&envoy_auth.CheckRequest{
-					Attributes: &envoy_auth.AttributeContext{
-						Request: &envoy_auth.AttributeContext_Request{
-							Http: &envoy_auth.AttributeContext_HttpRequest{
-								Host: "FoO.Bar",
-								Headers: map[string]string{
-									"x-foo": "bar",
-								},
-							},
-						},
+				return peer.NewContext(t.Context(), &peer.Peer{
+					Addr: &net.TCPAddr{
+						IP:   net.ParseIP("192.0.2.1"),
+						Port: 12345,
 					},
-				},
-			)
-			defer cf.Destroy(ctx)
+				})
+			},
+			expected: "192.0.2.1:12345",
+		},
+		"peer is not available": {
+			ctx: func(t *testing.T) context.Context {
+				t.Helper()
 
-			assert.Equal(t, tc.expected, ctx.Request().Header(tc.name))
-		})
-	}
-}
+				return t.Context()
+			},
+		},
+		"peer address is not available": {
+			ctx: func(t *testing.T) context.Context {
+				t.Helper()
 
-func TestRequestClientIPs(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		headers  map[string]string
-		expected []string
-	}{
-		"neither Forwarded, nor X-Forwarded-For headers are present": {
-			headers: map[string]string{},
-			expected: []string{
-				"192.0.2.1",
-			},
-		},
-		"only Forwarded header is present": {
-			headers: map[string]string{
-				"Forwarded": "proto=http;for=127.0.0.1, proto=https;for=192.168.12.125",
-			},
-			expected: []string{
-				"127.0.0.1",
-				"192.168.12.125",
-				"192.0.2.1",
-			},
-		},
-		"only X-Forwarded-For header is present": {
-			headers: map[string]string{
-				"X-Forwarded-For": "127.0.0.1, 192.168.12.125",
-			},
-			expected: []string{
-				"127.0.0.1",
-				"192.168.12.125",
-				"192.0.2.1",
-			},
-		},
-		"Forwarded and X-Forwarded-For headers are present": {
-			headers: map[string]string{
-				"X-Forwarded-For": "127.0.0.2, 192.168.12.126",
-				"Forwarded":       "proto=http;for=127.0.0.3, proto=http;for=192.168.12.127",
-			},
-			expected: []string{
-				"127.0.0.3",
-				"192.168.12.127",
-				"192.0.2.1",
-			},
-		},
-		"X-Forwarded-For contains multiple and empty values": {
-			headers: map[string]string{
-				"X-Forwarded-For": "127.0.0.1, 192.168.1.1, 10.0.0.2,   ",
-			},
-			expected: []string{
-				"127.0.0.1",
-				"192.168.1.1",
-				"10.0.0.2",
-				"192.0.2.1",
+				return peer.NewContext(t.Context(), &peer.Peer{})
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			md := metadata.New(nil)
-			md.Set("x-forwarded-for", "203.0.113.1")
-
-			ctx := metadata.NewIncomingContext(t.Context(), md)
-			ctx = peer.NewContext(ctx, &peer.Peer{
-				Addr: &net.TCPAddr{
-					IP:   net.ParseIP("192.0.2.1"),
-					Port: 12345,
-				},
-			})
-
 			// WHEN
-			ips := requestClientIPs(
-				ctx,
-				make([]string, 0, 10),
-				tc.headers,
-			)
+			actual := peerAddress(tc.ctx(t))
 
 			// THEN
-			assert.Equal(t, tc.expected, ips)
+			assert.Equal(t, tc.expected, actual)
 		})
 	}
 }

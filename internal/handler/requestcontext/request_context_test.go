@@ -17,11 +17,10 @@
 package requestcontext
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"net/http"
-	"net/http/httptest"
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,15 +29,52 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
+type testBodySource struct {
+	body  []byte
+	err   error
+	calls int
+}
+
+func (s *testBodySource) ReadRawBody() ([]byte, error) {
+	s.calls++
+
+	return s.body, s.err
+}
+
+func newTestRequestContext(
+	t *testing.T,
+	method string,
+	rawURL string,
+	headers http.Header,
+	body BodySource,
+) *RequestContext {
+	t.Helper()
+
+	requestURL, err := url.Parse(rawURL)
+	require.NoError(t, err)
+
+	ctx := NewRequestContext()
+	ctx.Init(Input{
+		Context:    t.Context(),
+		Method:     method,
+		URL:        *requestURL,
+		Headers:    headers,
+		RemoteAddr: "192.0.2.1:1234",
+		Body:       body,
+	})
+
+	return ctx
+}
+
 func TestRequestClientIPs(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		configureRequest func(t *testing.T, req *http.Request)
+		configureHeaders func(t *testing.T, headers http.Header)
 		assert           func(t *testing.T, ips []string)
 	}{
 		"neither Forwarded, not X-Forwarded-For headers are present": {
-			func(t *testing.T, _ *http.Request) { t.Helper() },
+			func(t *testing.T, _ http.Header) { t.Helper() },
 			func(t *testing.T, ips []string) {
 				t.Helper()
 
@@ -47,10 +83,10 @@ func TestRequestClientIPs(t *testing.T) {
 			},
 		},
 		"only Forwarded header is present": {
-			func(t *testing.T, req *http.Request) {
+			func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Set("Forwarded", "proto=http;for=127.0.0.1, proto=https;for=192.168.12.125")
+				headers.Set("Forwarded", "proto=http;for=127.0.0.1, proto=https;for=192.168.12.125")
 			},
 			func(t *testing.T, ips []string) {
 				t.Helper()
@@ -63,10 +99,10 @@ func TestRequestClientIPs(t *testing.T) {
 			},
 		},
 		"only X-Forwarded-For header is present": {
-			func(t *testing.T, req *http.Request) {
+			func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Set("X-Forwarded-For", "127.0.0.1, 192.168.12.125")
+				headers.Set("X-Forwarded-For", "127.0.0.1, 192.168.12.125")
 			},
 			func(t *testing.T, ips []string) {
 				t.Helper()
@@ -79,11 +115,11 @@ func TestRequestClientIPs(t *testing.T) {
 			},
 		},
 		"X-Forwarded-For appears multiple times": {
-			func(t *testing.T, req *http.Request) {
+			func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Add("X-Forwarded-For", "127.0.0.1")
-				req.Header.Add("X-Forwarded-For", "192.168.12.125")
+				headers.Add("X-Forwarded-For", "127.0.0.1")
+				headers.Add("X-Forwarded-For", "192.168.12.125")
 			},
 			func(t *testing.T, ips []string) {
 				t.Helper()
@@ -96,11 +132,11 @@ func TestRequestClientIPs(t *testing.T) {
 			},
 		},
 		"Forwarded and X-Forwarded-For headers are present": {
-			func(t *testing.T, req *http.Request) {
+			func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Set("X-Forwarded-For", "127.0.0.2, 192.168.12.126")
-				req.Header.Set("Forwarded", "proto=http;for=127.0.0.3, proto=http;for=192.168.12.127")
+				headers.Set("X-Forwarded-For", "127.0.0.2, 192.168.12.126")
+				headers.Set("Forwarded", "proto=http;for=127.0.0.3, proto=http;for=192.168.12.127")
 			},
 			func(t *testing.T, ips []string) {
 				t.Helper()
@@ -113,11 +149,11 @@ func TestRequestClientIPs(t *testing.T) {
 			},
 		},
 		"Forwarded appears multiple times": {
-			func(t *testing.T, req *http.Request) {
+			func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Add("Forwarded", "proto=http;for=127.0.0.1")
-				req.Header.Add("Forwarded", "proto=https;for=192.168.12.125")
+				headers.Add("Forwarded", "proto=http;for=127.0.0.1")
+				headers.Add("Forwarded", "proto=https;for=192.168.12.125")
 			},
 			func(t *testing.T, ips []string) {
 				t.Helper()
@@ -132,16 +168,14 @@ func TestRequestClientIPs(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodHead, "https://foo.bar/test", nil)
-			tc.configureRequest(t, req)
-
-			rc := New()
+			headers := make(http.Header)
+			tc.configureHeaders(t, headers)
 
 			// WHEN
-			rc.Init(req)
+			ips := requestClientIPs(nil, headers, "192.0.2.1:1234")
 
 			// THEN
-			tc.assert(t, rc.hmdlReq.ClientIPAddresses)
+			tc.assert(t, ips)
 		})
 	}
 }
@@ -150,52 +184,26 @@ func TestRequestContextRequestHeaders(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodHead, "https://FoO.Baz/test", nil)
-	req.Header.Set("X-Foo-Bar", "foo")
-	req.Header.Add("X-Foo-Bar", "bar")
+	headers := make(http.Header)
+	headers.Set("X-Foo-Bar", "foo")
+	headers.Add("X-Foo-Bar", "bar")
 
-	ctx := New()
-	ctx.Init(req)
-
-	// WHEN
-	headers := ctx.Request().Headers()
-
-	// THEN
-	require.Len(t, headers, 2)
-	assert.Equal(t, "foo,bar", headers["X-Foo-Bar"])
-	assert.Equal(t, "foo.baz", headers["Host"])
-}
-
-func TestRequestContextUpstreamRequest(t *testing.T) {
-	t.Parallel()
-
-	// GIVEN
-	ctx := New()
-	ctx.Init(httptest.NewRequestWithContext(
-		t.Context(),
-		http.MethodGet,
-		"https://foo.bar/test",
-		nil,
-	))
+	ctx := newTestRequestContext(t, http.MethodHead, "https://foo.baz/test", headers, nil)
 
 	// WHEN
-	upstreamRequest := ctx.UpstreamRequest()
+	actual := ctx.Request().Headers()
 
 	// THEN
-	assert.Nil(t, upstreamRequest)
+	require.Len(t, actual, 2)
+	assert.Equal(t, "foo,bar", actual["X-Foo-Bar"])
+	assert.Equal(t, "foo.baz", actual["Host"])
 }
 
 func TestRequestContextMethod(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := New()
-	ctx.Init(httptest.NewRequestWithContext(
-		t.Context(),
-		http.MethodPatch,
-		"https://foo.bar/test",
-		nil,
-	))
+	ctx := newTestRequestContext(t, http.MethodPatch, "https://foo.bar/test", nil, nil)
 
 	// WHEN
 	method := ctx.Method()
@@ -208,13 +216,7 @@ func TestRequestContextURL(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := New()
-	ctx.Init(httptest.NewRequestWithContext(
-		t.Context(),
-		http.MethodGet,
-		"https://foo.bar/test?foo=bar",
-		nil,
-	))
+	ctx := newTestRequestContext(t, http.MethodGet, "https://foo.bar/test?foo=bar", nil, nil)
 
 	// WHEN
 	upstreamURL := ctx.URL()
@@ -243,15 +245,15 @@ func TestRequestContextAddHeader(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		configureRequest func(t *testing.T, req *http.Request)
+		configureHeaders func(t *testing.T, headers http.Header)
 		mutate           func(t *testing.T, ctx *RequestContext)
 		assert           func(t *testing.T, ctx *RequestContext)
 	}{
 		"ordinary and Host headers are added": {
-			configureRequest: func(t *testing.T, req *http.Request) {
+			configureHeaders: func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Set("X-Foo", "incoming")
+				headers.Set("X-Foo", "incoming")
 			},
 			mutate: func(t *testing.T, ctx *RequestContext) {
 				t.Helper()
@@ -287,11 +289,11 @@ func TestRequestContextAddHeader(t *testing.T) {
 			},
 		},
 		"connection-specific header is ignored": {
-			configureRequest: func(t *testing.T, req *http.Request) {
+			configureHeaders: func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Set("Connection", "x-foo")
-				req.Header.Set("X-Foo", "incoming")
+				headers.Set("Connection", "x-foo")
+				headers.Set("X-Foo", "incoming")
 			},
 			mutate: func(t *testing.T, ctx *RequestContext) {
 				t.Helper()
@@ -305,16 +307,29 @@ func TestRequestContextAddHeader(t *testing.T) {
 				assert.NotContains(t, ctx.UpstreamHeaders(), "X-Foo")
 			},
 		},
+		"pseudo header is ignored": {
+			mutate: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				ctx.AddHeader(":authority", "bar.foo")
+			},
+			assert: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				assert.NotContains(t, ctx.UpstreamHeaders(), ":authority")
+				assert.Equal(t, "foo.bar", ctx.Headers().Get("Host"))
+				assert.Equal(t, "foo.bar", ctx.Request().URL.Host)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-			if tc.configureRequest != nil {
-				tc.configureRequest(t, req)
+			headers := make(http.Header)
+			if tc.configureHeaders != nil {
+				tc.configureHeaders(t, headers)
 			}
 
-			ctx := New()
-			ctx.Init(req)
+			ctx := newTestRequestContext(t, http.MethodGet, "https://foo.bar/test", headers, nil)
 
 			// WHEN
 			tc.mutate(t, ctx)
@@ -329,16 +344,16 @@ func TestRequestContextSetHeader(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		configureRequest func(t *testing.T, req *http.Request)
+		configureHeaders func(t *testing.T, headers http.Header)
 		prepareContext   func(t *testing.T, ctx *RequestContext)
 		mutate           func(t *testing.T, ctx *RequestContext)
 		assert           func(t *testing.T, ctx *RequestContext)
 	}{
 		"ordinary and Host headers are set": {
-			configureRequest: func(t *testing.T, req *http.Request) {
+			configureHeaders: func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Set("X-Foo", "incoming")
+				headers.Set("X-Foo", "incoming")
 			},
 			prepareContext: func(t *testing.T, ctx *RequestContext) {
 				t.Helper()
@@ -378,11 +393,11 @@ func TestRequestContextSetHeader(t *testing.T) {
 			},
 		},
 		"connection-specific header is ignored": {
-			configureRequest: func(t *testing.T, req *http.Request) {
+			configureHeaders: func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Set("Connection", "X-Foo")
-				req.Header.Set("X-Foo", "incoming")
+				headers.Set("Connection", "X-Foo")
+				headers.Set("X-Foo", "incoming")
 			},
 			mutate: func(t *testing.T, ctx *RequestContext) {
 				t.Helper()
@@ -396,16 +411,29 @@ func TestRequestContextSetHeader(t *testing.T) {
 				assert.NotContains(t, ctx.UpstreamHeaders(), "X-Foo")
 			},
 		},
+		"pseudo header is ignored": {
+			mutate: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				ctx.SetHeader(":path", "/changed")
+			},
+			assert: func(t *testing.T, ctx *RequestContext) {
+				t.Helper()
+
+				assert.NotContains(t, ctx.UpstreamHeaders(), ":path")
+				assert.Equal(t, "/test", ctx.URL().Path)
+				assert.Equal(t, "/test", ctx.Request().URL.Path)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-			if tc.configureRequest != nil {
-				tc.configureRequest(t, req)
+			headers := make(http.Header)
+			if tc.configureHeaders != nil {
+				tc.configureHeaders(t, headers)
 			}
 
-			ctx := New()
-			ctx.Init(req)
+			ctx := newTestRequestContext(t, http.MethodGet, "https://foo.bar/test", headers, nil)
 
 			if tc.prepareContext != nil {
 				tc.prepareContext(t, ctx)
@@ -419,21 +447,22 @@ func TestRequestContextSetHeader(t *testing.T) {
 		})
 	}
 }
+
 func TestRequestContextSetCookie(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		configureRequest func(t *testing.T, req *http.Request)
+		configureHeaders func(t *testing.T, headers http.Header)
 		prepareContext   func(t *testing.T, ctx *RequestContext)
 		mutate           func(t *testing.T, ctx *RequestContext)
 		assert           func(t *testing.T, ctx *RequestContext)
 	}{
 		"cookie is set": {
-			configureRequest: func(t *testing.T, req *http.Request) {
+			configureHeaders: func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Add("Cookie", "foo=old; session=abc")
-				req.Header.Add("Cookie", "another=x; foo=older")
+				headers.Add("Cookie", "foo=old; session=abc")
+				headers.Add("Cookie", "another=x; foo=older")
 			},
 			mutate: func(t *testing.T, ctx *RequestContext) {
 				t.Helper()
@@ -469,10 +498,10 @@ func TestRequestContextSetCookie(t *testing.T) {
 			},
 		},
 		"malformed Cookie header is not mutated": {
-			configureRequest: func(t *testing.T, req *http.Request) {
+			configureHeaders: func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Set("Cookie", "foo=old; malformed; session=abc")
+				headers.Set("Cookie", "foo=old; malformed; session=abc")
 			},
 			mutate: func(t *testing.T, ctx *RequestContext) {
 				t.Helper()
@@ -487,10 +516,10 @@ func TestRequestContextSetCookie(t *testing.T) {
 			},
 		},
 		"malformed Cookie header in overlay is not mutated": {
-			configureRequest: func(t *testing.T, req *http.Request) {
+			configureHeaders: func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Set("Cookie", "foo=old; session=abc")
+				headers.Set("Cookie", "foo=old; session=abc")
 			},
 			prepareContext: func(t *testing.T, ctx *RequestContext) {
 				t.Helper()
@@ -510,11 +539,11 @@ func TestRequestContextSetCookie(t *testing.T) {
 			},
 		},
 		"connection-specific Cookie header is not mutated": {
-			configureRequest: func(t *testing.T, req *http.Request) {
+			configureHeaders: func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Set("Connection", "Cookie")
-				req.Header.Set("Cookie", "foo=old; session=abc")
+				headers.Set("Connection", "Cookie")
+				headers.Set("Cookie", "foo=old; session=abc")
 			},
 			mutate: func(t *testing.T, ctx *RequestContext) {
 				t.Helper()
@@ -531,13 +560,12 @@ func TestRequestContextSetCookie(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-			if tc.configureRequest != nil {
-				tc.configureRequest(t, req)
+			headers := make(http.Header)
+			if tc.configureHeaders != nil {
+				tc.configureHeaders(t, headers)
 			}
 
-			ctx := New()
-			ctx.Init(req)
+			ctx := newTestRequestContext(t, http.MethodGet, "https://foo.bar/test", headers, nil)
 
 			if tc.prepareContext != nil {
 				tc.prepareContext(t, ctx)
@@ -556,72 +584,70 @@ func TestRequestContextConnectionSpecificHeaders(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		configureRequest func(t *testing.T, req *http.Request)
+		configureHeaders func(t *testing.T, headers http.Header)
 		expected         []string
 	}{
 		"no connection-specific headers": {},
 		"connection-specific headers are initialized": {
-			configureRequest: func(t *testing.T, req *http.Request) {
+			configureHeaders: func(t *testing.T, headers http.Header) {
 				t.Helper()
 
-				req.Header.Add("Connection", "X-Foo, x-bar")
-				req.Header.Add("Connection", " X-Baz ")
+				headers.Add("Connection", "X-Foo, x-bar")
+				headers.Add("Connection", " X-Baz ")
 			},
 			expected: []string{"X-Foo", "X-Bar", "X-Baz"},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-			if tc.configureRequest != nil {
-				tc.configureRequest(t, req)
+			headers := make(http.Header)
+			if tc.configureHeaders != nil {
+				tc.configureHeaders(t, headers)
 			}
 
-			ctx := New()
+			ctx := newTestRequestContext(t, http.MethodGet, "https://foo.bar/test", headers, nil)
 
 			// WHEN
-			ctx.Init(req)
-
-			// THEN
 			actual := make([]string, 0, len(tc.expected))
 			for name := range ctx.ConnectionSpecificHeaders() {
 				actual = append(actual, name)
 			}
 
+			// THEN
 			assert.ElementsMatch(t, tc.expected, actual)
 		})
 	}
 }
+
 func TestRequestContextHeaders(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-	req.Header.Set("Host", "spoofed")
-	req.Header.Set("X-Foo", "incoming")
-	req.Header.Set("X-Removed", "remove-me")
-	req.Header.Set("Cookie", "foo=bar")
+	headers := make(http.Header)
+	headers.Set("Host", "spoofed")
+	headers.Set("X-Foo", "incoming")
+	headers.Set("X-Removed", "remove-me")
+	headers.Set("Cookie", "foo=bar")
 
-	ctx := New()
-	ctx.Init(req)
+	ctx := newTestRequestContext(t, http.MethodGet, "https://foo.bar/test", headers, nil)
 	ctx.AddHeader("X-Foo", "from-heimdall")
 	ctx.SetHeader("X-Set", "set-by-heimdall")
 	ctx.SetCookie("bar", "foo")
 	ctx.upstreamHeaders["X-Removed"] = nil
 
 	// WHEN
-	headers := ctx.Headers()
+	actual := ctx.Headers()
 
 	// THEN
-	assert.Equal(t, []string{"from-heimdall"}, headers.Values("X-Foo"))
-	assert.Equal(t, "set-by-heimdall", headers.Get("X-Set"))
-	assert.Equal(t, "foo=bar; bar=foo", headers.Get("Cookie"))
-	assert.Equal(t, "foo.bar", headers.Get("Host"))
-	assert.Empty(t, headers.Values("X-Removed"))
+	assert.Equal(t, []string{"from-heimdall"}, actual.Values("X-Foo"))
+	assert.Equal(t, "set-by-heimdall", actual.Get("X-Set"))
+	assert.Equal(t, "foo=bar; bar=foo", actual.Get("Cookie"))
+	assert.Equal(t, "foo.bar", actual.Get("Host"))
+	assert.Empty(t, actual.Values("X-Removed"))
 
-	headers.Set("X-Foo", "changed")
-	headers.Set("Host", "changed.local")
-	headers.Set("Cookie", "changed=true")
+	actual.Set("X-Foo", "changed")
+	actual.Set("Host", "changed.local")
+	actual.Set("Cookie", "changed=true")
 
 	current := ctx.Headers()
 
@@ -638,13 +664,11 @@ func TestRequestContextHeader(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodHead, "https://Foo.bar/test", nil)
-	req.Header.Set("X-Foo-Bar", "foo")
-	req.Header.Add("X-Foo-Bar", "bar")
-	req.Host = "Bar.foo"
+	headers := make(http.Header)
+	headers.Set("X-Foo-Bar", "foo")
+	headers.Add("X-Foo-Bar", "bar")
 
-	ctx := New()
-	ctx.Init(req)
+	ctx := newTestRequestContext(t, http.MethodHead, "https://bar.foo/test", headers, nil)
 
 	// WHEN
 	xFooBarValue := ctx.Request().Header("X-Foo-Bar")
@@ -661,11 +685,10 @@ func TestRequestContextCookie(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodHead, "https://foo.bar/test", nil)
-	req.Header.Set("Cookie", "foo=bar; bar=baz")
+	headers := make(http.Header)
+	headers.Set("Cookie", "foo=bar; bar=baz")
 
-	ctx := New()
-	ctx.Init(req)
+	ctx := newTestRequestContext(t, http.MethodHead, "https://foo.bar/test", headers, nil)
 
 	// WHEN
 	value1 := ctx.Request().Cookie("bar")
@@ -681,93 +704,93 @@ func TestRequestContextBody(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		ct     string
-		body   io.Reader
+		body   string
 		expect any
 	}{
 		"No body": {
 			ct:     "empty",
-			body:   nil,
 			expect: "",
 		},
 		"Empty body": {
 			ct:     "empty",
-			body:   bytes.NewBufferString(""),
+			body:   "",
 			expect: "",
 		},
 		"Wrong content type": {
 			ct:     "application/json",
-			body:   bytes.NewBufferString("foo: bar"),
+			body:   "foo: bar",
 			expect: "foo: bar",
 		},
 		"x-www-form-urlencoded encoded": {
 			ct:     "application/x-www-form-urlencoded; charset=utf-8",
-			body:   bytes.NewBufferString("content=heimdall"),
+			body:   "content=heimdall",
 			expect: map[string]any{"content": []string{"heimdall"}},
 		},
 		"json encoded": {
 			ct:     "application/json; charset=utf-8",
-			body:   bytes.NewBufferString(`{ "content": "heimdall" }`),
+			body:   `{ "content": "heimdall" }`,
 			expect: map[string]any{"content": "heimdall"},
 		},
 		"json encoded array": {
 			ct:     "application/json; charset=utf-8",
-			body:   bytes.NewBufferString(`[{"content": "heimdall"}]`),
+			body:   `[{"content": "heimdall"}]`,
 			expect: []any{map[string]any{"content": "heimdall"}},
 		},
 		"json encoded scalar string": {
 			ct:     "application/json; charset=utf-8",
-			body:   bytes.NewBufferString(`"heimdall"`),
+			body:   `"heimdall"`,
 			expect: "heimdall",
 		},
 		"json encoded scalar number": {
 			ct:     "application/json; charset=utf-8",
-			body:   bytes.NewBufferString(`42`),
+			body:   `42`,
 			expect: float64(42),
 		},
 		"json encoded scalar bool": {
 			ct:     "application/json; charset=utf-8",
-			body:   bytes.NewBufferString(`true`),
+			body:   `true`,
 			expect: true,
 		},
 		"json encoded null": {
 			ct:     "application/json; charset=utf-8",
-			body:   bytes.NewBufferString(`null`),
+			body:   `null`,
 			expect: nil,
 		},
 		"yaml encoded": {
 			ct:     "application/yaml; charset=utf-8",
-			body:   bytes.NewBufferString("content: heimdall"),
+			body:   "content: heimdall",
 			expect: map[string]any{"content": "heimdall"},
 		},
 		"yaml encoded sequence": {
 			ct:     "application/yaml; charset=utf-8",
-			body:   bytes.NewBufferString("- content: heimdall\n"),
+			body:   "- content: heimdall\n",
 			expect: []any{map[string]any{"content": "heimdall"}},
 		},
 		"yaml encoded scalar": {
 			ct:     "application/yaml; charset=utf-8",
-			body:   bytes.NewBufferString("heimdall\n"),
+			body:   "heimdall\n",
 			expect: "heimdall",
 		},
 		"plain text": {
 			ct:     "text/plain",
-			body:   bytes.NewBufferString("content=heimdall"),
+			body:   "content=heimdall",
 			expect: "content=heimdall",
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "https://foo.bar/test", tc.body)
-			req.Header.Set("Content-Type", tc.ct)
+			headers := make(http.Header)
+			headers.Set("Content-Type", tc.ct)
 
-			ctx := New()
-			ctx.Init(req)
+			source := &testBodySource{body: []byte(tc.body)}
+			ctx := newTestRequestContext(t, http.MethodPost, "https://foo.bar/test", headers, source)
 
 			// WHEN
 			data := ctx.Request().Body()
 
 			// THEN
 			assert.Equal(t, tc.expect, data)
+			assert.Equal(t, 1, source.calls)
 		})
 	}
 }
@@ -776,7 +799,7 @@ func TestRequestContextRawBody(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		body     io.Reader
+		body     string
 		prepare  func(t *testing.T, ctx *RequestContext)
 		expected string
 	}{
@@ -784,11 +807,11 @@ func TestRequestContextRawBody(t *testing.T) {
 			expected: "",
 		},
 		"Body present": {
-			body:     bytes.NewBufferString("content=heimdall"),
+			body:     "content=heimdall",
 			expected: "content=heimdall",
 		},
 		"Body was already requested": {
-			body: bytes.NewBufferString("content=heimdall"),
+			body: "content=heimdall",
 			prepare: func(t *testing.T, ctx *RequestContext) {
 				t.Helper()
 
@@ -802,7 +825,7 @@ func TestRequestContextRawBody(t *testing.T) {
 			expected: "content=heimdall",
 		},
 		"Body was already decoded": {
-			body: bytes.NewBufferString("content=heimdall"),
+			body: "content=heimdall",
 			prepare: func(t *testing.T, ctx *RequestContext) {
 				t.Helper()
 
@@ -813,10 +836,8 @@ func TestRequestContextRawBody(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "https://foo.bar/test", tc.body)
-
-			ctx := New()
-			ctx.Init(req)
+			source := &testBodySource{body: []byte(tc.body)}
+			ctx := newTestRequestContext(t, http.MethodPost, "https://foo.bar/test", nil, source)
 
 			if tc.prepare != nil {
 				tc.prepare(t, ctx)
@@ -834,26 +855,38 @@ func TestRequestContextRawBody(t *testing.T) {
 			require.NoError(t, body.Close())
 
 			assert.Equal(t, tc.expected, string(data))
-
-			requestBody, err := io.ReadAll(req.Body)
-			require.NoError(t, err)
-
-			assert.Equal(t, tc.expected, string(requestBody))
+			assert.Equal(t, 1, source.calls)
 		})
 	}
+}
+
+func TestRequestContextRawBodyError(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	source := &testBodySource{err: assert.AnError}
+	ctx := newTestRequestContext(t, http.MethodPost, "https://foo.bar/test", nil, source)
+
+	// WHEN
+	body, err := ctx.RawBody()
+
+	// THEN
+	require.ErrorIs(t, err, assert.AnError)
+	assert.Nil(t, body)
+	assert.Equal(t, 1, source.calls)
 }
 
 func TestRequestContextRequestURLCaptures(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := New()
-	ctx.Init(httptest.NewRequestWithContext(t.Context(), http.MethodHead, "https://foo.bar/test", nil))
-
+	ctx := newTestRequestContext(t, http.MethodHead, "https://foo.bar/test", nil, nil)
 	ctx.Request().URL.Captures = map[string]string{"a": "b"}
 
 	// WHEN
 	captures := ctx.Request().URL.Captures
+
+	// THEN
 	require.Len(t, captures, 1)
 	assert.Equal(t, "b", captures["a"])
 }
@@ -862,16 +895,11 @@ func TestRequestContextReset(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	req := httptest.NewRequestWithContext(
-		t.Context(),
-		http.MethodHead,
-		"https://foo.bar/test",
-		bytes.NewBufferString(`{ "content": "heimdall" }`),
-	)
-	req.Header.Set("Content-Type", "application/json; charset=utf-8")
+	headers := make(http.Header)
+	headers.Set("Content-Type", "application/json; charset=utf-8")
+	source := &testBodySource{body: []byte(`{ "content": "heimdall" }`)}
 
-	ctx := New()
-	ctx.Init(req)
+	ctx := newTestRequestContext(t, http.MethodHead, "https://foo.bar/test", headers, source)
 	ctx.Request().URL.Captures = map[string]string{"a": "b"}
 	ctx.SetError(assert.AnError)
 	_ = ctx.Body()
@@ -885,10 +913,12 @@ func TestRequestContextReset(t *testing.T) {
 	ctx.Reset()
 
 	// THEN
+	require.Nil(t, ctx.inputHeaders)
+	require.Nil(t, ctx.bodySource)
 	require.Nil(t, ctx.savedBody)
 	require.Nil(t, ctx.rawBody)
 	require.NoError(t, ctx.err)
-	require.Nil(t, ctx.req)
+	require.Nil(t, ctx.ctx)
 	require.NotNil(t, ctx.outputs)
 	require.Empty(t, ctx.outputs)
 	require.NotNil(t, ctx.headers)
@@ -904,25 +934,22 @@ func TestRequestContextReset(t *testing.T) {
 	require.NotNil(t, ctx.hmdlReq.ClientIPAddresses)
 	require.Empty(t, ctx.hmdlReq.ClientIPAddresses)
 	require.Equal(t, 10, cap(ctx.hmdlReq.ClientIPAddresses))
+	require.NotNil(t, ctx.connectionSpecificHeaders)
+	require.Empty(t, ctx.connectionSpecificHeaders)
 }
 
-func TestRequestContextWithParent(t *testing.T) {
+func TestRequestContextSetParent(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
-	ctx := New()
-	ctx.Init(httptest.NewRequestWithContext(
-		t.Context(),
-		http.MethodHead,
-		"https://foo.bar/test",
-		nil,
-	))
-
+	ctx := newTestRequestContext(t, http.MethodHead, "https://foo.bar/test", nil, nil)
 	orig := ctx.Context()
 	newParent := context.Background()
 
-	ctx.WithParent(newParent)
+	// WHEN
+	ctx.SetParent(newParent)
 
+	// THEN
 	assert.NotEqual(t, orig, ctx.ctx)
 	assert.Equal(t, newParent, ctx.ctx)
 }

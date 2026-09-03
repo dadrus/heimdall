@@ -73,6 +73,30 @@ func TestClassify(t *testing.T) {
 			name:     "x-fOrWaRdEd-CuStOm",
 			expected: ProxyOwned,
 		},
+		":method is transport-managed": {
+			name:     ":method",
+			expected: Transport,
+		},
+		":scheme is transport-managed": {
+			name:     ":scheme",
+			expected: Transport,
+		},
+		":path is transport-managed": {
+			name:     ":path",
+			expected: Transport,
+		},
+		":authority is transport-managed": {
+			name:     ":authority",
+			expected: Transport,
+		},
+		":status is transport-managed": {
+			name:     ":status",
+			expected: Transport,
+		},
+		"arbitrary pseudo header is transport-managed": {
+			name:     ":custom",
+			expected: Transport,
+		},
 		"Connection is transport-managed": {
 			name:     "Connection",
 			expected: Transport,
@@ -137,6 +161,14 @@ func TestShouldSanitizeInput(t *testing.T) {
 		},
 		"Host is not sanitized": {
 			name:     "Host",
+			expected: false,
+		},
+		"pseudo header is protected but not sanitized here": {
+			name:     ":authority",
+			expected: false,
+		},
+		"arbitrary pseudo header is protected but not sanitized here": {
+			name:     ":custom",
 			expected: false,
 		},
 		"Forwarded is preserved for preparation": {

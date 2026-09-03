@@ -17,6 +17,7 @@
 package decision
 
 import (
+	"context"
 	"net/http"
 	"sync"
 
@@ -56,14 +57,14 @@ func newContextFactory(
 		responseCode: responseCode,
 		pool: &sync.Pool{New: func() any {
 			return &requestContext{
-				RequestContext: requestcontext.New(),
+				NetHTTPRequestContext: requestcontext.New(),
 			}
 		}},
 	}
 }
 
 type requestContext struct {
-	*requestcontext.RequestContext
+	*requestcontext.NetHTTPRequestContext
 
 	rw           http.ResponseWriter
 	responseCode int
@@ -75,7 +76,7 @@ func (r *requestContext) Init(rw http.ResponseWriter, req *http.Request, code in
 	r.rw = rw
 	r.responseCode = code
 
-	r.RequestContext.Init(req)
+	r.NetHTTPRequestContext.Init(req)
 }
 
 func (r *requestContext) Reset() {
@@ -83,7 +84,13 @@ func (r *requestContext) Reset() {
 	r.responseCode = 0
 	r.upstreamViewPrepared = false
 
-	r.RequestContext.Reset()
+	r.NetHTTPRequestContext.Reset()
+}
+
+func (r *requestContext) WithParent(ctx context.Context) pipeline.Context {
+	r.SetParent(ctx)
+
+	return r
 }
 
 func (r *requestContext) PrepareUpstreamView(_ pipeline.UpstreamTarget) {
