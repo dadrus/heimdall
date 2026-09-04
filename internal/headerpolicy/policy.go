@@ -68,6 +68,10 @@ func metadataFor(name string) metadata {
 		return metadata{class: ProxyOwned}
 	}
 
+	if strings.HasPrefix(name, "X-Envoy-") {
+		return metadata{class: ProxyOwned}
+	}
+
 	switch name {
 	case "Connection",
 		"Proxy-Connection",

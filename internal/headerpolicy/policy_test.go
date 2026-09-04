@@ -69,6 +69,10 @@ func TestClassify(t *testing.T) {
 			name:     "X-Forwarded-Prefix",
 			expected: ProxyOwned,
 		},
+		"arbitrary header from Envoy namespace are proxy-owned": {
+			name:     "X-Envoy-Foo",
+			expected: ProxyOwned,
+		},
 		"proxy-owned classification is case-insensitive": {
 			name:     "x-fOrWaRdEd-CuStOm",
 			expected: ProxyOwned,
@@ -226,6 +230,10 @@ func TestShouldSanitizeInput(t *testing.T) {
 		"sanitization is case-insensitive": {
 			name:     "x-fOrWaRdEd-MeThOd",
 			expected: true,
+		},
+		"Headers from the Envoy namespace are preserved for preparation": {
+			name:     "X-Envoy-Foo",
+			expected: false,
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
