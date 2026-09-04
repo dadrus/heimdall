@@ -431,6 +431,71 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
 			},
 		},
+		"TE containing trailers is normalized for upstream": {
+			upstreamCalled: true,
+			headers: http.Header{
+				"Te": []string{"gzip, trailers"},
+			},
+			setup: func(t *testing.T, ctx requestcontext.Context, target *mocks.UpstreamTargetMock, upstreamURL *url.URL) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = *upstreamURL
+				})
+				target.EXPECT().ForwardHostHeader().Return(false)
+
+				ctx.PrepareUpstreamView(target)
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Equal(t, "trailers", req.Header.Get("Te"))
+			},
+		},
+		"TE without trailers is dropped for upstream": {
+			upstreamCalled: true,
+			headers: http.Header{
+				"Te": []string{"gzip"},
+			},
+			setup: func(t *testing.T, ctx requestcontext.Context, target *mocks.UpstreamTargetMock, upstreamURL *url.URL) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = *upstreamURL
+				})
+				target.EXPECT().ForwardHostHeader().Return(false)
+
+				ctx.PrepareUpstreamView(target)
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Empty(t, req.Header.Get("Te"))
+			},
+		},
+		"TE trailers survives Connection TE": {
+			upstreamCalled: true,
+			headers: http.Header{
+				"Connection": []string{"TE"},
+				"Te":         []string{"trailers"},
+			},
+			setup: func(t *testing.T, ctx requestcontext.Context, target *mocks.UpstreamTargetMock, upstreamURL *url.URL) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = *upstreamURL
+				})
+				target.EXPECT().ForwardHostHeader().Return(false)
+
+				ctx.PrepareUpstreamView(target)
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Empty(t, req.Header.Get("Connection"))
+				assert.Equal(t, "trailers", req.Header.Get("Te"))
+			},
+		},
 		"proxying fails": {
 			setup: func(t *testing.T, ctx requestcontext.Context, target *mocks.UpstreamTargetMock, upstreamURL *url.URL) {
 				t.Helper()
