@@ -402,6 +402,7 @@ func TestRequestContextRawBody(t *testing.T) {
 		rawBody           []byte
 		partialBodyHeader string
 		expected          string
+		expectError       bool
 	}{
 		"no body": {
 			partialBodyHeader: "false",
@@ -417,12 +418,14 @@ func TestRequestContextRawBody(t *testing.T) {
 			partialBodyHeader: "false",
 			expected:          "content=heimdall",
 		},
-		"partial body is treated as empty": {
+		"partial body is rejected": {
 			rawBody:           []byte("partial"),
 			partialBodyHeader: "true",
+			expectError:       true,
 		},
-		"missing partial body indicator is treated as empty": {
-			rawBody: []byte("content=heimdall"),
+		"missing partial body indicator is rejected": {
+			rawBody:     []byte("content=heimdall"),
+			expectError: true,
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
@@ -453,6 +456,13 @@ func TestRequestContextRawBody(t *testing.T) {
 			body, err := ctx.RawBody()
 
 			// THEN
+			if tc.expectError {
+				require.Error(t, err)
+				assert.Nil(t, body)
+
+				return
+			}
+
 			require.NoError(t, err)
 			require.NotNil(t, body)
 

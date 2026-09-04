@@ -18,6 +18,7 @@ package grpcv3
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -36,6 +37,8 @@ import (
 )
 
 var _ pipeline.UpstreamRequest = (*RequestContext)(nil)
+
+var errRequestBodyIncomplete = errors.New("request body is not fully available")
 
 type contextFactory struct {
 	pool *sync.Pool
@@ -64,10 +67,15 @@ func newContextFactory() *contextFactory {
 }
 
 type envoyBodySource struct {
-	body []byte
+	body     []byte
+	complete bool
 }
 
 func (s *envoyBodySource) ReadRawBody() ([]byte, error) {
+	if !s.complete {
+		return nil, errRequestBodyIncomplete
+	}
+
 	return s.body, nil
 }
 
@@ -99,8 +107,9 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 	headers := canonicalizeHeaders(httpReq.GetHeaders())
 
 	r.bodySource.body = nil
+	r.bodySource.complete = headers.Get("X-Envoy-Auth-Partial-Body") == "false"
 
-	if headers.Get("X-Envoy-Auth-Partial-Body") == "false" {
+	if r.bodySource.complete {
 		if rawBody := httpReq.GetRawBody(); rawBody != nil {
 			r.bodySource.body = rawBody
 		} else {
@@ -135,6 +144,7 @@ func peerAddress(ctx context.Context) string {
 
 func (r *RequestContext) Reset() {
 	r.bodySource.body = nil
+	r.bodySource.complete = false
 	r.upstreamViewPrepared = false
 
 	r.RequestContext.Reset()
