@@ -108,6 +108,23 @@ auth_method: bar
 				require.ErrorContains(t, err, "'auth_method' must be one of [basic_auth request_body]")
 			},
 		},
+		"with non-mutable header": {
+			config: []byte(`
+token_url: https://foo.bar
+credentials:
+  source: foo
+  selector: bar
+header:
+  name: Connection
+`),
+			assert: func(t *testing.T, err error, _ *oauth2ClientCredentialsFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "'header'.'name' is not a mutable upstream header")
+			},
+		},
 		"with minimal valid config with enforced and used TLS": {
 			enforceTLS: true,
 			config: []byte(`
@@ -171,7 +188,7 @@ cache_ttl: 11s
 scopes:
   - foo
   - baz
-header: 
+header:
   name: "X-My-Header"
   scheme: "Bar"
 `),
@@ -264,7 +281,7 @@ cache_ttl: 11s
 scopes:
   - foo
   - baz
-header: 
+header:
   name: "X-My-Header"
 `),
 			assert: func(t *testing.T, err error, prototype, configured *oauth2ClientCredentialsFinalizer) {
@@ -284,7 +301,7 @@ cache_ttl: 11s
 scopes:
   - foo
   - baz
-header: 
+header:
   name: "X-My-Header"
 `),
 			stepDef: types.StepDefinition{ID: "foo"},
@@ -675,7 +692,10 @@ token_url: ` + srv.URL + `
 				require.NoError(t, err)
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(rawData, nil)
-				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer foobar")
+
+				upstreamRequest := pipelinemocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().AddHeader("Authorization", "Bearer foobar")
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
 			},
 			assert: func(t *testing.T, err error, tokenEndpointCalled bool) {
 				t.Helper()
@@ -762,7 +782,10 @@ cache_ttl: 3m
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, 3*time.Minute).Return(nil)
-				ctx.EXPECT().AddHeaderForUpstream("X-My-Header", "Bar foobar").Return()
+
+				upstreamRequest := pipelinemocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().AddHeader("X-My-Header", "Bar foobar")
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
 			},
 			assertRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()

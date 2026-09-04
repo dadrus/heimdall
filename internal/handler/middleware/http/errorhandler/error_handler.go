@@ -73,6 +73,7 @@ func hasCustomResponse(responseError *pipeline.ResponseError) bool {
 		len(responseError.Body) != 0
 }
 
+//nolint:cyclop
 func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, err error) {
 	ctx := req.Context()
 	logger := zerolog.Ctx(ctx)
@@ -87,6 +88,10 @@ func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, er
 		}
 
 		err = responseError.Cause
+	}
+
+	if challengeError, ok := errors.AsType[*pipeline.AuthenticationChallengeError](err); ok {
+		rw.Header().Set("WWW-Authenticate", challengeError.Challenge())
 	}
 
 	switch {

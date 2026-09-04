@@ -38,98 +38,6 @@ func (_m *ContextMock) EXPECT() *ContextMock_Expecter {
 	return &ContextMock_Expecter{mock: &_m.Mock}
 }
 
-// AddCookieForUpstream provides a mock function for the type ContextMock
-func (_mock *ContextMock) AddCookieForUpstream(name string, value string) {
-	_mock.Called(name, value)
-	return
-}
-
-// ContextMock_AddCookieForUpstream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddCookieForUpstream'
-type ContextMock_AddCookieForUpstream_Call struct {
-	*mock.Call
-}
-
-// AddCookieForUpstream is a helper method to define mock.On call
-//   - name string
-//   - value string
-func (_e *ContextMock_Expecter) AddCookieForUpstream(name any, value any) *ContextMock_AddCookieForUpstream_Call {
-	return &ContextMock_AddCookieForUpstream_Call{Call: _e.mock.On("AddCookieForUpstream", name, value)}
-}
-
-func (_c *ContextMock_AddCookieForUpstream_Call) Run(run func(name string, value string)) *ContextMock_AddCookieForUpstream_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ContextMock_AddCookieForUpstream_Call) Return() *ContextMock_AddCookieForUpstream_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *ContextMock_AddCookieForUpstream_Call) RunAndReturn(run func(name string, value string)) *ContextMock_AddCookieForUpstream_Call {
-	_c.Run(run)
-	return _c
-}
-
-// AddHeaderForUpstream provides a mock function for the type ContextMock
-func (_mock *ContextMock) AddHeaderForUpstream(name string, value string) {
-	_mock.Called(name, value)
-	return
-}
-
-// ContextMock_AddHeaderForUpstream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'AddHeaderForUpstream'
-type ContextMock_AddHeaderForUpstream_Call struct {
-	*mock.Call
-}
-
-// AddHeaderForUpstream is a helper method to define mock.On call
-//   - name string
-//   - value string
-func (_e *ContextMock_Expecter) AddHeaderForUpstream(name any, value any) *ContextMock_AddHeaderForUpstream_Call {
-	return &ContextMock_AddHeaderForUpstream_Call{Call: _e.mock.On("AddHeaderForUpstream", name, value)}
-}
-
-func (_c *ContextMock_AddHeaderForUpstream_Call) Run(run func(name string, value string)) *ContextMock_AddHeaderForUpstream_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 string
-		if args[0] != nil {
-			arg0 = args[0].(string)
-		}
-		var arg1 string
-		if args[1] != nil {
-			arg1 = args[1].(string)
-		}
-		run(
-			arg0,
-			arg1,
-		)
-	})
-	return _c
-}
-
-func (_c *ContextMock_AddHeaderForUpstream_Call) Return() *ContextMock_AddHeaderForUpstream_Call {
-	_c.Call.Return()
-	return _c
-}
-
-func (_c *ContextMock_AddHeaderForUpstream_Call) RunAndReturn(run func(name string, value string)) *ContextMock_AddHeaderForUpstream_Call {
-	_c.Run(run)
-	return _c
-}
-
 // Context provides a mock function for the type ContextMock
 func (_mock *ContextMock) Context() context.Context {
 	ret := _mock.Called()
@@ -349,6 +257,52 @@ func (_c *ContextMock_SetError_Call) Return() *ContextMock_SetError_Call {
 
 func (_c *ContextMock_SetError_Call) RunAndReturn(run func(err error)) *ContextMock_SetError_Call {
 	_c.Run(run)
+	return _c
+}
+
+// UpstreamRequest provides a mock function for the type ContextMock
+func (_mock *ContextMock) UpstreamRequest() pipeline.UpstreamRequest {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for UpstreamRequest")
+	}
+
+	var r0 pipeline.UpstreamRequest
+	if returnFunc, ok := ret.Get(0).(func() pipeline.UpstreamRequest); ok {
+		r0 = returnFunc()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(pipeline.UpstreamRequest)
+		}
+	}
+	return r0
+}
+
+// ContextMock_UpstreamRequest_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'UpstreamRequest'
+type ContextMock_UpstreamRequest_Call struct {
+	*mock.Call
+}
+
+// UpstreamRequest is a helper method to define mock.On call
+func (_e *ContextMock_Expecter) UpstreamRequest() *ContextMock_UpstreamRequest_Call {
+	return &ContextMock_UpstreamRequest_Call{Call: _e.mock.On("UpstreamRequest")}
+}
+
+func (_c *ContextMock_UpstreamRequest_Call) Run(run func()) *ContextMock_UpstreamRequest_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ContextMock_UpstreamRequest_Call) Return(upstreamRequest pipeline.UpstreamRequest) *ContextMock_UpstreamRequest_Call {
+	_c.Call.Return(upstreamRequest)
+	return _c
+}
+
+func (_c *ContextMock_UpstreamRequest_Call) RunAndReturn(run func() pipeline.UpstreamRequest) *ContextMock_UpstreamRequest_Call {
+	_c.Call.Return(run)
 	return _c
 }
 

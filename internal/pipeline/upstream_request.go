@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,19 @@
 
 package pipeline
 
-type Executor interface {
-	Execute(ctx ExecutionContext) error
+import (
+	"io"
+	"net/http"
+	"net/url"
+)
+
+type UpstreamRequest interface {
+	Method() string
+	URL() url.URL
+	Headers() http.Header
+	RawBody() (io.ReadCloser, error)
+
+	AddHeader(name, value string)
+	SetHeader(name, value string)
+	SetCookie(name, value string)
 }

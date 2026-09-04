@@ -27,9 +27,10 @@ import (
 
 func extractURL(req *http.Request) url.URL {
 	var (
-		rawPath string
-		path    string
-		query   string
+		rawPath    string
+		path       string
+		query      string
+		forceQuery bool
 	)
 
 	proto := req.Header.Get("X-Forwarded-Proto")
@@ -43,11 +44,11 @@ func extractURL(req *http.Request) url.URL {
 	}
 
 	host = strings.ToLower(host)
-
 	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
 		if forwardedURI, err := url.Parse(val); err == nil {
 			rawPath = urlx.EscapedPath(forwardedURI)
 			query = forwardedURI.RawQuery
+			forceQuery = forwardedURI.ForceQuery
 		}
 	}
 
@@ -55,18 +56,20 @@ func extractURL(req *http.Request) url.URL {
 		rawPath = urlx.EscapedPath(req.URL)
 	}
 
-	if len(query) == 0 {
+	if len(query) == 0 && !forceQuery {
 		query = req.URL.RawQuery
+		forceQuery = req.URL.ForceQuery
 	}
 
 	rawPath = urlx.NormalizePath(rawPath)
 	path, _ = url.PathUnescape(rawPath)
 
 	return url.URL{
-		Scheme:   proto,
-		Host:     host,
-		Path:     path,
-		RawPath:  rawPath,
-		RawQuery: query,
+		Scheme:     proto,
+		Host:       host,
+		Path:       path,
+		RawPath:    rawPath,
+		RawQuery:   query,
+		ForceQuery: forceQuery,
 	}
 }

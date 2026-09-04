@@ -57,7 +57,7 @@ func newHeaderFinalizer(app app.Context, name string, rawConfig map[string]any) 
 		Msg("Creating finalizer")
 
 	type Config struct {
-		Headers map[string]template.Template `mapstructure:"headers" validate:"required,gt=0"`
+		Headers map[string]template.Template `mapstructure:"headers" validate:"required,gt=0,dive,keys,required,mutable_upstream_header,endkeys"` //nolint: lll
 	}
 
 	var conf Config
@@ -106,7 +106,7 @@ func (f *headerFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) er
 		// Split the rendered value into multiple values if newline-separated
 		for v := range strings.SplitSeq(value, "\n") {
 			if len(v) != 0 {
-				ctx.AddHeaderForUpstream(name, v)
+				ctx.UpstreamRequest().AddHeader(name, v)
 			}
 		}
 	}
@@ -130,7 +130,7 @@ func (f *headerFinalizer) CreateStep(
 	}
 
 	type Config struct {
-		Headers map[string]template.Template `mapstructure:"headers" validate:"dive,required"`
+		Headers map[string]template.Template `mapstructure:"headers" validate:"dive,keys,required,mutable_upstream_header,endkeys,required"` //nolint: lll
 	}
 
 	var conf Config

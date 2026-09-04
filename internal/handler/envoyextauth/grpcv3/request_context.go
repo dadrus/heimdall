@@ -18,6 +18,7 @@ package grpcv3
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -30,12 +31,14 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 
+	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/dadrus/heimdall/internal/rules/mechanisms/contenttype"
-	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/urlx"
 )
+
+var _ pipeline.UpstreamRequest = (*RequestContext)(nil)
+
+var errRequestBodyIncomplete = errors.New("request body is not fully available")
 
 type contextFactory struct {
 	pool *sync.Pool
@@ -63,34 +66,31 @@ func newContextFactory() *contextFactory {
 	}
 }
 
-type RequestContext struct {
-	ctx             context.Context // nolint: containedctx
-	reqHeaders      map[string]string
-	reqRawBody      []byte
-	upstreamHeaders http.Header
-	upstreamCookies map[string]string
-	err             error
-	hmdlReq         *pipeline.Request
+type envoyBodySource struct {
+	body     []byte
+	complete bool
+}
 
-	// the following properties are created lazy and cached
-	savedBody any
-	results   pipeline.Results
+func (s *envoyBodySource) ReadRawBody() ([]byte, error) {
+	if !s.complete {
+		return nil, errRequestBodyIncomplete
+	}
+
+	return s.body, nil
+}
+
+type RequestContext struct {
+	*requestcontext.RequestContext
+
+	bodySource envoyBodySource
+
+	upstreamViewPrepared bool
 }
 
 func newRequestContext() *RequestContext {
-	rc := &RequestContext{
-		upstreamHeaders: make(http.Header, 6),
-		upstreamCookies: make(map[string]string, 4),
-		results:         make(pipeline.Results, 10),
+	return &RequestContext{
+		RequestContext: requestcontext.NewRequestContext(),
 	}
-
-	rc.hmdlReq = &pipeline.Request{
-		RequestFunctions:  rc,
-		URL:               &pipeline.URL{},
-		ClientIPAddresses: make([]string, 0, 10),
-	}
-
-	return rc
 }
 
 func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest) {
@@ -104,173 +104,107 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 		parsed.Path, _ = url.PathUnescape(parsed.RawPath)
 	}
 
-	r.ctx = ctx
-	r.reqHeaders = canonicalizeHeaders(httpReq.GetHeaders())
-	r.reqRawBody = httpReq.GetRawBody()
-	r.hmdlReq.Method = httpReq.GetMethod()
-	r.hmdlReq.URL.URL = url.URL{
-		Scheme:   httpReq.GetScheme(),
-		Host:     strings.ToLower(httpReq.GetHost()),
-		RawPath:  parsed.RawPath,
-		Path:     parsed.Path,
-		RawQuery: parsed.RawQuery,
+	headers := canonicalizeHeaders(httpReq.GetHeaders())
+
+	r.bodySource.body = nil
+	r.bodySource.complete = headers.Get("X-Envoy-Auth-Partial-Body") == "false"
+
+	headers.Del("X-Envoy-Auth-Partial-Body")
+
+	if r.bodySource.complete {
+		if rawBody := httpReq.GetRawBody(); rawBody != nil {
+			r.bodySource.body = rawBody
+		} else {
+			r.bodySource.body = []byte(httpReq.GetBody())
+		}
 	}
-	r.reqHeaders["Host"] = r.hmdlReq.URL.Host
-	r.hmdlReq.ClientIPAddresses = requestClientIPs(
-		ctx,
-		r.hmdlReq.ClientIPAddresses,
-		r.reqHeaders,
-	)
+
+	r.RequestContext.Init(requestcontext.Input{
+		Context: ctx,
+		Method:  httpReq.GetMethod(),
+		URL: url.URL{
+			Scheme:     httpReq.GetScheme(),
+			Host:       strings.ToLower(httpReq.GetHost()),
+			RawPath:    parsed.RawPath,
+			Path:       parsed.Path,
+			RawQuery:   parsed.RawQuery,
+			ForceQuery: parsed.ForceQuery,
+		},
+		Headers:    headers,
+		RemoteAddr: peerAddress(ctx),
+		Body:       &r.bodySource,
+	})
 }
 
-func requestClientIPs(ctx context.Context, ips []string, headers map[string]string) []string {
-	res, _ := httpx.IPsFromForwarded(ips, []string{headers["Forwarded"]})
-	if len(res) == 0 {
-		res, _ = httpx.IPsFromXForwardedFor(ips, []string{headers["X-Forwarded-For"]})
-	}
-
-	if len(res) == 0 {
-		res = ips
-	}
-
+func peerAddress(ctx context.Context) string {
 	if peerInfo, ok := peer.FromContext(ctx); ok && peerInfo.Addr != nil {
-		peerIP := httpx.IPFromHostPort(peerInfo.Addr.String())
-		if len(peerIP) != 0 {
-			res = append(res, peerIP)
-		}
-	}
-
-	return res
-}
-
-func (r *RequestContext) Reset() {
-	r.ctx = nil
-	r.reqHeaders = nil
-	r.reqRawBody = nil
-	r.savedBody = nil
-	r.err = nil
-
-	clear(r.upstreamHeaders)
-	clear(r.upstreamCookies)
-	clear(r.results)
-
-	clear(r.hmdlReq.URL.Captures)
-	r.hmdlReq.URL.URL = url.URL{}
-	r.hmdlReq.Method = ""
-	r.hmdlReq.ClientIPAddresses = r.hmdlReq.ClientIPAddresses[:0]
-}
-
-func canonicalizeHeaders(headers map[string]string) map[string]string {
-	result := make(map[string]string, len(headers))
-
-	for key, value := range headers {
-		result[http.CanonicalHeaderKey(key)] = value
-	}
-
-	return result
-}
-
-func (r *RequestContext) Request() *pipeline.Request { return r.hmdlReq }
-func (r *RequestContext) Headers() map[string]string { return r.reqHeaders }
-
-func (r *RequestContext) Header(name string) string {
-	return r.reqHeaders[http.CanonicalHeaderKey(name)]
-}
-
-func (r *RequestContext) Cookie(name string) string {
-	values, ok := r.reqHeaders["Cookie"]
-	if !ok {
-		return ""
-	}
-
-	for cookie := range strings.SplitSeq(values, ";") {
-		if cookieName, cookieValue, ok := strings.Cut(cookie, "="); ok && strings.TrimSpace(cookieName) == name {
-			return strings.TrimSpace(cookieValue)
-		}
+		return peerInfo.Addr.String()
 	}
 
 	return ""
 }
 
-func (r *RequestContext) Body() any {
-	if r.savedBody == nil {
-		decoder, err := contenttype.NewDecoder(r.Header("Content-Type"))
-		if err != nil {
-			r.savedBody = string(r.reqRawBody)
+func (r *RequestContext) Reset() {
+	r.bodySource.body = nil
+	r.bodySource.complete = false
+	r.upstreamViewPrepared = false
 
-			return r.savedBody
-		}
-
-		data, err := decoder.Decode(r.reqRawBody)
-		if err != nil {
-			r.savedBody = string(r.reqRawBody)
-
-			return r.savedBody
-		}
-
-		r.savedBody = data
-	}
-
-	return r.savedBody
+	r.RequestContext.Reset()
 }
 
-func (r *RequestContext) Context() context.Context                { return r.ctx }
-func (r *RequestContext) SetError(err error)                      { r.err = err }
-func (r *RequestContext) Error() error                            { return r.err }
-func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
+func canonicalizeHeaders(headers map[string]string) http.Header {
+	result := make(http.Header, len(headers))
 
-func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }
-func (r *RequestContext) Outputs() pipeline.Results               { return r.results }
+	for key, value := range headers {
+		result[http.CanonicalHeaderKey(key)] = []string{value}
+	}
+
+	return result
+}
+
+func (r *RequestContext) PrepareUpstreamView(_ pipeline.UpstreamTarget) {
+	r.upstreamViewPrepared = true
+}
+
+func (r *RequestContext) UpstreamRequest() pipeline.UpstreamRequest {
+	if !r.upstreamViewPrepared {
+		return nil
+	}
+
+	return r
+}
 
 func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
-	r.ctx = ctx
+	r.SetParent(ctx)
 
 	return r
 }
 
 func (r *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
-	if r.err != nil {
-		return nil, r.err
+	if err := r.Error(); err != nil {
+		return nil, err
 	}
 
-	zerolog.Ctx(r.ctx).Debug().Msg("Creating response")
+	zerolog.Ctx(r.Context()).Debug().Msg("Creating response")
 
-	headers := make([]*envoy_core.HeaderValueOption,
-		len(r.upstreamHeaders)+x.IfThenElse(len(r.upstreamCookies) == 0, 0, 1))
-	hidx := 0
+	upstreamHeaders := r.UpstreamHeaders()
+	headers := make([]*envoy_core.HeaderValueOption, 0, len(upstreamHeaders))
 
-	for k := range r.upstreamHeaders {
-		headers[hidx] = &envoy_core.HeaderValueOption{
+	for name, values := range upstreamHeaders {
+		headers = append(headers, &envoy_core.HeaderValueOption{
 			Header: &envoy_core.HeaderValue{
-				Key:   k,
-				Value: strings.Join(r.upstreamHeaders.Values(k), ","),
+				Key:   name,
+				Value: strings.Join(values, ","),
 			},
-		}
-
-		hidx++
-	}
-
-	if len(r.upstreamCookies) != 0 {
-		cookies := make([]string, len(r.upstreamCookies))
-		cidx := 0
-
-		for k, v := range r.upstreamCookies {
-			cookies[cidx] = k + "=" + v
-			cidx++
-		}
-
-		headers[hidx] = &envoy_core.HeaderValueOption{
-			Header: &envoy_core.HeaderValue{
-				Key:   "Cookie",
-				Value: strings.Join(cookies, ";"),
-			},
-		}
+		})
 	}
 
 	return &envoy_auth.CheckResponse{
 		Status: &status.Status{Code: int32(codes.OK)},
 		HttpResponse: &envoy_auth.CheckResponse_OkResponse{
-			OkResponse: &envoy_auth.OkHttpResponse{Headers: headers},
+			OkResponse: &envoy_auth.OkHttpResponse{
+				Headers: headers,
+			},
 		},
 	}, nil
 }

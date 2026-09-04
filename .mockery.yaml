@@ -44,14 +44,15 @@ packages:
   github.com/dadrus/heimdall/internal/pipeline:
     interfaces:
       Context: {}
+      ExecutionContext: {}
       Step: {}
       Insecure: {}
       PrincipalNamer: {}
       RequestFunctions: {}
       Visitor: {}
-      Backend: {}
       Executor: {}
-      Pipeline: {}
+      UpstreamTarget: {}
+      UpstreamRequest: {}
   github.com/dadrus/heimdall/internal/keyregistry:
     interfaces:
       KeyObserver: {}

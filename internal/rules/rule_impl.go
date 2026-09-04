@@ -42,7 +42,7 @@ type ruleImpl struct {
 	subjectPool     *sync.Pool
 }
 
-func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
+func (r *ruleImpl) Execute(ctx pipeline.ExecutionContext) error {
 	logger := zerolog.Ctx(ctx.Context())
 
 	logger.Info().
@@ -60,7 +60,7 @@ func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 		request.URL.RawPath = ""
 	case v1beta1.EncodedSlashesOff:
 		if urlx.ContainsEncodedSlash(request.URL.RawPath) {
-			return nil, errorchain.NewWithMessage(pipeline.ErrArgument,
+			return errorchain.NewWithMessage(pipeline.ErrArgument,
 				"path contains encoded slash, which is not allowed")
 		}
 	}
@@ -84,11 +84,17 @@ func (r *ruleImpl) Execute(ctx pipeline.Context) (pipeline.Backend, error) {
 		r.subjectPool.Put(sub)
 	}()
 
-	if err := r.p.Execute(ctx, sub); err != nil {
-		return nil, err
+	var target pipeline.UpstreamTarget
+
+	if r.backend != nil {
+		target = r
 	}
 
-	return r.createBackend(request), nil
+	if err := r.p.Execute(ctx, sub, target); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *ruleImpl) ID() string           { return r.id }
@@ -103,18 +109,17 @@ func (r *ruleImpl) Equals(other rule.Rule) bool {
 	return r.SameAs(other) && bytes.Equal(r.hash, other.(*ruleImpl).hash) // nolint: forcetypeassert
 }
 
-func (r *ruleImpl) createBackend(request *pipeline.Request) pipeline.Backend {
-	var upstream pipeline.Backend
+func (r *ruleImpl) ApplyTo(target *url.URL) {
+	target.Host = r.backend.Host
 
-	if r.backend != nil {
-		upstream = backend{
-			targetURL: r.backend.CreateURL(&request.URL.URL),
-			forwardHostHeader: r.backend.ForwardHostHeader == nil ||
-				(r.backend.ForwardHostHeader != nil && *r.backend.ForwardHostHeader),
-		}
+	if r.backend.URLRewriter != nil {
+		r.backend.URLRewriter.Rewrite(target)
 	}
+}
 
-	return upstream
+func (r *ruleImpl) ForwardHostHeader() bool {
+	return r.backend.ForwardHostHeader == nil ||
+		*r.backend.ForwardHostHeader
 }
 
 type routeImpl struct {
@@ -137,12 +142,3 @@ func (r *routeImpl) Host() string { return r.host }
 func (r *routeImpl) Path() string { return r.path }
 
 func (r *routeImpl) Rule() rule.Rule { return r.rule }
-
-type backend struct {
-	targetURL         *url.URL
-	forwardHostHeader bool
-}
-
-func (b backend) URL() *url.URL { return b.targetURL }
-
-func (b backend) ForwardHostHeader() bool { return b.forwardHostHeader }

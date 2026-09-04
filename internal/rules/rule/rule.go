@@ -23,7 +23,7 @@ import (
 type Rule interface {
 	ID() string
 	Source() RuleSet
-	Execute(ctx pipeline.Context) (pipeline.Backend, error)
+	Execute(ctx pipeline.ExecutionContext) error
 	Routes() []Route
 	SameAs(other Rule) bool
 	Equals(other Rule) bool

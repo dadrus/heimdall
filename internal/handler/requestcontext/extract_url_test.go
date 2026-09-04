@@ -247,6 +247,19 @@ func TestExtractURL(t *testing.T) {
 				assert.Empty(t, extracted.Query())
 			},
 		},
+		"Request URL with empty query": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.URL.ForceQuery = true
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.True(t, extracted.ForceQuery)
+				assert.Equal(t, "http://heimdall.test.local/test%2Ffoo/bar/%5Bval%5D?", extracted.String())
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN

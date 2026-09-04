@@ -17,6 +17,7 @@
 package decision
 
 import (
+	"context"
 	"net/http"
 	"sync"
 
@@ -25,6 +26,8 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/pipeline"
 )
+
+var _ pipeline.UpstreamRequest = (*requestContext)(nil)
 
 type contextFactory struct {
 	responseCode int
@@ -54,48 +57,65 @@ func newContextFactory(
 		responseCode: responseCode,
 		pool: &sync.Pool{New: func() any {
 			return &requestContext{
-				RequestContext: requestcontext.New(),
+				NetHTTPRequestContext: requestcontext.New(),
 			}
 		}},
 	}
 }
 
 type requestContext struct {
-	*requestcontext.RequestContext
+	*requestcontext.NetHTTPRequestContext
 
 	rw           http.ResponseWriter
 	responseCode int
+
+	upstreamViewPrepared bool
 }
 
 func (r *requestContext) Init(rw http.ResponseWriter, req *http.Request, code int) {
 	r.rw = rw
 	r.responseCode = code
-	r.RequestContext.Init(req)
+
+	r.NetHTTPRequestContext.Init(req)
 }
 
 func (r *requestContext) Reset() {
 	r.rw = nil
 	r.responseCode = 0
+	r.upstreamViewPrepared = false
 
-	r.RequestContext.Reset()
+	r.NetHTTPRequestContext.Reset()
 }
 
-func (r *requestContext) Finalize(_ pipeline.Backend) error {
+func (r *requestContext) WithParent(ctx context.Context) pipeline.Context {
+	r.SetParent(ctx)
+
+	return r
+}
+
+func (r *requestContext) PrepareUpstreamView(_ pipeline.UpstreamTarget) {
+	r.upstreamViewPrepared = true
+}
+
+func (r *requestContext) UpstreamRequest() pipeline.UpstreamRequest {
+	if !r.upstreamViewPrepared {
+		return nil
+	}
+
+	return r
+}
+
+func (r *requestContext) Finalize() error {
 	if err := r.Error(); err != nil {
 		return err
 	}
 
 	zerolog.Ctx(r.Context()).Debug().Msg("Creating response")
 
-	uh := r.UpstreamHeaders()
-	for name, values := range uh {
+	for name, values := range r.UpstreamHeaders() {
 		for _, value := range values {
 			r.rw.Header().Add(name, value)
 		}
-	}
-
-	for k, v := range r.UpstreamCookies() {
-		http.SetCookie(r.rw, &http.Cookie{Name: k, Value: v}) //nolint:gosec
 	}
 
 	r.rw.WriteHeader(r.responseCode)

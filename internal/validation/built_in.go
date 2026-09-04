@@ -5,6 +5,8 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+
+	"github.com/dadrus/heimdall/internal/headerpolicy"
 )
 
 type notAllowedValidator struct{}
@@ -66,4 +68,22 @@ func (v urlValidator) Validate(_ string, field reflect.Value) bool {
 	}
 
 	return true
+}
+
+type mutableUpstreamHeaderValidator struct{}
+
+func (mutableUpstreamHeaderValidator) Tag() string             { return "mutable_upstream_header" }
+func (mutableUpstreamHeaderValidator) AlwaysValidate() bool    { return false }
+func (mutableUpstreamHeaderValidator) MessageTemplate() string { return "{0} {1}" }
+
+func (mutableUpstreamHeaderValidator) ErrorMessage(_ string) string {
+	return "is not a mutable upstream header"
+}
+
+func (mutableUpstreamHeaderValidator) Validate(_ string, field reflect.Value) bool {
+	if field.Kind() != reflect.String {
+		return false
+	}
+
+	return headerpolicy.Classify(field.String()) == headerpolicy.Ordinary
 }

@@ -114,6 +114,71 @@ headers:
 				assert.Equal(t, "baz", val)
 			},
 		},
+		"with host header": {
+			config: []byte(`
+headers:
+  Host: upstream.example.com
+`),
+			assert: func(t *testing.T, err error, finalizer *headerFinalizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, finalizer)
+				assert.Contains(t, finalizer.headers, "Host")
+			},
+		},
+		"with forwarded header": {
+			config: []byte(`
+headers:
+  Forwarded: foo
+`),
+			assert: func(t *testing.T, err error, _ *headerFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "is not a mutable upstream header")
+			},
+		},
+		"with x-forwarded header": {
+			config: []byte(`
+headers:
+  X-Forwarded-Prefix: foo
+`),
+			assert: func(t *testing.T, err error, _ *headerFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "is not a mutable upstream header")
+			},
+		},
+		"with transport managed header": {
+			config: []byte(`
+headers:
+  Connection: close
+`),
+			assert: func(t *testing.T, err error, _ *headerFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "is not a mutable upstream header")
+			},
+		},
+		"with content length header": {
+			config: []byte(`
+headers:
+  Content-Length: "42"
+`),
+			assert: func(t *testing.T, err error, _ *headerFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "is not a mutable upstream header")
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -264,6 +329,106 @@ headers:
 				require.ErrorContains(t, err, "failed decoding")
 			},
 		},
+		"new host header provided": {
+			config: []byte(`
+headers:
+  foo: bar
+`),
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"headers": map[string]any{
+						"Host": "upstream.example.com",
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, _ *headerFinalizer, configured *headerFinalizer) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, configured)
+				assert.Contains(t, configured.headers, "Host")
+			},
+		},
+		"new forwarded header provided": {
+			config: []byte(`
+headers:
+  foo: bar
+`),
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"headers": map[string]any{
+						"Forwarded": "foo",
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, _, _ *headerFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "is not a mutable upstream header")
+			},
+		},
+		"new x-forwarded header provided": {
+			config: []byte(`
+headers:
+  foo: bar
+`),
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"headers": map[string]any{
+						"X-Forwarded-Prefix": "foo",
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, _, _ *headerFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "is not a mutable upstream header")
+			},
+		},
+		"new transport managed header provided": {
+			config: []byte(`
+headers:
+  foo: bar
+`),
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"headers": map[string]any{
+						"Connection": "close",
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, _, _ *headerFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "is not a mutable upstream header")
+			},
+		},
+		"new content length header provided": {
+			config: []byte(`
+headers:
+  foo: bar
+`),
+			stepDef: types.StepDefinition{
+				Config: config.MechanismConfig{
+					"headers": map[string]any{
+						"Content-Length": "42",
+					},
+				},
+			},
+			assert: func(t *testing.T, err error, _, _ *headerFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "is not a mutable upstream header")
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -352,13 +517,15 @@ headers:
 				reqf := mocks.NewRequestFunctionsMock(t)
 				reqf.EXPECT().Header("X-Foo").Return("Bar")
 
-				ctx.EXPECT().AddHeaderForUpstream("foo", "baz")
-				ctx.EXPECT().AddHeaderForUpstream("bar", "FooBar")
-				ctx.EXPECT().AddHeaderForUpstream("baz", "bar")
-				ctx.EXPECT().AddHeaderForUpstream("X-Baz", "Bar")
-				ctx.EXPECT().AddHeaderForUpstream("X-Foo", "bar")
-				ctx.EXPECT().AddHeaderForUpstream("X-Result", "from-result")
+				upstreamRequest := mocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().AddHeader("foo", "baz")
+				upstreamRequest.EXPECT().AddHeader("bar", "FooBar")
+				upstreamRequest.EXPECT().AddHeader("baz", "bar")
+				upstreamRequest.EXPECT().AddHeader("X-Baz", "Bar")
+				upstreamRequest.EXPECT().AddHeader("X-Foo", "bar")
+				upstreamRequest.EXPECT().AddHeader("X-Result", "from-result")
 
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: reqf})
 
 				headers := make(http.Header)
@@ -386,10 +553,12 @@ headers:
 			configureContext: func(t *testing.T, ctx *mocks.ContextMock) {
 				t.Helper()
 
-				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group1")
-				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group2")
-				ctx.EXPECT().AddHeaderForUpstream("Impersonation-Group", "group3")
+				upstreamRequest := mocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().AddHeader("Impersonation-Group", "group1")
+				upstreamRequest.EXPECT().AddHeader("Impersonation-Group", "group2")
+				upstreamRequest.EXPECT().AddHeader("Impersonation-Group", "group3")
 
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
 				ctx.EXPECT().Request().Return(&pipeline.Request{})
 				ctx.EXPECT().Outputs().Return(pipeline.Results{"foo": pipeline.NewResult(map[string]any{})})
 			},

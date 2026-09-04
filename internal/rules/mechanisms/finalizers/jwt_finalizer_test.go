@@ -108,6 +108,23 @@ signer:
 				require.ErrorContains(t, err, "failed creating secret informer")
 			},
 		},
+		"with non-mutable header": {
+			config: []byte(`
+signer:
+  secret:
+    source: foo
+    selector: bar
+header:
+  name: Connection
+`),
+			assert: func(t *testing.T, err error, _ *jwtFinalizer) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, pipeline.ErrConfiguration)
+				require.ErrorContains(t, err, "'header'.'name' is not a mutable upstream header")
+			},
+		},
 		"minimal valid config": {
 			config: []byte(`
 signer:
@@ -702,7 +719,9 @@ signer:
 					},
 				)
 
-				ctx.EXPECT().AddHeaderForUpstream("Authorization", "Bearer TestToken")
+				upstreamRequest := pipelinemocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().AddHeader("Authorization", "Bearer TestToken")
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
 
 				cacheKey := fin.calculateCacheKey(ctx, sub)
 				cch.EXPECT().Get(mock.Anything, cacheKey).Return([]byte("TestToken"), nil)
@@ -741,8 +760,11 @@ ttl: 1m
 				ctx.EXPECT().Outputs().Return(
 					pipeline.Results{"remote": pipeline.NewResult(map[string]any{})},
 				)
-				ctx.EXPECT().AddHeaderForUpstream("Authorization",
+
+				upstreamRequest := pipelinemocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().AddHeader("Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, configuredTTL-defaultCacheLeeway).Return(nil)
@@ -784,8 +806,11 @@ ttl: 2s
 					},
 				)
 
-				ctx.EXPECT().AddHeaderForUpstream("Authorization",
+				upstreamRequest := pipelinemocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().AddHeader("Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
+
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 			},
 			assert: func(t *testing.T, err error) {
@@ -831,8 +856,11 @@ claims: '{
 						"foo": pipeline.NewResult("bar"),
 					},
 				)
-				ctx.EXPECT().AddHeaderForUpstream("X-Token",
+
+				upstreamRequest := pipelinemocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().AddHeader("X-Token",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bar ") }))
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, defaultJWTTTL-defaultCacheLeeway).Return(nil)
@@ -876,8 +904,11 @@ values:
 						"remote": pipeline.NewResult(map[string]any{"foo": "bar"}),
 					},
 				)
-				ctx.EXPECT().AddHeaderForUpstream("Authorization",
+
+				upstreamRequest := pipelinemocks.NewUpstreamRequestMock(t)
+				upstreamRequest.EXPECT().AddHeader("Authorization",
 					mock.MatchedBy(func(val string) bool { return strings.HasPrefix(val, "Bearer ") }))
+				ctx.EXPECT().UpstreamRequest().Return(upstreamRequest)
 
 				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, assert.AnError)
 				cch.EXPECT().Set(mock.Anything, mock.Anything, mock.Anything, defaultJWTTTL-defaultCacheLeeway).Return(nil)

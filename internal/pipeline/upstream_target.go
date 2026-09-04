@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,11 +16,9 @@
 
 package pipeline
 
-import (
-	"net/url"
-)
+import "net/url"
 
-type Backend interface {
-	URL() *url.URL
+type UpstreamTarget interface {
+	ApplyTo(url *url.URL)
 	ForwardHostHeader() bool
 }

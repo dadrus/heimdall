@@ -39,14 +39,14 @@ func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 
 	defer h.f.Destroy(rc)
 
-	be, err := h.e.Execute(rc)
+	err := h.e.Execute(rc)
 	if err != nil {
 		h.eh.HandleError(rw, req, err)
 
 		return
 	}
 
-	if err = rc.Finalize(be); err != nil {
+	if err = rc.Finalize(); err != nil {
 		h.eh.HandleError(rw, req, err)
 	}
 }

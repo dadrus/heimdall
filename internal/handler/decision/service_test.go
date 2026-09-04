@@ -62,7 +62,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -92,7 +92,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrNoRuleFound)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrNoRuleFound)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -122,7 +122,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthentication)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrAuthentication)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -152,7 +152,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
 				t.Helper()
 
-				exec.EXPECT().Execute(mock.Anything).Return(nil, pipeline.ErrAuthorization)
+				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrAuthorization)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -189,16 +189,19 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
-						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
-						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+						ctx.PrepareUpstreamView(nil)
+
+						upstreamRequest := ctx.UpstreamRequest()
+						upstreamRequest.AddHeader("X-Foo-Bar", "baz")
+						upstreamRequest.SetCookie("X-Bar-Foo", "zab")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
 						methodMatched := ctx.Request().Method == http.MethodPost
 
 						return pathMatched && methodMatched
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -213,7 +216,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				headerVal := response.Header.Get("X-Foo-Bar")
 				assert.Equal(t, "baz", headerVal)
 
-				cookies := response.Cookies()
+				cookies, err := http.ParseCookie(response.Header.Get("Cookie"))
+				require.NoError(t, err)
 				require.Len(t, cookies, 1)
 				assert.Equal(t, "X-Bar-Foo", cookies[0].Name)
 				assert.Equal(t, "zab", cookies[0].Value)
@@ -243,12 +247,12 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
-						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
-						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+						ctx.PrepareUpstreamView(nil)
 
-						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
-						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
+						upstreamRequest := ctx.UpstreamRequest()
+						upstreamRequest.AddHeader("X-Foo-Bar", "baz")
+						upstreamRequest.SetCookie("X-Bar-Foo", "zab")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
 						methodMatched := ctx.Request().Method == http.MethodPost
@@ -257,7 +261,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 						return pathMatched && methodMatched && schemeMatched && hostMatched
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -272,7 +276,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				headerVal := response.Header.Get("X-Foo-Bar")
 				assert.Equal(t, "baz", headerVal)
 
-				cookies := response.Cookies()
+				cookies, err := http.ParseCookie(response.Header.Get("Cookie"))
+				require.NoError(t, err)
 				require.Len(t, cookies, 1)
 				assert.Equal(t, "X-Bar-Foo", cookies[0].Name)
 				assert.Equal(t, "zab", cookies[0].Value)
@@ -303,9 +308,12 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
-						ctx.AddHeaderForUpstream("X-Foo-Bar", "baz")
-						ctx.AddCookieForUpstream("X-Bar-Foo", "zab")
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+						ctx.PrepareUpstreamView(nil)
+
+						upstreamRequest := ctx.UpstreamRequest()
+						upstreamRequest.AddHeader("X-Foo-Bar", "baz")
+						upstreamRequest.SetCookie("X-Bar-Foo", "zab")
 
 						pathMatched := ctx.Request().URL.Path == "/foobar"
 						methodMatched := ctx.Request().Method == http.MethodPost
@@ -314,7 +322,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 						return pathMatched && methodMatched && schemeMatched && hostMatched
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -329,7 +337,8 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				headerVal := response.Header.Get("X-Foo-Bar")
 				assert.Equal(t, "baz", headerVal)
 
-				cookies := response.Cookies()
+				cookies, err := http.ParseCookie(response.Header.Get("Cookie"))
+				require.NoError(t, err)
 				require.Len(t, cookies, 1)
 				assert.Equal(t, "X-Bar-Foo", cookies[0].Name)
 				assert.Equal(t, "zab", cookies[0].Value)
@@ -357,14 +366,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "http" &&
 							req.URL.Path == "/foobar" &&
 							req.Method == http.MethodGet
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -395,7 +404,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "http" &&
@@ -403,7 +412,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 							req.URL.Path == "/foobar" &&
 							req.Method == http.MethodPost
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -434,14 +443,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "http" &&
 							req.URL.Path == "/bar" &&
 							req.Method == http.MethodPost
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -472,14 +481,14 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "https" &&
 							req.URL.Path == "/foobar" &&
 							req.Method == http.MethodPost
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()
@@ -513,7 +522,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
-					mock.MatchedBy(func(ctx pipeline.Context) bool {
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
 						req := ctx.Request()
 
 						return req.URL.Scheme == "https" &&
@@ -521,7 +530,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 							req.URL.Path == "/bar" &&
 							req.Method == http.MethodPatch
 					}),
-				).Return(nil, nil)
+				).Return(nil)
 			},
 			assertResponse: func(t *testing.T, err error, response *http.Response) {
 				t.Helper()

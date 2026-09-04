@@ -72,7 +72,7 @@ func newJWTFinalizer(app app.Context, name string, rawConfig map[string]any) (ty
 		Msg("Creating finalizer")
 
 	type HeaderConfig struct {
-		Name   string `mapstructure:"name"   validate:"required"`
+		Name   string `mapstructure:"name"   validate:"required,mutable_upstream_header"`
 		Scheme string `mapstructure:"scheme"`
 	}
 
@@ -166,7 +166,7 @@ func (f *jwtFinalizer) Execute(ctx pipeline.Context, sub pipeline.Subject) error
 		}
 	}
 
-	ctx.AddHeaderForUpstream(f.headerName, f.headerScheme+" "+jwtToken)
+	ctx.UpstreamRequest().AddHeader(f.headerName, f.headerScheme+" "+jwtToken)
 
 	return nil
 }

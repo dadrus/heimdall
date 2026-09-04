@@ -51,7 +51,7 @@ type oauth2ClientCredentials struct {
 }
 
 type oauth2ClientCredentialsHeaderConfig struct {
-	Name   string `mapstructure:"name"   validate:"required"`
+	Name   string `mapstructure:"name"   validate:"required,mutable_upstream_header"`
 	Scheme string `mapstructure:"scheme"`
 }
 
@@ -229,7 +229,7 @@ func (f *oauth2ClientCredentialsFinalizer) Execute(ctx pipeline.Context, _ pipel
 		headerScheme = f.headerScheme
 	}
 
-	ctx.AddHeaderForUpstream(f.headerName, headerScheme+" "+token.AccessToken)
+	ctx.UpstreamRequest().AddHeader(f.headerName, headerScheme+" "+token.AccessToken)
 
 	return nil
 }

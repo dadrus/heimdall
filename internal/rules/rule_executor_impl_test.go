@@ -37,12 +37,12 @@ func TestRuleExecutorExecute(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		expErr         error
 		createRequest  func(t *testing.T) *http.Request
-		configureMocks func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock)
+		configureMocks func(t *testing.T, ctx *mocks2.ExecutionContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock)
 		assertResponse func(t *testing.T, err error, response *http.Response)
 	}{
 		"no matching rules": {
 			expErr: pipeline.ErrNoRuleFound,
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.ExecutionContextMock, repo *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
 				t.Helper()
 
 				req := &pipeline.Request{Method: http.MethodPost, URL: &pipeline.URL{URL: *matchingURL}}
@@ -54,7 +54,7 @@ func TestRuleExecutorExecute(t *testing.T) {
 		},
 		"rule execution fails with authentication error": {
 			expErr: pipeline.ErrAuthentication,
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.ExecutionContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
 				req := &pipeline.Request{Method: http.MethodGet, URL: &pipeline.URL{URL: *matchingURL}}
@@ -62,34 +62,33 @@ func TestRuleExecutorExecute(t *testing.T) {
 				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)
 				repo.EXPECT().FindRule(ctx).Return(rule, nil)
-				rule.EXPECT().Execute(ctx).Return(nil, pipeline.ErrAuthentication)
+				rule.EXPECT().Execute(ctx).Return(pipeline.ErrAuthentication)
 			},
 		},
 		"rule execution succeeds": {
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.ExecutionContextMock, repo *mocks4.RepositoryMock, rule *mocks4.RuleMock) {
 				t.Helper()
 
-				upstream := mocks2.NewBackendMock(t)
 				req := &pipeline.Request{Method: http.MethodGet, URL: &pipeline.URL{URL: *matchingURL}}
 
 				ctx.EXPECT().Context().Return(t.Context())
 				ctx.EXPECT().Request().Return(req)
 				repo.EXPECT().FindRule(ctx).Return(rule, nil)
-				rule.EXPECT().Execute(ctx).Return(upstream, nil)
+				rule.EXPECT().Execute(ctx).Return(nil)
 			},
 		},
 		"request path contains plain dot segments": {
 			expErr: pipeline.ErrArgument,
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, _ *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.ExecutionContextMock, _ *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
 				t.Helper()
 
 				req := &pipeline.Request{
 					Method: http.MethodGet,
-					URL: &pipeline.URL{URL: url.URL{
+					URL: &pipeline.URL{
 						Scheme: "https",
 						Host:   "foo.bar",
 						Path:   "/foo/../admin",
-					}},
+					},
 				}
 
 				ctx.EXPECT().Context().Return(t.Context())
@@ -98,17 +97,17 @@ func TestRuleExecutorExecute(t *testing.T) {
 		},
 		"request path contains encoded dot segments and slash (lowercase)": {
 			expErr: pipeline.ErrArgument,
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, _ *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.ExecutionContextMock, _ *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
 				t.Helper()
 
 				req := &pipeline.Request{
 					Method: http.MethodGet,
-					URL: &pipeline.URL{URL: url.URL{
+					URL: &pipeline.URL{
 						Scheme:  "https",
 						Host:    "foo.bar",
 						Path:    "/scripts/../Windows/System32/cmd.exe",
 						RawPath: "/scripts/%2e%2e%2fWindows/System32/cmd.exe",
-					}},
+					},
 				}
 
 				ctx.EXPECT().Context().Return(t.Context())
@@ -117,17 +116,17 @@ func TestRuleExecutorExecute(t *testing.T) {
 		},
 		"request path contains encoded dot segments and slash (uppercase)": {
 			expErr: pipeline.ErrArgument,
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, _ *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.ExecutionContextMock, _ *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
 				t.Helper()
 
 				req := &pipeline.Request{
 					Method: http.MethodGet,
-					URL: &pipeline.URL{URL: url.URL{
+					URL: &pipeline.URL{
 						Scheme:  "https",
 						Host:    "foo.bar",
 						Path:    "/scripts/../Windows/System32/cmd.exe",
 						RawPath: "/scripts/%2E%2E%2FWindows/System32/cmd.exe",
-					}},
+					},
 				}
 
 				ctx.EXPECT().Context().Return(t.Context())
@@ -136,17 +135,17 @@ func TestRuleExecutorExecute(t *testing.T) {
 		},
 		"request path contains encoded backslash separators": {
 			expErr: pipeline.ErrArgument,
-			configureMocks: func(t *testing.T, ctx *mocks2.ContextMock, _ *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
+			configureMocks: func(t *testing.T, ctx *mocks2.ExecutionContextMock, _ *mocks4.RepositoryMock, _ *mocks4.RuleMock) {
 				t.Helper()
 
 				req := &pipeline.Request{
 					Method: http.MethodGet,
-					URL: &pipeline.URL{URL: url.URL{
+					URL: &pipeline.URL{
 						Scheme:  "https",
 						Host:    "foo.bar",
 						Path:    "/scripts/..\\Windows/System32/cmd.exe",
 						RawPath: "/scripts/%2E%2E%5CWindows/System32/cmd.exe",
-					}},
+					},
 				}
 
 				ctx.EXPECT().Context().Return(t.Context())
@@ -158,21 +157,20 @@ func TestRuleExecutorExecute(t *testing.T) {
 			// GIVEN
 			repo := mocks4.NewRepositoryMock(t)
 			rule := mocks4.NewRuleMock(t)
-			ctx := mocks2.NewContextMock(t)
+			ctx := mocks2.NewExecutionContextMock(t)
 
 			tc.configureMocks(t, ctx, repo, rule)
 
 			exec := newRuleExecutor(repo)
 
 			// WHEN
-			mut, err := exec.Execute(ctx)
+			err = exec.Execute(ctx)
 
 			// THEN
 			if tc.expErr != nil {
 				require.ErrorIs(t, err, tc.expErr)
 			} else {
 				require.NoError(t, err)
-				require.NotNil(t, mut)
 			}
 		})
 	}

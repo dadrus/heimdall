@@ -45,6 +45,22 @@ func (e *RedirectError) Is(target error) bool {
 	return reflect.TypeFor[*RedirectError]() == reflect.TypeOf(target)
 }
 
+type AuthenticationChallengeError struct {
+	err       error
+	challenge string
+}
+
+func NewAuthenticationChallengeError(err error, challenge string) error {
+	return &AuthenticationChallengeError{
+		err:       err,
+		challenge: challenge,
+	}
+}
+
+func (e *AuthenticationChallengeError) Error() string     { return e.err.Error() }
+func (e *AuthenticationChallengeError) Unwrap() error     { return e.err }
+func (e *AuthenticationChallengeError) Challenge() string { return e.challenge }
+
 type ErrorResponse struct {
 	Code    int
 	Headers map[string][]string

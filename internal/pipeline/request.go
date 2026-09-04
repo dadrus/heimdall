@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,18 @@
 
 package pipeline
 
-type Executor interface {
-	Execute(ctx ExecutionContext) error
+import "net/url"
+
+type URL struct {
+	url.URL
+
+	Captures map[string]string
+}
+
+type Request struct {
+	RequestFunctions
+
+	Method            string
+	URL               *URL
+	ClientIPAddresses []string
 }
