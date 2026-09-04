@@ -355,10 +355,11 @@ func (r *RequestContext) readRawBody() ([]byte, error) {
 
 func (r *RequestContext) requestHeaders() map[string]string {
 	if len(r.headers) == 0 {
-		r.headers["Host"] = r.hmdlReq.URL.Host
 		for k, v := range r.inputHeaders {
 			r.headers[textproto.CanonicalMIMEHeaderKey(k)] = strings.Join(v, ",")
 		}
+
+		r.headers["Host"] = r.hmdlReq.URL.Host
 	}
 
 	return r.headers

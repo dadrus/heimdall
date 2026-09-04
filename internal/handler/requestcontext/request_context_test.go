@@ -185,6 +185,7 @@ func TestRequestContextRequestHeaders(t *testing.T) {
 
 	// GIVEN
 	headers := make(http.Header)
+	headers.Set("Host", "spoofed")
 	headers.Set("X-Foo-Bar", "foo")
 	headers.Add("X-Foo-Bar", "bar")
 
@@ -197,6 +198,7 @@ func TestRequestContextRequestHeaders(t *testing.T) {
 	require.Len(t, actual, 2)
 	assert.Equal(t, "foo,bar", actual["X-Foo-Bar"])
 	assert.Equal(t, "foo.baz", actual["Host"])
+	assert.Equal(t, ctx.Request().Header("Host"), actual["Host"])
 }
 
 func TestRequestContextMethod(t *testing.T) {
