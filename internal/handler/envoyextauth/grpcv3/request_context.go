@@ -109,6 +109,8 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 	r.bodySource.body = nil
 	r.bodySource.complete = headers.Get("X-Envoy-Auth-Partial-Body") == "false"
 
+	headers.Del("X-Envoy-Auth-Partial-Body")
+
 	if r.bodySource.complete {
 		if rawBody := httpReq.GetRawBody(); rawBody != nil {
 			r.bodySource.body = rawBody
@@ -172,13 +174,6 @@ func (r *RequestContext) UpstreamRequest() pipeline.UpstreamRequest {
 	return r
 }
 
-func (r *RequestContext) Headers() http.Header {
-	headers := r.RequestContext.Headers()
-	headers.Del("X-Envoy-Auth-Partial-Body")
-
-	return headers
-}
-
 func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
 	r.SetParent(ctx)
 
@@ -196,10 +191,6 @@ func (r *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
 	headers := make([]*envoy_core.HeaderValueOption, 0, len(upstreamHeaders))
 
 	for name, values := range upstreamHeaders {
-		if http.CanonicalHeaderKey(name) == "X-Envoy-Auth-Partial-Body" {
-			continue
-		}
-
 		headers = append(headers, &envoy_core.HeaderValueOption{
 			Header: &envoy_core.HeaderValue{
 				Key:   name,

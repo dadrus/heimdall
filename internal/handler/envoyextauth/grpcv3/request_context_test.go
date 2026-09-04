@@ -224,7 +224,7 @@ func TestRequestContextUpstreamRequest(t *testing.T) {
 	}
 }
 
-func TestRequestContextHeaders(t *testing.T) {
+func TestRequestContextInternalMetadataIsNotExposed(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
@@ -253,6 +253,7 @@ func TestRequestContextHeaders(t *testing.T) {
 	assert.Equal(t, "bar", headers.Get("X-Foo"))
 	assert.Equal(t, "foo.bar", headers.Get("Host"))
 	assert.Empty(t, headers.Get("X-Envoy-Auth-Partial-Body"))
+	assert.Empty(t, ctx.Request().Header("X-Envoy-Auth-Partial-Body"))
 }
 
 func TestRequestContextFinalize(t *testing.T) {
@@ -325,24 +326,6 @@ func TestRequestContextFinalize(t *testing.T) {
 				header := findHeader(okResponse.GetHeaders(), "X-Foo-Bar")
 				require.NotNil(t, header)
 				assert.Equal(t, "barfoo", header.GetValue())
-			},
-		},
-		"internal partial body header is not returned": {
-			updateContext: func(t *testing.T, ctx pipeline.ExecutionContext) {
-				t.Helper()
-
-				ctx.PrepareUpstreamView(nil)
-				ctx.UpstreamRequest().SetHeader("X-Envoy-Auth-Partial-Body", "true")
-			},
-			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
-				t.Helper()
-
-				require.NoError(t, err)
-				require.NotNil(t, response)
-
-				okResponse := response.GetOkResponse()
-				require.NotNil(t, okResponse)
-				assert.Empty(t, okResponse.GetHeaders())
 			},
 		},
 		"error is returned": {
