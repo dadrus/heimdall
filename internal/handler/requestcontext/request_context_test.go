@@ -706,6 +706,7 @@ func TestRequestContextBody(t *testing.T) {
 		ct     string
 		body   string
 		expect any
+		err    error
 	}{
 		"No body": {
 			ct:     "empty",
@@ -775,6 +776,11 @@ func TestRequestContextBody(t *testing.T) {
 			ct:     "text/plain",
 			body:   "content=heimdall",
 			expect: "content=heimdall",
+		}, "body source fails": {
+			ct:     "application/json",
+			body:   `{ "content": "heimdall" }`,
+			err:    assert.AnError,
+			expect: "",
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
@@ -782,7 +788,7 @@ func TestRequestContextBody(t *testing.T) {
 			headers := make(http.Header)
 			headers.Set("Content-Type", tc.ct)
 
-			source := &testBodySource{body: []byte(tc.body)}
+			source := &testBodySource{body: []byte(tc.body), err: tc.err}
 			ctx := newTestRequestContext(t, http.MethodPost, "https://foo.bar/test", headers, source)
 
 			// WHEN
