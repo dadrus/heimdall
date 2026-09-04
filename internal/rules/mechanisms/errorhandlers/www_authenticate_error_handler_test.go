@@ -256,7 +256,7 @@ func TestWWWAuthenticateErrorHandlerExecute(t *testing.T) {
 					return false
 				}
 
-				assert.ErrorIs(t, err, pipeline.ErrAuthentication)
+				require.ErrorIs(t, err, pipeline.ErrAuthentication)
 				assert.Equal(t, tc.expChallenge, challengeError.Challenge())
 
 				return true

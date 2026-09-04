@@ -42,7 +42,7 @@ type BodySource interface {
 }
 
 type Input struct {
-	Context    context.Context
+	Context    context.Context // nolint: containedctx
 	Method     string
 	URL        url.URL
 	Headers    http.Header

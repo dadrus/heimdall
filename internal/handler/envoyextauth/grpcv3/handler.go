@@ -46,7 +46,7 @@ func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*env
 		return nil, err
 	}
 
-	return reqCtx.Finalize()
+	return reqCtx.Finalize() //nolint:contextcheck
 }
 
 func badRequest() *envoy_auth.CheckResponse {
