@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.17.23](https://github.com/dadrus/heimdall/compare/v0.17.22...v0.17.23) (2026-09-05)
+
+
+### Dependencies
+
+* update golang to v1.27.1 ([#3510](https://github.com/dadrus/heimdall/issues/3510)) ([e2fac41](https://github.com/dadrus/heimdall/commit/e2fac41c9a6b8fe30b985233f073dcb1012587a9))
+* update google.golang.org/genproto/googleapis/rpc digest to 18b4a75 ([#3508](https://github.com/dadrus/heimdall/issues/3508)) ([524f525](https://github.com/dadrus/heimdall/commit/524f525c7e1fd8c85ca902040fc8fc9a9db3d8fb))
+* update module github.com/go-jose/go-jose/v4 to v4.1.5 ([#3512](https://github.com/dadrus/heimdall/issues/3512)) ([65804fa](https://github.com/dadrus/heimdall/commit/65804fa5f1d6db08f2ec3165b39752147f4f115d))
+* update module github.com/go-playground/validator/v10 to v10.30.4 ([#3513](https://github.com/dadrus/heimdall/issues/3513)) ([ce3649f](https://github.com/dadrus/heimdall/commit/ce3649fd620125cbe68f7961a383513a50e22632))
+
 ## [0.17.22](https://github.com/dadrus/heimdall/compare/v0.17.21...v0.17.22) (2026-08-28)
 
 
