@@ -19,6 +19,7 @@ package management
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ccoveille/go-safecast/v2"
 	"github.com/justinas/alice"
@@ -38,6 +39,12 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
+)
+
+const (
+	defaultHTTP2MaxConcurrentStreams = 100
+	defaultHTTP2ReadIdleTimeout      = 30 * time.Second
+	defaultHTTP2PingTimeout          = 15 * time.Second
 )
 
 func newService(
@@ -83,12 +90,25 @@ func newService(
 		),
 	).Then(newHandler(kp, eh))
 
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+
+	if cfg.TLS != nil {
+		protocols.SetHTTP2(true)
+	}
+
 	return &http.Server{
-		Handler:        hc,
-		ReadTimeout:    cfg.Timeout.Read,
-		WriteTimeout:   cfg.Timeout.Write,
-		IdleTimeout:    cfg.Timeout.Idle,
-		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.BufferLimit.Read)),
-		ErrorLog:       loggeradapter.NewStdLogger(log),
+		Handler:           hc,
+		ReadHeaderTimeout: cfg.Requests.Headers.ReadTimeout,
+		IdleTimeout:       cfg.Connections.IdleTimeout,
+		MaxHeaderBytes:    safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
+		ErrorLog:          loggeradapter.NewStdLogger(log),
+		Protocols:         protocols,
+		HTTP2: &http.HTTP2Config{
+			MaxConcurrentStreams: defaultHTTP2MaxConcurrentStreams,
+			SendPingTimeout:      defaultHTTP2ReadIdleTimeout,
+			PingTimeout:          defaultHTTP2PingTimeout,
+			WriteByteTimeout:     cfg.Responses.WriteIdleTimeout,
+		},
 	}
 }

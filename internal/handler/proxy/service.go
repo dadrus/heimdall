@@ -140,12 +140,17 @@ func newService(
 	).Then(service.NewHandler(newContextFactory(cfg, tlsClientConfig), exec, eh))
 
 	return &http.Server{
-		Handler:        hc,
-		ReadTimeout:    cfg.Timeout.Read,
-		WriteTimeout:   cfg.Timeout.Write,
-		IdleTimeout:    cfg.Timeout.Idle,
-		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.BufferLimit.Read)),
-		ErrorLog:       loggeradapter.NewStdLogger(log),
-		ConnContext:    der.contexter,
+		Handler:           hc,
+		ReadHeaderTimeout: cfg.Requests.Headers.ReadTimeout,
+		IdleTimeout:       cfg.Connections.IdleTimeout,
+		MaxHeaderBytes:    safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
+		ErrorLog:          loggeradapter.NewStdLogger(log),
+		HTTP2: &http.HTTP2Config{
+			MaxConcurrentStreams: cfg.HTTP2.MaxConcurrentStreams,
+			SendPingTimeout:      cfg.HTTP2.ReadIdleTimeout,
+			PingTimeout:          cfg.HTTP2.PingTimeout,
+			WriteByteTimeout:     cfg.Responses.WriteIdleTimeout,
+		},
+		ConnContext: der.contexter,
 	}
 }

@@ -17,6 +17,9 @@
 package grpcv3
 
 import (
+	"math"
+	"time"
+
 	"github.com/ccoveille/go-safecast/v2"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -35,7 +38,10 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/trustedproxy"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/x"
 )
+
+const grpcIOBufferSize = 4 * 1024
 
 func newService(
 	conf *config.Configuration,
@@ -55,9 +61,19 @@ func newService(
 	)
 
 	srv := grpc.NewServer(
-		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: cfg.Timeout.Idle}),
-		grpc.ReadBufferSize(safecast.MustConvert[int](uint64(cfg.BufferLimit.Read))),
-		grpc.WriteBufferSize(safecast.MustConvert[int](uint64(cfg.BufferLimit.Write))),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			MaxConnectionIdle: cfg.Connections.IdleTimeout,
+			Time: x.IfThenElse(
+				cfg.HTTP2.ReadIdleTimeout != 0,
+				cfg.HTTP2.ReadIdleTimeout,
+				time.Duration(math.MaxInt64),
+			),
+			Timeout: cfg.HTTP2.PingTimeout,
+		}),
+		grpc.MaxHeaderListSize(safecast.MustConvert[uint32](uint64(cfg.Requests.Headers.MaxSize))),
+		grpc.MaxConcurrentStreams(safecast.MustConvert[uint32](cfg.HTTP2.MaxConcurrentStreams)),
+		grpc.ReadBufferSize(grpcIOBufferSize),
+		grpc.WriteBufferSize(grpcIOBufferSize),
 		grpc.UnknownServiceHandler(func(_ any, _ grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
 		}),
