@@ -24,50 +24,113 @@ import (
 )
 
 const (
-	defaultReadTimeout  = time.Second * 5
-	defaultWriteTimeout = time.Second * 10
-	defaultIdleTimeout  = time.Second * 120
+	defaultRequestHeaderMaxSize = 64 * bytesize.KB
+	defaultRequestBodyMaxSize   = 5 * bytesize.MB
 
-	defaultMaxIdleConnections        = 100
-	defaultMaxIdleConnectionsPerHost = 100
+	defaultRequestHeaderReadTimeout = 5 * time.Second
+	defaultResponseWriteIdleTimeout = 30 * time.Second
+	defaultConnectionIdleTimeout    = 2 * time.Minute
+
+	defaultMaxConnections       = 1024
+	defaultMaxInFlightRequests  = 512
+	defaultMaxConcurrentStreams = 100
+
+	defaultHTTP2ReadIdleTimeout = 30 * time.Second
+	defaultHTTP2PingTimeout     = 15 * time.Second
+
+	defaultUpstreamMaxConnectionsPerHost = 100
+	defaultUpstreamMaxIdleConnections    = 100
+	defaultUpstreamMaxIdlePerHost        = 100
+
+	defaultUpstreamDialTimeout           = 5 * time.Second
+	defaultUpstreamTLSHandshakeTimeout   = 10 * time.Second
+	defaultUpstreamIdleTimeout           = 90 * time.Second
+	defaultUpstreamExpectContinueTimeout = time.Second
+	defaultUpstreamWriteIdleTimeout      = 30 * time.Second
+
+	defaultUpstreamResponseHeaderMaxSize     = bytesize.MB
+	defaultUpstreamResponseHeaderReadTimeout = 30 * time.Second
+
+	defaultUpstreamHTTP2ReadIdleTimeout = 30 * time.Second
+	defaultUpstreamHTTP2PingTimeout     = 15 * time.Second
 
 	defaultServePort             = 4456
 	defaultManagementServicePort = 4457
 	defaultProfilingServicePort  = 10251
 
-	defaultBufferSize = 4 * bytesize.KB
-
 	loopbackIP = "127.0.0.1"
 )
 
+//nolint:funlen
 func defaultConfig() Configuration {
 	return Configuration{
 		Serve: ServeConfig{
 			Port: defaultServePort,
-			Timeout: Timeout{
-				Read:  defaultReadTimeout,
-				Write: defaultWriteTimeout,
-				Idle:  defaultIdleTimeout,
+			Requests: IngressRequests{
+				MaxInFlight: defaultMaxInFlightRequests,
+				Headers: IngressRequestHeaders{
+					MaxSize:     defaultRequestHeaderMaxSize,
+					ReadTimeout: defaultRequestHeaderReadTimeout,
+				},
+				Body: IngressRequestBody{
+					MaxSize: defaultRequestBodyMaxSize,
+				},
 			},
-			BufferLimit: BufferLimit{
-				Read:  defaultBufferSize,
-				Write: defaultBufferSize,
+			Responses: IngressResponses{
+				WriteIdleTimeout: defaultResponseWriteIdleTimeout,
 			},
-			ConnectionsLimit: ConnectionsLimit{
-				MaxIdle:        defaultMaxIdleConnections,
-				MaxIdlePerHost: defaultMaxIdleConnectionsPerHost,
+			Connections: IngressConnections{
+				Max:         defaultMaxConnections,
+				IdleTimeout: defaultConnectionIdleTimeout,
+			},
+			HTTP2: IngressHTTP2{
+				MaxConcurrentStreams: defaultMaxConcurrentStreams,
+				ReadIdleTimeout:      defaultHTTP2ReadIdleTimeout,
+				PingTimeout:          defaultHTTP2PingTimeout,
+			},
+			Upstream: UpstreamConfig{
+				Connections: UpstreamConnections{
+					MaxPerHost:          defaultUpstreamMaxConnectionsPerHost,
+					MaxIdle:             defaultUpstreamMaxIdleConnections,
+					MaxIdlePerHost:      defaultUpstreamMaxIdlePerHost,
+					DialTimeout:         defaultUpstreamDialTimeout,
+					TLSHandshakeTimeout: defaultUpstreamTLSHandshakeTimeout,
+					IdleTimeout:         defaultUpstreamIdleTimeout,
+				},
+				Requests: UpstreamRequests{
+					ExpectContinueTimeout: defaultUpstreamExpectContinueTimeout,
+					WriteIdleTimeout:      defaultUpstreamWriteIdleTimeout,
+				},
+				Responses: UpstreamResponses{
+					Headers: UpstreamResponseHeaders{
+						MaxSize:     defaultUpstreamResponseHeaderMaxSize,
+						ReadTimeout: defaultUpstreamResponseHeaderReadTimeout,
+					},
+				},
+				HTTP2: UpstreamHTTP2{
+					ReadIdleTimeout: defaultUpstreamHTTP2ReadIdleTimeout,
+					PingTimeout:     defaultUpstreamHTTP2PingTimeout,
+				},
 			},
 		},
 		Management: ManagementConfig{
 			Port: defaultManagementServicePort,
-			Timeout: Timeout{
-				Read:  defaultReadTimeout,
-				Write: defaultWriteTimeout,
-				Idle:  defaultIdleTimeout,
+			Requests: IngressRequests{
+				MaxInFlight: defaultMaxInFlightRequests,
+				Headers: IngressRequestHeaders{
+					MaxSize:     defaultRequestHeaderMaxSize,
+					ReadTimeout: defaultRequestHeaderReadTimeout,
+				},
+				Body: IngressRequestBody{
+					MaxSize: defaultRequestBodyMaxSize,
+				},
 			},
-			BufferLimit: BufferLimit{
-				Read:  defaultBufferSize,
-				Write: defaultBufferSize,
+			Responses: IngressResponses{
+				WriteIdleTimeout: defaultResponseWriteIdleTimeout,
+			},
+			Connections: IngressConnections{
+				Max:         defaultMaxConnections,
+				IdleTimeout: defaultConnectionIdleTimeout,
 			},
 		},
 		Cache: CacheConfig{
