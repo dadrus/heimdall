@@ -621,25 +621,299 @@
         }
       }
     },
-    "connectionsLimitConfig": {
+    "ingressRequestsConfig": {
       "type": "object",
-      "description": "Overrides the default limits for connections",
+      "description": "Limits and timeouts for incoming requests.",
+      "additionalProperties": false,
+      "properties": {
+        "max_in_flight": {
+          "description": "Maximum number of requests processed concurrently. 0 disables Heimdall's admission limit.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 512
+        },
+        "headers": {
+          "$ref": "#/definitions/ingressRequestHeadersConfig"
+        },
+        "body": {
+          "$ref": "#/definitions/ingressRequestBodyConfig"
+        }
+      }
+    },
+    "ingressRequestHeadersConfig": {
+      "type": "object",
+      "description": "Limits and timeouts for incoming request headers.",
+      "additionalProperties": false,
+      "properties": {
+        "max_size": {
+          "description": "Maximum size of incoming request headers.",
+          "type": "string",
+          "default": "64KB",
+          "pattern": "^[1-9][0-9]*(B|KB|MB|GB)$",
+          "examples": [
+            "64KB",
+            "1MB"
+          ]
+        },
+        "read_timeout": {
+          "description": "Maximum duration allowed for reading incoming request headers. 0 disables the timeout.",
+          "type": "string",
+          "default": "5s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+          "examples": [
+            "5s",
+            "1m"
+          ]
+        }
+      }
+    },
+    "ingressRequestBodyConfig": {
+      "type": "object",
+      "description": "Limits and timeouts for incoming request bodies.",
+      "additionalProperties": false,
+      "properties": {
+        "max_size": {
+          "description": "Maximum size of an incoming request body. 0 disables Heimdall's body size limit.",
+          "type": "string",
+          "default": "5MB",
+          "pattern": "^[0-9]+(B|KB|MB|GB)$",
+          "examples": [
+            "0B",
+            "5MB",
+            "100MB"
+          ]
+        },
+        "read_idle_timeout": {
+          "description": "Maximum time an active request body read may make no progress. 0 disables the timeout.",
+          "type": "string",
+          "default": "0s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+          "examples": [
+            "0s",
+            "30s"
+          ]
+        }
+      }
+    },
+    "ingressResponsesConfig": {
+      "type": "object",
+      "description": "Timeouts for outgoing responses to clients.",
+      "additionalProperties": false,
+      "properties": {
+        "write_idle_timeout": {
+          "description": "Maximum time an active response write may make no progress. 0 disables the timeout.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+          "examples": [
+            "0s",
+            "30s"
+          ]
+        }
+      }
+    },
+    "ingressConnectionsConfig": {
+      "type": "object",
+      "description": "Limits and timeouts for accepted connections.",
+      "additionalProperties": false,
+      "properties": {
+        "max": {
+          "description": "Maximum number of accepted connections. 0 disables Heimdall's connection limit.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 1024
+        },
+        "idle_timeout": {
+          "description": "Maximum time an idle keep-alive connection is kept open. 0 disables the timeout.",
+          "type": "string",
+          "default": "2m",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+          "examples": [
+            "0s",
+            "2m"
+          ]
+        }
+      }
+    },
+    "ingressHTTP2Config": {
+      "type": "object",
+      "description": "Limits and liveness settings for incoming HTTP/2 connections.",
+      "additionalProperties": false,
+      "properties": {
+        "max_concurrent_streams": {
+          "description": "Maximum number of concurrent streams accepted on one HTTP/2 connection.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 100
+        },
+        "read_idle_timeout": {
+          "description": "Time without a received HTTP/2 frame after which a liveness ping is sent. 0 disables active liveness pings.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+          "examples": [
+            "0s",
+            "30s"
+          ]
+        },
+        "ping_timeout": {
+          "description": "Maximum time to wait for an HTTP/2 ping response before closing the connection.",
+          "type": "string",
+          "default": "15s",
+          "pattern": "^[1-9][0-9]*(ns|us|ms|s|m|h)$",
+          "examples": [
+            "15s",
+            "1m"
+          ]
+        }
+      }
+    },
+    "upstreamConfig": {
+      "type": "object",
+      "description": "Transport configuration for proxy requests to rule-selected upstream services.",
+      "additionalProperties": false,
+      "properties": {
+        "connections": {
+          "$ref": "#/definitions/upstreamConnectionsConfig"
+        },
+        "requests": {
+          "$ref": "#/definitions/upstreamRequestsConfig"
+        },
+        "responses": {
+          "$ref": "#/definitions/upstreamResponsesConfig"
+        },
+        "http2": {
+          "$ref": "#/definitions/upstreamHTTP2Config"
+        }
+      }
+    },
+    "upstreamConnectionsConfig": {
+      "type": "object",
+      "description": "Connection pool limits and connection phase timeouts for proxy upstreams.",
       "additionalProperties": false,
       "properties": {
         "max_per_host": {
-          "description": "Max allowed connections per host. 0 means no limits (default)",
+          "description": "Maximum number of connections per upstream host and transport profile. 0 disables this limit.",
           "type": "integer",
-          "default": 0
+          "minimum": 0,
+          "default": 100
         },
         "max_idle": {
-          "description": "Max allowed idle connections. Defaults to 100",
+          "description": "Maximum number of idle upstream connections per transport profile.",
           "type": "integer",
+          "minimum": 1,
           "default": 100
         },
         "max_idle_per_host": {
-          "description": "Max allowed idle connections per host. Defaults to 100",
+          "description": "Maximum number of idle upstream connections per host and transport profile. Must not exceed max_idle.",
           "type": "integer",
+          "minimum": 1,
           "default": 100
+        },
+        "dial_timeout": {
+          "description": "Maximum time allowed to establish an upstream network connection. 0 disables the timeout.",
+          "type": "string",
+          "default": "5s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "tls_handshake_timeout": {
+          "description": "Maximum time allowed for an upstream TLS handshake. 0 disables the timeout.",
+          "type": "string",
+          "default": "10s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "idle_timeout": {
+          "description": "Maximum time an idle upstream connection remains in the pool. 0 disables the timeout.",
+          "type": "string",
+          "default": "90s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        }
+      }
+    },
+    "upstreamRequestsConfig": {
+      "type": "object",
+      "description": "Timeouts for sending proxy requests to upstream services.",
+      "additionalProperties": false,
+      "properties": {
+        "expect_continue_timeout": {
+          "description": "Maximum time to wait for an upstream 100 Continue response before sending the request body. 0 sends the body immediately.",
+          "type": "string",
+          "default": "1s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "write_idle_timeout": {
+          "description": "Maximum time an active upstream request write may make no progress. 0 disables the timeout.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        }
+      }
+    },
+    "upstreamResponsesConfig": {
+      "type": "object",
+      "description": "Limits and timeouts for proxy responses from upstream services.",
+      "additionalProperties": false,
+      "properties": {
+        "headers": {
+          "$ref": "#/definitions/upstreamResponseHeadersConfig"
+        },
+        "body": {
+          "$ref": "#/definitions/upstreamResponseBodyConfig"
+        }
+      }
+    },
+    "upstreamResponseHeadersConfig": {
+      "type": "object",
+      "description": "Limits and timeouts for upstream response headers.",
+      "additionalProperties": false,
+      "properties": {
+        "max_size": {
+          "description": "Maximum size of upstream response headers.",
+          "type": "string",
+          "default": "1MB",
+          "pattern": "^[1-9][0-9]*(B|KB|MB|GB)$",
+          "examples": [
+            "64KB",
+            "1MB"
+          ]
+        },
+        "read_timeout": {
+          "description": "Maximum time to wait for upstream response headers. 0 disables the timeout.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        }
+      }
+    },
+    "upstreamResponseBodyConfig": {
+      "type": "object",
+      "description": "Timeouts for reading upstream response bodies.",
+      "additionalProperties": false,
+      "properties": {
+        "read_idle_timeout": {
+          "description": "Maximum time an active upstream response body read may make no progress. 0 disables the timeout.",
+          "type": "string",
+          "default": "0s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        }
+      }
+    },
+    "upstreamHTTP2Config": {
+      "type": "object",
+      "description": "Liveness settings for HTTP/2 upstream connections.",
+      "additionalProperties": false,
+      "properties": {
+        "read_idle_timeout": {
+          "description": "Time without a received HTTP/2 frame after which a liveness ping is sent. 0 disables active liveness pings.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "ping_timeout": {
+          "description": "Maximum time to wait for an HTTP/2 ping response before closing the connection.",
+          "type": "string",
+          "default": "15s",
+          "pattern": "^[1-9][0-9]*(ns|us|ms|s|m|h)$"
         }
       }
     },
@@ -926,8 +1200,8 @@
                       "1h",
                       "1m",
                       "30s"
-                  ]
-                }
+                    ]
+                  }
                 }
               }
             }
@@ -2709,25 +2983,32 @@
       "properties": {
         "port": {
           "description": "The port to listen on.",
-          "type": "integer"
+          "type": "integer",
+          "default": 4456
         },
         "host": {
           "description": "The network interface to listen on.",
           "type": "string",
-          "default": "",
           "examples": [
+            "0.0.0.0",
             "localhost",
             "127.0.0.1"
           ]
         },
-        "timeout": {
-          "$ref": "#/definitions/timeoutConfig"
+        "requests": {
+          "$ref": "#/definitions/ingressRequestsConfig"
         },
-        "buffer_limit": {
-          "$ref": "#/definitions/bufferLimitConfig"
+        "responses": {
+          "$ref": "#/definitions/ingressResponsesConfig"
         },
-        "connections_limit": {
-          "$ref": "#/definitions/connectionsLimitConfig"
+        "connections": {
+          "$ref": "#/definitions/ingressConnectionsConfig"
+        },
+        "http2": {
+          "$ref": "#/definitions/ingressHTTP2Config"
+        },
+        "upstream": {
+          "$ref": "#/definitions/upstreamConfig"
         },
         "cors": {
           "$ref": "#/definitions/corsConfig"
@@ -2754,7 +3035,8 @@
       "properties": {
         "port": {
           "description": "The port to listen on.",
-          "type": "integer"
+          "type": "integer",
+          "default": 4457
         },
         "host": {
           "description": "The network interface to listen on.",
@@ -2765,11 +3047,14 @@
             "127.0.0.1"
           ]
         },
-        "timeout": {
-          "$ref": "#/definitions/timeoutConfig"
+        "requests": {
+          "$ref": "#/definitions/ingressRequestsConfig"
         },
-        "buffer_limit": {
-          "$ref": "#/definitions/bufferLimitConfig"
+        "responses": {
+          "$ref": "#/definitions/ingressResponsesConfig"
+        },
+        "connections": {
+          "$ref": "#/definitions/ingressConnectionsConfig"
         },
         "cors": {
           "$ref": "#/definitions/corsConfig"
