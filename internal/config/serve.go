@@ -24,15 +24,17 @@ import (
 )
 
 type ServeConfig struct {
-	Host             string           `koanf:"host"`
-	Port             int              `koanf:"port"`
-	Timeout          Timeout          `koanf:"timeout"`
-	BufferLimit      BufferLimit      `koanf:"buffer_limit"`
-	ConnectionsLimit ConnectionsLimit `koanf:"connections_limit"`
-	CORS             *CORS            `koanf:"cors,omitempty"`
-	TLS              *TLS             `koanf:"tls,omitempty"             validate:"enforced=notnil"`
-	TrustedProxies   []string         `koanf:"trusted_proxies,omitempty" validate:"enforced=secure_networks"`
-	Respond          RespondConfig    `koanf:"respond"`
+	Host           string             `koanf:"host"`
+	Port           int                `koanf:"port"`
+	Requests       IngressRequests    `koanf:"requests"`
+	Responses      IngressResponses   `koanf:"responses"`
+	Connections    IngressConnections `koanf:"connections"`
+	HTTP2          IngressHTTP2       `koanf:"http2"`
+	Upstream       UpstreamConfig     `koanf:"upstream"`
+	CORS           *CORS              `koanf:"cors,omitempty"`
+	TLS            *TLS               `koanf:"tls,omitempty"             validate:"enforced=notnil"`
+	TrustedProxies []string           `koanf:"trusted_proxies,omitempty" validate:"enforced=secure_networks"`
+	Respond        RespondConfig      `koanf:"respond"`
 }
 
 func (c ServeConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }
@@ -48,10 +50,76 @@ type Timeout struct {
 	Idle  time.Duration `koanf:"idle,string"  mapstructure:"idle"`
 }
 
-type ConnectionsLimit struct {
-	MaxPerHost     int `koanf:"max_per_host"`
-	MaxIdle        int `koanf:"max_idle"`
-	MaxIdlePerHost int `koanf:"max_idle_per_host"`
+type IngressRequests struct {
+	MaxInFlight int                   `koanf:"max_in_flight" validate:"gte=0"`
+	Headers     IngressRequestHeaders `koanf:"headers"`
+	Body        IngressRequestBody    `koanf:"body"`
+}
+
+type IngressRequestHeaders struct {
+	MaxSize     bytesize.ByteSize `koanf:"max_size"            validate:"gt=0"`
+	ReadTimeout time.Duration     `koanf:"read_timeout,string" validate:"gte=0"`
+}
+
+type IngressRequestBody struct {
+	MaxSize         bytesize.ByteSize `koanf:"max_size"`
+	ReadIdleTimeout time.Duration     `koanf:"read_idle_timeout,string" validate:"gte=0"`
+}
+
+type IngressResponses struct {
+	WriteIdleTimeout time.Duration `koanf:"write_idle_timeout,string" validate:"gte=0"`
+}
+
+type IngressConnections struct {
+	Max         int           `koanf:"max"                 validate:"gte=0"`
+	IdleTimeout time.Duration `koanf:"idle_timeout,string" validate:"gte=0"`
+}
+
+type IngressHTTP2 struct {
+	MaxConcurrentStreams int           `koanf:"max_concurrent_streams"   validate:"gt=0"`
+	ReadIdleTimeout      time.Duration `koanf:"read_idle_timeout,string" validate:"gte=0"`
+	PingTimeout          time.Duration `koanf:"ping_timeout,string"      validate:"gt=0"`
+}
+
+type UpstreamConfig struct {
+	Connections UpstreamConnections `koanf:"connections"`
+	Requests    UpstreamRequests    `koanf:"requests"`
+	Responses   UpstreamResponses   `koanf:"responses"`
+	HTTP2       UpstreamHTTP2       `koanf:"http2"`
+}
+
+type UpstreamConnections struct {
+	MaxPerHost     int `koanf:"max_per_host"      validate:"gte=0"`
+	MaxIdle        int `koanf:"max_idle"          validate:"gt=0"`
+	MaxIdlePerHost int `koanf:"max_idle_per_host" validate:"gt=0,ltefield=MaxIdle"`
+
+	DialTimeout         time.Duration `koanf:"dial_timeout,string"          validate:"gte=0"`
+	TLSHandshakeTimeout time.Duration `koanf:"tls_handshake_timeout,string" validate:"gte=0"`
+	IdleTimeout         time.Duration `koanf:"idle_timeout,string"          validate:"gte=0"`
+}
+
+type UpstreamRequests struct {
+	ExpectContinueTimeout time.Duration `koanf:"expect_continue_timeout,string" validate:"gte=0"`
+	WriteIdleTimeout      time.Duration `koanf:"write_idle_timeout,string"      validate:"gte=0"`
+}
+
+type UpstreamResponses struct {
+	Headers UpstreamResponseHeaders `koanf:"headers"`
+	Body    UpstreamResponseBody    `koanf:"body"`
+}
+
+type UpstreamResponseHeaders struct {
+	MaxSize     bytesize.ByteSize `koanf:"max_size"            validate:"gt=0"`
+	ReadTimeout time.Duration     `koanf:"read_timeout,string" validate:"gte=0"`
+}
+
+type UpstreamResponseBody struct {
+	ReadIdleTimeout time.Duration `koanf:"read_idle_timeout,string" validate:"gte=0"`
+}
+
+type UpstreamHTTP2 struct {
+	ReadIdleTimeout time.Duration `koanf:"read_idle_timeout,string" validate:"gte=0"`
+	PingTimeout     time.Duration `koanf:"ping_timeout,string"      validate:"gt=0"`
 }
 
 type CORS struct {
