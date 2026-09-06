@@ -1,0 +1,28 @@
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = false
+
+[*.go]
+indent_style = tab
+
+[go.mod]
+indent_style = tab
+
+[go.work]
+indent_style = tab
+
+[*.{yaml,yml,json}]
+indent_style = space
+indent_size = 2
+
+[*.sh]
+indent_style = space
+indent_size = 2
+
+[Justfile]
+indent_style = space
+indent_size = 2
