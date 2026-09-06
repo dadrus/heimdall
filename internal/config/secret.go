@@ -17,6 +17,6 @@
 package config
 
 type Secret struct {
-	Source   string `koanf:"source"   mapstructure:"source"   validate:"required"`
-	Selector string `koanf:"selector" mapstructure:"selector"`
+	Source   string `koanf:"source" validate:"required"`
+	Selector string `koanf:"selector"`
 }

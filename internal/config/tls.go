@@ -48,7 +48,7 @@ func (v TLSMinVersion) OrDefault() uint16 {
 }
 
 type TLS struct {
-	Secret       Secret          `koanf:"secret"        mapstructure:"secret"        validate:"omitempty"`
-	CipherSuites TLSCipherSuites `koanf:"cipher_suites" mapstructure:"cipher_suites"`
-	MinVersion   TLSMinVersion   `koanf:"min_version"   mapstructure:"min_version"`
+	Secret       Secret          `koanf:"secret"        validate:"omitempty"`
+	CipherSuites TLSCipherSuites `koanf:"cipher_suites"`
+	MinVersion   TLSMinVersion   `koanf:"min_version"`
 }
