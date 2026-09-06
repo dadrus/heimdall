@@ -41,19 +41,45 @@ master_key:
 
 
 serve:
-  host: 127.0.0.1
-  port: 4469
-  timeout:
-    read: 2s
-    write: 5s
-    idle: 2m
-  buffer_limit:
-    read: 4KB
-    write: 4KB
-  connections_limit:
-    max_idle: 100
-    max_idle_per_host: 100
-    max_per_host: 20
+  host: 0.0.0.0
+  port: 4456
+  requests:
+    max_in_flight: 512
+    headers:
+      max_size: 64KB
+      read_timeout: 5s
+    body:
+      max_size: 5MB
+      read_idle_timeout: 0s
+  responses:
+    write_idle_timeout: 30s
+  connections:
+    max: 1024
+    idle_timeout: 2m
+  http2:
+    max_concurrent_streams: 100
+    read_idle_timeout: 30s
+    ping_timeout: 15s
+  upstream:
+    connections:
+      max_per_host: 100
+      max_idle: 100
+      max_idle_per_host: 100
+      dial_timeout: 5s
+      tls_handshake_timeout: 10s
+      idle_timeout: 90s
+    requests:
+      expect_continue_timeout: 1s
+      write_idle_timeout: 30s
+    responses:
+      headers:
+        max_size: 1MB
+        read_timeout: 30s
+      body:
+        read_idle_timeout: 0s
+    http2:
+      read_idle_timeout: 30s
+      ping_timeout: 15s
   cors:
     allowed_origins:
       - example.org
@@ -102,13 +128,19 @@ serve:
 management:
   host: 127.0.0.1
   port: 4457
-  timeout:
-    read: 2s
-    write: 5s
-    idle: 2m
-  buffer_limit:
-    read: 4KB
-    write: 4KB
+  requests:
+    max_in_flight: 64
+    headers:
+      max_size: 4KB
+      read_timeout: 5s
+    body:
+      max_size: 5MB
+      read_idle_timeout: 0s
+  responses:
+    write_idle_timeout: 30s
+  connections:
+    max: 128
+    idle_timeout: 2m
   cors:
     allowed_origins:
       - example.org
