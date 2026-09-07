@@ -17,6 +17,8 @@
 package grpcv3
 
 import (
+	"math"
+
 	"github.com/ccoveille/go-safecast/v2"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -35,6 +37,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/trustedproxy"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 func newService(
@@ -56,6 +59,11 @@ func newService(
 
 	srv := grpc.NewServer(
 		grpc.MaxHeaderListSize(safecast.MustConvert[uint32](cfg.Requests.Headers.MaxSize)),
+		grpc.MaxRecvMsgSize(x.IfThenElse(
+			cfg.Requests.Body.MaxSize > 0,
+			safecast.MustConvert[int](cfg.Requests.Body.MaxSize),
+			math.MaxInt,
+		)),
 		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: cfg.Timeout.Idle}),
 		grpc.UnknownServiceHandler(func(_ any, _ grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
