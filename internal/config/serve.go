@@ -58,12 +58,12 @@ type IngressRequests struct {
 }
 
 type IngressRequestHeaders struct {
-	MaxSize     bytesize.ByteSize `koanf:"max_size"            validate:"gt=0"`
+	MaxSize     bytesize.ByteSize `koanf:"max_size"            validate:"gt=0,max_bytes=2047MB"`
 	ReadTimeout time.Duration     `koanf:"read_timeout,string" validate:"gte=0"`
 }
 
 type IngressRequestBody struct {
-	MaxSize         bytesize.ByteSize `koanf:"max_size"`
+	MaxSize         bytesize.ByteSize `koanf:"max_size,max_bytes=7EB"`
 	ReadIdleTimeout time.Duration     `koanf:"read_idle_timeout,string" validate:"gte=0"`
 }
 
@@ -110,7 +110,7 @@ type UpstreamResponses struct {
 }
 
 type UpstreamResponseHeaders struct {
-	MaxSize     bytesize.ByteSize `koanf:"max_size"            validate:"gt=0"`
+	MaxSize     bytesize.ByteSize `koanf:"max_size"            validate:"gt=0,max_bytes=7EB"`
 	ReadTimeout time.Duration     `koanf:"read_timeout,string" validate:"gte=0"`
 }
 
