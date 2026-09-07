@@ -55,7 +55,7 @@ func newService(
 	)
 
 	srv := grpc.NewServer(
-		grpc.MaxHeaderListSize(safecast.MustConvert[uint32](uint64(cfg.Requests.Headers.MaxSize))),
+		grpc.MaxHeaderListSize(safecast.MustConvert[uint32](cfg.Requests.Headers.MaxSize)),
 		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: cfg.Timeout.Idle}),
 		grpc.UnknownServiceHandler(func(_ any, _ grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
