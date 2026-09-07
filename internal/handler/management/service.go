@@ -90,25 +90,12 @@ func newService(
 		),
 	).Then(newHandler(kp, eh))
 
-	protocols := new(http.Protocols)
-	protocols.SetHTTP1(true)
-
-	if cfg.TLS != nil {
-		protocols.SetHTTP2(true)
-	}
-
 	return &http.Server{
 		Handler:           hc,
-		ReadHeaderTimeout: cfg.Requests.Headers.ReadTimeout,
-		IdleTimeout:       cfg.Connections.IdleTimeout,
-		MaxHeaderBytes:    safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
+		ReadTimeout:    cfg.Timeout.Read,
+		WriteTimeout:   cfg.Timeout.Write,
+		IdleTimeout:    cfg.Timeout.Idle,
+		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
 		ErrorLog:          loggeradapter.NewStdLogger(log),
-		Protocols:         protocols,
-		HTTP2: &http.HTTP2Config{
-			MaxConcurrentStreams: defaultHTTP2MaxConcurrentStreams,
-			SendPingTimeout:      defaultHTTP2ReadIdleTimeout,
-			PingTimeout:          defaultHTTP2PingTimeout,
-			WriteByteTimeout:     cfg.Responses.WriteIdleTimeout,
-		},
 	}
 }

@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ccoveille/go-safecast/v2"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
@@ -73,18 +74,19 @@ func newContextFactory(
 			// is possible per upstream
 			Proxy: http.ProxyFromEnvironment,
 			DialContext: (&net.Dialer{
-				Timeout:   30 * time.Second, //nolint:mnd
+				Timeout:   cfg.Upstream.Connections.DialTimeout,
 				KeepAlive: 30 * time.Second, //nolint:mnd
 			}).DialContext,
-			ResponseHeaderTimeout: cfg.Timeout.Read,
-			MaxIdleConns:          cfg.ConnectionsLimit.MaxIdle,
-			MaxIdleConnsPerHost:   cfg.ConnectionsLimit.MaxIdlePerHost,
-			MaxConnsPerHost:       cfg.ConnectionsLimit.MaxPerHost,
-			IdleConnTimeout:       cfg.Timeout.Idle,
-			TLSHandshakeTimeout:   10 * time.Second, //nolint:mnd
-			ExpectContinueTimeout: 1 * time.Second,
-			ForceAttemptHTTP2:     true,
-			TLSClientConfig:       tlsCfg,
+			ResponseHeaderTimeout:  cfg.Upstream.Responses.Headers.ReadTimeout,
+			MaxResponseHeaderBytes: safecast.MustConvert[int64](cfg.Upstream.Responses.Headers.MaxSize),
+			MaxIdleConns:           cfg.Upstream.Connections.MaxIdle,
+			MaxIdleConnsPerHost:    cfg.Upstream.Connections.MaxIdlePerHost,
+			MaxConnsPerHost:        cfg.Upstream.Connections.MaxPerHost,
+			IdleConnTimeout:        cfg.Upstream.Connections.IdleTimeout,
+			TLSHandshakeTimeout:    cfg.Upstream.Connections.TLSHandshakeTimeout,
+			ExpectContinueTimeout:  cfg.Upstream.Requests.ExpectContinueTimeout,
+			ForceAttemptHTTP2:      true,
+			TLSClientConfig:        tlsCfg,
 		},
 		pool: &sync.Pool{New: func() any {
 			return &requestContext{

@@ -580,7 +580,7 @@
           ]
         },
         "idle": {
-          "description": " The maximum amount of time to wait for any action of a request session, reading data or writing the response.",
+          "description": "The maximum amount of time to wait for any action of a request session, reading data or writing the response.",
           "type": "string",
           "default": "120s",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
@@ -623,26 +623,17 @@
     },
     "ingressRequestsConfig": {
       "type": "object",
-      "description": "Limits and timeouts for incoming requests.",
+      "description": "Limits for incoming requests.",
       "additionalProperties": false,
       "properties": {
-        "max_in_flight": {
-          "description": "Maximum number of requests processed concurrently. 0 disables Heimdall's admission limit.",
-          "type": "integer",
-          "minimum": 0,
-          "default": 512
-        },
         "headers": {
           "$ref": "#/definitions/ingressRequestHeadersConfig"
-        },
-        "body": {
-          "$ref": "#/definitions/ingressRequestBodyConfig"
         }
       }
     },
     "ingressRequestHeadersConfig": {
       "type": "object",
-      "description": "Limits and timeouts for incoming request headers.",
+      "description": "Limits for incoming request headers.",
       "additionalProperties": false,
       "properties": {
         "max_size": {
@@ -653,117 +644,6 @@
           "examples": [
             "64KB",
             "1MB"
-          ]
-        },
-        "read_timeout": {
-          "description": "Maximum duration allowed for reading incoming request headers. 0 disables the timeout.",
-          "type": "string",
-          "default": "5s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-          "examples": [
-            "5s",
-            "1m"
-          ]
-        }
-      }
-    },
-    "ingressRequestBodyConfig": {
-      "type": "object",
-      "description": "Limits and timeouts for incoming request bodies.",
-      "additionalProperties": false,
-      "properties": {
-        "max_size": {
-          "description": "Maximum size of an incoming request body. 0 disables Heimdall's body size limit.",
-          "type": "string",
-          "default": "5MB",
-          "pattern": "^[0-9]+(B|KB|MB|GB)$",
-          "examples": [
-            "0B",
-            "5MB",
-            "100MB"
-          ]
-        },
-        "read_idle_timeout": {
-          "description": "Maximum time an active request body read may make no progress. 0 disables the timeout.",
-          "type": "string",
-          "default": "0s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-          "examples": [
-            "0s",
-            "30s"
-          ]
-        }
-      }
-    },
-    "ingressResponsesConfig": {
-      "type": "object",
-      "description": "Timeouts for outgoing responses to clients.",
-      "additionalProperties": false,
-      "properties": {
-        "write_idle_timeout": {
-          "description": "Maximum time an active response write may make no progress. 0 disables the timeout.",
-          "type": "string",
-          "default": "30s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-          "examples": [
-            "0s",
-            "30s"
-          ]
-        }
-      }
-    },
-    "ingressConnectionsConfig": {
-      "type": "object",
-      "description": "Limits and timeouts for accepted connections.",
-      "additionalProperties": false,
-      "properties": {
-        "max": {
-          "description": "Maximum number of accepted connections. 0 disables Heimdall's connection limit.",
-          "type": "integer",
-          "minimum": 0,
-          "default": 1024
-        },
-        "idle_timeout": {
-          "description": "Maximum time an idle keep-alive connection is kept open. 0 disables the timeout.",
-          "type": "string",
-          "default": "2m",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-          "examples": [
-            "0s",
-            "2m"
-          ]
-        }
-      }
-    },
-    "ingressHTTP2Config": {
-      "type": "object",
-      "description": "Limits and liveness settings for incoming HTTP/2 connections.",
-      "additionalProperties": false,
-      "properties": {
-        "max_concurrent_streams": {
-          "description": "Maximum number of concurrent streams accepted on one HTTP/2 connection.",
-          "type": "integer",
-          "minimum": 1,
-          "default": 100
-        },
-        "read_idle_timeout": {
-          "description": "Time without a received HTTP/2 frame after which a liveness ping is sent. 0 disables active liveness pings.",
-          "type": "string",
-          "default": "30s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-          "examples": [
-            "0s",
-            "30s"
-          ]
-        },
-        "ping_timeout": {
-          "description": "Maximum time to wait for an HTTP/2 ping response before closing the connection.",
-          "type": "string",
-          "default": "15s",
-          "pattern": "^[1-9][0-9]*(ns|us|ms|s|m|h)$",
-          "examples": [
-            "15s",
-            "1m"
           ]
         }
       }
@@ -781,9 +661,6 @@
         },
         "responses": {
           "$ref": "#/definitions/upstreamResponsesConfig"
-        },
-        "http2": {
-          "$ref": "#/definitions/upstreamHTTP2Config"
         }
       }
     },
@@ -840,12 +717,6 @@
           "type": "string",
           "default": "1s",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
-        },
-        "write_idle_timeout": {
-          "description": "Maximum time an active upstream request write may make no progress. 0 disables the timeout.",
-          "type": "string",
-          "default": "30s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
         }
       }
     },
@@ -856,9 +727,6 @@
       "properties": {
         "headers": {
           "$ref": "#/definitions/upstreamResponseHeadersConfig"
-        },
-        "body": {
-          "$ref": "#/definitions/upstreamResponseBodyConfig"
         }
       }
     },
@@ -882,38 +750,6 @@
           "type": "string",
           "default": "30s",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
-        }
-      }
-    },
-    "upstreamResponseBodyConfig": {
-      "type": "object",
-      "description": "Timeouts for reading upstream response bodies.",
-      "additionalProperties": false,
-      "properties": {
-        "read_idle_timeout": {
-          "description": "Maximum time an active upstream response body read may make no progress. 0 disables the timeout.",
-          "type": "string",
-          "default": "0s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
-        }
-      }
-    },
-    "upstreamHTTP2Config": {
-      "type": "object",
-      "description": "Liveness settings for HTTP/2 upstream connections.",
-      "additionalProperties": false,
-      "properties": {
-        "read_idle_timeout": {
-          "description": "Time without a received HTTP/2 frame after which a liveness ping is sent. 0 disables active liveness pings.",
-          "type": "string",
-          "default": "30s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
-        },
-        "ping_timeout": {
-          "description": "Maximum time to wait for an HTTP/2 ping response before closing the connection.",
-          "type": "string",
-          "default": "15s",
-          "pattern": "^[1-9][0-9]*(ns|us|ms|s|m|h)$"
         }
       }
     },
@@ -1122,7 +958,7 @@
     },
     "endpointConfiguration": {
       "description": "Endpoint to to communicate to",
-      "type": ["object", "string"],
+      "type": [ "object", "string" ],
       "allOf": [
         {
           "if": { "type": "object" },
@@ -1213,14 +1049,14 @@
             "type": "string",
             "description": "If only URL should be configured for the endpoint",
             "format": "uri-reference",
-            "examples": ["http://some.endpoint"]
+            "examples": [ "http://some.endpoint" ]
           }
         }
       ]
     },
     "metadataEndpointConfiguration": {
       "description": "Metadata endpoint settings to discover OAuth2/OIDC configuration",
-      "type": ["object", "string"],
+      "type": [ "object", "string" ],
       "allOf": [
         {
           "if": { "type": "object" },
@@ -1327,7 +1163,7 @@
             "type": "string",
             "description": "If only URL should be configured for the endpoint",
             "format": "uri-reference",
-            "examples": ["http://some.endpoint"]
+            "examples": [ "http://some.endpoint" ]
           }
         }
       ]
@@ -1386,37 +1222,37 @@
     "endpointAuthConfiguration": {
       "description": "How to authenticate against the endpoint",
       "type": "object",
-      "required": ["type"],
+      "required": [ "type" ],
       "properties": {
         "type": {
-          "enum": ["api_key", "basic_auth", "oauth2_client_credentials", "http_message_signatures"]
+          "enum": [ "api_key", "basic_auth", "oauth2_client_credentials", "http_message_signatures" ]
         }
       },
       "allOf": [
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "api_key" } }
           },
           "then": { "$ref": "#/definitions/endpointAuthApiKeyProperties" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "basic_auth" } }
           },
           "then": { "$ref": "#/definitions/endpointAuthBasicAuthProperties" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "oauth2_client_credentials" } }
           },
           "then": { "$ref": "#/definitions/endpointAuth2ClientCredentialsProperties" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "http_message_signatures" } }
           },
           "then": { "$ref": "#/definitions/endpointAuthHTTPMessageSignaturesProperties" }
@@ -1582,10 +1418,10 @@
           "body_parameter": { "type": "string" }
         },
         "oneOf": [
-          { "required": ["header"] },
-          { "required": ["cookie"] },
-          { "required": ["query_parameter"] },
-          { "required": ["body_parameter"] }
+          { "required": [ "header" ] },
+          { "required": [ "cookie" ] },
+          { "required": [ "query_parameter" ] },
+          { "required": [ "body_parameter" ] }
         ]
       }
     },
@@ -1596,7 +1432,7 @@
         "scopes": {
           "oneOf": [
             {
-              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this mechanism.\n If the token used in the Authorization header did not request that specific scope, the request is denied.",
+              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this mechanism. If the token used in the Authorization header did not request that specific scope, the request is denied.",
               "type": "object",
               "properties": {
                 "matching_strategy": {
@@ -1618,7 +1454,7 @@
               }
             },
             {
-              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this mechanism.\n If the token used in the Authorization header did not request that specific scope, the request is denied. When only the actual scopes are configured the matching strategy is 'exact'",
+              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this mechanism. If the token used in the Authorization header did not request that specific scope, the request is denied. When only the actual scopes are configured the matching strategy is 'exact'",
               "type": "array",
               "items": {
                 "type": "string"
@@ -2491,7 +2327,7 @@
           "additionalProperties": false,
           "properties": {
             "realm": {
-              "description": "Message that will be displayed by the browser. Most browsers show a message like \"The website says: `,<realm>`\". Using a real message is thus more appropriate than a Realm identifier.",
+              "description": "Message that will be displayed by the browser. Most browsers show a message like \"The website says: <realm>\". Using a real message is thus more appropriate than a Realm identifier.",
               "type": "string",
               "default": "Please authenticate."
             }
@@ -2735,37 +2571,37 @@
           "additionalItems": false,
           "items": {
             "type": "object",
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": {
               "type": {
-                "enum": ["www_authenticate", "redirect", "default", "generic"]
+                "enum": [ "www_authenticate", "redirect", "default", "generic" ]
               }
             },
             "allOf": [
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "www_authenticate" } }
                 },
                 "then": { "$ref": "#/definitions/errorHandlerWWWAuthenticate" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "redirect" } }
                 },
                 "then": { "$ref": "#/definitions/errorsHandlerRedirect" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "default" } }
                 },
                 "then": { "$ref": "#/definitions/errorsHandlerDefault" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "generic" } }
                 },
                 "then": { "$ref": "#/definitions/errorHandlerGeneric" }
@@ -2780,46 +2616,46 @@
           "uniqueItems": true,
           "items": {
             "type": "object",
-            "required": ["type"],
+            "required": [ "type" ],
             "allOf": [
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "anonymous" } }
                 },
                 "then": { "$ref": "#/definitions/authenticatorAnonymous" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "unauthorized" } }
                 },
                 "then": { "$ref": "#/definitions/authenticatorUnauthorized" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "generic" } }
                 },
                 "then": { "$ref": "#/definitions/authenticatorGeneric" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "oauth2_introspection" } }
                 },
                 "then": { "$ref": "#/definitions/authenticatorOAuth2Introspection" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "jwt" } }
                 },
                 "then": { "$ref": "#/definitions/authenticatorJwt" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "basic_auth" } }
                 },
                 "then": { "$ref": "#/definitions/authenticatorBasicAuth" }
@@ -2846,37 +2682,37 @@
           "uniqueItems": true,
           "items": {
             "type": "object",
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": {
               "type": {
-                "enum": ["allow", "deny", "remote", "cel"]
+                "enum": [ "allow", "deny", "remote", "cel" ]
               }
             },
             "allOf": [
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "allow" } }
                 },
                 "then": { "$ref": "#/definitions/authorizerAllow" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "deny" } }
                 },
                 "then": { "$ref": "#/definitions/authorizerDeny" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "remote" } }
                 },
                 "then": { "$ref": "#/definitions/authorizerRemote" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "cel" } }
                 },
                 "then": { "$ref": "#/definitions/authorizerLocalCEL" }
@@ -2891,23 +2727,23 @@
           "uniqueItems": true,
           "items": {
             "type": "object",
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": {
               "type": {
-                "enum": ["generic", "map"]
+                "enum": [ "generic", "map" ]
               }
             },
             "allOf": [
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "generic" } }
                 },
                 "then": { "$ref": "#/definitions/contextualizerGeneric" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "map" } }
                 },
                 "then": { "$ref": "#/definitions/contextualizerMap" }
@@ -2922,44 +2758,44 @@
           "uniqueItems": true,
           "items": {
             "type": "object",
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": {
               "type": {
-                "enum": ["noop", "jwt", "header", "cookie", "oauth2_client_credentials"]
+                "enum": [ "noop", "jwt", "header", "cookie", "oauth2_client_credentials" ]
               }
             },
             "allOf": [
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "noop" } }
                 },
                 "then": { "$ref": "#/definitions/finalizerNoop" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "jwt" } }
                 },
                 "then": { "$ref": "#/definitions/finalizerJwt" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "header" } }
                 },
                 "then": { "$ref": "#/definitions/finalizerHeader" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "cookie" } }
                 },
                 "then": { "$ref": "#/definitions/finalizerCookie" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "oauth2_client_credentials" } }
                 },
                 "then": { "$ref": "#/definitions/finalizerClientCredentials" }
@@ -2995,17 +2831,11 @@
             "127.0.0.1"
           ]
         },
+        "timeout": {
+          "$ref": "#/definitions/timeoutConfig"
+        },
         "requests": {
           "$ref": "#/definitions/ingressRequestsConfig"
-        },
-        "responses": {
-          "$ref": "#/definitions/ingressResponsesConfig"
-        },
-        "connections": {
-          "$ref": "#/definitions/ingressConnectionsConfig"
-        },
-        "http2": {
-          "$ref": "#/definitions/ingressHTTP2Config"
         },
         "upstream": {
           "$ref": "#/definitions/upstreamConfig"
@@ -3047,14 +2877,11 @@
             "127.0.0.1"
           ]
         },
+        "timeout": {
+          "$ref": "#/definitions/timeoutConfig"
+        },
         "requests": {
           "$ref": "#/definitions/ingressRequestsConfig"
-        },
-        "responses": {
-          "$ref": "#/definitions/ingressResponsesConfig"
-        },
-        "connections": {
-          "$ref": "#/definitions/ingressConnectionsConfig"
         },
         "cors": {
           "$ref": "#/definitions/corsConfig"
@@ -3102,44 +2929,44 @@
     "cache": {
       "description": "Configure caches",
       "type": "object",
-      "required": ["type"],
+      "required": [ "type" ],
       "properties": {
         "type": {
-          "enum": ["noop", "in-memory", "redis", "redis-cluster", "redis-sentinel"]
+          "enum": [ "noop", "in-memory", "redis", "redis-cluster", "redis-sentinel" ]
         }
       },
       "allOf": [
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "noop" } }
           },
           "then": { "$ref": "#/definitions/cacheNoop" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "in-memory" } }
           },
           "then": { "$ref": "#/definitions/cacheInMemory" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "redis" } }
           },
           "then": { "$ref": "#/definitions/cacheRedisStandalone" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "redis-cluster" } }
           },
           "then": { "$ref": "#/definitions/cacheRedisCluster" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "redis-sentinel" } }
           },
           "then": { "$ref": "#/definitions/cacheRedisSentinel" }
@@ -3272,37 +3099,37 @@
       "type": "object",
       "additionalProperties": {
         "type": "object",
-        "required": ["type"],
+        "required": [ "type" ],
         "properties": {
           "type": {
-            "enum": ["pem", "file", "inline", "jwks"]
+            "enum": [ "pem", "file", "inline", "jwks" ]
           }
         },
         "allOf": [
           {
             "if": {
-              "required": ["type"],
+              "required": [ "type" ],
               "properties": { "type": { "const": "pem" } }
             },
             "then": { "$ref": "#/definitions/secretSourcePem" }
           },
           {
             "if": {
-              "required": ["type"],
+              "required": [ "type" ],
               "properties": { "type": { "const": "file" } }
             },
             "then": { "$ref": "#/definitions/secretSourceFile" }
           },
           {
             "if": {
-              "required": ["type"],
+              "required": [ "type" ],
               "properties": { "type": { "const": "inline" } }
             },
             "then": { "$ref": "#/definitions/secretSourceInline" }
           },
           {
             "if": {
-              "required": ["type"],
+              "required": [ "type" ],
               "properties": { "type": { "const": "jwks" } }
             },
             "then": { "$ref": "#/definitions/secretSourceJWKS" }

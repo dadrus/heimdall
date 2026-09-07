@@ -43,23 +43,13 @@ master_key:
 serve:
   host: 0.0.0.0
   port: 4456
+  timeout:
+    read: 2s
+    write: 5s
+    idle: 2m
   requests:
-    max_in_flight: 512
     headers:
       max_size: 64KB
-      read_timeout: 5s
-    body:
-      max_size: 5MB
-      read_idle_timeout: 0s
-  responses:
-    write_idle_timeout: 30s
-  connections:
-    max: 1024
-    idle_timeout: 2m
-  http2:
-    max_concurrent_streams: 100
-    read_idle_timeout: 30s
-    ping_timeout: 15s
   upstream:
     connections:
       max_per_host: 100
@@ -70,16 +60,10 @@ serve:
       idle_timeout: 90s
     requests:
       expect_continue_timeout: 1s
-      write_idle_timeout: 30s
     responses:
       headers:
         max_size: 1MB
         read_timeout: 30s
-      body:
-        read_idle_timeout: 0s
-    http2:
-      read_idle_timeout: 30s
-      ping_timeout: 15s
   cors:
     allowed_origins:
       - example.org
@@ -128,19 +112,13 @@ serve:
 management:
   host: 127.0.0.1
   port: 4457
+  timeout:
+    read: 2s
+    write: 5s
+    idle: 2m
   requests:
-    max_in_flight: 64
     headers:
       max_size: 4KB
-      read_timeout: 5s
-    body:
-      max_size: 5MB
-      read_idle_timeout: 0s
-  responses:
-    write_idle_timeout: 30s
-  connections:
-    max: 128
-    idle_timeout: 2m
   cors:
     allowed_origins:
       - example.org

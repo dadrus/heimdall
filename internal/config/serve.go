@@ -26,6 +26,7 @@ import (
 type ServeConfig struct {
 	Host           string             `koanf:"host"`
 	Port           int                `koanf:"port"`
+	Timeout        Timeout            `koanf:"timeout"`
 	Requests       IngressRequests    `koanf:"requests"`
 	Responses      IngressResponses   `koanf:"responses"`
 	Connections    IngressConnections `koanf:"connections"`

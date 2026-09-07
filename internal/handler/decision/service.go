@@ -86,16 +86,11 @@ func newService(
 	).Then(service.NewHandler(newContextFactory(acceptedCode), exec, eh))
 
 	return &http.Server{
-		Handler:           hc,
-		ReadHeaderTimeout: cfg.Requests.Headers.ReadTimeout,
-		IdleTimeout:       cfg.Connections.IdleTimeout,
-		MaxHeaderBytes:    safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
-		ErrorLog:          loggeradapter.NewStdLogger(log),
-		HTTP2: &http.HTTP2Config{
-			MaxConcurrentStreams: cfg.HTTP2.MaxConcurrentStreams,
-			SendPingTimeout:      cfg.HTTP2.ReadIdleTimeout,
-			PingTimeout:          cfg.HTTP2.PingTimeout,
-			WriteByteTimeout:     cfg.Responses.WriteIdleTimeout,
-		},
+		Handler:        hc,
+		ReadTimeout:    cfg.Timeout.Read,
+		WriteTimeout:   cfg.Timeout.Write,
+		IdleTimeout:    cfg.Timeout.Idle,
+		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
+		ErrorLog:       loggeradapter.NewStdLogger(log),
 	}
 }
