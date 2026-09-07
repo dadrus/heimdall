@@ -18,13 +18,13 @@ Heimdall can either:
 
 ## Container Image
 
-Heimdall is published as a minimal, multi-platform Linux container image for:
+Heimdall is published as a hardened, minimal, and multi-platform Linux container image for:
 
 * `linux/amd64`
 * `linux/arm64`
 * `linux/arm/v7`
 
-The images are **rootless** and **distroless**. They contain the Heimdall binary and only the runtime metadata required to execute it as a non-root user.
+Each image contains the Heimdall binary and only the runtime metadata required to execute it as a non-root user.
 
 Images are available from both Docker Hub and GitHub Container Registry:
 
