@@ -1,40 +1,119 @@
 # Heimdall
 
-## Background
+**A cloud native Identity Aware Proxy and Access Control Decision service.**
 
-Heimdall is inspired by the ZeroTrust idea and tries to adopt it to some extent to web applications.
+Heimdall is a general-purpose Policy Enforcement Point (PEP) for HTTP services, designed for Zero Trust architectures as described in [NIST SP 800-207](https://csrc.nist.gov/pubs/sp/800/207/final). It combines authentication and authorization in a configurable pipeline, keeps access control close to the protected resource, and can provide services with trusted context derived from the authenticated subject and authorization process — without coupling them to concrete authentication protocols, identity providers, or authorization systems.
 
-## Heimdall's Promise
+Heimdall can either:
 
-Heimdall authenticates and authorizes incoming HTTP requests as well as enriches these with further contextual information and finally transforms resulting subject information into a format, required by the upstream services. And all of that can be controlled by each and every backend service individually.
+* expose its access control decisions to an existing proxy, ingress controller, API gateway, or service mesh; or
+* enforce them directly by proxying requests to the protected service, commonly as a sidecar or in front of a small group of services.
 
-It is supposed to be used either as
-* a **Reverse Proxy** in front of your upstream API or web server that rejects unauthorized requests and forwards authorized ones to your end points, or as
-* a **Decision Service**, which integrates with your API Gateway (Kong, NGNIX, Envoy, Traefik, etc.) and then acts as a Policy Decision Point.
+## References
 
-## Reference
+* [Documentation](https://dadrus.github.io/heimdall/) — concepts, configuration, mechanisms, operations, and security guidance
+* [Getting Started](https://dadrus.github.io/heimdall/dev/docs/getting_started/discover_heimdall/) — learn how Heimdall works and protect your first application
+* [Integration Guides](https://dadrus.github.io/heimdall/dev/guides/) — examples for proxies, gateways, authentication, and authorization systems
+* [GitHub](https://github.com/dadrus/heimdall) — source code, releases, issues, and contribution guidelines
 
-* [Documentation](https://dadrus.github.io/heimdall/) - Checkout the documentation for more details.
-* [GitHub](https://github.com/dadrus/heimdall) - Visit heimdall on GitHub.
+## Container Image
 
-## Image Variants
+Heimdall is published as a minimal, multi-platform Linux container image for:
 
-As of today heimdall is built as a multi-platform image for the following platforms:
+* `linux/amd64`
+* `linux/arm64`
+* `linux/arm/v7`
 
-* linux/amd64
-* linux/arm64
-* linux/arm/v7
+The images are **rootless** and **distroless**. They contain the Heimdall binary and only the runtime metadata required to execute it as a non-root user.
 
-If you need support for other platforms, don't hesitate to file an issue at GitHub. Contributions are very welcome as well!
+Images are available from both Docker Hub and GitHub Container Registry:
 
-All images adhere to the following patterns:
+```text
+dadrus/heimdall:<tag>
+ghcr.io/dadrus/heimdall:<tag>
+```
 
-* For stable, respectively released versions, image tags have the suffix of the corresponding version and have the `dadrus/heimdall:<version>` form. E.g. an image tagged with `dadrus/heimdall:0.17.22` is the image for the released `0.17.22` version of heimdall. In addition, there is a `dadrus/heimdall:latest` tag referencing the latest released version as well.
+## Image Tags
 
-* Development images are created from the main branch by heimdall's continuous integration and are tagged with the `dev` and with the `dev-<SHA>` suffix, where the SHA is the commit in heimdall main from which it was created. For example, after a build at commit `730b2206`, an image will be created for `dadrus/heimdall:dev-730b2206fdfc688ca42bcdf0e344d8fa6bfba232` and the image `dadrus/heimdall:dev` will be tagged to it until the next build.
+### Releases
 
-Each published image is signed using [Cosign](https://docs.sigstore.dev/docs/signing/quickstart/). The signatures are located in the same repository and have the tag pattern `sha256-<SHA256>.sig`. An SBOM is attached to each image as an attestation, created via Cosign as well. These objects are also present in this repository with tags adhering to the `sha256-<SHA256>.att` name pattern. Both, the images and the SBOM attestations are signed using [keyless signing feature](https://docs.sigstore.dev/docs/signing/overview/). Please refer to heimdall's [Documentation](https://dadrus.github.io/heimdall/dev/docs/operations/security/#_verifying_heimdall_binaries_and_container_images) on how to verify both and extract the SBOM.
+A specific released version can be pulled using its version:
+
+```bash
+docker pull dadrus/heimdall:<version>
+```
+
+For example:
+
+```bash
+docker pull dadrus/heimdall:0.17.22
+```
+
+The `latest` tag references the most recently released version:
+
+```bash
+docker pull dadrus/heimdall:latest
+```
+
+For reproducible deployments, prefer pinning a specific version or image digest instead of relying on `latest`.
+
+### Development
+
+Images built from the `main` branch are published as:
+
+```text
+dadrus/heimdall:dev
+dadrus/heimdall:dev-<commit-sha>
+```
+
+`dev` always references the latest development image, while `dev-<commit-sha>` identifies the image built from a specific commit.
+
+Development images are useful for testing unreleased changes and should not be treated as stable releases.
+
+## Supply Chain Security
+
+Heimdall is security infrastructure, and its release process provides verifiable information about the origin and contents of published artifacts.
+
+### Signatures
+
+Container images are signed using [Cosign](https://docs.sigstore.dev/cosign/) with keyless signing.
+
+Signatures for Docker Hub images are stored in:
+
+```text
+dadrus/heimdall-signatures
+```
+
+Development images are signed as well.
+
+### Software Bill of Materials
+
+Every container image is accompanied by a CycloneDX SBOM attestation.
+
+SBOM attestations for Docker Hub images are stored in:
+
+```text
+dadrus/heimdall-sbom
+```
+
+### SLSA Provenance
+
+Released container images additionally include SLSA provenance generated by Heimdall's release workflow.
+
+This allows released images to be verified against the source repository and release tag from which they were built.
+
+### Verification
+
+For instructions on verifying:
+
+* container image signatures;
+* SLSA provenance;
+* SBOM attestations and extracting the SBOM;
+
+see the [Heimdall artifact verification documentation](https://dadrus.github.io/heimdall/dev/docs/operations/security/#_verification_of_heimdall_artifacts).
+
+For security-sensitive or production deployments, verifying the image before deployment is recommended.
 
 ## License
 
-Heimdall is licensed under [Apache-2.0](https://github.com/dadrus/heimdall/blob/main/LICENSE) license.
+Heimdall is licensed under the [Apache License 2.0](https://github.com/dadrus/heimdall/blob/main/LICENSE).
