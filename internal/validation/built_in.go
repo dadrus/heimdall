@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/inhies/go-bytesize"
+
 	"github.com/dadrus/heimdall/internal/headerpolicy"
 )
 
@@ -87,3 +89,24 @@ func (mutableUpstreamHeaderValidator) Validate(_ string, field reflect.Value) bo
 
 	return headerpolicy.Classify(field.String()) == headerpolicy.Ordinary
 }
+
+type maxBytes struct{}
+
+func (maxBytes) Validate(param string, field reflect.Value) bool {
+	size, ok := field.Interface().(bytesize.ByteSize)
+	if !ok {
+		return false
+	}
+
+	maxSize, err := bytesize.Parse(param)
+	if err != nil {
+		return false
+	}
+
+	return size <= maxSize
+}
+
+func (maxBytes) Tag() string                      { return "max_bytes" }
+func (maxBytes) AlwaysValidate() bool             { return false }
+func (maxBytes) MessageTemplate() string          { return "{0} {1}" }
+func (maxBytes) ErrorMessage(param string) string { return "must not exceed " + param }

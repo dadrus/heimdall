@@ -20,6 +20,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/inhies/go-bytesize"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -113,4 +114,53 @@ func TestMutableUpstreamHeaderValidatorErrorMessage(t *testing.T) {
 		"is not a mutable upstream header",
 		mutableUpstreamHeaderValidator{}.ErrorMessage(""),
 	)
+}
+
+func TestMaxBytesValidate(t *testing.T) {
+	t.Parallel()
+
+	validator := maxBytes{}
+
+	for uc, tc := range map[string]struct {
+		param string
+		value any
+		want  bool
+	}{
+		"below maximum": {
+			param: "2GB",
+			value: 2*bytesize.GB - bytesize.B,
+			want:  true,
+		},
+		"at maximum": {
+			param: "2KB",
+			value: 2 * bytesize.KB,
+			want:  true,
+		},
+		"above maximum": {
+			param: "1MB",
+			value: 1*bytesize.MB + bytesize.B,
+			want:  false,
+		},
+		"invalid parameter": {
+			param: "not-a-byte-size",
+			value: bytesize.GB,
+			want:  false,
+		},
+		"unsupported field type": {
+			param: "2GB",
+			value: uint64(bytesize.GB),
+			want:  false,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			got := validator.Validate(
+				tc.param,
+				reflect.ValueOf(tc.value),
+			)
+
+			assert.Equal(t, tc.want, got)
+		})
+	}
 }
