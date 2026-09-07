@@ -124,6 +124,11 @@ func defaultConfig() Configuration {
 		},
 		Management: ManagementConfig{
 			Port: defaultManagementServicePort,
+			Timeout: Timeout{
+				Read:  defaultReadTimeout,
+				Write: defaultWriteTimeout,
+				Idle:  defaultIdleTimeout,
+			},
 			Requests: IngressRequests{
 				MaxInFlight: defaultMaxInFlightRequests,
 				Headers: IngressRequestHeaders{

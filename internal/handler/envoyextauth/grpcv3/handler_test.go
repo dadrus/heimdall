@@ -216,7 +216,18 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				grpc.WithTransportCredentials(insecure.NewCredentials()))
 			require.NoError(t, err)
 
-			conf := &config.Configuration{Metrics: config.MetricsConfig{Enabled: true}}
+			conf := &config.Configuration{
+				Metrics: config.MetricsConfig{
+					Enabled: true,
+				},
+				Serve: config.ServeConfig{
+					Requests: config.IngressRequests{
+						Headers: config.IngressRequestHeaders{
+							MaxSize: 64 * 1024,
+						},
+					},
+				},
+			}
 			cch := mocks.NewCacheMock(t)
 			exec := mocks3.NewExecutorMock(t)
 

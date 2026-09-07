@@ -19,7 +19,6 @@ package management
 import (
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/ccoveille/go-safecast/v2"
 	"github.com/justinas/alice"
@@ -39,12 +38,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
-)
-
-const (
-	defaultHTTP2MaxConcurrentStreams = 100
-	defaultHTTP2ReadIdleTimeout      = 30 * time.Second
-	defaultHTTP2PingTimeout          = 15 * time.Second
 )
 
 func newService(
@@ -91,11 +84,11 @@ func newService(
 	).Then(newHandler(kp, eh))
 
 	return &http.Server{
-		Handler:           hc,
+		Handler:        hc,
 		ReadTimeout:    cfg.Timeout.Read,
 		WriteTimeout:   cfg.Timeout.Write,
 		IdleTimeout:    cfg.Timeout.Idle,
 		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
-		ErrorLog:          loggeradapter.NewStdLogger(log),
+		ErrorLog:       loggeradapter.NewStdLogger(log),
 	}
 }

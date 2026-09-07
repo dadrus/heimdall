@@ -21,8 +21,7 @@ import "fmt"
 type ManagementConfig struct {
 	Host        string             `koanf:"host"`
 	Port        int                `koanf:"port"`
-	Timeout     Timeout     `koanf:"timeout"`
-	BufferLimit BufferLimit `koanf:"buffer_limit"`
+	Timeout     Timeout            `koanf:"timeout"`
 	Requests    IngressRequests    `koanf:"requests"`
 	Responses   IngressResponses   `koanf:"responses"`
 	Connections IngressConnections `koanf:"connections"`
