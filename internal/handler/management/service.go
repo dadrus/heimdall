@@ -21,6 +21,7 @@ import (
 	"strings"
 
 	"github.com/ccoveille/go-safecast/v2"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/bodylimit"
 	"github.com/justinas/alice"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
@@ -64,6 +65,7 @@ func newService(
 			otelmetrics.WithOperationFilter(opFilter),
 		),
 		logger.New(log, logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled)),
+		bodylimit.New(cfg.Requests.Body.MaxSize),
 		requestvalidation.New(),
 		dump.New(),
 		x.IfThenElseExec(cfg.CORS != nil,

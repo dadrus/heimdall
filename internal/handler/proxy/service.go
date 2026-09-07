@@ -31,6 +31,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/bodylimit"
 	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/http/cache"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
@@ -118,6 +119,7 @@ func newService(
 			logger.WithAccessStatusEnabled(true),
 			logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled),
 		),
+		bodylimit.New(cfg.Requests.Body.MaxSize),
 		requestvalidation.New(),
 		dump.New(),
 		der.handler,
