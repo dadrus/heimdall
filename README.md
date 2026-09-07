@@ -1,6 +1,6 @@
 # Heimdall
-[![CI](https://github.com/dadrus/heimdall/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/dadrus/heimdall/actions/workflows/ci.yml)
-[![Security-Scan](https://github.com/dadrus/heimdall/actions/workflows/security.yaml/badge.svg)](https://github.com/dadrus/heimdall/actions/workflows/security.yml)
+[![CI](https://github.com/dadrus/heimdall/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/dadrus/heimdall/actions/workflows/ci.yaml)
+[![Security-Scan](https://github.com/dadrus/heimdall/actions/workflows/security.yaml/badge.svg)](https://github.com/dadrus/heimdall/actions/workflows/security.yaml)
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/7738/badge)](https://www.bestpractices.dev/projects/7738)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/dadrus/heimdall/badge)](https://securityscorecards.dev/viewer/?uri=github.com/dadrus/heimdall)
 [![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
@@ -9,65 +9,125 @@
 [![Helm Chart](https://img.shields.io/badge/dynamic/yaml.svg?label=chart&url=https://dadrus.github.io/heimdall/charts/index.yaml&query=$.entries.heimdall[0].version&logo=helm&logoColor=white)](https://github.com/dadrus/heimdall/tree/main/charts/heimdall)
 [![Discord](https://img.shields.io/discord/1100447190796742698?logo=discord&logoColor=white&label=community)](https://discord.gg/qQgg8xKuyb)
 
-## Background
+**A cloud native Identity Aware Proxy and Access Control Decision service.**
 
-Heimdall is inspired by the Zero Trust idea and also by [Pomerium](https://www.pomerium.com/docs) and [Ory's OAthkeeper](https://www.ory.sh/docs/oathkeeper). Some experience with both and my inability to update the latter one to include the desired functionality and behavior was Heimdall's born hour. 
+Heimdall is a general-purpose Policy Enforcement Point (PEP) for HTTP services, designed for Zero Trust architectures as described in [NIST SP 800-207](https://csrc.nist.gov/pubs/sp/800/207/final). It combines authentication and authorization in a configurable pipeline, keeps access control close to the protected resource, and can provide services with trusted context derived from the authenticated subject and authorization process — without coupling them to concrete authentication protocols, identity providers, or authorization systems.
 
-## What is heimdall
+Heimdall can either:
 
-Heimdall authenticates and authorizes incoming HTTP (HTTP 1.x and HTTP 2.0) requests as well as enriches these with further contextual information and finally transforms resulting subject information into a format, required by the upstream services.
+* expose its access control decisions to an existing proxy, ingress controller, API gateway, or service mesh; or
+* enforce them directly by proxying requests to the protected service, commonly as a sidecar or in front of a small group of services.
 
-It can do so:
 
-* Standalone as a proxy in front of your service or web server that rejects unauthorized requests and forwards authorized ones to your end points, or 
-* Integrated into any other proxy, ingress controller or API gateway, like Kong, NGNIX, Envoy, Traefik, Contour, Ambassador and many more. Here that other proxy will forward the incoming request to heimdall and depending on its response either forward the original request, verified and updated by heimdall to your upstream service, or reject it with the information provided by heimdall.
+## How it works
 
-In both cases it acts as a Policy Enforcement and to some degree a Policy Decision Point according to [NIST Zero Trust Architecture (SP 800-207)](https://doi.org/10.6028/NIST.SP.800-207)
+Incoming requests are matched against declarative rules and processed by a configurable pipeline. A successful processing path typically looks like this:
 
-## How does authentication, authorization and transformation work
+```mermaid
+flowchart LR
+    Request[Request] --> Match[Rule matching]
+    Match --> AuthN[Authentication]
+    AuthN --> Context[Contextualization]
+    Context --> AuthZ[Authorization]
+    AuthZ --> Final[Finalization]
+    Final --> Service[Protected Service]
+```
 
-The decision-making and transformation processes in Heimdall are governed by rules or respectively rule sets. These rule sets can be independently configured and managed by each upstream service. Heimdall dynamically loads these rules from a variety of sources, including:
+Reusable mechanisms implement the individual steps.
 
-* `RuleSet` kubernetes resources (a corresponding CRD is shipped with the helm chart)
-* Cloud storages, like AWS S3, Google's GC, etc.
-* Local file system
-* Any HTTP endpoint
+This allows Heimdall to:
 
-That way, these rule sets cannot only be managed centrally, but be deployed together with each particular upstream service as well without the need to restart or redeploy heimdall. Indeed, these rule sets are optional first class citizens of the upstream service and allow:
+* authenticate requests using different identity providers and protocols;
+* enrich authenticated subjects with additional context;
+* authorize requests locally or through external authorization systems;
+* provide protected services with trusted context generated by finalizers;
+* apply different policies to individual services and endpoints.
 
-* Implementation of secure defaults. If no rule matches the incoming request, a default decision and transformation, if configured, is applied. This is the reason for "optional first class citizens" above.
-* Configuration of as many authentication (e.g. OpenID Connect), authorization (e.g. via CEL expressions, or via OPA, or OpenFGA), contextualization (by e.g. communicating to some specific endpoint) and finalization mechanisms (e.g. creation of a JWT out of the available subject information), supported by heimdall, as required for the particular system. So, if your system requires integration with multiple authentication providers, or you want to migrate from one to another, it is just a matter of configuring them in heimdall.
-* Reuse and combination of these mechanisms in as many rules as required for the particular system.
-* Partial reconfiguration of a particular mechanism in a rule if required by the upstream service.
-* Authentication mechanism fallbacks.
-* Implementation of different decision process schemes by combining e.g. authentication mechanisms with error handlers to drive authentication mechanism specific error handling strategies.
-* Execution of authorization and contextualization mechanisms in any order. That way, if the information about your subject, available from the authentication system, is not sufficient to make proper authorization decisions, you can let heimdall call other services to retrieve that additional information.
-* Conditional execution of authorization, contextualization and finalization mechanisms is possible. E.g. if depending on the available information about the subject you would like heimdall to either block the request, or let the upstream return different representations of the requested resource.
+Learn more about [pipelines](https://dadrus.github.io/heimdall/dev/docs/concepts/pipelines/), [rules](https://dadrus.github.io/heimdall/dev/docs/concepts/rules/), and [mechanisms](https://dadrus.github.io/heimdall/dev/docs/concepts/mechanisms/).
 
-## Beyond the functionality
+## Deployment
 
-Heimdall's main focus points beyond its functionality are:
+### Integrate with your existing proxy or gateway
 
-* Performance - To achieve this, heimdall does use any http routing frameworks and does not load or convert data during execution whenever possible. This is also true for reflection use.
-* Clear abstractions - To allow extensibility and even replacement of components without side effects.
-* Simplicity - To allow better understanding of code to everybody, who would like to contribute.
+Heimdall's Access Control Decision service is designed to integrate with existing proxies, ingress controllers, API gateways, and service meshes.
 
-## Where can I find more details
+The surrounding infrastructure handles traffic management and routing, while Heimdall evaluates the applicable policy enforcement pipeline and returns the decision together with trusted context for the protected service.
 
-Head over to the [documentation](https://dadrus.github.io/heimdall/) for details or if you would like to give it a try.
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant P as Proxy / Gateway
+    participant H as Heimdall
+    participant S as Protected Service
 
-## Current state
+    C->>P: Request
+    P->>H: Authorization request
 
-* Production-ready and already in use by multiple organizations worldwide.
-* Code base is stable and well-tested. 
-* Some features are still missing, and the development of these features might lead to breaking changes in future updates.
+    alt allowed
+        H-->>P: Allow + trusted context
+        P->>S: Request + trusted context
+    else denied
+        H-->>P: Deny
+        P-->>C: Reject request
+    end
+```
 
-For information on the currently supported functionality, please refer to the [Release descriptions](https://github.com/dadrus/heimdall/releases). Planned features can be found in the defined [Milestones](https://github.com/dadrus/heimdall/milestones).
+Integration guides and examples are available for Caddy, Contour, Emissary Ingress,
+Envoy, Envoy Gateway, HAProxy, Istio, KGateway, NGINX, and Traefik.
 
+See all [proxy and gateway integration guides and examples](https://dadrus.github.io/heimdall/dev/guides/proxies/).
+
+### Run Heimdall as a proxy
+
+Heimdall can alternatively proxy the final hop to the protected service:
+
+```mermaid
+flowchart LR
+    Client[Client] --> Proxy[Proxy / Gateway]
+    Proxy --> Heimdall[Heimdall]
+    Heimdall --> Service[Protected Service]
+```
+
+This is particularly useful for sidecar deployments or when one Heimdall instance protects a small group of services.
+
+See [Operating Modes](https://dadrus.github.io/heimdall/dev/docs/concepts/operating_modes/) for details.
+
+## Design principles
+
+Heimdall is developed with four main goals:
+
+* **Security** — preserve explicit trust boundaries and fail-closed behavior.
+* **Performance** — minimize work and allocations on request-processing paths.
+* **Clear abstractions** — keep authentication, authorization, contextualization, and finalization independent and replaceable.
+* **Simplicity** — prefer straightforward solutions over unnecessary frameworks and abstractions.
+
+## Getting started
+
+New to Heimdall?
+
+1. [Discover Heimdall](https://dadrus.github.io/heimdall/dev/docs/getting_started/discover_heimdall/)
+2. [Protect an Application](https://dadrus.github.io/heimdall/dev/docs/getting_started/protect_an_app/)
+3. [Install Heimdall](https://dadrus.github.io/heimdall/dev/docs/getting_started/installation/)
+4. Explore the [Guides](https://dadrus.github.io/heimdall/dev/guides/)
+
+The documentation contains the authoritative reference for configuration, mechanisms, rules, APIs, operations, and integrations.
+
+## Project status
+
+Heimdall is production-ready, actively developed, and used in production.
+
+Check the [releases](https://github.com/dadrus/heimdall/releases) and
+[upgrade and migration documentation](https://dadrus.github.io/heimdall/dev/docs/operations/migration/)
+when upgrading.
 
 ## If you ...
 
-* ... like the project - please give it a :star:
-* ... miss something, or found a bug, [file a ticket](https://github.com/dadrus/heimdall/issues). You are also very welcome to [contribute](CONTRIBUTING.md) :wink:
-* ... would like to support, reach out to me via [Discord](https://discord.gg/qQgg8xKuyb)
+* ... like the project — please give it a :star:
+* ... miss something or found a bug, [file a ticket](https://github.com/dadrus/heimdall/issues). You are also very welcome to [contribute](https://github.com/dadrus/heimdall/blob/main/CONTRIBUTING.md) :wink:
+* ... would like to financially support the development and maintenance of Heimdall, consider becoming a sponsor via [GitHub Sponsors](https://github.com/sponsors/dadrus) or [Open Collective](https://opencollective.com/heimdall-proxy)
+* ... would like to support the project in another way, reach out to me via [Discord](https://discord.gg/qQgg8xKuyb)
 * ... need help, head over to [Discord](https://discord.gg/qQgg8xKuyb) as well
+
+## License
+
+Heimdall is licensed under the [Apache License 2.0](LICENSE).
