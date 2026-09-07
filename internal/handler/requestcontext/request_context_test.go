@@ -778,11 +778,11 @@ func TestRequestContextBody(t *testing.T) {
 			ct:     "text/plain",
 			body:   "content=heimdall",
 			expect: "content=heimdall",
-		}, "body source fails": {
-			ct:     "application/json",
-			body:   `{ "content": "heimdall" }`,
-			err:    assert.AnError,
-			expect: "",
+		},
+		"body source fails": {
+			ct:   "application/json",
+			body: `{ "content": "heimdall" }`,
+			err:  assert.AnError,
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
@@ -794,9 +794,16 @@ func TestRequestContextBody(t *testing.T) {
 			ctx := newTestRequestContext(t, http.MethodPost, "https://foo.bar/test", headers, source)
 
 			// WHEN
-			data := ctx.Request().Body()
+			data, err := ctx.Request().Body()
 
 			// THEN
+			if tc.err != nil {
+				require.Error(t, err)
+
+				return
+			}
+
+			require.NoError(t, err)
 			assert.Equal(t, tc.expect, data)
 			assert.Equal(t, 1, source.calls)
 		})
@@ -837,7 +844,7 @@ func TestRequestContextRawBody(t *testing.T) {
 			prepare: func(t *testing.T, ctx *RequestContext) {
 				t.Helper()
 
-				_ = ctx.Body()
+				_, _ = ctx.Body()
 			},
 			expected: "content=heimdall",
 		},
@@ -910,7 +917,7 @@ func TestRequestContextReset(t *testing.T) {
 	ctx := newTestRequestContext(t, http.MethodHead, "https://foo.bar/test", headers, source)
 	ctx.Request().URL.Captures = map[string]string{"a": "b"}
 	ctx.SetError(assert.AnError)
-	_ = ctx.Body()
+	_, _ = ctx.Body()
 	ctx.Outputs()["a"] = pipeline.NewResult("b")
 	ctx.SetCookie("foo", "bar")
 	ctx.SetHeader("bar", "foo")

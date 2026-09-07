@@ -28,7 +28,10 @@ type BodyParameterExtractStrategy struct {
 }
 
 func (es BodyParameterExtractStrategy) GetAuthData(ctx pipeline.Context) (AuthData, error) {
-	data := ctx.Request().Body()
+	data, err := ctx.Request().Body()
+	if err != nil {
+		return AuthData{}, errorchain.NewWithMessage(pipeline.ErrArgument, "no usable body present")
+	}
 
 	entries, ok := data.(map[string]any)
 	if !ok {

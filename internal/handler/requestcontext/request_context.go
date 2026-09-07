@@ -57,7 +57,7 @@ type requestFunctions struct {
 func (f *requestFunctions) Header(name string) string  { return f.ctx.Header(name) }
 func (f *requestFunctions) Cookie(name string) string  { return f.ctx.Cookie(name) }
 func (f *requestFunctions) Headers() map[string]string { return f.ctx.requestHeaders() }
-func (f *requestFunctions) Body() any                  { return f.ctx.Body() }
+func (f *requestFunctions) Body() (any, error)         { return f.ctx.Body() }
 
 type RequestContext struct {
 	inputHeaders    http.Header
@@ -237,31 +237,39 @@ func (r *RequestContext) Cookie(name string) string {
 	return ""
 }
 
-func (r *RequestContext) Body() any {
-	if r.savedBody == nil {
-		body, err := r.readRawBody()
-		if err != nil || len(body) == 0 {
-			return ""
-		}
-
-		decoder, err := contenttype.NewDecoder(r.Header("Content-Type"))
-		if err != nil {
-			r.savedBody = string(body)
-
-			return r.savedBody
-		}
-
-		data, err := decoder.Decode(body)
-		if err != nil {
-			r.savedBody = string(body)
-
-			return r.savedBody
-		}
-
-		r.savedBody = data
+func (r *RequestContext) Body() (any, error) {
+	if r.savedBody != nil {
+		return r.savedBody, nil
 	}
 
-	return r.savedBody
+	body, err := r.readRawBody()
+	if err != nil {
+		return nil, err
+	}
+
+	if len(body) == 0 {
+		r.savedBody = ""
+
+		return r.savedBody, nil
+	}
+
+	decoder, err := contenttype.NewDecoder(r.Header("Content-Type"))
+	if err != nil {
+		r.savedBody = string(body)
+
+		return r.savedBody, nil
+	}
+
+	data, err := decoder.Decode(body)
+	if err != nil {
+		r.savedBody = string(body)
+
+		return r.savedBody, nil
+	}
+
+	r.savedBody = data
+
+	return r.savedBody, nil
 }
 
 func (r *RequestContext) RawBody() (io.ReadCloser, error) {

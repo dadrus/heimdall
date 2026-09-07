@@ -47,7 +47,7 @@ func TestRequests(t *testing.T) {
 	reqf.EXPECT().Header("bar").Return("baz")
 	reqf.EXPECT().Header("zab").Return("bar;charset=utf-8")
 	reqf.EXPECT().Header("accept").Return("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-	reqf.EXPECT().Body().Return(map[string]any{"foo": []any{"bar"}})
+	reqf.EXPECT().Body().Return(map[string]any{"foo": []any{"bar"}}, nil)
 
 	req := &pipeline.Request{
 		RequestFunctions: reqf,

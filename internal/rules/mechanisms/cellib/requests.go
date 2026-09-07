@@ -78,8 +78,13 @@ func (requestsLib) CompileOptions() []cel.EnvOption {
 				cel.UnaryBinding(func(lhs ref.Val) ref.Val {
 					// nolint: forcetypeassert
 					req := lhs.Value().(*pipeline.Request)
+					
+					body, err := req.Body()
+					if err != nil {
+						return types.WrapErr(err)
+					}
 
-					return types.DefaultTypeAdapter.NativeToValue(req.Body())
+					return types.DefaultTypeAdapter.NativeToValue(body)
 				}),
 			),
 		),
