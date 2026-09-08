@@ -22,9 +22,11 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	typev3 "github.com/envoyproxy/go-control-plane/envoy/type/v3"
+	"github.com/inhies/go-bytesize"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -293,4 +295,137 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			tc.assert(t, err, resp)
 		})
 	}
+
+	t.Run("limits concurrent streams per connection", func(t *testing.T) {
+		// GIVEN
+		conf := &config.Configuration{}
+		conf.Serve.Requests.Headers.MaxSize = 64 * bytesize.KB
+		conf.Serve.HTTP2.MaxConcurrentStreams = 1
+
+		exec := mocks3.NewExecutorMock(t)
+
+		requestEntered := make(chan struct{}, 2)
+		releaseRequest := make(chan struct{})
+
+		released := false
+		releaseRequests := func() {
+			if !released {
+				close(releaseRequest)
+				released = true
+			}
+		}
+		t.Cleanup(releaseRequests)
+
+		exec.EXPECT().
+			Execute(mock.Anything).
+			Times(2).
+			Run(func(_ mock.Arguments) {
+				requestEntered <- struct{}{}
+
+				<-releaseRequest
+			}).
+			Return(pipeline.ErrNoRuleFound)
+
+		srv := newService(
+			conf,
+			mocks.NewCacheMock(t),
+			log.Logger,
+			exec,
+		)
+
+		listener := bufconn.Listen(8 * 1024 * 1024)
+		t.Cleanup(func() {
+			_ = listener.Close()
+		})
+
+		t.Cleanup(srv.Stop)
+
+		go func() {
+			_ = srv.Serve(listener)
+		}()
+
+		conn, err := grpc.NewClient(
+			"passthrough:///bufnet",
+			grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+				return listener.Dial()
+			}),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		)
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			_ = conn.Close()
+		})
+
+		client := envoy_auth.NewAuthorizationClient(conn)
+
+		createRequest := func() *envoy_auth.CheckRequest {
+			return &envoy_auth.CheckRequest{
+				Attributes: &envoy_auth.AttributeContext{
+					Request: &envoy_auth.AttributeContext_Request{
+						Http: &envoy_auth.AttributeContext_HttpRequest{
+							Method: http.MethodGet,
+							Scheme: "http",
+							Host:   "example.com",
+							Path:   "/",
+						},
+					},
+				},
+			}
+		}
+
+		ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+		defer cancel()
+
+		firstDone := make(chan error, 1)
+
+		go func() {
+			_, err := client.Check(ctx, createRequest())
+			firstDone <- err
+		}()
+
+		// Wait until the first stream has reached the server and occupies
+		// the only available concurrent-stream slot.
+		select {
+		case <-requestEntered:
+		case <-ctx.Done():
+			require.FailNow(t, "first request did not reach the server")
+		}
+
+		secondDone := make(chan error, 1)
+
+		go func() {
+			_, err := client.Check(ctx, createRequest())
+			secondDone <- err
+		}()
+
+		// THEN
+		// The second RPC uses the same ClientConn and must not reach the
+		// server while the first stream still occupies the only slot.
+		select {
+		case <-requestEntered:
+			releaseRequests()
+
+			require.FailNow(
+				t,
+				"second request reached the server while stream capacity was exhausted",
+			)
+		case <-time.After(100 * time.Millisecond):
+		}
+
+		// WHEN
+		releaseRequests()
+
+		// THEN
+		// Releasing the first stream must make capacity available for the
+		// second one.
+		select {
+		case <-requestEntered:
+		case <-ctx.Done():
+			require.FailNow(t, "second request did not reach the server after capacity was released")
+		}
+
+		require.NoError(t, <-firstDone)
+		require.NoError(t, <-secondDone)
+	})
 }

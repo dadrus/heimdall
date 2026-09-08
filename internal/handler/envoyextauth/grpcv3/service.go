@@ -59,6 +59,7 @@ func newService(
 
 	srv := grpc.NewServer(
 		grpc.MaxHeaderListSize(safecast.MustConvert[uint32](cfg.Requests.Headers.MaxSize)),
+		grpc.MaxConcurrentStreams(safecast.MustConvert[uint32](cfg.HTTP2.MaxConcurrentStreams)),
 		grpc.MaxRecvMsgSize(x.IfThenElse(
 			cfg.Requests.Body.MaxSize > 0,
 			safecast.MustConvert[int](cfg.Requests.Body.MaxSize),
