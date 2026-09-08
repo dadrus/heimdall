@@ -308,6 +308,31 @@ func TestHandlerHandle(t *testing.T) {
 			},
 			expBody: `{"code":"requestBodyTooLarge","message":"request body too large"}`,
 		},
+		"too many requests error default": {
+			handler:   New(),
+			err:       errorchain.New(pipeline.ErrTooManyRequests),
+			expCode:   http.StatusTooManyRequests,
+			expHeader: http.Header{},
+		},
+		"too many requests error overridden": {
+			handler: New(
+				WithTooManyRequestsErrorCode(http.StatusContinue),
+			),
+			err:       errorchain.New(pipeline.ErrTooManyRequests),
+			expCode:   http.StatusContinue,
+			expHeader: http.Header{},
+		},
+		"too many requests error verbose expecting application/json": {
+			handler: New(WithVerboseErrors(true)),
+			err:     errorchain.New(pipeline.ErrTooManyRequests),
+			expCode: http.StatusTooManyRequests,
+			accept:  "application/json",
+			expHeader: http.Header{
+				"Content-Type":           {"application/json"},
+				"X-Content-Type-Options": {"nosniff"},
+			},
+			expBody: `{"code":"tooManyRequests","message":"too many requests"}`,
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN

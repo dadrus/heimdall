@@ -134,6 +134,8 @@ func (h *interceptor) handleDefaultErrors(ctx context.Context, err error, mimeTy
 		return h.preconditionError(err, h.verboseErrors, mimeType)
 	case errors.Is(err, pipeline.ErrNoRuleFound):
 		return h.noRuleError(err, h.verboseErrors, mimeType)
+	case errors.Is(err, pipeline.ErrTooManyRequests):
+		return h.tooManyRequestsError(err, h.verboseErrors, mimeType)
 	default:
 		logger := zerolog.Ctx(ctx)
 		logger.Error().Err(err).Msg("Internal error occurred")

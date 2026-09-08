@@ -23,10 +23,11 @@ import (
 )
 
 var defaultOptions = opts{ //nolint:gochecknoglobals
-	authenticationError: responseWith(codes.Unauthenticated, http.StatusUnauthorized),
-	authorizationError:  responseWith(codes.PermissionDenied, http.StatusForbidden),
-	communicationError:  responseWith(codes.DeadlineExceeded, http.StatusBadGateway),
-	preconditionError:   responseWith(codes.InvalidArgument, http.StatusBadRequest),
-	noRuleError:         responseWith(codes.NotFound, http.StatusNotFound),
-	internalError:       responseWith(codes.Internal, http.StatusInternalServerError),
+	authenticationError:  responseWith(codes.Unauthenticated, http.StatusUnauthorized),
+	authorizationError:   responseWith(codes.PermissionDenied, http.StatusForbidden),
+	communicationError:   responseWith(codes.DeadlineExceeded, http.StatusBadGateway),
+	preconditionError:    responseWith(codes.InvalidArgument, http.StatusBadRequest),
+	noRuleError:          responseWith(codes.NotFound, http.StatusNotFound),
+	internalError:        responseWith(codes.Internal, http.StatusInternalServerError),
+	tooManyRequestsError: responseWith(codes.ResourceExhausted, http.StatusTooManyRequests),
 }

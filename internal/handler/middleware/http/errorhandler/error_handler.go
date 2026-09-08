@@ -112,6 +112,8 @@ func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, er
 
 		rw.Header().Set("Location", redirectError.RedirectTo)
 		rw.WriteHeader(redirectError.Code)
+	case errors.Is(err, pipeline.ErrTooManyRequests):
+		h.onTooManyRequestsError(rw, req, err)
 	default:
 		logger.Error().Err(err).Msg("Internal error occurred")
 

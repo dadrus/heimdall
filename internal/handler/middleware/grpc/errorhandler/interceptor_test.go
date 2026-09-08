@@ -200,11 +200,9 @@ func TestErrorInterceptor(t *testing.T) {
 		"generic error": {
 			interceptor: New(),
 			err: &pipeline.ResponseError{
-				ErrorResponse: pipeline.ErrorResponse{
-					Code:    http.StatusUnprocessableEntity,
-					Headers: map[string][]string{"X-Error-Reason": {"blocked"}},
-					Body:    `{"error":"denied"}`,
-				},
+				Code:    http.StatusUnprocessableEntity,
+				Headers: map[string][]string{"X-Error-Reason": {"blocked"}},
+				Body:    `{"error":"denied"}`,
 			},
 			expGRPCCode: codes.FailedPrecondition,
 			expHTTPCode: http.StatusUnprocessableEntity,
@@ -220,11 +218,9 @@ func TestErrorInterceptor(t *testing.T) {
 		"generic error with multiple header values": {
 			interceptor: New(),
 			err: &pipeline.ResponseError{
-				ErrorResponse: pipeline.ErrorResponse{
-					Code:    http.StatusTooManyRequests,
-					Headers: map[string][]string{"Set-Cookie": {"a=1", "b=2"}},
-					Body:    "rate limited",
-				},
+				Code:    http.StatusTooManyRequests,
+				Headers: map[string][]string{"Set-Cookie": {"a=1", "b=2"}},
+				Body:    "rate limited",
 			},
 			expGRPCCode: codes.FailedPrecondition,
 			expHTTPCode: http.StatusTooManyRequests,
@@ -263,6 +259,25 @@ func TestErrorInterceptor(t *testing.T) {
 			expGRPCCode: codes.Internal,
 			expHTTPCode: http.StatusInternalServerError,
 			expBody:     "<p>internal error</p>",
+		},
+		"too many requests error default": {
+			interceptor: New(),
+			err:         pipeline.ErrTooManyRequests,
+			expGRPCCode: codes.ResourceExhausted,
+			expHTTPCode: http.StatusTooManyRequests,
+		},
+		"too many requests error overridden": {
+			interceptor: New(WithTooManyRequestsErrorCode(http.StatusContinue)),
+			err:         pipeline.ErrTooManyRequests,
+			expGRPCCode: codes.ResourceExhausted,
+			expHTTPCode: http.StatusContinue,
+		},
+		"too many requests error verbose": {
+			interceptor: New(WithVerboseErrors(true)),
+			err:         pipeline.ErrTooManyRequests,
+			expGRPCCode: codes.ResourceExhausted,
+			expHTTPCode: http.StatusTooManyRequests,
+			expBody:     "<p>too many requests</p>",
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {

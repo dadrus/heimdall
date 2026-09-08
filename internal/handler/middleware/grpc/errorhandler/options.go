@@ -16,16 +16,19 @@
 
 package errorhandler
 
-import "google.golang.org/grpc/codes"
+import (
+	"google.golang.org/grpc/codes"
+)
 
 type opts struct {
-	verboseErrors       bool
-	authenticationError func(err error, verbose bool, mimeType string) (any, error)
-	authorizationError  func(err error, verbose bool, mimeType string) (any, error)
-	communicationError  func(err error, verbose bool, mimeType string) (any, error)
-	preconditionError   func(err error, verbose bool, mimeType string) (any, error)
-	noRuleError         func(err error, verbose bool, mimeType string) (any, error)
-	internalError       func(err error, verbose bool, mimeType string) (any, error)
+	verboseErrors        bool
+	authenticationError  func(err error, verbose bool, mimeType string) (any, error)
+	authorizationError   func(err error, verbose bool, mimeType string) (any, error)
+	communicationError   func(err error, verbose bool, mimeType string) (any, error)
+	preconditionError    func(err error, verbose bool, mimeType string) (any, error)
+	noRuleError          func(err error, verbose bool, mimeType string) (any, error)
+	internalError        func(err error, verbose bool, mimeType string) (any, error)
+	tooManyRequestsError func(err error, verbose bool, mimeType string) (any, error)
 }
 
 type Option func(*opts)
@@ -74,6 +77,14 @@ func WithNoRuleErrorCode(code int) Option {
 	return func(o *opts) {
 		if code > 0 {
 			o.noRuleError = responseWith(codes.NotFound, code)
+		}
+	}
+}
+
+func WithTooManyRequestsErrorCode(code int) Option {
+	return func(o *opts) {
+		if code > 0 {
+			o.tooManyRequestsError = responseWith(codes.ResourceExhausted, code)
 		}
 	}
 }
