@@ -59,6 +59,41 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
+func TestNewService(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	conf := &config.Configuration{}
+
+	conf.Serve.Timeout.Read = 11 * time.Second
+	conf.Serve.Timeout.Write = 12 * time.Second
+	conf.Serve.Timeout.Idle = 13 * time.Second
+	conf.Serve.Requests.Headers.MaxSize = 42 * bytesize.KB
+	conf.Serve.HTTP2.MaxConcurrentStreams = 17
+
+	// WHEN
+	srv := newService(
+		conf,
+		mocks.NewCacheMock(t),
+		log.Logger,
+		mocks2.NewExecutorMock(t),
+	)
+
+	// THEN
+	assert.NotNil(t, srv.Handler)
+
+	assert.Equal(t, 11*time.Second, srv.ReadTimeout)
+	assert.Equal(t, 12*time.Second, srv.WriteTimeout)
+	assert.Equal(t, 13*time.Second, srv.IdleTimeout)
+	assert.Equal(t, int(42*bytesize.KB), srv.MaxHeaderBytes)
+
+	require.NotNil(t, srv.HTTP2)
+	assert.Equal(t, 17, srv.HTTP2.MaxConcurrentStreams)
+
+	assert.NotNil(t, srv.ErrorLog)
+	assert.NotNil(t, srv.ConnContext)
+}
+
 func TestProxyService(t *testing.T) {
 	t.Parallel()
 
