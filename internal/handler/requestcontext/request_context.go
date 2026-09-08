@@ -257,14 +257,14 @@ func (r *RequestContext) Body() (any, error) {
 	if err != nil {
 		r.savedBody = string(body)
 
-		return r.savedBody, nil
+		return r.savedBody, nil //nolint:nilerr
 	}
 
 	data, err := decoder.Decode(body)
 	if err != nil {
 		r.savedBody = string(body)
 
-		return r.savedBody, nil
+		return r.savedBody, nil //nolint:nilerr
 	}
 
 	r.savedBody = data
