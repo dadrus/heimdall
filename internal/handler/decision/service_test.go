@@ -20,9 +20,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/inhies/go-bytesize"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -537,6 +539,90 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.Equal(t, http.StatusOK, response.StatusCode)
+			},
+		},
+		"request body exceeds limit with known content length": {
+			serviceConf: config.ServeConfig{
+				Requests: config.IngressRequests{
+					Body: config.IngressRequestBody{
+						MaxSize: 5 * bytesize.B,
+					},
+				},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/", host),
+					strings.NewReader("123456"),
+				)
+				require.NoError(t, err)
+
+				return req
+			},
+			configureMocks: func(t *testing.T, _ *mocks2.ExecutorMock) {
+				t.Helper()
+			},
+			assertResponse: func(t *testing.T, err error, response *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, response)
+
+				assert.Equal(t, http.StatusRequestEntityTooLarge, response.StatusCode)
+
+				data, err := io.ReadAll(response.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
+			},
+		},
+		"request body exceeds limit while being read by pipeline": {
+			serviceConf: config.ServeConfig{
+				Requests: config.IngressRequests{
+					Body: config.IngressRequestBody{
+						MaxSize: 5 * bytesize.B,
+					},
+				},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/", host),
+					strings.NewReader("123456"),
+				)
+				require.NoError(t, err)
+
+				req.ContentLength = -1
+
+				return req
+			},
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
+				t.Helper()
+
+				exec.EXPECT().
+					Execute(mock.Anything).
+					RunAndReturn(func(ctx pipeline.ExecutionContext) error {
+						_, err := ctx.Request().Body()
+
+						return err
+					})
+			},
+			assertResponse: func(t *testing.T, err error, response *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, response)
+
+				assert.Equal(t, http.StatusRequestEntityTooLarge, response.StatusCode)
+
+				data, err := io.ReadAll(response.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
 			},
 		},
 	} {

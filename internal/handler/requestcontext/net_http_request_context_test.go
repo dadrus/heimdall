@@ -18,14 +18,26 @@ package requestcontext
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
+
+type errorReader struct {
+	err error
+}
+
+func (r errorReader) Read([]byte) (int, error) {
+	return 0, r.err
+}
 
 func TestNetHTTPRequestContextInit(t *testing.T) {
 	t.Parallel()
@@ -88,29 +100,96 @@ func TestNetHTTPRequestContextUpstreamRequest(t *testing.T) {
 	assert.Nil(t, upstreamRequest)
 }
 
-func TestNetHTTPRequestContextRawBodyRestoresRequestBody(t *testing.T) {
+func TestNetHTTPRequestContextRawBody(t *testing.T) {
 	t.Parallel()
 
+	expectedReadErr := errors.New("read failed")
+
 	for uc, tc := range map[string]struct {
-		body     io.Reader
-		expected string
+		setup  func(*http.Request)
+		assert func(t *testing.T, req *http.Request, body io.ReadCloser, err error)
 	}{
 		"No body": {
-			expected: "",
+			setup: func(req *http.Request) {},
+			assert: func(t *testing.T, req *http.Request, body io.ReadCloser, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, body)
+
+				data, err := io.ReadAll(body)
+				require.NoError(t, err)
+				require.NoError(t, body.Close())
+
+				assert.Empty(t, data)
+			},
 		},
 		"Body present": {
-			body:     bytes.NewBufferString("content=heimdall"),
-			expected: "content=heimdall",
+			setup: func(req *http.Request) {
+				req.Body = io.NopCloser(bytes.NewBufferString("content=heimdall"))
+			},
+			assert: func(t *testing.T, req *http.Request, body io.ReadCloser, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, body)
+
+				data, err := io.ReadAll(body)
+				require.NoError(t, err)
+				require.NoError(t, body.Close())
+
+				assert.Equal(t, "content=heimdall", string(data))
+
+				requestBody, err := io.ReadAll(req.Body)
+				require.NoError(t, err)
+
+				assert.Equal(t, "content=heimdall", string(requestBody))
+			},
+		},
+		"Body exceeds configured limit": {
+			setup: func(req *http.Request) {
+				req.Body = http.MaxBytesReader(
+					httptest.NewRecorder(),
+					io.NopCloser(strings.NewReader("123456")),
+					5,
+				)
+			},
+			assert: func(t *testing.T, _ *http.Request, body io.ReadCloser, err error) {
+				t.Helper()
+
+				require.Nil(t, body)
+				require.ErrorIs(t, err, pipeline.ErrRequestBodyTooLarge)
+
+				var maxBytesErr *http.MaxBytesError
+
+				require.ErrorAs(t, err, &maxBytesErr)
+				assert.Equal(t, int64(5), maxBytesErr.Limit)
+			},
+		},
+		"Body read fails": {
+			setup: func(req *http.Request) {
+				req.Body = io.NopCloser(errorReader{err: expectedReadErr})
+			},
+			assert: func(t *testing.T, _ *http.Request, body io.ReadCloser, err error) {
+				t.Helper()
+
+				require.Nil(t, body)
+				require.ErrorIs(t, err, expectedReadErr)
+				require.NotErrorIs(t, err, pipeline.ErrRequestBodyTooLarge)
+			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
 			// GIVEN
 			req := httptest.NewRequestWithContext(
 				t.Context(),
 				http.MethodPost,
 				"https://foo.bar/test",
-				tc.body,
+				nil,
 			)
+			tc.setup(req)
 
 			ctx := New()
 			ctx.Init(req)
@@ -119,19 +198,7 @@ func TestNetHTTPRequestContextRawBodyRestoresRequestBody(t *testing.T) {
 			body, err := ctx.RawBody()
 
 			// THEN
-			require.NoError(t, err)
-			require.NotNil(t, body)
-
-			data, err := io.ReadAll(body)
-			require.NoError(t, err)
-			require.NoError(t, body.Close())
-
-			assert.Equal(t, tc.expected, string(data))
-
-			requestBody, err := io.ReadAll(req.Body)
-			require.NoError(t, err)
-
-			assert.Equal(t, tc.expected, string(requestBody))
+			tc.assert(t, req, body, err)
 		})
 	}
 }

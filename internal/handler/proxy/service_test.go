@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/inhies/go-bytesize"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -1074,6 +1075,127 @@ func TestProxyService(t *testing.T) {
 				data, err := io.ReadAll(resp.Body)
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "foo": "bar" }`, string(data))
+			},
+		},
+		"request body exceeds limit with known content length": {
+			serviceConf: config.ServeConfig{
+				Requests: config.IngressRequests{
+					Body: config.IngressRequestBody{
+						MaxSize: 5 * bytesize.B,
+					},
+				},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/foobar", host),
+					strings.NewReader("123456"),
+				)
+				require.NoError(t, err)
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				_ *mocks2.ExecutorMock,
+				_ *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *url.URL,
+			) {
+				t.Helper()
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.False(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
+
+				data, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
+			},
+		},
+		"request body exceeds limit while proxying": {
+			serviceConf: config.ServeConfig{
+				Requests: config.IngressRequests{
+					Body: config.IngressRequestBody{
+						MaxSize: 5 * bytesize.B,
+					},
+				},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/foobar", host),
+					strings.NewReader("123456"),
+				)
+				require.NoError(t, err)
+
+				// Force streaming/chunked semantics so the bodylimit middleware
+				// cannot reject the request based on Content-Length.
+				req.ContentLength = -1
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/foobar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+						// Deliberately do not access Body()/RawBody().
+						// The body must reach the streaming proxy path.
+						ctx.PrepareUpstreamView(target)
+
+						return true
+					}),
+				).Return(nil)
+			},
+			processRequest: func(t *testing.T, _ http.ResponseWriter, req *http.Request) {
+				t.Helper()
+
+				// Force the upstream side to consume the streamed request.
+				// The proxy will abort the upload when MaxBytesReader detects
+				// the sixth byte.
+				_, _ = io.Copy(io.Discard, req.Body)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.True(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
+
+				data, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
 			},
 		},
 	} {

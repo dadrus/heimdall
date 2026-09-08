@@ -20,14 +20,15 @@ import (
 	"net/http"
 
 	"github.com/ccoveille/go-safecast/v2"
+	"github.com/inhies/go-bytesize"
+
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/pipeline"
-	"github.com/inhies/go-bytesize"
 )
 
 // New returns a middleware that limits the number of bytes that can be read
 // from a request body. A maxSize of zero disables the limit.
-func New(maxSize bytesize.ByteSize, eh errorhandler.ErrorHandler,) func(http.Handler) http.Handler {
+func New(maxSize bytesize.ByteSize, eh errorhandler.ErrorHandler) func(http.Handler) http.Handler {
 	if maxSize == 0 {
 		return func(next http.Handler) http.Handler {
 			return next

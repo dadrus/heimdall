@@ -25,11 +25,13 @@ import (
 	"crypto/x509/pkix"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/goccy/go-json"
+	"github.com/inhies/go-bytesize"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/suite"
 
@@ -112,6 +114,11 @@ func (suite *ServiceTestSuite) SetupTest() {
 			Host: "127.0.0.1",
 			Port: port,
 			CORS: &config.CORS{},
+			Requests: config.IngressRequests{
+				Body: config.IngressRequestBody{
+					MaxSize: 5 * bytesize.B,
+				},
+			},
 		},
 		Metrics: config.MetricsConfig{Enabled: true},
 	}
@@ -271,4 +278,31 @@ func (suite *ServiceTestSuite) TestHealthRequest() {
 	suite.Require().NoError(err)
 
 	suite.JSONEq(`{ "status": "ok"}`, string(rawResp))
+}
+
+func (suite *ServiceTestSuite) TestRequestBodyLimit() {
+	// GIVEN
+	client := &http.Client{Transport: &http.Transport{}}
+
+	req, err := http.NewRequestWithContext(
+		suite.T().Context(),
+		http.MethodGet,
+		suite.addr+"/.well-known/jwks",
+		strings.NewReader("123456"),
+	)
+	suite.Require().NoError(err)
+
+	// WHEN
+	resp, err := client.Do(req)
+
+	// THEN
+	suite.Require().NoError(err)
+
+	defer resp.Body.Close()
+
+	suite.Equal(http.StatusRequestEntityTooLarge, resp.StatusCode)
+
+	rawResp, err := io.ReadAll(resp.Body)
+	suite.Require().NoError(err)
+	suite.Empty(rawResp)
 }

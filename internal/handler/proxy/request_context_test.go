@@ -19,6 +19,7 @@ package proxy
 import (
 	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -31,6 +32,7 @@ import (
 
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
+	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
@@ -51,23 +53,26 @@ func TestRequestContextFinalize(t *testing.T) {
 	cf := newContextFactory(config.ServeConfig{Timeout: timeouts}, nil)
 
 	for uc, tc := range map[string]struct {
-		upstreamCalled bool
-		useIPv6        bool
-		headers        http.Header
-		setup          func(*testing.T, requestcontext.Context, *mocks.UpstreamTargetMock, *url.URL)
-		assertRequest  func(*testing.T, *http.Request)
+		useIPv6 bool
+		headers http.Header
+		setup   func(*testing.T, requestcontext.Context, *mocks.UpstreamTargetMock, *url.URL)
+		assert  func(*testing.T, error, *http.Request)
 	}{
 		"error was present, forwarding aborted": {
 			setup: func(t *testing.T, ctx requestcontext.Context, _ *mocks.UpstreamTargetMock, _ *url.URL) {
 				t.Helper()
 
-				err := assert.AnError
-				ctx.SetError(err)
+				ctx.SetError(assert.AnError)
+			},
+			assert: func(t *testing.T, err error, req *http.Request) {
+				t.Helper()
+
+				require.ErrorIs(t, err, assert.AnError)
+				require.Nil(t, req)
 			},
 		},
 		"no headers set, ipv6 is used": {
-			upstreamCalled: true,
-			useIPv6:        true,
+			useIPv6: true,
 			setup: func(t *testing.T, ctx requestcontext.Context, target *mocks.UpstreamTargetMock, upstreamURL *url.URL) {
 				t.Helper()
 
@@ -78,8 +83,11 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				ctx.PrepareUpstreamView(target)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
@@ -94,8 +102,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"all X-Forwarded-* and Forwarded headers present, ipv6 is used": {
-			upstreamCalled: true,
-			useIPv6:        true,
+			useIPv6: true,
 			headers: http.Header{
 				"X-Forwarded-Proto":  []string{"https"},
 				"X-Forwarded-Host":   []string{"bar.foo"},
@@ -115,8 +122,11 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				ctx.PrepareUpstreamView(target)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodPatch, req.Method)
@@ -131,7 +141,6 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"Forwarded and X-Forwarded-For appear multiple times": {
-			upstreamCalled: true,
 			headers: http.Header{
 				"X-Forwarded-For": []string{"127.0.0.2", "192.168.12.126"},
 				"Forwarded":       []string{"proto=http;for=127.0.0.3", "proto=https;for=192.168.12.127"},
@@ -146,8 +155,11 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				ctx.PrepareUpstreamView(target)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
@@ -162,7 +174,6 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"only X-Forwarded-Method, Forwarded, and X-Forwarded-* headers are present": {
-			upstreamCalled: true,
 			headers: http.Header{
 				"X-Forwarded-Method": []string{http.MethodPost},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
@@ -177,8 +188,11 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				ctx.PrepareUpstreamView(target)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodPost, req.Method)
@@ -193,7 +207,6 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"only custom headers and results from rule execution are present (custom header are not dropped, but proxy owned)": {
-			upstreamCalled: true,
 			headers: http.Header{
 				"X-Foo-Bar": []string{"bar", "foo"},
 				"X-Bar":     []string{"bar"},
@@ -214,8 +227,11 @@ func TestRequestContextFinalize(t *testing.T) {
 				ctx.UpstreamRequest().SetCookie("my_cookie_1", "my_value_1")
 				ctx.UpstreamRequest().SetCookie("my_cookie_2", "my_value_2")
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
@@ -237,7 +253,6 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"only custom headers and results from rule execution are present (custom header and proxy-owned header are dropped)": {
-			upstreamCalled: true,
 			headers: http.Header{
 				"X-Foo-Bar": []string{"bar", "foo"},
 				"X-Bar":     []string{"bar"},
@@ -260,8 +275,11 @@ func TestRequestContextFinalize(t *testing.T) {
 				ctx.UpstreamRequest().SetCookie("my_cookie_1", "my_value_1")
 				ctx.UpstreamRequest().SetCookie("my_cookie_2", "my_value_2")
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
@@ -283,7 +301,6 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"Host header is manually added for upstream": {
-			upstreamCalled: true,
 			setup: func(t *testing.T, ctx requestcontext.Context, target *mocks.UpstreamTargetMock, upstreamURL *url.URL) {
 				t.Helper()
 
@@ -295,8 +312,11 @@ func TestRequestContextFinalize(t *testing.T) {
 				ctx.PrepareUpstreamView(target)
 				ctx.UpstreamRequest().AddHeader("Host", "bar.foo")
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Equal(t, "bar.foo", req.Host)
 				assert.Equal(t, http.MethodGet, req.Method)
@@ -311,7 +331,6 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"only X-Forwarded-Proto header is present, host not set": {
-			upstreamCalled: true,
 			headers: http.Header{
 				"X-Forwarded-Proto": []string{"http"},
 			},
@@ -325,8 +344,11 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				ctx.PrepareUpstreamView(target)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
@@ -341,7 +363,6 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"only X-Forwarded-Host header is present, host forwarded": {
-			upstreamCalled: true,
 			headers: http.Header{
 				"X-Forwarded-Host": []string{"bar.foo"},
 			},
@@ -355,8 +376,11 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				ctx.PrepareUpstreamView(target)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Equal(t, "foo.bar", req.Host)
 				assert.Equal(t, http.MethodGet, req.Method)
@@ -371,7 +395,6 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"only X-Forwarded-For header is present, host not forwarded": {
-			upstreamCalled: true,
 			headers: http.Header{
 				"X-Forwarded-For": []string{"172.2.34.1"},
 			},
@@ -385,8 +408,11 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				ctx.PrepareUpstreamView(target)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
@@ -401,7 +427,6 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"header is set for upstream": {
-			upstreamCalled: true,
 			headers: http.Header{
 				"X-Foo-Bar": []string{"bar"},
 			},
@@ -418,8 +443,11 @@ func TestRequestContextFinalize(t *testing.T) {
 				ctx.UpstreamRequest().SetHeader("X-Foo-Bar", "baz")
 				ctx.UpstreamRequest().SetHeader("X-Set", "foo")
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
@@ -432,7 +460,6 @@ func TestRequestContextFinalize(t *testing.T) {
 			},
 		},
 		"TE containing trailers is normalized for upstream": {
-			upstreamCalled: true,
 			headers: http.Header{
 				"Te": []string{"gzip, trailers"},
 			},
@@ -446,14 +473,16 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				ctx.PrepareUpstreamView(target)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Equal(t, "trailers", req.Header.Get("Te"))
 			},
 		},
 		"TE without trailers is dropped for upstream": {
-			upstreamCalled: true,
 			headers: http.Header{
 				"Te": []string{"gzip"},
 			},
@@ -467,14 +496,16 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				ctx.PrepareUpstreamView(target)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Empty(t, req.Header.Get("Te"))
 			},
 		},
 		"TE trailers survives Connection TE": {
-			upstreamCalled: true,
 			headers: http.Header{
 				"Connection": []string{"TE"},
 				"Te":         []string{"trailers"},
@@ -489,8 +520,11 @@ func TestRequestContextFinalize(t *testing.T) {
 
 				ctx.PrepareUpstreamView(target)
 			},
-			assertRequest: func(t *testing.T, req *http.Request) {
+			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, req)
 
 				assert.Empty(t, req.Header.Get("Connection"))
 				assert.Equal(t, "trailers", req.Header.Get("Te"))
@@ -511,12 +545,65 @@ func TestRequestContextFinalize(t *testing.T) {
 					return nil, assert.AnError
 				})
 			},
+			assert: func(t *testing.T, err error, req *http.Request) {
+				t.Helper()
+
+				require.ErrorIs(t, err, pipeline.ErrCommunication)
+				require.ErrorIs(t, err, assert.AnError)
+				require.NotErrorIs(t, err, pipeline.ErrRequestBodyTooLarge)
+				require.Nil(t, req)
+			},
+		},
+		"request body exceeds limit while proxying": {
+			setup: func(t *testing.T, ctx requestcontext.Context, target *mocks.UpstreamTargetMock, upstreamURL *url.URL) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = *upstreamURL
+				})
+				target.EXPECT().ForwardHostHeader().Return(false)
+
+				rc := ctx.(*requestContext)
+
+				rc.req.Body = http.MaxBytesReader(
+					httptest.NewRecorder(),
+					rc.req.Body,
+					3,
+				)
+				rc.req.ContentLength = -1
+
+				ctx.PrepareUpstreamView(target)
+
+				rc.rt = roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+					_, err := io.ReadAll(req.Body)
+
+					return nil, err
+				})
+			},
+			assert: func(t *testing.T, err error, req *http.Request) {
+				t.Helper()
+
+				require.ErrorIs(t, err, pipeline.ErrRequestBodyTooLarge)
+				require.NotErrorIs(t, err, pipeline.ErrCommunication)
+				require.Nil(t, req)
+
+				var maxBytesErr *http.MaxBytesError
+
+				require.ErrorAs(t, err, &maxBytesErr)
+				assert.Equal(t, int64(3), maxBytesErr.Limit)
+			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			upstreamCalled := false
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", bytes.NewBufferString("Ping"))
+			var upstreamReq *http.Request
+
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodGet,
+				"https://foo.bar/test",
+				bytes.NewBufferString("Ping"),
+			)
 			req.Header = tc.headers
 
 			if tc.useIPv6 {
@@ -526,9 +613,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			rw := httptest.NewRecorder()
 
 			srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
-				upstreamCalled = true
-
-				tc.assertRequest(t, req)
+				upstreamReq = req
 			}))
 			defer srv.Close()
 
@@ -546,11 +631,7 @@ func TestRequestContextFinalize(t *testing.T) {
 			err = ctx.Finalize()
 
 			// THEN
-			require.Equal(t, tc.upstreamCalled, upstreamCalled)
-
-			if !tc.upstreamCalled {
-				require.Error(t, err)
-			}
+			tc.assert(t, err, upstreamReq)
 		})
 	}
 }

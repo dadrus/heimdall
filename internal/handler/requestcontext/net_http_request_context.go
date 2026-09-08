@@ -38,7 +38,10 @@ func (s *netHTTPBodySource) ReadRawBody() ([]byte, error) {
 	body, err := io.ReadAll(s.req.Body)
 	if err != nil {
 		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
-			return nil, errorchain.New(pipeline.ErrRequestBodyTooLarge).CausedBy(err)
+			return nil, errorchain.NewWithMessage(
+				pipeline.ErrRequestBodyTooLarge,
+				"request body size limit exceeded",
+			).CausedBy(err)
 		}
 
 		return nil, err

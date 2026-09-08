@@ -20,6 +20,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
@@ -31,6 +32,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
 	"github.com/dadrus/heimdall/internal/cache/mocks"
@@ -41,18 +43,16 @@ import (
 
 func TestHandleDecisionEndpointRequest(t *testing.T) {
 	for uc, tc := range map[string]struct {
-		host           string
-		configureMocks func(t *testing.T, exec *mocks3.ExecutorMock)
-		assertResponse func(t *testing.T, err error, response *envoy_auth.CheckResponse)
+		setup  func(t *testing.T, cfg *config.Configuration, req *envoy_auth.CheckRequest, exec *mocks3.ExecutorMock)
+		assert func(t *testing.T, err error, response *envoy_auth.CheckResponse)
 	}{
 		"no rules configured": {
-			host: "heimdall.local",
-			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
+			setup: func(t *testing.T, _ *config.Configuration, _ *envoy_auth.CheckRequest, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrNoRuleFound)
 			},
-			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -66,13 +66,12 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule doesn't match method": {
-			host: "heimdall.local",
-			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
+			setup: func(t *testing.T, _ *config.Configuration, _ *envoy_auth.CheckRequest, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrNoRuleFound)
 			},
-			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -86,13 +85,12 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule execution fails with authentication error": {
-			host: "heimdall.local",
-			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
+			setup: func(t *testing.T, _ *config.Configuration, _ *envoy_auth.CheckRequest, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrAuthentication)
 			},
-			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -106,13 +104,12 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule execution fails with authorization error": {
-			host: "heimdall.local",
-			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
+			setup: func(t *testing.T, _ *config.Configuration, _ *envoy_auth.CheckRequest, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(pipeline.ErrAuthorization)
 			},
-			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -126,8 +123,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule execution fails with a redirect": {
-			host: "heimdall.local",
-			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
+			setup: func(t *testing.T, _ *config.Configuration, _ *envoy_auth.CheckRequest, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Return(&pipeline.RedirectError{
@@ -135,7 +131,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					RedirectTo: "http://foo.bar",
 				})
 			},
-			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -151,8 +147,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"rule execution succeeds": {
-			host: "heimdall.local",
-			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
+			setup: func(t *testing.T, _ *config.Configuration, _ *envoy_auth.CheckRequest, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(
@@ -164,7 +159,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					}),
 				).Return(nil)
 			},
-			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -176,13 +171,12 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"server panics and error does not contain traces": {
-			host: "heimdall.local",
-			configureMocks: func(t *testing.T, exec *mocks3.ExecutorMock) {
+			setup: func(t *testing.T, _ *config.Configuration, _ *envoy_auth.CheckRequest, exec *mocks3.ExecutorMock) {
 				t.Helper()
 
 				exec.EXPECT().Execute(mock.Anything).Panic("wuff")
 			},
-			assertResponse: func(t *testing.T, err error, _ *envoy_auth.CheckResponse) {
+			assert: func(t *testing.T, err error, _ *envoy_auth.CheckResponse) {
 				t.Helper()
 
 				require.Error(t, err)
@@ -190,11 +184,12 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			},
 		},
 		"invalid host is rejected": {
-			host: "evil.com,for=127.0.0.1",
-			configureMocks: func(t *testing.T, _ *mocks3.ExecutorMock) {
+			setup: func(t *testing.T, _ *config.Configuration, req *envoy_auth.CheckRequest, _ *mocks3.ExecutorMock) {
 				t.Helper()
+
+				req.Attributes.Request.Http.Host = "evil.com,for=127.0.0.1"
 			},
-			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -202,15 +197,51 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)
-				assert.Equal(t, typev3.StatusCode_BadRequest, deniedResponse.GetStatus().GetCode())
+				assert.Equal(
+					t,
+					typev3.StatusCode_BadRequest,
+					deniedResponse.GetStatus().GetCode(),
+				)
 				assert.Empty(t, deniedResponse.GetBody())
 				assert.Empty(t, deniedResponse.GetHeaders())
+			},
+		},
+		"request exceeds configured body limit": {
+			setup: func(t *testing.T, conf *config.Configuration, req *envoy_auth.CheckRequest, _ *mocks3.ExecutorMock) {
+				t.Helper()
+
+				conf.Serve.Requests.Body.MaxSize = 1024
+				req.Attributes.Request.Http.Body = strings.Repeat("x", 2*1024)
+			},
+			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+				t.Helper()
+
+				require.Error(t, err)
+				assert.Equal(t, codes.ResourceExhausted, status.Code(err))
+				assert.Nil(t, response)
+			},
+		},
+		"disabled body limit allows request exceeding grpc default": {
+			setup: func(t *testing.T, conf *config.Configuration, req *envoy_auth.CheckRequest, exec *mocks3.ExecutorMock) {
+				t.Helper()
+
+				conf.Serve.Requests.Body.MaxSize = 0
+				req.Attributes.Request.Http.Body = strings.Repeat("x", 5*1024*1024)
+
+				exec.EXPECT().Execute(mock.Anything).Return(nil)
+			},
+			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, response)
+				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			lis := bufconn.Listen(1024 * 1024)
+			lis := bufconn.Listen(8 * 1024 * 1024)
 			conn, err := grpc.NewClient("passthrough://bufnet",
 				grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
 				grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -228,10 +259,22 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					},
 				},
 			}
+			req := &envoy_auth.CheckRequest{
+				Attributes: &envoy_auth.AttributeContext{
+					Request: &envoy_auth.AttributeContext_Request{
+						Http: &envoy_auth.AttributeContext_HttpRequest{
+							Body:   "foo",
+							Method: http.MethodPost,
+							Path:   "/test",
+							Host:   "heimdall.local",
+						},
+					},
+				},
+			}
 			cch := mocks.NewCacheMock(t)
 			exec := mocks3.NewExecutorMock(t)
 
-			tc.configureMocks(t, exec)
+			tc.setup(t, conf, req, exec)
 
 			srv := newService(conf, cch, log.Logger, exec)
 
@@ -244,21 +287,10 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			client := envoy_auth.NewAuthorizationClient(conn)
 
 			// WHEN
-			resp, err := client.Check(t.Context(), &envoy_auth.CheckRequest{
-				Attributes: &envoy_auth.AttributeContext{
-					Request: &envoy_auth.AttributeContext_Request{
-						Http: &envoy_auth.AttributeContext_HttpRequest{
-							Body:   "foo",
-							Method: http.MethodPost,
-							Path:   "/test",
-							Host:   tc.host,
-						},
-					},
-				},
-			})
+			resp, err := client.Check(t.Context(), req)
 
 			// THEN
-			tc.assertResponse(t, err, resp)
+			tc.assert(t, err, resp)
 		})
 	}
 }
