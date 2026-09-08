@@ -21,13 +21,13 @@ import (
 	"strings"
 
 	"github.com/ccoveille/go-safecast/v2"
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/bodylimit"
 	"github.com/justinas/alice"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/bodylimit"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"

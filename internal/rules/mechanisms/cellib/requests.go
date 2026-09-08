@@ -78,7 +78,7 @@ func (requestsLib) CompileOptions() []cel.EnvOption {
 				cel.UnaryBinding(func(lhs ref.Val) ref.Val {
 					// nolint: forcetypeassert
 					req := lhs.Value().(*pipeline.Request)
-					
+
 					body, err := req.Body()
 					if err != nil {
 						return types.WrapErr(err)
