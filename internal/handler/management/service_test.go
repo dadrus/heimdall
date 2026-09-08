@@ -33,6 +33,8 @@ import (
 	"github.com/goccy/go-json"
 	"github.com/inhies/go-bytesize"
 	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -306,4 +308,35 @@ func (suite *ServiceTestSuite) TestRequestBodyLimit() {
 	rawResp, err := io.ReadAll(resp.Body)
 	suite.Require().NoError(err)
 	suite.Empty(rawResp)
+}
+
+func TestNewService(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	conf := &config.Configuration{}
+
+	conf.Management.Timeout.Read = 11 * time.Second
+	conf.Management.Timeout.Write = 12 * time.Second
+	conf.Management.Timeout.Idle = 13 * time.Second
+	conf.Management.Requests.Headers.MaxSize = 42 * bytesize.KB
+
+	// WHEN
+	srv := newService(
+		conf,
+		log.Logger,
+		nil,
+	)
+
+	// THEN
+	assert.Equal(t, 11*time.Second, srv.ReadTimeout)
+	assert.Equal(t, 12*time.Second, srv.WriteTimeout)
+	assert.Equal(t, 13*time.Second, srv.IdleTimeout)
+	assert.Equal(t, int(42*bytesize.KB), srv.MaxHeaderBytes)
+
+	require.NotNil(t, srv.HTTP2)
+	assert.Equal(t, 100, srv.HTTP2.MaxConcurrentStreams)
+
+	assert.NotNil(t, srv.Handler)
+	assert.NotNil(t, srv.ErrorLog)
 }
