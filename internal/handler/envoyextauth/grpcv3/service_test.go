@@ -393,11 +393,22 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		}
 
 		secondDone := make(chan error, 1)
+		secondStarted := make(chan struct{})
 
 		go func() {
+			close(secondStarted)
+
 			_, err := client.Check(ctx, createRequest())
 			secondDone <- err
 		}()
+
+		<-secondStarted
+
+		select {
+		case <-requestEntered:
+			// unexpected
+		case <-time.After(100 * time.Millisecond):
+		}
 
 		// THEN
 		// The second RPC uses the same ClientConn and must not reach the
