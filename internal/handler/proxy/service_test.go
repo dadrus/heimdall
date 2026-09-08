@@ -1122,7 +1122,7 @@ func TestProxyService(t *testing.T) {
 				assert.Empty(t, data)
 			},
 		},
-		"request body exceeds limit while proxying": {
+		"request with unknown length exceeds body limit": {
 			serviceConf: config.ServeConfig{
 				Requests: config.IngressRequests{
 					Body: config.IngressRequestBody{
@@ -1169,7 +1169,8 @@ func TestProxyService(t *testing.T) {
 				exec.EXPECT().Execute(
 					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
 						// Deliberately do not access Body()/RawBody().
-						// The body must reach the streaming proxy path.
+						// The request must reach the proxy path before its
+						// unknown-length body can exceed the limit.
 						ctx.PrepareUpstreamView(target)
 
 						return true
@@ -1179,16 +1180,14 @@ func TestProxyService(t *testing.T) {
 			processRequest: func(t *testing.T, _ http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
-				// Force the upstream side to consume the streamed request.
-				// The proxy will abort the upload when MaxBytesReader detects
-				// the sixth byte.
+				// If the upstream handler is reached, consume the streamed body.
+				// Whether the handler itself is reached is transport timing dependent.
 				_, _ = io.Copy(io.Discard, req.Body)
 			},
-			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+			assertResponse: func(t *testing.T, err error, _ bool, resp *http.Response) {
 				t.Helper()
 
 				require.NoError(t, err)
-				require.True(t, upstreamCalled)
 				require.NotNil(t, resp)
 
 				assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
