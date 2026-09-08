@@ -1,0 +1,124 @@
+package requestlimit
+
+import (
+	"sync"
+	"sync/atomic"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestLimiterTryAcquire(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		max   int
+		setup func(t *testing.T, limiter *Limiter)
+		want  bool
+	}{
+		"acquires capacity": {
+			max:  1,
+			want: true,
+		},
+		"rejects if capacity is exhausted": {
+			max: 1,
+			setup: func(t *testing.T, limiter *Limiter) {
+				t.Helper()
+
+				require.True(t, limiter.TryAcquire())
+			},
+			want: false,
+		},
+		"disabled limit always acquires": {
+			max: 0,
+			setup: func(t *testing.T, limiter *Limiter) {
+				t.Helper()
+
+				for range 10 {
+					require.True(t, limiter.TryAcquire())
+				}
+			},
+			want: true,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			limiter := New(tc.max)
+
+			if tc.setup != nil {
+				tc.setup(t, limiter)
+			}
+
+			// WHEN
+			acquired := limiter.TryAcquire()
+
+			// THEN
+			assert.Equal(t, tc.want, acquired)
+		})
+	}
+
+	t.Run("does not exceed capacity under concurrency", func(t *testing.T) {
+		// GIVEN
+		const (
+			max        = 5
+			contenders = 100
+		)
+
+		limiter := New(max)
+
+		start := make(chan struct{})
+		var acquired atomic.Int32
+		var wg sync.WaitGroup
+
+		wg.Add(contenders)
+
+		// WHEN
+		for range contenders {
+			go func() {
+				defer wg.Done()
+
+				<-start
+
+				if limiter.TryAcquire() {
+					acquired.Add(1)
+				}
+			}()
+		}
+
+		close(start)
+		wg.Wait()
+
+		// THEN
+		assert.Equal(t, int32(max), acquired.Load())
+	})
+}
+
+func TestLimiterRelease(t *testing.T) {
+	t.Parallel()
+
+	t.Run("releases acquired capacity", func(t *testing.T) {
+		// GIVEN
+		limiter := New(1)
+
+		require.True(t, limiter.TryAcquire())
+		require.False(t, limiter.TryAcquire())
+
+		// WHEN
+		limiter.Release()
+
+		// THEN
+		assert.True(t, limiter.TryAcquire())
+	})
+
+	t.Run("does nothing if limit is disabled", func(t *testing.T) {
+		// GIVEN
+		limiter := New(0)
+
+		// WHEN
+		limiter.Release()
+
+		// THEN
+		assert.True(t, limiter.TryAcquire())
+	})
+}
