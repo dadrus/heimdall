@@ -28,6 +28,7 @@ type opts struct {
 	onPreconditionError   func(rw http.ResponseWriter, req *http.Request, err error)
 	onNoRuleError         func(rw http.ResponseWriter, req *http.Request, err error)
 	onInternalError       func(rw http.ResponseWriter, req *http.Request, err error)
+	onRequestBodyTooLarge func(rw http.ResponseWriter, req *http.Request, err error)
 }
 
 type Option func(*opts)
@@ -76,6 +77,14 @@ func WithNoRuleErrorCode(code int) Option {
 	return func(o *opts) {
 		if code != 0 {
 			o.onNoRuleError = errorWriter(o, code)
+		}
+	}
+}
+
+func WithRequestBodyTooLargeErrorCode(code int) Option {
+	return func(o *opts) {
+		if code != 0 {
+			o.onRequestBodyTooLarge = errorWriter(o, code)
 		}
 	}
 }

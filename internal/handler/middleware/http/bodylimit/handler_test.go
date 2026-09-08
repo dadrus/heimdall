@@ -27,54 +27,117 @@ import (
 	"github.com/justinas/alice"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
+
+type errorHandlerFunc func(http.ResponseWriter, *http.Request, error)
+
+func (f errorHandlerFunc) HandleError(rw http.ResponseWriter, req *http.Request, err error) {
+	f(rw, req, err)
+}
 
 func TestHandlerExecution(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		maxSize       bytesize.ByteSize
-		body          string
-		contentLength int64
-		wantStatus    int
-		wantNext      bool
-		wantReadError bool
+		maxSize bytesize.ByteSize
+		setup   func(*http.Request)
+		assert  func(t *testing.T, statusCode int, nextCalled bool, readErr error, handledErr error)
 	}{
 		"limit disabled": {
-			maxSize:       0,
-			body:          "123456",
-			contentLength: 6,
-			wantStatus:    http.StatusNoContent,
-			wantNext:      true,
+			maxSize: 0,
+			setup: func(req *http.Request) {
+				req.Body = io.NopCloser(strings.NewReader("123456"))
+				req.ContentLength = 6
+			},
+			assert: func(t *testing.T, statusCode int, nextCalled bool, readErr error, handledErr error) {
+				t.Helper()
+
+				assert.Equal(t, http.StatusNoContent, statusCode)
+				assert.True(t, nextCalled)
+				require.NoError(t, readErr)
+				require.NoError(t, handledErr)
+			},
+		},
+		"nil body": {
+			maxSize: 5 * bytesize.B,
+			setup: func(req *http.Request) {
+				req.Body = nil
+				req.ContentLength = 0
+			},
+			assert: func(t *testing.T, statusCode int, nextCalled bool, readErr error, handledErr error) {
+				t.Helper()
+
+				assert.Equal(t, http.StatusNoContent, statusCode)
+				assert.True(t, nextCalled)
+				require.NoError(t, readErr)
+				require.NoError(t, handledErr)
+			},
 		},
 		"body below limit": {
-			maxSize:       5 * bytesize.B,
-			body:          "1234",
-			contentLength: 4,
-			wantStatus:    http.StatusNoContent,
-			wantNext:      true,
+			maxSize: 5 * bytesize.B,
+			setup: func(req *http.Request) {
+				req.Body = io.NopCloser(strings.NewReader("1234"))
+				req.ContentLength = 4
+			},
+			assert: func(t *testing.T, statusCode int, nextCalled bool, readErr error, handledErr error) {
+				t.Helper()
+
+				assert.Equal(t, http.StatusNoContent, statusCode)
+				assert.True(t, nextCalled)
+				require.NoError(t, readErr)
+				require.NoError(t, handledErr)
+			},
 		},
 		"body exactly at limit": {
-			maxSize:       5 * bytesize.B,
-			body:          "12345",
-			contentLength: 5,
-			wantStatus:    http.StatusNoContent,
-			wantNext:      true,
+			maxSize: 5 * bytesize.B,
+			setup: func(req *http.Request) {
+				req.Body = io.NopCloser(strings.NewReader("12345"))
+				req.ContentLength = 5
+			},
+			assert: func(t *testing.T, statusCode int, nextCalled bool, readErr error, handledErr error) {
+				t.Helper()
+
+				assert.Equal(t, http.StatusNoContent, statusCode)
+				assert.True(t, nextCalled)
+				require.NoError(t, readErr)
+				require.NoError(t, handledErr)
+			},
 		},
 		"body above limit with known content length": {
-			maxSize:       5 * bytesize.B,
-			body:          "123456",
-			contentLength: 6,
-			wantStatus:    http.StatusRequestEntityTooLarge,
-			wantNext:      false,
+			maxSize: 5 * bytesize.B,
+			setup: func(req *http.Request) {
+				req.Body = io.NopCloser(strings.NewReader("123456"))
+				req.ContentLength = 6
+			},
+			assert: func(t *testing.T, statusCode int, nextCalled bool, readErr error, handledErr error) {
+				t.Helper()
+
+				assert.Equal(t, http.StatusRequestEntityTooLarge, statusCode)
+				assert.False(t, nextCalled)
+				require.NoError(t, readErr)
+				require.ErrorIs(t, handledErr, pipeline.ErrRequestBodyTooLarge)
+			},
 		},
 		"body above limit with unknown content length": {
-			maxSize:       5 * bytesize.B,
-			body:          "123456",
-			contentLength: -1,
-			wantStatus:    http.StatusRequestEntityTooLarge,
-			wantNext:      true,
-			wantReadError: true,
+			maxSize: 5 * bytesize.B,
+			setup: func(req *http.Request) {
+				req.Body = io.NopCloser(strings.NewReader("123456"))
+				req.ContentLength = -1
+			},
+			assert: func(t *testing.T, statusCode int, nextCalled bool, readErr error, handledErr error) {
+				t.Helper()
+
+				assert.Equal(t, http.StatusRequestEntityTooLarge, statusCode)
+				assert.True(t, nextCalled)
+				require.NoError(t, handledErr)
+
+				var maxBytesErr *http.MaxBytesError
+
+				require.ErrorAs(t, readErr, &maxBytesErr)
+				assert.Equal(t, int64(5), maxBytesErr.Limit)
+			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
@@ -84,13 +147,30 @@ func TestHandlerExecution(t *testing.T) {
 			var (
 				nextCalled bool
 				readErr    error
+				handledErr error
 			)
 
-			handler := alice.New(New(tc.maxSize)).
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"http://heimdall.local/test",
+				nil,
+			)
+			tc.setup(req)
+
+			eh := errorHandlerFunc(func(rw http.ResponseWriter, _ *http.Request, err error) {
+				handledErr = err
+				rw.WriteHeader(http.StatusRequestEntityTooLarge)
+			})
+
+			handler := alice.New(New(tc.maxSize, eh)).
 				ThenFunc(func(rw http.ResponseWriter, req *http.Request) {
 					nextCalled = true
 
-					_, readErr = io.ReadAll(req.Body)
+					if req.Body != nil {
+						_, readErr = io.ReadAll(req.Body)
+					}
+
 					if readErr != nil {
 						rw.WriteHeader(http.StatusRequestEntityTooLarge)
 
@@ -100,32 +180,13 @@ func TestHandlerExecution(t *testing.T) {
 					rw.WriteHeader(http.StatusNoContent)
 				})
 
-			req := httptest.NewRequestWithContext(
-				t.Context(),
-				http.MethodPost,
-				"http://heimdall.local/test",
-				strings.NewReader(tc.body),
-			)
-			req.ContentLength = tc.contentLength
-
 			rw := httptest.NewRecorder()
 
 			// WHEN
 			handler.ServeHTTP(rw, req)
 
 			// THEN
-			assert.Equal(t, tc.wantStatus, rw.Code)
-			assert.Equal(t, tc.wantNext, nextCalled)
-
-			if tc.wantReadError {
-				require.Error(t, readErr)
-
-				var maxBytesErr *http.MaxBytesError
-				require.ErrorAs(t, readErr, &maxBytesErr)
-				assert.Equal(t, int64(tc.maxSize), maxBytesErr.Limit)
-			} else {
-				require.NoError(t, readErr)
-			}
+			tc.assert(t, rw.Code, nextCalled, readErr, handledErr)
 		})
 	}
 }

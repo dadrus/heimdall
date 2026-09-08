@@ -18,10 +18,12 @@ package requestcontext
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
 type netHTTPBodySource struct {
@@ -35,6 +37,10 @@ func (s *netHTTPBodySource) ReadRawBody() ([]byte, error) {
 
 	body, err := io.ReadAll(s.req.Body)
 	if err != nil {
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+			return nil, errorchain.New(pipeline.ErrRequestBodyTooLarge).CausedBy(err)
+		}
+
 		return nil, err
 	}
 

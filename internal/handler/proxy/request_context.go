@@ -19,6 +19,7 @@ package proxy
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -191,10 +192,14 @@ func (r *requestContext) Finalize() error {
 
 	proxy := &httputil.ReverseProxy{
 		ErrorHandler: func(_ http.ResponseWriter, _ *http.Request, err error) {
+			perr := pipeline.ErrCommunication
+			if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+				perr = pipeline.ErrRequestBodyTooLarge
+			}
+
 			logger.Error().Err(err).Msg("Proxying error")
 
-			errHolder.err = errorchain.NewWithMessage(pipeline.ErrCommunication, "Failed to proxy request").
-				CausedBy(err)
+			errHolder.err = errorchain.NewWithMessage(perr, "Failed to proxy request").CausedBy(err)
 		},
 		Rewrite: r.rewriteRequest,
 		Transport: otelhttp.NewTransport(

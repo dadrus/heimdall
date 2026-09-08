@@ -97,6 +97,7 @@ func newService(
 		errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
 		errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
 		errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
+		errorhandler.WithRequestBodyTooLargeErrorCode(cfg.Respond.With.RequestBodyTooLarge.Code),
 	)
 
 	hc := alice.New(
@@ -119,7 +120,7 @@ func newService(
 			logger.WithAccessStatusEnabled(true),
 			logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled),
 		),
-		bodylimit.New(cfg.Requests.Body.MaxSize),
+		bodylimit.New(cfg.Requests.Body.MaxSize, eh),
 		requestvalidation.New(),
 		dump.New(),
 		der.handler,
