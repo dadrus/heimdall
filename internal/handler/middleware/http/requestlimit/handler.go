@@ -8,7 +8,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
-func New(maxInFlight int, eh errorhandler.ErrorHandler) func(http.Handler) http.Handler {
+func New(maxInFlight int64, eh errorhandler.ErrorHandler) func(http.Handler) http.Handler {
 	if maxInFlight == 0 {
 		return func(next http.Handler) http.Handler {
 			return next

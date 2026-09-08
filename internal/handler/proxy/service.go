@@ -39,6 +39,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/requestlimit"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/requestvalidation"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/trustedproxy"
 	"github.com/dadrus/heimdall/internal/handler/service"
@@ -98,6 +99,7 @@ func newService(
 		errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
 		errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
 		errorhandler.WithRequestBodyTooLargeErrorCode(cfg.Respond.With.RequestBodyTooLarge.Code),
+		errorhandler.WithTooManyRequestsErrorCode(cfg.Respond.With.TooManyRequests.Code),
 	)
 
 	hc := alice.New(
@@ -120,6 +122,7 @@ func newService(
 			logger.WithAccessStatusEnabled(true),
 			logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled),
 		),
+		requestlimit.New(cfg.Requests.MaxInFlight, eh),
 		bodylimit.New(cfg.Requests.Body.MaxSize, eh),
 		requestvalidation.New(),
 		dump.New(),

@@ -439,4 +439,175 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		require.NoError(t, <-firstDone)
 		require.NoError(t, <-secondDone)
 	})
+
+	t.Run("rejects request if maximum number of requests is in flight", func(t *testing.T) {
+		// GIVEN
+		conf := &config.Configuration{}
+		conf.Serve.Requests.Headers.MaxSize = 64 * bytesize.KB
+		conf.Serve.Requests.MaxInFlight = 1
+		conf.Serve.HTTP2.MaxConcurrentStreams = 100
+		conf.Serve.Respond.With.TooManyRequests.Code = http.StatusServiceUnavailable
+
+		exec := mocks3.NewExecutorMock(t)
+
+		requestEntered := make(chan struct{}, 2)
+		releaseRequest := make(chan struct{})
+
+		released := false
+		releaseRequests := func() {
+			if !released {
+				close(releaseRequest)
+				released = true
+			}
+		}
+
+		exec.EXPECT().Execute(mock.Anything).
+			Run(func(_ pipeline.ExecutionContext) {
+				requestEntered <- struct{}{}
+
+				<-releaseRequest
+			}).
+			Return(pipeline.ErrNoRuleFound)
+
+		srv := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+
+		listener := bufconn.Listen(8 * 1024 * 1024)
+
+		go func() {
+			_ = srv.Serve(listener)
+		}()
+
+		conn, err := grpc.NewClient(
+			"passthrough:///bufnet",
+			grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+				return listener.Dial()
+			}),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		)
+		require.NoError(t, err)
+
+		t.Cleanup(func() {
+			releaseRequests()
+			_ = conn.Close()
+			srv.Stop()
+			_ = listener.Close()
+		})
+
+		client := envoy_auth.NewAuthorizationClient(conn)
+
+		createRequest := func() *envoy_auth.CheckRequest {
+			return &envoy_auth.CheckRequest{
+				Attributes: &envoy_auth.AttributeContext{
+					Request: &envoy_auth.AttributeContext_Request{
+						Http: &envoy_auth.AttributeContext_HttpRequest{
+							Method: http.MethodGet,
+							Scheme: "http",
+							Host:   "example.com",
+							Path:   "/",
+						},
+					},
+				},
+			}
+		}
+
+		ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+		defer cancel()
+
+		firstResponse := make(chan *envoy_auth.CheckResponse, 1)
+		firstError := make(chan error, 1)
+
+		go func() {
+			resp, err := client.Check(ctx, createRequest())
+
+			firstResponse <- resp
+			firstError <- err
+		}()
+
+		select {
+		case <-requestEntered:
+		case <-ctx.Done():
+			require.FailNow(t, "first request did not reach pipeline")
+		}
+
+		var (
+			secondResponse *envoy_auth.CheckResponse
+			secondErr      error
+		)
+
+		secondDone := make(chan struct{})
+
+		// WHEN
+		go func() {
+			defer close(secondDone)
+
+			secondResponse, secondErr = client.Check(ctx, createRequest())
+		}()
+
+		// THEN
+		select {
+		case <-requestEntered:
+			require.FailNow(
+				t,
+				"second request reached pipeline while maximum number of requests was in flight",
+			)
+
+		case <-secondDone:
+			require.NoError(t, secondErr)
+			require.NotNil(t, secondResponse)
+
+			assert.Equal(
+				t,
+				int32(codes.ResourceExhausted),
+				secondResponse.GetStatus().GetCode(),
+			)
+
+			deniedResponse := secondResponse.GetDeniedResponse()
+			require.NotNil(t, deniedResponse)
+
+			assert.Equal(
+				t,
+				typev3.StatusCode(http.StatusServiceUnavailable),
+				deniedResponse.GetStatus().GetCode(),
+			)
+			assert.Empty(t, deniedResponse.GetBody())
+			assert.Empty(t, deniedResponse.GetHeaders())
+
+		case <-ctx.Done():
+			require.FailNow(t, "second request was not rejected immediately")
+		}
+
+		// WHEN
+		releaseRequests()
+
+		// THEN
+		select {
+		case err := <-firstError:
+			require.NoError(t, err)
+		case <-ctx.Done():
+			require.FailNow(t, "first request did not complete")
+		}
+
+		select {
+		case resp := <-firstResponse:
+			require.NotNil(t, resp)
+
+			assert.Equal(
+				t,
+				int32(codes.NotFound),
+				resp.GetStatus().GetCode(),
+			)
+
+			deniedResponse := resp.GetDeniedResponse()
+			require.NotNil(t, deniedResponse)
+
+			assert.Equal(
+				t,
+				typev3.StatusCode(http.StatusNotFound),
+				deniedResponse.GetStatus().GetCode(),
+			)
+
+		case <-ctx.Done():
+			require.FailNow(t, "first response was not received")
+		}
+	})
 }

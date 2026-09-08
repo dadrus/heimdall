@@ -3,24 +3,24 @@ package requestlimit
 import "sync/atomic"
 
 type Limiter struct {
-	max    int64
+	limit  int64
 	active atomic.Int64
 }
 
-func New(max int) *Limiter {
+func New(limit int64) *Limiter {
 	return &Limiter{
-		max: int64(max),
+		limit: limit,
 	}
 }
 
 func (l *Limiter) TryAcquire() bool {
-	if l.max == 0 {
+	if l.limit == 0 {
 		return true
 	}
 
 	for {
 		active := l.active.Load()
-		if active >= l.max {
+		if active >= l.limit {
 			return false
 		}
 
@@ -31,7 +31,7 @@ func (l *Limiter) TryAcquire() bool {
 }
 
 func (l *Limiter) Release() {
-	if l.max != 0 {
+	if l.limit != 0 {
 		l.active.Add(-1)
 	}
 }

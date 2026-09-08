@@ -52,7 +52,7 @@ type Timeout struct {
 }
 
 type IngressRequests struct {
-	MaxInFlight int                   `koanf:"max_in_flight" validate:"gte=0"`
+	MaxInFlight int64                 `koanf:"max_in_flight" validate:"gte=0"`
 	Headers     IngressRequestHeaders `koanf:"headers"`
 	Body        IngressRequestBody    `koanf:"body"`
 }

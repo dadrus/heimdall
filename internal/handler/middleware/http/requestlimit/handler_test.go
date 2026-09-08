@@ -68,7 +68,7 @@ func TestNew(t *testing.T) {
 
 			handler.ServeHTTP(
 				httptest.NewRecorder(),
-				httptest.NewRequest(http.MethodGet, "/", nil),
+				httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil),
 			)
 		}()
 
@@ -78,7 +78,7 @@ func TestNew(t *testing.T) {
 			require.FailNow(t, "first request did not enter handler")
 		}
 
-		secondRequest := httptest.NewRequest(http.MethodGet, "/", nil)
+		secondRequest := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 		secondResponse := httptest.NewRecorder()
 
 		eh.EXPECT().
@@ -108,7 +108,7 @@ func TestNew(t *testing.T) {
 
 		handler.ServeHTTP(
 			thirdResponse,
-			httptest.NewRequest(http.MethodGet, "/", nil),
+			httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil),
 		)
 
 		// THEN

@@ -35,6 +35,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/errorhandler"
 	loggermiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/otelmetrics"
+	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/requestlimit"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/trustedproxy"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
@@ -82,12 +83,14 @@ func newService(
 				errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
 				errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
 				errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
+				errorhandler.WithTooManyRequestsErrorCode(cfg.Respond.With.TooManyRequests.Code),
 			),
 			// the logHandler is used here to have access to the error object
 			// as it will be replaced by a CheckResponse object returned to envoy
 			// and will not contain all the details, typically required to enable
 			// error traceback
 			logHandler.UnaryServerInterceptor(),
+			requestlimit.New(cfg.Requests.MaxInFlight),
 			cachemiddleware.New(cch),
 		),
 		grpc.ChainStreamInterceptor(

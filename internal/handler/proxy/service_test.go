@@ -32,6 +32,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1342,6 +1343,152 @@ func TestProxyService(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("rejects request if maximum number of requests is in flight", func(t *testing.T) {
+		// GIVEN
+		port, err := testsupport.GetFreePort()
+		require.NoError(t, err)
+
+		proxyConf := config.ServeConfig{
+			Host: "127.0.0.1",
+			Port: port,
+		}
+
+		proxyConf.Requests.MaxInFlight = 1
+		proxyConf.Respond.With.TooManyRequests.Code = http.StatusServiceUnavailable
+
+		factory, err := listener.NewFactory(proxyConf.Address(), proxyConf.TLS, 0, nil)
+		require.NoError(t, err)
+
+		lstnr, err := factory.Create(t.Context())
+		require.NoError(t, err)
+
+		conf := &config.Configuration{Serve: proxyConf}
+		exec := mocks2.NewExecutorMock(t)
+
+		requestEntered := make(chan struct{}, 2)
+		releaseRequest := make(chan struct{})
+
+		var releaseOnce sync.Once
+		release := func() {
+			releaseOnce.Do(func() {
+				close(releaseRequest)
+			})
+		}
+
+		exec.EXPECT().Execute(mock.Anything).
+			Run(func(_ pipeline.ExecutionContext) {
+				requestEntered <- struct{}{}
+
+				<-releaseRequest
+			}).
+			Return(pipeline.ErrNoRuleFound)
+
+		proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+
+		defer func() {
+			release()
+			_ = proxy.Shutdown(t.Context())
+		}()
+
+		go func() {
+			_ = proxy.Serve(lstnr)
+		}()
+
+		time.Sleep(50 * time.Millisecond)
+
+		client := &http.Client{Transport: &http.Transport{}}
+
+		firstResponse := make(chan *http.Response, 1)
+		firstError := make(chan error, 1)
+
+		go func() {
+			req, err := http.NewRequestWithContext(
+				t.Context(),
+				http.MethodGet,
+				fmt.Sprintf("http://%s/", proxyConf.Address()),
+				nil,
+			)
+			if err != nil {
+				firstError <- err
+
+				return
+			}
+
+			resp, err := client.Do(req) //nolint:bodyclose
+			firstResponse <- resp
+			firstError <- err
+		}()
+
+		select {
+		case <-requestEntered:
+		case <-time.After(time.Second):
+			require.FailNow(t, "first request did not enter pipeline")
+		}
+
+		secondRequest, err := http.NewRequestWithContext(
+			t.Context(),
+			http.MethodGet,
+			fmt.Sprintf("http://%s/", proxyConf.Address()),
+			nil,
+		)
+		require.NoError(t, err)
+
+		var (
+			secondResponse *http.Response
+			secondErr      error
+		)
+
+		secondDone := make(chan struct{})
+
+		// WHEN
+		go func() {
+			defer close(secondDone)
+
+			secondResponse, secondErr = client.Do(secondRequest) //nolint:bodyclose
+		}()
+
+		// THEN
+		select {
+		case <-requestEntered:
+			require.FailNow(t, "second request entered pipeline while maximum number of requests was in flight")
+
+		case <-secondDone:
+			require.NoError(t, secondErr)
+			require.NotNil(t, secondResponse)
+			defer secondResponse.Body.Close()
+
+			assert.Equal(t, http.StatusServiceUnavailable, secondResponse.StatusCode)
+
+			data, err := io.ReadAll(secondResponse.Body)
+			require.NoError(t, err)
+			assert.Empty(t, data)
+
+		case <-time.After(time.Second):
+			require.FailNow(t, "second request was not rejected immediately")
+		}
+
+		// WHEN
+		release()
+
+		// THEN
+		select {
+		case err := <-firstError:
+			require.NoError(t, err)
+		case <-time.After(time.Second):
+			require.FailNow(t, "first request did not complete")
+		}
+
+		select {
+		case resp := <-firstResponse:
+			require.NotNil(t, resp)
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+		case <-time.After(time.Second):
+			require.FailNow(t, "first response was not received")
+		}
+	})
 }
 
 func TestWebSocketSupport(t *testing.T) {

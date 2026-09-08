@@ -34,6 +34,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/requestlimit"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/requestvalidation"
 	"github.com/dadrus/heimdall/internal/keyregistry"
 	"github.com/dadrus/heimdall/internal/x"
@@ -65,6 +66,7 @@ func newService(
 			otelmetrics.WithOperationFilter(opFilter),
 		),
 		logger.New(log, logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled)),
+		requestlimit.New(cfg.Requests.MaxInFlight, eh),
 		bodylimit.New(cfg.Requests.Body.MaxSize, eh),
 		requestvalidation.New(),
 		dump.New(),

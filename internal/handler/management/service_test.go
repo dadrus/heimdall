@@ -26,6 +26,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -34,6 +35,7 @@ import (
 	"github.com/inhies/go-bytesize"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -117,6 +119,7 @@ func (suite *ServiceTestSuite) SetupTest() {
 			Port: port,
 			CORS: &config.CORS{},
 			Requests: config.IngressRequests{
+				MaxInFlight: 1,
 				Body: config.IngressRequestBody{
 					MaxSize: 5 * bytesize.B,
 				},
@@ -308,6 +311,102 @@ func (suite *ServiceTestSuite) TestRequestBodyLimit() {
 	rawResp, err := io.ReadAll(resp.Body)
 	suite.Require().NoError(err)
 	suite.Empty(rawResp)
+}
+
+func (suite *ServiceTestSuite) TestRequestLimit() {
+	// GIVEN
+	requestEntered := make(chan struct{})
+	releaseRequest := make(chan struct{})
+
+	var releaseOnce sync.Once
+	release := func() {
+		releaseOnce.Do(func() {
+			close(releaseRequest)
+		})
+	}
+	suite.T().Cleanup(release)
+
+	suite.khr.EXPECT().Keys().Once().
+		Run(func(_ mock.Arguments) {
+			close(requestEntered)
+
+			<-releaseRequest
+		}).
+		Return([]jose.JSONWebKey{})
+
+	client := &http.Client{Transport: &http.Transport{}}
+
+	firstResponse := make(chan *http.Response, 1)
+	firstError := make(chan error, 1)
+
+	go func() {
+		req, err := http.NewRequestWithContext(
+			suite.T().Context(),
+			http.MethodGet,
+			suite.addr+"/.well-known/jwks",
+			nil,
+		)
+		if err != nil {
+			firstError <- err
+
+			return
+		}
+
+		resp, err := client.Do(req) //nolint:bodyclose
+
+		firstResponse <- resp
+		firstError <- err
+	}()
+
+	select {
+	case <-requestEntered:
+	case <-time.After(time.Second):
+		suite.FailNow("first request did not enter management handler")
+	}
+
+	secondRequest, err := http.NewRequestWithContext(
+		suite.T().Context(),
+		http.MethodGet,
+		suite.addr+"/.well-known/health",
+		nil,
+	)
+	suite.Require().NoError(err)
+
+	// WHEN
+	secondResponse, err := client.Do(secondRequest)
+
+	// THEN
+	suite.Require().NoError(err)
+	suite.Require().NotNil(secondResponse)
+
+	defer secondResponse.Body.Close()
+
+	suite.Equal(http.StatusTooManyRequests, secondResponse.StatusCode)
+
+	data, err := io.ReadAll(secondResponse.Body)
+	suite.Require().NoError(err)
+	suite.Empty(data)
+
+	// WHEN
+	release()
+
+	// THEN
+	select {
+	case err := <-firstError:
+		suite.Require().NoError(err)
+	case <-time.After(time.Second):
+		suite.FailNow("first request did not complete")
+	}
+
+	select {
+	case resp := <-firstResponse:
+		suite.Require().NotNil(resp)
+		defer resp.Body.Close()
+
+		suite.Equal(http.StatusOK, resp.StatusCode)
+	case <-time.After(time.Second):
+		suite.FailNow("first response was not received")
+	}
 }
 
 func TestNewService(t *testing.T) {

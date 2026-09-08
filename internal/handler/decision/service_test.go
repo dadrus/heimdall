@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -81,6 +82,7 @@ func TestNewService(t *testing.T) {
 	assert.NotNil(t, srv.ErrorLog)
 }
 
+//nolint:gocyclo
 func TestHandleDecisionEndpointRequest(t *testing.T) {
 	t.Parallel()
 
@@ -717,4 +719,160 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			tc.assertResponse(t, err, resp)
 		})
 	}
+
+	t.Run("rejects request if maximum number of requests is in flight", func(t *testing.T) {
+		// GIVEN
+		port, err := testsupport.GetFreePort()
+		require.NoError(t, err)
+
+		srvConf := config.ServeConfig{
+			Host: "127.0.0.1",
+			Port: port,
+		}
+
+		srvConf.Requests.MaxInFlight = 1
+		srvConf.Respond.With.TooManyRequests.Code = http.StatusServiceUnavailable
+
+		factory, err := listener.NewFactory(
+			srvConf.Address(),
+			srvConf.TLS,
+			0,
+			nil,
+		)
+		require.NoError(t, err)
+
+		lstnr, err := factory.Create(t.Context())
+		require.NoError(t, err)
+
+		conf := &config.Configuration{Serve: srvConf}
+		exec := mocks2.NewExecutorMock(t)
+
+		requestEntered := make(chan struct{}, 2)
+		releaseRequest := make(chan struct{})
+
+		var releaseOnce sync.Once
+		release := func() {
+			releaseOnce.Do(func() {
+				close(releaseRequest)
+			})
+		}
+		t.Cleanup(release)
+
+		exec.EXPECT().Execute(mock.Anything).
+			Run(func(_ pipeline.ExecutionContext) {
+				requestEntered <- struct{}{}
+
+				<-releaseRequest
+			}).
+			Return(pipeline.ErrNoRuleFound)
+
+		decision := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+		defer decision.Shutdown(t.Context())
+
+		go func() {
+			_ = decision.Serve(lstnr)
+		}()
+
+		time.Sleep(50 * time.Millisecond)
+
+		client := &http.Client{Transport: &http.Transport{}}
+
+		firstResponse := make(chan *http.Response, 1)
+		firstError := make(chan error, 1)
+
+		go func() {
+			req, err := http.NewRequestWithContext(
+				t.Context(),
+				http.MethodGet,
+				fmt.Sprintf("http://%s/", srvConf.Address()),
+				nil,
+			)
+			if err != nil {
+				firstError <- err
+
+				return
+			}
+
+			resp, err := client.Do(req) //nolint:bodyclose
+			firstResponse <- resp
+			firstError <- err
+		}()
+
+		select {
+		case <-requestEntered:
+		case <-time.After(time.Second):
+			release()
+			require.FailNow(t, "first request did not enter pipeline")
+		}
+
+		secondRequest, err := http.NewRequestWithContext(
+			t.Context(),
+			http.MethodGet,
+			fmt.Sprintf("http://%s/", srvConf.Address()),
+			nil,
+		)
+		require.NoError(t, err)
+
+		var (
+			secondResponse *http.Response
+			secondErr      error
+		)
+
+		secondDone := make(chan struct{})
+
+		// WHEN
+		go func() {
+			defer close(secondDone)
+
+			secondResponse, secondErr = client.Do(secondRequest) //nolint:bodyclose
+		}()
+
+		// THEN
+		select {
+		case <-requestEntered:
+			release()
+
+			require.FailNow(
+				t,
+				"second request entered pipeline while maximum number of requests was in flight",
+			)
+
+		case <-secondDone:
+			require.NoError(t, secondErr)
+			require.NotNil(t, secondResponse)
+			defer secondResponse.Body.Close()
+
+			assert.Equal(t, http.StatusServiceUnavailable, secondResponse.StatusCode)
+
+			data, err := io.ReadAll(secondResponse.Body)
+			require.NoError(t, err)
+			assert.Empty(t, data)
+
+		case <-time.After(time.Second):
+			release()
+
+			require.FailNow(t, "second request was not rejected immediately")
+		}
+
+		// WHEN
+		release()
+
+		// THEN
+		select {
+		case err := <-firstError:
+			require.NoError(t, err)
+		case <-time.After(time.Second):
+			require.FailNow(t, "first request did not complete")
+		}
+
+		select {
+		case resp := <-firstResponse:
+			require.NotNil(t, resp)
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+		case <-time.After(time.Second):
+			require.FailNow(t, "first response was not received")
+		}
+	})
 }

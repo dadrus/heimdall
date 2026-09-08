@@ -13,16 +13,16 @@ func TestLimiterTryAcquire(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		max   int
+		limit int64
 		setup func(t *testing.T, limiter *Limiter)
 		want  bool
 	}{
 		"acquires capacity": {
-			max:  1,
-			want: true,
+			limit: 1,
+			want:  true,
 		},
 		"rejects if capacity is exhausted": {
-			max: 1,
+			limit: 1,
 			setup: func(t *testing.T, limiter *Limiter) {
 				t.Helper()
 
@@ -31,7 +31,7 @@ func TestLimiterTryAcquire(t *testing.T) {
 			want: false,
 		},
 		"disabled limit always acquires": {
-			max: 0,
+			limit: 0,
 			setup: func(t *testing.T, limiter *Limiter) {
 				t.Helper()
 
@@ -44,7 +44,7 @@ func TestLimiterTryAcquire(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			limiter := New(tc.max)
+			limiter := New(tc.limit)
 
 			if tc.setup != nil {
 				tc.setup(t, limiter)
@@ -61,11 +61,11 @@ func TestLimiterTryAcquire(t *testing.T) {
 	t.Run("does not exceed capacity under concurrency", func(t *testing.T) {
 		// GIVEN
 		const (
-			max        = 5
+			limit      = 5
 			contenders = 100
 		)
 
-		limiter := New(max)
+		limiter := New(limit)
 
 		start := make(chan struct{})
 		var acquired atomic.Int32
@@ -90,7 +90,7 @@ func TestLimiterTryAcquire(t *testing.T) {
 		wg.Wait()
 
 		// THEN
-		assert.Equal(t, int32(max), acquired.Load())
+		assert.Equal(t, int32(limit), acquired.Load())
 	})
 }
 

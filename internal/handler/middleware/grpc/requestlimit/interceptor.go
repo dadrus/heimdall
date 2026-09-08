@@ -25,7 +25,7 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
-func New(maxInFlight int) grpc.UnaryServerInterceptor {
+func New(maxInFlight int64) grpc.UnaryServerInterceptor {
 	if maxInFlight == 0 {
 		return func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 			return handler(ctx, req)
