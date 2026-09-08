@@ -653,6 +653,12 @@
       "description": "Limits for incoming requests.",
       "additionalProperties": false,
       "properties": {
+        "max_in_flight": {
+          "description": "Maximum number of requests processed concurrently. 0 disables this limit.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 512
+        },
         "headers": {
           "$ref": "#/definitions/ingressRequestHeadersConfig"
         },
@@ -843,6 +849,9 @@
               "$ref": "#/definitions/responseOverride"
             },
             "request_body_too_large": {
+              "$ref": "#/definitions/responseOverride"
+            },
+            "too_many_requests": {
               "$ref": "#/definitions/responseOverride"
             },
             "internal_error": {
