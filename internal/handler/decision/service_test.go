@@ -38,6 +38,49 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
+func TestNewService(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	conf := &config.Configuration{
+		Serve: config.ServeConfig{
+			Timeout: config.Timeout{
+				Read:  11 * time.Second,
+				Write: 12 * time.Second,
+				Idle:  13 * time.Second,
+			},
+			Requests: config.IngressRequests{
+				Headers: config.IngressRequestHeaders{
+					MaxSize: 42 * bytesize.KB,
+				},
+			},
+			HTTP2: config.IngressHTTP2{
+				MaxConcurrentStreams: 17,
+			},
+		},
+	}
+
+	// WHEN
+	srv := newService(
+		conf,
+		mocks.NewCacheMock(t),
+		log.Logger,
+		mocks2.NewExecutorMock(t),
+	)
+
+	// THEN
+	assert.Equal(t, 11*time.Second, srv.ReadTimeout)
+	assert.Equal(t, 12*time.Second, srv.WriteTimeout)
+	assert.Equal(t, 13*time.Second, srv.IdleTimeout)
+	assert.Equal(t, 42*bytesize.KB, bytesize.ByteSize(srv.MaxHeaderBytes))
+
+	require.NotNil(t, srv.HTTP2)
+	assert.Equal(t, 17, srv.HTTP2.MaxConcurrentStreams)
+
+	assert.NotNil(t, srv.Handler)
+	assert.NotNil(t, srv.ErrorLog)
+}
+
 func TestHandleDecisionEndpointRequest(t *testing.T) {
 	t.Parallel()
 

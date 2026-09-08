@@ -95,5 +95,8 @@ func newService(
 		IdleTimeout:    cfg.Timeout.Idle,
 		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
 		ErrorLog:       loggeradapter.NewStdLogger(log),
+		HTTP2: &http.HTTP2Config{
+			MaxConcurrentStreams: cfg.HTTP2.MaxConcurrentStreams,
+		},
 	}
 }
