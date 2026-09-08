@@ -146,6 +146,7 @@ type RespondConfig struct {
 		CommunicationError  ResponseOverride `koanf:"communication_error"`
 		InternalError       ResponseOverride `koanf:"internal_error"`
 		RequestBodyTooLarge ResponseOverride `koanf:"request_body_too_large"`
+		TooManyRequests     ResponseOverride `koanf:"too_many_requests"`
 		NoRuleError         ResponseOverride `koanf:"no_rule_error"`
 	} `koanf:"with"`
 }
