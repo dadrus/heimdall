@@ -161,6 +161,19 @@
         }
       }
     },
+    "http2Config": {
+      "type": "object",
+      "description": "HTTP/2 transport limits for the main service.",
+      "additionalProperties": false,
+      "properties": {
+        "max_concurrent_streams": {
+          "description": "Maximum number of concurrent HTTP/2 streams per client connection.",
+          "type": "integer",
+          "minimum": 1,
+          "default": 100
+        }
+      }
+    },
     "tlsConfig": {
       "description": "TLS Configuration",
       "type": "object",
@@ -2879,6 +2892,9 @@
         },
         "upstream": {
           "$ref": "#/definitions/upstreamConfig"
+        },
+        "http2": {
+          "$ref": "#/definitions/http2Config"
         },
         "cors": {
           "$ref": "#/definitions/corsConfig"
