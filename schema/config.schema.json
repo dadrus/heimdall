@@ -170,6 +170,7 @@
           "description": "Maximum number of concurrent HTTP/2 streams per client connection.",
           "type": "integer",
           "minimum": 1,
+          "maximum": 4294967295,
           "default": 100
         }
       }
