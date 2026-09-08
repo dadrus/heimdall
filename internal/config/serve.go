@@ -63,7 +63,7 @@ type IngressRequestHeaders struct {
 }
 
 type IngressRequestBody struct {
-	MaxSize         bytesize.ByteSize `koanf:"max_size,max_bytes=7EB"`
+	MaxSize         bytesize.ByteSize `koanf:"max_size"                 validate:"max_bytes=7EB"`
 	ReadIdleTimeout time.Duration     `koanf:"read_idle_timeout,string" validate:"gte=0"`
 }
 
