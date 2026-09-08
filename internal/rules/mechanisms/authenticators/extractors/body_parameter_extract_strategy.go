@@ -30,18 +30,26 @@ type BodyParameterExtractStrategy struct {
 func (es BodyParameterExtractStrategy) GetAuthData(ctx pipeline.Context) (AuthData, error) {
 	data, err := ctx.Request().Body()
 	if err != nil {
-		return AuthData{}, errorchain.NewWithMessage(pipeline.ErrArgument, "no usable body present")
+		return AuthData{}, errorchain.NewWithMessage(
+			pipeline.ErrArgument,
+			"no usable body present",
+		).CausedBy(err)
 	}
 
 	entries, ok := data.(map[string]any)
 	if !ok {
-		return AuthData{}, errorchain.NewWithMessage(pipeline.ErrArgument, "no usable body present")
+		return AuthData{}, errorchain.NewWithMessage(
+			pipeline.ErrArgument,
+			"no usable body present",
+		)
 	}
 
 	entry, ok := entries[es.Name]
 	if !ok {
-		return AuthData{}, errorchain.NewWithMessagef(pipeline.ErrArgument,
-			"no %s parameter present in request body", es.Name)
+		return AuthData{}, errorchain.NewWithMessagef(
+			pipeline.ErrArgument,
+			"no %s parameter present in request body", es.Name,
+		)
 	}
 
 	var value string
@@ -51,25 +59,33 @@ func (es BodyParameterExtractStrategy) GetAuthData(ctx pipeline.Context) (AuthDa
 		value = val
 	case []string:
 		if len(val) != 1 {
-			return AuthData{}, errorchain.NewWithMessagef(pipeline.ErrArgument,
-				"%s request body parameter is present multiple times", es.Name)
+			return AuthData{}, errorchain.NewWithMessagef(
+				pipeline.ErrArgument,
+				"%s request body parameter is present multiple times", es.Name,
+			)
 		}
 
 		value = val[0]
 	case []any:
 		if len(val) != 1 {
-			return AuthData{}, errorchain.NewWithMessagef(pipeline.ErrArgument,
-				"%s request body parameter is present multiple times", es.Name)
+			return AuthData{}, errorchain.NewWithMessagef(
+				pipeline.ErrArgument,
+				"%s request body parameter is present multiple times", es.Name,
+			)
 		}
 
 		value, ok = val[0].(string)
 		if !ok {
-			return AuthData{}, errorchain.NewWithMessagef(pipeline.ErrArgument,
-				"unexpected type for %s request body parameter", es.Name)
+			return AuthData{}, errorchain.NewWithMessagef(
+				pipeline.ErrArgument,
+				"unexpected type for %s request body parameter", es.Name,
+			)
 		}
 	default:
-		return AuthData{}, errorchain.NewWithMessagef(pipeline.ErrArgument,
-			"unexpected type for %s request body parameter", es.Name)
+		return AuthData{}, errorchain.NewWithMessagef(
+			pipeline.ErrArgument,
+			"unexpected type for %s request body parameter", es.Name,
+		)
 	}
 
 	return AuthData{
