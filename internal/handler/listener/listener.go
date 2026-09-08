@@ -21,6 +21,8 @@ import (
 	"crypto/tls"
 	"net"
 
+	"golang.org/x/net/netutil"
+
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/secrets"
 	"github.com/dadrus/heimdall/internal/x/tlsx"
@@ -61,14 +63,16 @@ func (l *listener) Accept() (net.Conn, error) {
 }
 
 type Factory struct {
-	address    string
-	tlsConfig  *tls.Config
-	tlsEnabled bool
+	address        string
+	tlsConfig      *tls.Config
+	tlsEnabled     bool
+	maxConnections int
 }
 
 func NewFactory(
 	address string,
 	tlsConf *config.TLS,
+	maxConnections int,
 	secretResolver secrets.Resolver,
 ) (Factory, error) {
 	var tlsConfig *tls.Config
@@ -83,9 +87,10 @@ func NewFactory(
 	}
 
 	return Factory{
-		address:    address,
-		tlsConfig:  tlsConfig,
-		tlsEnabled: tlsConf != nil,
+		address:        address,
+		tlsConfig:      tlsConfig,
+		tlsEnabled:     tlsConf != nil,
+		maxConnections: maxConnections,
 	}, nil
 }
 
@@ -93,6 +98,10 @@ func (f Factory) Create(ctx context.Context) (net.Listener, error) {
 	listnr, err := listen(ctx, f.address)
 	if err != nil {
 		return nil, err
+	}
+
+	if f.maxConnections > 0 {
+		listnr = netutil.LimitListener(listnr, f.maxConnections)
 	}
 
 	listnr = &listener{Listener: listnr}

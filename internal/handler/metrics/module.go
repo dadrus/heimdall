@@ -74,7 +74,7 @@ func newLifecycleManager(app app.Context) (lifecycleManager, error) {
 		return noopManager{}, nil
 	}
 
-	lf, err := listener.NewFactory(cfg.Address(), nil, nil)
+	lf, err := listener.NewFactory(cfg.Address(), nil, 0, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -56,7 +56,7 @@ func New(
 		return noopController{}, nil
 	}
 
-	lf, err := listener.NewFactory(listeningAddress, tlsConf, sr)
+	lf, err := listener.NewFactory(listeningAddress, tlsConf, 0, sr)
 	if err != nil {
 		return nil, err
 	}

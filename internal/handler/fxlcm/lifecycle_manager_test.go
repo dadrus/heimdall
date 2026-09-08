@@ -94,7 +94,12 @@ func TestLifecycleManagerStart(t *testing.T) {
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
 
-			lf, err := listener.NewFactory(fmt.Sprintf("127.0.0.1:%d", port), nil, nil)
+			lf, err := listener.NewFactory(
+				fmt.Sprintf("127.0.0.1:%d", port),
+				nil,
+				0,
+				nil,
+			)
 			require.NoError(t, err)
 
 			lcm := &LifecycleManager{

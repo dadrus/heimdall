@@ -126,6 +126,7 @@ func (suite *ServiceTestSuite) SetupTest() {
 	factory, err := listener.NewFactory(
 		conf.Management.Address(),
 		conf.Management.TLS,
+		0,
 		nil,
 	)
 	suite.Require().NoError(err)

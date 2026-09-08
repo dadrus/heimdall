@@ -638,6 +638,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			factory, err := listener.NewFactory(
 				srvConf.Address(),
 				srvConf.TLS,
+				0,
 				nil,
 			)
 			require.NoError(t, err)

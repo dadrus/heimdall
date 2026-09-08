@@ -1266,6 +1266,7 @@ func TestProxyService(t *testing.T) {
 			factory, err := listener.NewFactory(
 				proxyConf.Address(),
 				proxyConf.TLS,
+				0,
 				sr,
 			)
 			require.NoError(t, err)
@@ -1389,6 +1390,7 @@ func TestWebSocketSupport(t *testing.T) {
 	factory, err := listener.NewFactory(
 		conf.Serve.Address(),
 		conf.Serve.TLS,
+		0,
 		nil,
 	)
 	require.NoError(t, err)
@@ -1500,6 +1502,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 	factory, err := listener.NewFactory(
 		conf.Serve.Address(),
 		conf.Serve.TLS,
+		0,
 		nil,
 	)
 	require.NoError(t, err)
