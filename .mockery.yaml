@@ -37,10 +37,6 @@ packages:
   github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler:
     interfaces:
       ErrorHandler: {}
-  github.com/dadrus/heimdall/internal/handler/requestcontext:
-    interfaces:
-      Context: {}
-      ContextFactory: {}
   github.com/dadrus/heimdall/internal/pipeline:
     interfaces:
       Context: {}

@@ -35,10 +35,6 @@ func newCommitter() *committer {
 }
 
 func (c *committer) Commit(_ commitTarget, ctx *RequestContext) (*envoy_auth.CheckResponse, error) {
-	if err := ctx.Error(); err != nil {
-		return nil, err
-	}
-
 	zerolog.Ctx(ctx.Context()).Debug().Msg("Creating response")
 
 	upstreamHeaders := ctx.UpstreamHeaders()

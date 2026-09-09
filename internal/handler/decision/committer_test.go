@@ -1,3 +1,19 @@
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package decision
 
 import (
@@ -8,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dadrus/heimdall/internal/handler/requestcontext"
+	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 func TestCommitterCommit(t *testing.T) {
@@ -17,12 +33,12 @@ func TestCommitterCommit(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		headers http.Header
 		code    int
-		setup   func(t *testing.T, rc requestcontext.Context)
+		setup   func(t *testing.T, rc pipeline.ExecutionContext)
 		assert  func(t *testing.T, err error, rec *httptest.ResponseRecorder)
 	}{
 		"only response code is set": {
 			code: http.StatusNoContent,
-			setup: func(t *testing.T, _ requestcontext.Context) {
+			setup: func(t *testing.T, _ pipeline.ExecutionContext) {
 				t.Helper()
 			},
 			assert: func(t *testing.T, err error, rec *httptest.ResponseRecorder) {
@@ -35,7 +51,7 @@ func TestCommitterCommit(t *testing.T) {
 		},
 		"explicit header mutation is returned": {
 			code: http.StatusMultiStatus,
-			setup: func(t *testing.T, rc requestcontext.Context) {
+			setup: func(t *testing.T, rc pipeline.ExecutionContext) {
 				t.Helper()
 
 				rc.PrepareUpstreamView(nil)
@@ -51,7 +67,7 @@ func TestCommitterCommit(t *testing.T) {
 		},
 		"multiple values of explicit header mutation are returned": {
 			code: http.StatusMultiStatus,
-			setup: func(t *testing.T, rc requestcontext.Context) {
+			setup: func(t *testing.T, rc pipeline.ExecutionContext) {
 				t.Helper()
 
 				rc.PrepareUpstreamView(nil)
@@ -74,7 +90,7 @@ func TestCommitterCommit(t *testing.T) {
 				"X-Replaced":  []string{"old"},
 			},
 			code: http.StatusOK,
-			setup: func(t *testing.T, rc requestcontext.Context) {
+			setup: func(t *testing.T, rc pipeline.ExecutionContext) {
 				t.Helper()
 
 				rc.PrepareUpstreamView(nil)
@@ -98,7 +114,7 @@ func TestCommitterCommit(t *testing.T) {
 				"Cookie": []string{"existing=foo"},
 			},
 			code: http.StatusAccepted,
-			setup: func(t *testing.T, rc requestcontext.Context) {
+			setup: func(t *testing.T, rc pipeline.ExecutionContext) {
 				t.Helper()
 
 				rc.PrepareUpstreamView(nil)
@@ -114,7 +130,7 @@ func TestCommitterCommit(t *testing.T) {
 		},
 		"Host mutation is returned as regular header mutation": {
 			code: http.StatusOK,
-			setup: func(t *testing.T, rc requestcontext.Context) {
+			setup: func(t *testing.T, rc pipeline.ExecutionContext) {
 				t.Helper()
 
 				rc.PrepareUpstreamView(nil)

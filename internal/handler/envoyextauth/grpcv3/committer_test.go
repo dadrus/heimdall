@@ -101,19 +101,6 @@ func TestCommitterCommit(t *testing.T) {
 				assert.Equal(t, "barfoo", header.GetValue())
 			},
 		},
-		"error is returned": {
-			updateContext: func(t *testing.T, ctx pipeline.ExecutionContext) {
-				t.Helper()
-
-				ctx.SetError(assert.AnError)
-			},
-			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
-				t.Helper()
-
-				require.ErrorIs(t, err, assert.AnError)
-				require.Nil(t, response)
-			},
-		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
