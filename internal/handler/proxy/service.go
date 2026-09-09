@@ -102,8 +102,7 @@ func newService(
 		errorhandler.WithRequestBodyTooLargeErrorCode(cfg.Respond.With.RequestBodyTooLarge.Code),
 		errorhandler.WithTooManyRequestsErrorCode(cfg.Respond.With.TooManyRequests.Code),
 	)
-	transport := newTransport(cfg, tlsClientConfig)
-	rt := newObservedRoundTripper(transport)
+	rt := newObservedRoundTripper(newProfileRoundTripper(cfg, tlsClientConfig))
 	coordinator := requestcoordinator.New(exec, newContextFactory(), newCommitter(rt))
 
 	hc := alice.New(

@@ -20,6 +20,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httputil"
 	"net/url"
 	"testing"
 
@@ -56,6 +57,9 @@ func TestRequestContextReset(t *testing.T) {
 	// THEN
 	require.Nil(t, ctx.req)
 	require.Empty(t, ctx.routingURL)
+	require.Equal(t, upstreamSchemeUnknown, ctx.upstreamScheme)
+	require.False(t, ctx.nativeGRPC)
+	require.False(t, ctx.upgrade)
 	require.False(t, ctx.upstreamViewPrepared)
 	require.False(t, ctx.hasUpstreamTarget)
 	require.Empty(t, ctx.UpstreamHeaders())
@@ -175,6 +179,110 @@ func TestRequestContextURL(t *testing.T) {
 			assert.Equal(t, tc.expectedHost, ctx.Headers().Get("Host"))
 		})
 	}
+}
+
+func TestRequestContextTransportClassification(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		contentType   string
+		routingScheme string
+		upgrade       bool
+		nativeGRPC    bool
+		scheme        upstreamScheme
+	}{
+		"ordinary http request": {
+			routingScheme: "http",
+			scheme:        upstreamSchemeHTTP,
+		},
+		"ordinary https request": {
+			routingScheme: "https",
+			scheme:        upstreamSchemeHTTPS,
+		},
+		"native gRPC request": {
+			contentType:   "application/grpc+proto",
+			routingScheme: "https",
+			nativeGRPC:    true,
+			scheme:        upstreamSchemeHTTPS,
+		},
+		"explicit h2c upstream": {
+			routingScheme: "h2c",
+			scheme:        upstreamSchemeH2C,
+		},
+		"upgrade request": {
+			routingScheme: "https",
+			upgrade:       true,
+			scheme:        upstreamSchemeHTTPS,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "https://foo.bar/test", nil)
+			if len(tc.contentType) != 0 {
+				req.Header.Set("Content-Type", tc.contentType)
+			}
+
+			if tc.upgrade {
+				req.Header.Set("Connection", "Upgrade")
+				req.Header.Set("Upgrade", "websocket")
+			}
+
+			ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
+			ctx.Init(req)
+
+			target := mocks.NewUpstreamTargetMock(t)
+			target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+				targetURL.Scheme = tc.routingScheme
+				targetURL.Host = "upstream.local"
+			})
+			target.EXPECT().ForwardHostHeader().Return(false)
+
+			ctx.PrepareUpstreamView(target)
+			proxyReq := &httputil.ProxyRequest{
+				In:  req,
+				Out: req.Clone(t.Context()),
+			}
+
+			// WHEN
+			ctx.rewriteRequest(proxyReq)
+
+			// THEN
+			assert.Equal(t, tc.nativeGRPC, ctx.nativeGRPC)
+			assert.Equal(t, tc.upgrade, ctx.upgrade)
+			assert.Equal(t, tc.scheme, ctx.upstreamScheme)
+		})
+	}
+}
+
+func TestRequestContextRewriteRequestNormalizesH2C(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
+	ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
+	ctx.Init(req)
+
+	target := mocks.NewUpstreamTargetMock(t)
+	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+		targetURL.Scheme = "h2c"
+		targetURL.Host = "upstream.local"
+	})
+	target.EXPECT().ForwardHostHeader().Return(false)
+
+	ctx.PrepareUpstreamView(target)
+	proxyReq := &httputil.ProxyRequest{
+		In:  req,
+		Out: req.Clone(t.Context()),
+	}
+
+	// WHEN
+	ctx.rewriteRequest(proxyReq)
+
+	// THEN
+	assert.Equal(t, "h2c", ctx.routingURL.Scheme)
+	assert.Equal(t, upstreamSchemeH2C, ctx.upstreamScheme)
+	assert.Equal(t, "http", proxyReq.Out.URL.Scheme)
+	assert.Equal(t, "upstream.local", proxyReq.Out.URL.Host)
 }
 
 func TestRequestContextHostMutationDoesNotChangeURL(t *testing.T) {

@@ -38,12 +38,17 @@ type requestContext struct {
 	req *http.Request
 
 	routingURL           url.URL
+	upstreamScheme       upstreamScheme
+	nativeGRPC           bool
+	upgrade              bool
 	upstreamViewPrepared bool
 	hasUpstreamTarget    bool
 }
 
 func (r *requestContext) Init(req *http.Request) {
 	r.req = req
+	r.nativeGRPC = isNativeGRPCContentType(req.Header.Get("Content-Type"))
+	r.upgrade = isUpgradeRequest(req)
 
 	r.NetHTTPRequestContext.Init(req)
 }
@@ -52,6 +57,9 @@ func (r *requestContext) Reset() {
 	r.req = nil
 
 	r.routingURL = url.URL{}
+	r.upstreamScheme = upstreamSchemeUnknown
+	r.nativeGRPC = false
+	r.upgrade = false
 	r.upstreamViewPrepared = false
 	r.hasUpstreamTarget = false
 
@@ -105,8 +113,10 @@ func (r *requestContext) URL() url.URL { return r.routingURL }
 
 func (r *requestContext) rewriteRequest(proxyReq *httputil.ProxyRequest) {
 	proxyReq.Out.Method = r.Method()
-	proxyReq.Out.URL = &r.routingURL
+	*proxyReq.Out.URL = r.routingURL
+	r.upstreamScheme = upstreamSchemeFrom(r.routingURL.Scheme)
 
+	normalizeUpstreamScheme(proxyReq.Out, r.upstreamScheme)
 	r.applyUpstreamView(proxyReq.Out)
 }
 
