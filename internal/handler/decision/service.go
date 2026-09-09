@@ -37,6 +37,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/requestlimit"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/requestvalidation"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/trustedproxy"
+	"github.com/dadrus/heimdall/internal/handler/requestcoordinator"
 	"github.com/dadrus/heimdall/internal/handler/service"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
@@ -63,6 +64,7 @@ func newService(
 		errorhandler.WithTooManyRequestsErrorCode(cfg.Respond.With.TooManyRequests.Code),
 	)
 	acceptedCode := x.IfThenElse(cfg.Respond.With.Accepted.Code != 0, cfg.Respond.With.Accepted.Code, http.StatusOK)
+	coordinator := requestcoordinator.New(exec, newContextFactory(), newCommitter(acceptedCode))
 
 	hc := alice.New(
 		trustedproxy.New(
@@ -89,7 +91,7 @@ func newService(
 		requestvalidation.New(),
 		dump.New(),
 		cachemiddleware.New(cch),
-	).Then(service.NewHandler(newContextFactory(acceptedCode), exec, eh))
+	).Then(service.NewHandler(coordinator, eh))
 
 	return &http.Server{
 		Handler:        hc,

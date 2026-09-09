@@ -22,6 +22,4 @@ import (
 
 type Context interface {
 	pipeline.ExecutionContext
-
-	Finalize() error
 }

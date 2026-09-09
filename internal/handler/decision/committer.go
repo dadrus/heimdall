@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,32 +14,37 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package service
+package decision
 
 import (
 	"net/http"
 
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
+	"github.com/rs/zerolog"
 )
 
-type requestCoordinator interface {
-	Handle(req *http.Request, rw http.ResponseWriter) (struct{}, error)
+type committer struct {
+	acceptedCode int
 }
 
-type handler struct {
-	c  requestCoordinator
-	eh errorhandler.ErrorHandler
-}
-
-func NewHandler(coordinator requestCoordinator, eh errorhandler.ErrorHandler) http.Handler {
-	return &handler{
-		c:  coordinator,
-		eh: eh,
+func newCommitter(acceptedCode int) *committer {
+	return &committer{
+		acceptedCode: acceptedCode,
 	}
 }
 
-func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if _, err := h.c.Handle(req, rw); err != nil {
-		h.eh.HandleError(rw, req, err)
+func (c *committer) Commit(
+	rw http.ResponseWriter,
+	rc *requestContext,
+) (struct{}, error) {
+	zerolog.Ctx(rc.Context()).Debug().Msg("Creating response")
+
+	for name, values := range rc.UpstreamHeaders() {
+		for _, value := range values {
+			rw.Header().Add(name, value)
+		}
 	}
+
+	rw.WriteHeader(c.acceptedCode)
+
+	return struct{}{}, nil
 }

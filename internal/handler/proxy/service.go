@@ -42,6 +42,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/requestlimit"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/requestvalidation"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/trustedproxy"
+	"github.com/dadrus/heimdall/internal/handler/requestcoordinator"
 	"github.com/dadrus/heimdall/internal/handler/service"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
@@ -101,6 +102,8 @@ func newService(
 		errorhandler.WithRequestBodyTooLargeErrorCode(cfg.Respond.With.RequestBodyTooLarge.Code),
 		errorhandler.WithTooManyRequestsErrorCode(cfg.Respond.With.TooManyRequests.Code),
 	)
+	rt := newRoundTripper(cfg, tlsClientConfig)
+	coordinator := requestcoordinator.New(exec, newContextFactory(), newCommitter(rt))
 
 	hc := alice.New(
 		trustedproxy.New(
@@ -143,7 +146,7 @@ func newService(
 			func() func(http.Handler) http.Handler { return passthrough.New },
 		),
 		cachemiddleware.New(cch),
-	).Then(service.NewHandler(newContextFactory(cfg, tlsClientConfig), exec, eh))
+	).Then(service.NewHandler(coordinator, eh))
 
 	return &http.Server{
 		Handler:        hc,

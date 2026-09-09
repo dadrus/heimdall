@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,32 +14,39 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package service
+package decision
 
 import (
 	"net/http"
+	"sync"
 
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 )
 
-type requestCoordinator interface {
-	Handle(req *http.Request, rw http.ResponseWriter) (struct{}, error)
+type contextFactory struct {
+	pool *sync.Pool
 }
 
-type handler struct {
-	c  requestCoordinator
-	eh errorhandler.ErrorHandler
+func (cf *contextFactory) Create(req *http.Request) *requestContext {
+	rc := cf.pool.Get().(*requestContext) //nolint: forcetypeassert
+	rc.Init(req)
+
+	return rc
 }
 
-func NewHandler(coordinator requestCoordinator, eh errorhandler.ErrorHandler) http.Handler {
-	return &handler{
-		c:  coordinator,
-		eh: eh,
-	}
+func (cf *contextFactory) Destroy(rc *requestContext) {
+	rc.Reset()
+	cf.pool.Put(rc)
 }
 
-func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	if _, err := h.c.Handle(req, rw); err != nil {
-		h.eh.HandleError(rw, req, err)
+func newContextFactory() *contextFactory {
+	return &contextFactory{
+		pool: &sync.Pool{
+			New: func() any {
+				return &requestContext{
+					NetHTTPRequestContext: requestcontext.New(),
+				}
+			},
+		},
 	}
 }

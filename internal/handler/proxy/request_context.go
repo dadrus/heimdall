@@ -18,108 +18,37 @@ package proxy
 
 import (
 	"context"
-	"crypto/tls"
-	"errors"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"strings"
-	"sync"
-	"time"
 
-	"github.com/ccoveille/go-safecast/v2"
-	"github.com/rs/zerolog"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-
-	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/headerpolicy"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
-	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
 var _ pipeline.UpstreamRequest = (*requestContext)(nil)
 
-type contextFactory struct {
-	roundTripper http.RoundTripper
-	pool         *sync.Pool
-}
-
-func (cf *contextFactory) Create(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
-	rc := cf.pool.Get().(*requestContext) //nolint:forcetypeassert
-
-	rc.Init(rw, req, cf.roundTripper)
-
-	return rc
-}
-
-func (cf *contextFactory) Destroy(ctx requestcontext.Context) {
-	rc := ctx.(*requestContext) //nolint:forcetypeassert
-
-	rc.Reset()
-
-	cf.pool.Put(rc)
-}
-
-func newContextFactory(
-	cfg config.ServeConfig,
-	tlsCfg *tls.Config,
-) requestcontext.ContextFactory {
-	return &contextFactory{
-		roundTripper: &http.Transport{
-			// tlsClientConfig used for test purposes only
-			// must be removed as soon as tls configuration
-			// is possible per upstream
-			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
-				Timeout:   cfg.Upstream.Connections.DialTimeout,
-				KeepAlive: 30 * time.Second, //nolint:mnd
-			}).DialContext,
-			ResponseHeaderTimeout:  cfg.Upstream.Responses.Headers.ReadTimeout,
-			MaxResponseHeaderBytes: safecast.MustConvert[int64](cfg.Upstream.Responses.Headers.MaxSize),
-			MaxIdleConns:           cfg.Upstream.Connections.MaxIdle,
-			MaxIdleConnsPerHost:    cfg.Upstream.Connections.MaxIdlePerHost,
-			MaxConnsPerHost:        cfg.Upstream.Connections.MaxPerHost,
-			IdleConnTimeout:        cfg.Upstream.Connections.IdleTimeout,
-			TLSHandshakeTimeout:    cfg.Upstream.Connections.TLSHandshakeTimeout,
-			ExpectContinueTimeout:  cfg.Upstream.Requests.ExpectContinueTimeout,
-			ForceAttemptHTTP2:      true,
-			TLSClientConfig:        tlsCfg,
-		},
-		pool: &sync.Pool{New: func() any {
-			return &requestContext{
-				NetHTTPRequestContext: requestcontext.New(),
-			}
-		}},
-	}
-}
-
 type requestContext struct {
 	*requestcontext.NetHTTPRequestContext
 
-	rw  http.ResponseWriter
 	req *http.Request
-	rt  http.RoundTripper
 
 	routingURL           url.URL
 	upstreamViewPrepared bool
 	hasUpstreamTarget    bool
 }
 
-func (r *requestContext) Init(rw http.ResponseWriter, req *http.Request, rt http.RoundTripper) {
-	r.rw = rw
-	r.rt = rt
+func (r *requestContext) Init(req *http.Request) {
 	r.req = req
 
 	r.NetHTTPRequestContext.Init(req)
 }
 
 func (r *requestContext) Reset() {
-	r.rw = nil
-	r.rt = nil
 	r.req = nil
 
 	r.routingURL = url.URL{}
@@ -170,49 +99,6 @@ func (r *requestContext) PrepareUpstreamView(target pipeline.UpstreamTarget) {
 	}
 
 	r.UpstreamHeaders().Set("Host", host)
-}
-
-func (r *requestContext) Finalize() error {
-	logger := zerolog.Ctx(r.Context())
-
-	if err := r.Error(); err != nil {
-		return err
-	}
-
-	if !r.hasUpstreamTarget {
-		return errorchain.NewWithMessage(pipeline.ErrConfiguration, "No upstream reference defined")
-	}
-
-	logger.Info().
-		Str("_method", r.Request().Method).
-		Str("_upstream", r.routingURL.String()).
-		Msg("Forwarding request")
-
-	errHolder := struct{ err error }{}
-
-	proxy := &httputil.ReverseProxy{
-		ErrorHandler: func(_ http.ResponseWriter, _ *http.Request, err error) {
-			perr := pipeline.ErrCommunication
-			if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
-				perr = pipeline.ErrRequestBodyTooLarge
-			}
-
-			logger.Error().Err(err).Msg("Proxying error")
-
-			errHolder.err = errorchain.NewWithMessage(perr, "Failed to proxy request").CausedBy(err)
-		},
-		Rewrite: r.rewriteRequest,
-		Transport: otelhttp.NewTransport(
-			httpx.NewTraceRoundTripper(r.rt),
-			otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
-				return r.Proto + " " + r.Method + " " + r.URL.Path + " @" + r.URL.Host
-			})),
-	}
-
-	proxy.ServeHTTP(r.rw, r.req)
-
-	// set in the proxy error handler above
-	return errHolder.err
 }
 
 func (r *requestContext) URL() url.URL { return r.routingURL }
