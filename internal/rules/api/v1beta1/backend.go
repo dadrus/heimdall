@@ -57,5 +57,9 @@ func (b *Backend) DeepCopyInto(out *Backend) {
 }
 
 func (b *Backend) IsInsecure() bool {
-	return b != nil && b.URLRewriter != nil && b.URLRewriter.Scheme == "http"
+	if b == nil || b.URLRewriter == nil {
+		return false
+	}
+
+	return b.URLRewriter.Scheme == "http" || b.URLRewriter.Scheme == "h2c"
 }
