@@ -33,6 +33,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -59,6 +60,18 @@ import (
 	"github.com/dadrus/heimdall/internal/x/stringx"
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
+
+type testExecutor func(pipeline.ExecutionContext) error
+
+func (e testExecutor) Execute(ctx pipeline.ExecutionContext) error { return e(ctx) }
+
+type testUpstreamTarget struct {
+	targetURL         url.URL
+	forwardHostHeader bool
+}
+
+func (t testUpstreamTarget) ApplyTo(targetURL *url.URL) { *targetURL = t.targetURL }
+func (t testUpstreamTarget) ForwardHostHeader() bool    { return t.forwardHostHeader }
 
 func TestNewService(t *testing.T) {
 	t.Parallel()
@@ -123,6 +136,7 @@ func TestProxyService(t *testing.T) {
 		serviceConf    config.ServeConfig
 		enableMetrics  bool
 		disableHTTP2   bool
+		upstreamScheme string
 		createRequest  func(t *testing.T, host string) *http.Request
 		createClient   func(t *testing.T) *http.Client
 		configureMocks func(
@@ -332,6 +346,7 @@ func TestProxyService(t *testing.T) {
 			},
 		},
 		"successful rule execution - request method and path are taken from the real request (trusted proxy not configured)": {
+			upstreamScheme: "http",
 			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 			},
@@ -385,6 +400,8 @@ func TestProxyService(t *testing.T) {
 			},
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
+
+				assert.Equal(t, "HTTP/1.1", req.Proto)
 
 				assert.Equal(t, http.MethodPost, req.Method)
 				assert.Equal(t, "/foobar", req.URL.Path)
@@ -992,6 +1009,301 @@ func TestProxyService(t *testing.T) {
 				assert.JSONEq(t, `{ "foo": "bar" }`, string(data))
 			},
 		},
+		"h2c usage": {
+			upstreamScheme: "h2c",
+			serviceConf: config.ServeConfig{
+				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodGet,
+					fmt.Sprintf("http://%s/foobar", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+					ctx.PrepareUpstreamView(target)
+				}).Return(nil)
+			},
+			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
+				t.Helper()
+
+				assert.Equal(t, "HTTP/2.0", req.Proto)
+				assert.Equal(t, "/bar", req.URL.Path)
+
+				rw.WriteHeader(http.StatusOK)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.True(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+			},
+		},
+		"native gRPC uses http2 over https": {
+			serviceConf: config.ServeConfig{
+				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/foobar", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				req.Header.Set("Content-Type", grpcContentType)
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+					ctx.PrepareUpstreamView(target)
+				}).Return(nil)
+			},
+			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
+				t.Helper()
+
+				assert.Equal(t, "HTTP/2.0", req.Proto)
+				assert.Equal(t, grpcContentType, req.Header.Get("Content-Type"))
+
+				rw.WriteHeader(http.StatusOK)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.True(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+			},
+		},
+		"native gRPC uses h2c": {
+			upstreamScheme: "h2c",
+			serviceConf: config.ServeConfig{
+				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/foobar", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				req.Header.Set("Content-Type", grpcContentType)
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+					ctx.PrepareUpstreamView(target)
+				}).Return(nil)
+			},
+			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
+				t.Helper()
+
+				assert.Equal(t, "HTTP/2.0", req.Proto)
+				assert.Equal(t, grpcContentType, req.Header.Get("Content-Type"))
+
+				rw.WriteHeader(http.StatusOK)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.True(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+			},
+		},
+		"native gRPC over http is rejected": {
+			upstreamScheme: "http",
+			serviceConf: config.ServeConfig{
+				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/foobar", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				req.Header.Set("Content-Type", grpcContentType)
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+					ctx.PrepareUpstreamView(target)
+				}).Return(nil)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.False(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+				data, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
+			},
+		},
+		"upgrade over h2c is rejected": {
+			upstreamScheme: "h2c",
+			serviceConf: config.ServeConfig{
+				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodGet,
+					fmt.Sprintf("http://%s/foobar", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				req.Header.Set("Connection", "Upgrade")
+				req.Header.Set("Upgrade", "websocket")
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+					ctx.PrepareUpstreamView(target)
+				}).Return(nil)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.False(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+				data, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
+			},
+		},
 		"http2 not supported by upstream server": {
 			disableHTTP2: true,
 			serviceConf: config.ServeConfig{
@@ -1111,6 +1423,63 @@ func TestProxyService(t *testing.T) {
 				data, err := io.ReadAll(resp.Body)
 				require.NoError(t, err)
 				assert.JSONEq(t, `{ "foo": "bar" }`, string(data))
+			},
+		},
+		"native gRPC does not fall back to http1": {
+			disableHTTP2: true,
+			serviceConf: config.ServeConfig{
+				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/foobar", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				req.Header.Set("Content-Type", grpcContentType)
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+					ctx.PrepareUpstreamView(target)
+				}).Return(nil)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.False(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+				data, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
 			},
 		},
 		"request body exceeds limit with known content length": {
@@ -1245,7 +1614,7 @@ func TestProxyService(t *testing.T) {
 				))
 			}
 
-			upstreamCalled := false
+			var upstreamCalled atomic.Bool
 
 			processRequest := x.IfThenElse(tc.processRequest != nil, tc.processRequest,
 				func(t *testing.T, rw http.ResponseWriter, _ *http.Request) {
@@ -1255,21 +1624,34 @@ func TestProxyService(t *testing.T) {
 				})
 
 			upstreamSrv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				upstreamCalled = true
+				upstreamCalled.Store(true)
 
 				processRequest(t, w, r)
 			}))
 			defer upstreamSrv.Close()
 
-			upstreamSrv.EnableHTTP2 = !tc.disableHTTP2
-			upstreamSrv.StartTLS()
+			switch tc.upstreamScheme {
+			case "http":
+				upstreamSrv.Start()
+			case "h2c":
+				upstreamSrv.Config.Protocols = new(http.Protocols)
+				upstreamSrv.Config.Protocols.SetUnencryptedHTTP2(true)
+				upstreamSrv.Start()
+			default:
+				upstreamSrv.EnableHTTP2 = !tc.disableHTTP2
+				upstreamSrv.StartTLS()
 
-			certPool := x509.NewCertPool()
-			certPool.AddCert(upstreamSrv.Certificate())
-			tlsClientConfig = &tls.Config{RootCAs: certPool} //nolint:gosec
+				certPool := x509.NewCertPool()
+				certPool.AddCert(upstreamSrv.Certificate())
+				tlsClientConfig = &tls.Config{RootCAs: certPool} //nolint:gosec
+			}
 
 			upstreamURL, err := url.Parse(upstreamSrv.URL)
 			require.NoError(t, err)
+
+			if tc.upstreamScheme == "h2c" {
+				upstreamURL.Scheme = "h2c"
+			}
 
 			createClient := x.IfThenElse(tc.createClient != nil,
 				tc.createClient,
@@ -1329,7 +1711,7 @@ func TestProxyService(t *testing.T) {
 				defer resp.Body.Close()
 			}
 
-			tc.assertResponse(t, err, upstreamCalled, resp)
+			tc.assertResponse(t, err, upstreamCalled.Load(), resp)
 
 			var rm metricdata.ResourceMetrics
 
@@ -1491,6 +1873,121 @@ func TestProxyService(t *testing.T) {
 	})
 }
 
+func TestProxyServiceUsesUpdatedUpstreamScheme(t *testing.T) {
+	// GIVEN
+	upstreamProtocols := make(chan string, 2)
+	upstreamSrv := httptest.NewUnstartedServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		upstreamProtocols <- req.Proto
+
+		rw.WriteHeader(http.StatusOK)
+	}))
+	defer upstreamSrv.Close()
+
+	upstreamSrv.Config.Protocols = new(http.Protocols)
+	upstreamSrv.Config.Protocols.SetHTTP1(true)
+	upstreamSrv.Config.Protocols.SetUnencryptedHTTP2(true)
+	upstreamSrv.Start()
+
+	upstreamURL, err := url.Parse(upstreamSrv.URL)
+	require.NoError(t, err)
+
+	var (
+		schemeMu sync.RWMutex
+		scheme   = "http"
+	)
+
+	target := mocks2.NewUpstreamTargetMock(t)
+	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+		schemeMu.RLock()
+		defer schemeMu.RUnlock()
+
+		*targetURL = url.URL{
+			Scheme: scheme,
+			Host:   upstreamURL.Host,
+			Path:   "/bar",
+		}
+	}).Twice()
+	target.EXPECT().ForwardHostHeader().Return(true).Twice()
+
+	exec := mocks2.NewExecutorMock(t)
+	exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+		ctx.PrepareUpstreamView(target)
+	}).Return(nil).Twice()
+
+	port, err := testsupport.GetFreePort()
+	require.NoError(t, err)
+
+	conf := &config.Configuration{
+		Serve: config.ServeConfig{
+			Host: "127.0.0.1",
+			Port: port,
+			Timeout: config.Timeout{
+				Read:  1 * time.Second,
+				Write: 1 * time.Second,
+				Idle:  1 * time.Second,
+			},
+		},
+	}
+
+	factory, err := listener.NewFactory(
+		conf.Serve.Address(),
+		conf.Serve.TLS,
+		0,
+		nil,
+	)
+	require.NoError(t, err)
+
+	lstnr, err := factory.Create(t.Context())
+	require.NoError(t, err)
+
+	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+	defer proxy.Shutdown(t.Context())
+
+	go func() {
+		_ = proxy.Serve(lstnr)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	client := &http.Client{Transport: &http.Transport{}}
+
+	doRequest := func() *http.Response {
+		req, err := http.NewRequestWithContext(
+			t.Context(),
+			http.MethodGet,
+			fmt.Sprintf("http://%s/foo", conf.Serve.Address()),
+			nil,
+		)
+		require.NoError(t, err)
+
+		resp, err := client.Do(req) //nolint:bodyclose
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		return resp
+	}
+
+	// WHEN
+	resp := doRequest()
+
+	// THEN
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NoError(t, resp.Body.Close())
+	assert.Equal(t, "HTTP/1.1", <-upstreamProtocols)
+
+	// WHEN
+	schemeMu.Lock()
+	scheme = "h2c"
+	schemeMu.Unlock()
+
+	resp = doRequest()
+
+	// THEN
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NoError(t, resp.Body.Close())
+	assert.Equal(t, "HTTP/2.0", <-upstreamProtocols)
+}
+
 func TestWebSocketSupport(t *testing.T) {
 	t.Parallel()
 
@@ -1498,6 +1995,7 @@ func TestWebSocketSupport(t *testing.T) {
 	require.NoError(t, err)
 
 	upstreamSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		assert.Equal(t, "HTTP/1.1", req.Proto)
 		assert.Equal(t, "/bar", req.URL.Path)
 
 		upgrader := websocket.Upgrader{
@@ -1530,27 +2028,22 @@ func TestWebSocketSupport(t *testing.T) {
 	upstreamURL, err := url.Parse(upstreamSrv.URL)
 	require.NoError(t, err)
 
-	exec := mocks2.NewExecutorMock(t)
-	target := mocks2.NewUpstreamTargetMock(t)
-	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
-		*targetURL = url.URL{
+	target := testUpstreamTarget{
+		targetURL: url.URL{
 			Scheme: upstreamURL.Scheme,
 			Host:   upstreamURL.Host,
 			Path:   "/bar",
-		}
+		},
+		forwardHostHeader: true,
+	}
+	exec := testExecutor(func(ctx pipeline.ExecutionContext) error {
+		assert.Equal(t, "/foo", ctx.Request().URL.Path)
+		assert.Equal(t, http.MethodGet, ctx.Request().Method)
+
+		ctx.PrepareUpstreamView(target)
+
+		return nil
 	})
-	target.EXPECT().ForwardHostHeader().Return(true)
-
-	exec.EXPECT().Execute(
-		mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
-			ctx.PrepareUpstreamView(target)
-
-			pathMatched := ctx.Request().URL.Path == "/foo"
-			methodMatched := ctx.Request().Method == http.MethodGet
-
-			return pathMatched && methodMatched
-		}),
-	).Return(nil)
 
 	conf := &config.Configuration{
 		Serve: config.ServeConfig{
@@ -1641,28 +2134,22 @@ func TestServerSentEventsSupport(t *testing.T) {
 	upstreamURL, err := url.Parse(upstreamSrv.URL)
 	require.NoError(t, err)
 
-	exec := mocks2.NewExecutorMock(t)
-
-	target := mocks2.NewUpstreamTargetMock(t)
-	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
-		*targetURL = url.URL{
+	target := testUpstreamTarget{
+		targetURL: url.URL{
 			Scheme: upstreamURL.Scheme,
 			Host:   upstreamURL.Host,
 			Path:   "/bar",
-		}
+		},
+		forwardHostHeader: true,
+	}
+	exec := testExecutor(func(ctx pipeline.ExecutionContext) error {
+		assert.Equal(t, "/foo", ctx.Request().URL.Path)
+		assert.Equal(t, http.MethodGet, ctx.Request().Method)
+
+		ctx.PrepareUpstreamView(target)
+
+		return nil
 	})
-	target.EXPECT().ForwardHostHeader().Return(true)
-
-	exec.EXPECT().Execute(
-		mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
-			ctx.PrepareUpstreamView(target)
-
-			pathMatched := ctx.Request().URL.Path == "/foo"
-			methodMatched := ctx.Request().Method == http.MethodGet
-
-			return pathMatched && methodMatched
-		}),
-	).Return(nil)
 
 	conf := &config.Configuration{
 		Serve: config.ServeConfig{
