@@ -26,8 +26,6 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-
-
 type commitTarget struct{}
 
 type committer struct{}
