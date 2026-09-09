@@ -37,6 +37,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/requestlimit"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/trustedproxy"
+	"github.com/dadrus/heimdall/internal/handler/requestcoordinator"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
 )
@@ -100,7 +101,13 @@ func newService(
 		),
 	)
 
-	envoy_auth.RegisterAuthorizationServer(srv, &Handler{e: exec, cf: newContextFactory()})
+	coordinator := requestcoordinator.New(
+		exec,
+		newContextFactory(),
+		newCommitter(),
+	)
+
+	envoy_auth.RegisterAuthorizationServer(srv, &Handler{c: coordinator})
 
 	return srv
 }
