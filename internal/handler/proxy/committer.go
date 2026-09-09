@@ -17,25 +17,45 @@
 package proxy
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httputil"
 
 	"github.com/rs/zerolog"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
-	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
+type proxyInvocation struct {
+	request *requestContext
+	err     error
+}
+
+type proxyInvocationKey struct{}
+
+func proxyInvocationFrom(ctx context.Context) *proxyInvocation {
+	invocation, ok := ctx.Value(proxyInvocationKey{}).(*proxyInvocation)
+	if !ok {
+		panic("proxy invocation missing")
+	}
+
+	return invocation
+}
+
 type committer struct {
-	roundTripper http.RoundTripper
+	proxy *httputil.ReverseProxy
 }
 
 func newCommitter(rt http.RoundTripper) *committer {
 	return &committer{
-		roundTripper: rt,
+		proxy: &httputil.ReverseProxy{
+			Rewrite:      rewriteRequest,
+			ErrorHandler: handleProxyError,
+			Transport:    rt,
+			BufferPool:   newBufferPool(),
+		},
 	}
 }
 
@@ -47,42 +67,45 @@ func (c *committer) Commit(rw http.ResponseWriter, rc *requestContext) (struct{}
 		)
 	}
 
-	logger := zerolog.Ctx(rc.Context())
-
-	logger.Info().
+	zerolog.Ctx(rc.Context()).Info().
 		Str("_method", rc.Request().Method).
 		Str("_upstream", rc.routingURL.String()).
 		Msg("Forwarding request")
 
-	errHolder := struct {
-		err error
-	}{}
-
-	proxy := &httputil.ReverseProxy{
-		ErrorHandler: func(_ http.ResponseWriter, _ *http.Request, err error) {
-			perr := pipeline.ErrCommunication
-
-			if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
-				perr = pipeline.ErrRequestBodyTooLarge
-			}
-
-			logger.Error().Err(err).Msg("Proxying error")
-
-			errHolder.err = errorchain.NewWithMessage(perr, "Failed to proxy request").
-				CausedBy(err)
-		},
-		Rewrite: rc.rewriteRequest,
-		Transport: otelhttp.NewTransport(
-			httpx.NewTraceRoundTripper(c.roundTripper),
-			otelhttp.WithSpanNameFormatter(
-				func(_ string, req *http.Request) string {
-					return req.Proto + " " + req.Method + " " + req.URL.Path + " @" + req.URL.Host
-				},
-			),
-		),
+	invocation := proxyInvocation{
+		request: rc,
 	}
 
-	proxy.ServeHTTP(rw, rc.req)
+	ctx := context.WithValue(
+		rc.req.Context(),
+		proxyInvocationKey{},
+		&invocation,
+	)
 
-	return struct{}{}, errHolder.err
+	c.proxy.ServeHTTP(rw, rc.req.WithContext(ctx))
+
+	return struct{}{}, invocation.err
+}
+
+func rewriteRequest(req *httputil.ProxyRequest) {
+	invocation := proxyInvocationFrom(req.In.Context())
+
+	invocation.request.rewriteRequest(req)
+}
+
+func handleProxyError(_ http.ResponseWriter, req *http.Request, err error) {
+	invocation := proxyInvocationFrom(req.Context())
+	perr := pipeline.ErrCommunication
+
+	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+		perr = pipeline.ErrRequestBodyTooLarge
+	}
+
+	zerolog.Ctx(req.Context()).
+		Error().
+		Err(err).
+		Msg("Proxying error")
+
+	invocation.err = errorchain.NewWithMessage(perr, "Failed to proxy request").
+		CausedBy(err)
 }

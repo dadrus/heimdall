@@ -18,11 +18,14 @@ package proxy
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -629,4 +632,183 @@ func TestCommitterCommit(t *testing.T) {
 			tc.assert(t, err, upstreamReq)
 		})
 	}
+}
+
+func TestCommitterConcurrentIsolation(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	type requestSnapshot struct {
+		marker  string
+		url     string
+		host    string
+		headers http.Header
+	}
+
+	type commitResult struct {
+		marker string
+		err    error
+	}
+
+	errA := errors.New("upstream A failed")
+	errB := errors.New("upstream B failed")
+
+	requestEntered := make(chan requestSnapshot, 2)
+	releaseRequest := make(chan struct{})
+	commitDone := make(chan commitResult, 2)
+
+	var releaseOnce sync.Once
+	release := func() {
+		releaseOnce.Do(func() {
+			close(releaseRequest)
+		})
+	}
+	defer release()
+
+	rt := roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		marker := req.Header.Get("X-Invocation")
+
+		requestEntered <- requestSnapshot{
+			marker:  marker,
+			url:     req.URL.String(),
+			host:    req.Host,
+			headers: req.Header.Clone(),
+		}
+
+		<-releaseRequest
+
+		switch marker {
+		case "a":
+			return nil, errA
+		case "b":
+			return nil, errB
+		default:
+			return nil, assert.AnError
+		}
+	})
+
+	committer := newCommitter(rt)
+	cf := newContextFactory()
+
+	reqA := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		"https://client-a.example/request-a",
+		nil,
+	)
+	reqA.RemoteAddr = "192.0.2.10:1234"
+
+	ctxA := cf.Create(reqA)
+	defer cf.Destroy(ctxA)
+
+	targetURLA, err := url.Parse("https://upstream-a.example/target-a?foo=a")
+	require.NoError(t, err)
+
+	targetA := mocks.NewUpstreamTargetMock(t)
+	targetA.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+		*targetURL = *targetURLA
+	})
+	targetA.EXPECT().ForwardHostHeader().Return(false)
+
+	ctxA.PrepareUpstreamView(targetA)
+	ctxA.UpstreamRequest().SetHeader("X-Invocation", "a")
+
+	reqB := httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		"http://client-b.example/request-b",
+		nil,
+	)
+	reqB.RemoteAddr = "198.51.100.20:4321"
+
+	ctxB := cf.Create(reqB)
+	defer cf.Destroy(ctxB)
+
+	targetURLB, err := url.Parse("http://upstream-b.example/target-b?foo=b")
+	require.NoError(t, err)
+
+	targetB := mocks.NewUpstreamTargetMock(t)
+	targetB.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+		*targetURL = *targetURLB
+	})
+	targetB.EXPECT().ForwardHostHeader().Return(false)
+
+	ctxB.PrepareUpstreamView(targetB)
+	ctxB.UpstreamRequest().SetHeader("X-Invocation", "b")
+
+	rwA := httptest.NewRecorder()
+	rwB := httptest.NewRecorder()
+
+	// WHEN
+	go func() {
+		_, err := committer.Commit(rwA, ctxA)
+
+		commitDone <- commitResult{marker: "a", err: err}
+	}()
+
+	go func() {
+		_, err := committer.Commit(rwB, ctxB)
+
+		commitDone <- commitResult{marker: "b", err: err}
+	}()
+
+	requests := make(map[string]requestSnapshot, 2)
+
+	for range 2 {
+		select {
+		case req := <-requestEntered:
+			requests[req.marker] = req
+		case <-time.After(time.Second):
+			require.FailNow(t, "requests did not concurrently enter round tripper")
+		}
+	}
+
+	release()
+
+	results := make(map[string]error, 2)
+
+	for range 2 {
+		select {
+		case result := <-commitDone:
+			results[result.marker] = result.err
+		case <-time.After(time.Second):
+			require.FailNow(t, "requests did not complete")
+		}
+	}
+
+	// THEN
+	require.Contains(t, requests, "a")
+	require.Contains(t, requests, "b")
+
+	assert.Equal(t, "https://upstream-a.example/target-a?foo=a", requests["a"].url)
+	assert.Equal(t, "upstream-a.example", requests["a"].host)
+	assert.Equal(t, "a", requests["a"].headers.Get("X-Invocation"))
+	assert.Equal(t, "192.0.2.10", requests["a"].headers.Get("X-Forwarded-For"))
+	assert.Equal(t, "client-a.example", requests["a"].headers.Get("X-Forwarded-Host"))
+	assert.Equal(t, "https", requests["a"].headers.Get("X-Forwarded-Proto"))
+	assert.Equal(
+		t,
+		`for=192.0.2.10;host="client-a.example";proto=https`,
+		requests["a"].headers.Get("Forwarded"),
+	)
+
+	assert.Equal(t, "http://upstream-b.example/target-b?foo=b", requests["b"].url)
+	assert.Equal(t, "upstream-b.example", requests["b"].host)
+	assert.Equal(t, "b", requests["b"].headers.Get("X-Invocation"))
+	assert.Equal(t, "198.51.100.20", requests["b"].headers.Get("X-Forwarded-For"))
+	assert.Equal(t, "client-b.example", requests["b"].headers.Get("X-Forwarded-Host"))
+	assert.Equal(t, "http", requests["b"].headers.Get("X-Forwarded-Proto"))
+	assert.Equal(
+		t,
+		`for=198.51.100.20;host="client-b.example";proto=http`,
+		requests["b"].headers.Get("Forwarded"),
+	)
+
+	require.ErrorIs(t, results["a"], pipeline.ErrCommunication)
+	require.ErrorIs(t, results["a"], errA)
+	require.NotErrorIs(t, results["a"], errB)
+
+	require.ErrorIs(t, results["b"], pipeline.ErrCommunication)
+	require.ErrorIs(t, results["b"], errB)
+	require.NotErrorIs(t, results["b"], errA)
 }

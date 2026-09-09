@@ -23,14 +23,13 @@ import (
 	"time"
 
 	"github.com/ccoveille/go-safecast/v2"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
-func newRoundTripper(
-	cfg config.ServeConfig,
-	tlsCfg *tls.Config,
-) http.RoundTripper {
+func newTransport(cfg config.ServeConfig, tlsCfg *tls.Config) *http.Transport {
 	return &http.Transport{
 		// tlsClientConfig used for test purposes only
 		// must be removed as soon as tls configuration
@@ -56,4 +55,15 @@ func newRoundTripper(
 		ForceAttemptHTTP2: true,
 		TLSClientConfig:   tlsCfg,
 	}
+}
+
+func newObservedRoundTripper(rt http.RoundTripper) http.RoundTripper {
+	return otelhttp.NewTransport(
+		httpx.NewTraceRoundTripper(rt),
+		otelhttp.WithSpanNameFormatter(upstreamSpanName),
+	)
+}
+
+func upstreamSpanName(_ string, req *http.Request) string {
+	return req.Proto + " " + req.Method + " " + req.URL.Path + " @" + req.URL.Host
 }
