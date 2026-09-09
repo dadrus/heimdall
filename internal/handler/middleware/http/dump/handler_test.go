@@ -17,6 +17,7 @@
 package dump
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -112,3 +113,92 @@ func TestDumpHandlerExecution(t *testing.T) {
 		})
 	}
 }
+
+func TestDumpHandlerDoesNotMaterializeStreamingRequestBody(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		contentLength int64
+		contentType   string
+		upgrade       string
+	}{
+		"unknown length": {contentLength: -1, contentType: "application/json"},
+		"native grpc":    {contentLength: 6, contentType: "application/grpc"},
+		"sse":            {contentLength: 6, contentType: "text/event-stream"},
+		"upgrade":        {contentLength: 6, contentType: "application/json", upgrade: "websocket"},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			body := &trackingBody{}
+			req := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+			req.Body = body
+			req.ContentLength = tc.contentLength
+			req.Header.Set("Content-Type", tc.contentType)
+			req.Header.Set("Upgrade", tc.upgrade)
+
+			logger := zerolog.New(io.Discard).Level(zerolog.TraceLevel)
+			req = req.WithContext(logger.WithContext(req.Context()))
+
+			handler := New()(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+				assert.False(t, body.read)
+				rw.WriteHeader(http.StatusNoContent)
+			}))
+
+			handler.ServeHTTP(httptest.NewRecorder(), req)
+
+			assert.False(t, body.read)
+		})
+	}
+}
+
+func TestDumpHandlerDoesNotBufferStreamingResponseBody(t *testing.T) {
+	t.Parallel()
+
+	for uc, contentType := range map[string]string{
+		"native grpc":   "application/grpc",
+		"sse":           "text/event-stream",
+		"generic flush": "text/plain",
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			tb := &testsupport.TestingLog{TB: t}
+			logger := zerolog.New(zerolog.TestWriter{T: tb}).Level(zerolog.TraceLevel)
+
+			req := httptest.NewRequest(http.MethodGet, "http://example.com", nil)
+			req = req.WithContext(logger.WithContext(req.Context()))
+
+			handler := New()(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+				rw.Header().Set("Content-Type", contentType)
+				_, err := rw.Write([]byte("first chunk"))
+				require.NoError(t, err)
+
+				flusher, ok := rw.(http.Flusher)
+				require.True(t, ok)
+				flusher.Flush()
+
+				_, err = rw.Write([]byte("second chunk"))
+				require.NoError(t, err)
+			}))
+
+			handler.ServeHTTP(httptest.NewRecorder(), req)
+
+			logs := tb.CollectedLog()
+			assert.NotContains(t, logs, "first chunk")
+			assert.NotContains(t, logs, "second chunk")
+		})
+	}
+}
+
+type trackingBody struct {
+	read bool
+}
+
+func (b *trackingBody) Read([]byte) (int, error) {
+	b.read = true
+
+	return 0, io.EOF
+}
+
+func (*trackingBody) Close() error { return nil }

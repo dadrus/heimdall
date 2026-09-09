@@ -25,11 +25,11 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"strconv"
-	"strings"
 
 	"github.com/felixge/httpsnoop"
 	"github.com/rs/zerolog"
 
+	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/stringx"
 )
 
@@ -66,12 +66,7 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 				return
 			}
 
-			contentType := req.Header.Get("Content-Type")
-			// don't dump the body if content type is some sort of stream
-			if dump, err := httputil.DumpRequest(req,
-				req.ContentLength != 0 &&
-					!strings.Contains(contentType, "stream") &&
-					!strings.Contains(contentType, "application/x-ndjson")); err == nil {
+			if dump, err := httputil.DumpRequest(req, httpx.ShouldDumpRequestBody(req)); err == nil {
 				logger.Trace().Msgf("Request: %s\n", stringx.ToString(dump))
 			} else {
 				logger.Trace().Err(err).Msg("Failed dumping request")
@@ -81,9 +76,29 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 				wroteHeader bool
 				hijacked    bool
 				flushed     bool
+				dumpBody    bool
+				bodyStart   int
 				buffer      bytes.Buffer
 				statusBuf   [3]byte
 			)
+
+			writeHeader := func(code int) {
+				if wroteHeader {
+					return
+				}
+
+				writeStatusLine(&buffer, req.Proto, code, statusBuf[:])
+				rw.Header().Write(&buffer) //nolint:errcheck
+
+				if len(rw.Header().Get("Content-Length")) != 0 {
+					buffer.Write(crlf)
+				}
+
+				dumpBody = code != http.StatusSwitchingProtocols &&
+					!httpx.IsStreamingContentType(rw.Header().Get("Content-Type"))
+				bodyStart = buffer.Len()
+				wroteHeader = true
+			}
 
 			next.ServeHTTP(httpsnoop.Wrap(rw, httpsnoop.Hooks{
 				Hijack: func(hijack httpsnoop.HijackFunc) httpsnoop.HijackFunc {
@@ -105,32 +120,19 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 							nil
 					}
 				},
-				WriteHeader: func(writeHeader httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
+				WriteHeader: func(write httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
 					return func(code int) {
-						if !wroteHeader {
-							writeStatusLine(&buffer, req.Proto, code, statusBuf[:])
-							rw.Header().Write(&buffer) //nolint:errcheck
-
-							if len(rw.Header().Get("Content-Length")) != 0 {
-								buffer.Write(crlf)
-							}
-
-							wroteHeader = true
-						}
-
 						writeHeader(code)
+						write(code)
 					}
 				},
 				Write: func(write httpsnoop.WriteFunc) httpsnoop.WriteFunc {
 					return func(data []byte) (int, error) {
-						if !wroteHeader {
-							writeStatusLine(&buffer, req.Proto, http.StatusOK, statusBuf[:])
-							rw.Header().Write(&buffer) //nolint:errcheck
+						writeHeader(http.StatusOK)
 
-							rw.WriteHeader(http.StatusOK)
+						if dumpBody && !flushed {
+							buffer.Write(data)
 						}
-
-						buffer.Write(data)
 
 						return write(data)
 					}
@@ -138,9 +140,12 @@ func New() func(http.Handler) http.Handler { // nolint: funlen, gocognit, cyclop
 				Flush: func(flush httpsnoop.FlushFunc) httpsnoop.FlushFunc {
 					return func() {
 						if !flushed {
+							writeHeader(http.StatusOK)
+							buffer.Truncate(bodyStart)
 							logger.Trace().Msgf("Response: %s\n", stringx.ToString(buffer.Bytes()))
 
 							flushed = true
+							dumpBody = false
 
 							buffer.Reset()
 							buffer = bytes.Buffer{}
