@@ -77,7 +77,7 @@ type IngressConnections struct {
 }
 
 type IngressHTTP2 struct {
-	MaxConcurrentStreams int           `koanf:"max_concurrent_streams"   validate:"gt=0"`
+	MaxConcurrentStreams int           `koanf:"max_concurrent_streams"   validate:"gt=0,lte=4294967295"`
 	ReadIdleTimeout      time.Duration `koanf:"read_idle_timeout,string" validate:"gte=0"`
 	PingTimeout          time.Duration `koanf:"ping_timeout,string"      validate:"gt=0"`
 }
