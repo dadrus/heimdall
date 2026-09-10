@@ -19,6 +19,7 @@ package decision
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -46,14 +47,16 @@ func TestNewService(t *testing.T) {
 	conf := &config.Configuration{
 		Serve: config.ServeConfig{
 			Timeout: config.Timeout{
-				Read:  11 * time.Second,
 				Write: 12 * time.Second,
-				Idle:  13 * time.Second,
 			},
 			Requests: config.IngressRequests{
 				Headers: config.IngressRequestHeaders{
-					MaxSize: 42 * bytesize.KB,
+					MaxSize:     42 * bytesize.KB,
+					ReadTimeout: 11 * time.Second,
 				},
+			},
+			Connections: config.IngressConnections{
+				IdleTimeout: 13 * time.Second,
 			},
 			HTTP2: config.IngressHTTP2{
 				MaxConcurrentStreams: 17,
@@ -70,7 +73,8 @@ func TestNewService(t *testing.T) {
 	)
 
 	// THEN
-	assert.Equal(t, 11*time.Second, srv.ReadTimeout)
+	assert.Zero(t, srv.ReadTimeout)
+	assert.Equal(t, 11*time.Second, srv.ReadHeaderTimeout)
 	assert.Equal(t, 12*time.Second, srv.WriteTimeout)
 	assert.Equal(t, 13*time.Second, srv.IdleTimeout)
 	assert.Equal(t, 42*bytesize.KB, bytesize.ByteSize(srv.MaxHeaderBytes))
@@ -719,6 +723,80 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			tc.assertResponse(t, err, resp)
 		})
 	}
+
+	t.Run("applies request body read idle timeout", func(t *testing.T) {
+		// GIVEN
+		port, err := testsupport.GetFreePort()
+		require.NoError(t, err)
+
+		srvConf := config.ServeConfig{
+			Host: "127.0.0.1",
+			Port: port,
+			Requests: config.IngressRequests{
+				Body: config.IngressRequestBody{
+					ReadIdleTimeout: 100 * time.Millisecond,
+				},
+			},
+		}
+
+		factory, err := listener.NewFactory(
+			srvConf.Address(),
+			srvConf.TLS,
+			0,
+			nil,
+		)
+		require.NoError(t, err)
+
+		lstnr, err := factory.Create(t.Context())
+		require.NoError(t, err)
+
+		conf := &config.Configuration{Serve: srvConf}
+		exec := mocks2.NewExecutorMock(t)
+		bodyReadResult := make(chan error, 1)
+
+		exec.EXPECT().Execute(mock.Anything).
+			RunAndReturn(func(ctx pipeline.ExecutionContext) error {
+				_, err := ctx.Request().Body()
+				bodyReadResult <- err
+
+				return err
+			})
+
+		decision := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+		defer decision.Shutdown(t.Context())
+
+		go func() {
+			_ = decision.Serve(lstnr)
+		}()
+
+		time.Sleep(50 * time.Millisecond)
+
+		dialer := &net.Dialer{}
+		conn, err := dialer.DialContext(t.Context(), "tcp", srvConf.Address())
+		require.NoError(t, err)
+		defer conn.Close()
+
+		_, err = io.WriteString(
+			conn,
+			"POST / HTTP/1.1\r\nHost: "+srvConf.Address()+"\r\nContent-Length: 1\r\n\r\n",
+		)
+		require.NoError(t, err)
+
+		// WHEN
+		var bodyReadErr error
+		select {
+		case bodyReadErr = <-bodyReadResult:
+		case <-time.After(2 * time.Second):
+			require.FailNow(t, "request body read did not complete")
+		}
+
+		// THEN
+		require.Error(t, bodyReadErr)
+
+		var netErr net.Error
+		require.ErrorAs(t, bodyReadErr, &netErr)
+		assert.True(t, netErr.Timeout())
+	})
 
 	t.Run("rejects request if maximum number of requests is in flight", func(t *testing.T) {
 		// GIVEN

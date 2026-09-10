@@ -67,7 +67,10 @@ func newService(
 			safecast.MustConvert[int](cfg.Requests.Body.MaxSize),
 			math.MaxInt,
 		)),
-		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: cfg.Timeout.Idle}),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			Timeout:           cfg.Timeout.Idle,
+			MaxConnectionIdle: cfg.Connections.IdleTimeout,
+		}),
 		grpc.UnknownServiceHandler(func(_ any, _ grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
 		}),

@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/ccoveille/go-safecast/v2"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/bodyreadidle"
 	"github.com/justinas/alice"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
@@ -127,6 +128,7 @@ func newService(
 		),
 		requestlimit.New(cfg.Requests.MaxInFlight, eh),
 		bodylimit.New(cfg.Requests.Body.MaxSize, eh),
+		bodyreadidle.New(cfg.Requests.Body.ReadIdleTimeout),
 		requestvalidation.New(),
 		dump.New(),
 		der.handler,
@@ -149,12 +151,12 @@ func newService(
 	).Then(service.NewHandler(coordinator, eh))
 
 	return &http.Server{
-		Handler:        hc,
-		ReadTimeout:    cfg.Timeout.Read,
-		WriteTimeout:   cfg.Timeout.Write,
-		IdleTimeout:    cfg.Timeout.Idle,
-		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
-		ErrorLog:       loggeradapter.NewStdLogger(log),
+		Handler:           hc,
+		ReadHeaderTimeout: cfg.Requests.Headers.ReadTimeout,
+		WriteTimeout:      cfg.Timeout.Write,
+		IdleTimeout:       cfg.Connections.IdleTimeout,
+		MaxHeaderBytes:    safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
+		ErrorLog:          loggeradapter.NewStdLogger(log),
 		HTTP2: &http.HTTP2Config{
 			MaxConcurrentStreams: cfg.HTTP2.MaxConcurrentStreams,
 		},

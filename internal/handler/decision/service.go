@@ -28,6 +28,7 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/bodylimit"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/bodyreadidle"
 	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/http/cache"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
@@ -88,18 +89,19 @@ func newService(
 		),
 		requestlimit.New(cfg.Requests.MaxInFlight, eh),
 		bodylimit.New(cfg.Requests.Body.MaxSize, eh),
+		bodyreadidle.New(cfg.Requests.Body.ReadIdleTimeout),
 		requestvalidation.New(),
 		dump.New(),
 		cachemiddleware.New(cch),
 	).Then(service.NewHandler(coordinator, eh))
 
 	return &http.Server{
-		Handler:        hc,
-		ReadTimeout:    cfg.Timeout.Read,
-		WriteTimeout:   cfg.Timeout.Write,
-		IdleTimeout:    cfg.Timeout.Idle,
-		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
-		ErrorLog:       loggeradapter.NewStdLogger(log),
+		Handler:           hc,
+		ReadHeaderTimeout: cfg.Requests.Headers.ReadTimeout,
+		WriteTimeout:      cfg.Timeout.Write,
+		IdleTimeout:       cfg.Connections.IdleTimeout,
+		MaxHeaderBytes:    safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
+		ErrorLog:          loggeradapter.NewStdLogger(log),
 		HTTP2: &http.HTTP2Config{
 			MaxConcurrentStreams: cfg.HTTP2.MaxConcurrentStreams,
 		},

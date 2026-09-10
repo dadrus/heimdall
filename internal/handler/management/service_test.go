@@ -415,10 +415,10 @@ func TestNewService(t *testing.T) {
 	// GIVEN
 	conf := &config.Configuration{}
 
-	conf.Management.Timeout.Read = 11 * time.Second
 	conf.Management.Timeout.Write = 12 * time.Second
-	conf.Management.Timeout.Idle = 13 * time.Second
 	conf.Management.Requests.Headers.MaxSize = 42 * bytesize.KB
+	conf.Management.Requests.Headers.ReadTimeout = 11 * time.Second
+	conf.Management.Connections.IdleTimeout = 13 * time.Second
 
 	// WHEN
 	srv := newService(
@@ -428,7 +428,8 @@ func TestNewService(t *testing.T) {
 	)
 
 	// THEN
-	assert.Equal(t, 11*time.Second, srv.ReadTimeout)
+	assert.Zero(t, srv.ReadTimeout)
+	assert.Equal(t, 11*time.Second, srv.ReadHeaderTimeout)
 	assert.Equal(t, 12*time.Second, srv.WriteTimeout)
 	assert.Equal(t, 13*time.Second, srv.IdleTimeout)
 	assert.Equal(t, int(42*bytesize.KB), srv.MaxHeaderBytes)

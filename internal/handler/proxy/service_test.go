@@ -79,10 +79,10 @@ func TestNewService(t *testing.T) {
 	// GIVEN
 	conf := &config.Configuration{}
 
-	conf.Serve.Timeout.Read = 11 * time.Second
 	conf.Serve.Timeout.Write = 12 * time.Second
-	conf.Serve.Timeout.Idle = 13 * time.Second
 	conf.Serve.Requests.Headers.MaxSize = 42 * bytesize.KB
+	conf.Serve.Requests.Headers.ReadTimeout = 11 * time.Second
+	conf.Serve.Connections.IdleTimeout = 13 * time.Second
 	conf.Serve.HTTP2.MaxConcurrentStreams = 17
 
 	// WHEN
@@ -96,7 +96,8 @@ func TestNewService(t *testing.T) {
 	// THEN
 	assert.NotNil(t, srv.Handler)
 
-	assert.Equal(t, 11*time.Second, srv.ReadTimeout)
+	assert.Zero(t, srv.ReadTimeout)
+	assert.Equal(t, 11*time.Second, srv.ReadHeaderTimeout)
 	assert.Equal(t, 12*time.Second, srv.WriteTimeout)
 	assert.Equal(t, 13*time.Second, srv.IdleTimeout)
 	assert.Equal(t, int(42*bytesize.KB), srv.MaxHeaderBytes)
@@ -1870,6 +1871,77 @@ func TestProxyService(t *testing.T) {
 		case <-time.After(time.Second):
 			require.FailNow(t, "first response was not received")
 		}
+	})
+
+	t.Run("applies request body read idle timeout", func(t *testing.T) {
+		// GIVEN
+		port, err := testsupport.GetFreePort()
+		require.NoError(t, err)
+
+		bodyReadResult := make(chan error, 1)
+		exec := testExecutor(func(ctx pipeline.ExecutionContext) error {
+			_, err := ctx.Request().Body()
+			bodyReadResult <- err
+
+			return err
+		})
+		conf := &config.Configuration{
+			Serve: config.ServeConfig{
+				Host: "127.0.0.1",
+				Port: port,
+				Requests: config.IngressRequests{
+					Body: config.IngressRequestBody{
+						ReadIdleTimeout: 100 * time.Millisecond,
+					},
+				},
+			},
+		}
+
+		factory, err := listener.NewFactory(
+			conf.Serve.Address(),
+			conf.Serve.TLS,
+			0,
+			nil,
+		)
+		require.NoError(t, err)
+
+		lstnr, err := factory.Create(t.Context())
+		require.NoError(t, err)
+
+		proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+		defer proxy.Shutdown(t.Context())
+
+		go func() {
+			_ = proxy.Serve(lstnr)
+		}()
+
+		time.Sleep(50 * time.Millisecond)
+
+		dialer := &net.Dialer{}
+		conn, err := dialer.DialContext(t.Context(), "tcp", conf.Serve.Address())
+		require.NoError(t, err)
+		defer conn.Close()
+
+		_, err = io.WriteString(
+			conn,
+			"POST / HTTP/1.1\r\nHost: "+conf.Serve.Address()+"\r\nContent-Length: 1\r\n\r\n",
+		)
+		require.NoError(t, err)
+
+		// WHEN
+		var bodyReadErr error
+		select {
+		case bodyReadErr = <-bodyReadResult:
+		case <-time.After(2 * time.Second):
+			require.FailNow(t, "request body read did not complete")
+		}
+
+		// THEN
+		require.Error(t, bodyReadErr)
+
+		var netErr net.Error
+		require.ErrorAs(t, bodyReadErr, &netErr)
+		assert.True(t, netErr.Timeout())
 	})
 }
 
