@@ -131,7 +131,7 @@ func TestDumpHandlerDoesNotMaterializeStreamingRequestBody(t *testing.T) {
 			t.Parallel()
 
 			body := &trackingBody{}
-			req := httptest.NewRequest(http.MethodPost, "http://example.com", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "http://example.com", nil)
 			req.Body = body
 			req.ContentLength = tc.contentLength
 			req.Header.Set("Content-Type", tc.contentType)
@@ -166,20 +166,20 @@ func TestDumpHandlerDoesNotBufferStreamingResponseBody(t *testing.T) {
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb}).Level(zerolog.TraceLevel)
 
-			req := httptest.NewRequest(http.MethodGet, "http://example.com", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", nil)
 			req = req.WithContext(logger.WithContext(req.Context()))
 
 			handler := New()(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
 				rw.Header().Set("Content-Type", contentType)
 				_, err := rw.Write([]byte("first chunk"))
-				require.NoError(t, err)
+				assert.NoError(t, err)
 
 				flusher, ok := rw.(http.Flusher)
-				require.True(t, ok)
+				assert.True(t, ok)
 				flusher.Flush()
 
 				_, err = rw.Write([]byte("second chunk"))
-				require.NoError(t, err)
+				assert.NoError(t, err)
 			}))
 
 			handler.ServeHTTP(httptest.NewRecorder(), req)
