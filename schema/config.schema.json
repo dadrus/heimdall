@@ -172,6 +172,18 @@
           "minimum": 1,
           "maximum": 4294967295,
           "default": 100
+        },
+        "read_idle_timeout": {
+          "description": "Maximum time without receiving an HTTP/2 frame before sending a liveness ping. 0 disables active liveness pings.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "ping_timeout": {
+          "description": "Maximum time to wait for an HTTP/2 liveness ping response.",
+          "type": "string",
+          "default": "15s",
+          "pattern": "^[0-9]*[1-9][0-9]*(ns|us|ms|s|m|h)$"
         }
       }
     },
@@ -645,6 +657,12 @@
           "type": "integer",
           "minimum": 0,
           "default": 1024
+        },
+        "idle_timeout": {
+          "description": "Maximum time an idle incoming connection waits between requests. 0 disables the timeout.",
+          "type": "string",
+          "default": "2m",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
         }
       }
     },
@@ -658,6 +676,12 @@
           "type": "integer",
           "minimum": 0,
           "default": 512
+        },
+        "read_timeout": {
+          "description": "Optional hard wall-clock ceiling for reading the complete incoming request, including its body. 0 disables the hard ceiling.",
+          "type": "string",
+          "default": "0s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
         },
         "headers": {
           "$ref": "#/definitions/ingressRequestHeadersConfig"
@@ -681,6 +705,12 @@
             "64KB",
             "1MB"
           ]
+        },
+        "read_timeout": {
+          "description": "Maximum time allowed to read incoming request headers. 0 disables the timeout.",
+          "type": "string",
+          "default": "5s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
         }
       }
     },
@@ -699,6 +729,43 @@
             "5MB",
             "1GB"
           ]
+        },
+        "read_idle_timeout": {
+          "description": "Progress timeout for request body reads. With read_min_rate 0, each read gets a fresh idle window. With a positive read_min_rate, this value is the initial grace period for the minimum-rate deadline. 0 disables body progress protection.",
+          "type": "string",
+          "default": "20s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "read_min_rate": {
+          "description": "Minimum request body transfer rate in bytes per second, calculated from a fixed transfer start with read_idle_timeout as the initial grace period. 0 uses sliding idle-timeout semantics only. A positive value requires read_idle_timeout to be positive.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        }
+      }
+    },
+    "ingressResponsesConfig": {
+      "type": "object",
+      "description": "Timeouts and progress limits for outgoing HTTP responses.",
+      "additionalProperties": false,
+      "properties": {
+        "write_timeout": {
+          "description": "Optional hard wall-clock ceiling for the response write phase. 0 disables the hard ceiling.",
+          "type": "string",
+          "default": "0s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "write_idle_timeout": {
+          "description": "Progress timeout for response writes. With write_min_rate 0, each write gets a fresh idle window. With a positive write_min_rate, this value is the initial grace period for the minimum-rate deadline. 0 disables response progress protection.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "write_min_rate": {
+          "description": "Minimum response transfer rate in bytes per second, calculated from a fixed transfer start with write_idle_timeout as the initial grace period. 0 uses sliding idle-timeout semantics only. A positive value requires write_idle_timeout to be positive.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
         }
       }
     },
@@ -2900,6 +2967,9 @@
         "requests": {
           "$ref": "#/definitions/ingressRequestsConfig"
         },
+        "responses": {
+          "$ref": "#/definitions/ingressResponsesConfig"
+        },
         "upstream": {
           "$ref": "#/definitions/upstreamConfig"
         },
@@ -2951,6 +3021,9 @@
         },
         "requests": {
           "$ref": "#/definitions/ingressRequestsConfig"
+        },
+        "responses": {
+          "$ref": "#/definitions/ingressResponsesConfig"
         },
         "cors": {
           "$ref": "#/definitions/corsConfig"
