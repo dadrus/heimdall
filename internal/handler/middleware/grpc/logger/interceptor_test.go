@@ -426,7 +426,7 @@ func TestLogInterceptorWithAccessLogDisabled(t *testing.T) {
 	handler.AssertExpectations(t)
 }
 
-func TestLogInterceptorStreamWithAccessLogDisabled(t *testing.T) {
+func TestUnknownServiceHandlerWithAccessLogDisabled(t *testing.T) {
 	otel.SetTracerProvider(sdktrace.NewTracerProvider())
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
 
@@ -442,12 +442,15 @@ func TestLogInterceptorStreamWithAccessLogDisabled(t *testing.T) {
 
 	defer conn.Close()
 
-	srv := grpc.NewServer(
-		grpc.UnknownServiceHandler(func(_ any, _ grpc.ServerStream) error {
+	logHandler := New(logger, WithAccessLogEnabled(false))
+	unknownServiceHandler := logHandler.UnknownServiceHandler(
+		func(_ any, _ grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
-		}),
+		},
+	)
+	srv := grpc.NewServer(
+		grpc.UnknownServiceHandler(unknownServiceHandler),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
-		grpc.ChainStreamInterceptor(New(logger, WithAccessLogEnabled(false)).StreamServerInterceptor()),
 	)
 	envoy_auth.RegisterAuthorizationServer(srv, handler)
 
@@ -469,7 +472,7 @@ func TestLogInterceptorStreamWithAccessLogDisabled(t *testing.T) {
 	assert.Empty(t, strings.TrimSpace(tb.CollectedLog()))
 }
 
-func TestLogInterceptorForUnknownService(t *testing.T) {
+func TestUnknownServiceHandlerLogsUnknownService(t *testing.T) {
 	otel.SetTracerProvider(sdktrace.NewTracerProvider())
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}))
 
@@ -495,14 +498,15 @@ func TestLogInterceptorForUnknownService(t *testing.T) {
 
 	defer conn.Close()
 
+	logHandler := New(logger)
+	unknownServiceHandler := logHandler.UnknownServiceHandler(
+		func(_ any, _ grpc.ServerStream) error {
+			return status.Error(codes.Unknown, "unknown service or method")
+		},
+	)
 	srv := grpc.NewServer(
-		grpc.UnknownServiceHandler(
-			func(_ any, _ grpc.ServerStream) error {
-				return status.Error(codes.Unknown, "unknown service or method")
-			},
-		),
+		grpc.UnknownServiceHandler(unknownServiceHandler),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
-		grpc.ChainStreamInterceptor(New(logger).StreamServerInterceptor()),
 	)
 	envoy_auth.RegisterAuthorizationServer(srv, handler)
 

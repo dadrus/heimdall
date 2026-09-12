@@ -37,9 +37,9 @@ const (
 	requestsActive = "rpc.server.active_requests"
 )
 
-type ServerInterceptor interface {
+type ServerMiddleware interface {
 	UnaryServerInterceptor() grpc.UnaryServerInterceptor
-	StreamServerInterceptor() grpc.StreamServerInterceptor
+	UnknownServiceHandler(stream grpc.StreamHandler) grpc.StreamHandler
 }
 
 type metricsInterceptor struct {
@@ -52,11 +52,11 @@ func (h *metricsInterceptor) UnaryServerInterceptor() grpc.UnaryServerIntercepto
 	return h.observeUnaryRequest
 }
 
-func (h *metricsInterceptor) StreamServerInterceptor() grpc.StreamServerInterceptor {
-	return h.observeStreamRequest
+func (h *metricsInterceptor) UnknownServiceHandler(handler grpc.StreamHandler) grpc.StreamHandler {
+	return h.observeUnknownRequest(handler)
 }
 
-func New(opts ...Option) ServerInterceptor {
+func New(opts ...Option) ServerMiddleware {
 	conf := newConfig(opts...)
 
 	meter := conf.provider.Meter(instrumentationName)
@@ -118,28 +118,29 @@ func (h *metricsInterceptor) observeUnaryRequest(
 	return handler(ctx, req)
 }
 
-func (h *metricsInterceptor) observeStreamRequest(
-	srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler,
-) error {
-	pkv := h.pool.Get().(*[]attribute.KeyValue) //nolint: forcetypeassert
-	attrs := *pkv
+func (h *metricsInterceptor) observeUnknownRequest(handler grpc.StreamHandler) grpc.StreamHandler {
+	return func(srv any, stream grpc.ServerStream) error {
+		pkv := h.pool.Get().(*[]attribute.KeyValue) //nolint: forcetypeassert
+		attrs := *pkv
 
-	defer func() {
-		*pkv = attrs[:0]
+		defer func() {
+			*pkv = attrs[:0]
 
-		h.pool.Put(pkv)
-	}()
+			h.pool.Put(pkv)
+		}()
 
-	ctx := stream.Context()
+		ctx := stream.Context()
+		fullMethod, _ := grpc.MethodFromServerStream(stream)
 
-	attrs = append(attrs, h.attributes...)
-	attrs = addRequestAttributes(attrs, info.FullMethod, peerFromCtx(ctx))
-	opts := metric.WithAttributeSet(attribute.NewSet(attrs...))
+		attrs = append(attrs, h.attributes...)
+		attrs = addRequestAttributes(attrs, fullMethod, peerFromCtx(ctx))
+		opts := metric.WithAttributeSet(attribute.NewSet(attrs...))
 
-	h.activeRequests.Add(ctx, 1, opts)
-	defer h.activeRequests.Add(ctx, -1, opts)
+		h.activeRequests.Add(ctx, 1, opts)
+		defer h.activeRequests.Add(ctx, -1, opts)
 
-	return handler(srv, stream)
+		return handler(srv, stream)
+	}
 }
 
 func peerFromCtx(ctx context.Context) string {
