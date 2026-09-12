@@ -28,10 +28,6 @@ import (
 	"github.com/dadrus/heimdall/internal/x/tlsx"
 )
 
-type listener struct {
-	net.Listener
-}
-
 type Listener interface {
 	net.Listener
 
@@ -51,15 +47,6 @@ var listen = func(ctx context.Context, address string) (net.Listener, error) {
 	var lc net.ListenConfig
 
 	return lc.Listen(ctx, "tcp", address)
-}
-
-func (l *listener) Accept() (net.Conn, error) {
-	con, err := l.Listener.Accept()
-	if err != nil {
-		return nil, err
-	}
-
-	return &conn{Conn: con}, nil
 }
 
 type Factory struct {
@@ -103,8 +90,6 @@ func (f Factory) Create(ctx context.Context) (net.Listener, error) {
 	if f.maxConnections > 0 {
 		listnr = netutil.LimitListener(listnr, f.maxConnections)
 	}
-
-	listnr = &listener{Listener: listnr}
 
 	if f.tlsConfig != nil {
 		listnr = tls.NewListener(listnr, f.tlsConfig)

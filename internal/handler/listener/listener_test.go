@@ -24,6 +24,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"io"
 	"math/big"
 	"net"
 	"testing"
@@ -277,47 +278,16 @@ func TestFactoryCreate(t *testing.T) {
 	})
 }
 
-func TestListenerAccept(t *testing.T) {
-	t.Parallel()
+type connRecorder struct{}
 
-	expectedConn := &connRecorder{}
-	expectedErr := assert.AnError
-
-	tests := map[string]struct {
-		listener net.Listener
-		assert   func(t *testing.T, accepted net.Conn, err error)
-	}{
-		"wraps accepted connection": {
-			listener: &acceptRecorder{conn: expectedConn},
-			assert: func(t *testing.T, accepted net.Conn, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				wrapped, ok := accepted.(*conn)
-				require.True(t, ok)
-				assert.Same(t, expectedConn, wrapped.Conn)
-			},
-		},
-		"returns accept error": {
-			listener: &acceptRecorder{err: expectedErr},
-			assert: func(t *testing.T, accepted net.Conn, err error) {
-				t.Helper()
-
-				require.ErrorIs(t, err, expectedErr)
-				assert.Nil(t, accepted)
-			},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			conn, err := (&listener{Listener: tc.listener}).Accept()
-
-			tc.assert(t, conn, err)
-		})
-	}
-}
+func (*connRecorder) Read([]byte) (int, error)         { return 0, io.EOF }
+func (*connRecorder) Write(data []byte) (int, error)   { return len(data), nil }
+func (*connRecorder) Close() error                     { return nil }
+func (*connRecorder) LocalAddr() net.Addr              { return &net.TCPAddr{} }
+func (*connRecorder) RemoteAddr() net.Addr             { return &net.TCPAddr{} }
+func (*connRecorder) SetDeadline(time.Time) error      { return nil }
+func (*connRecorder) SetReadDeadline(time.Time) error  { return nil }
+func (*connRecorder) SetWriteDeadline(time.Time) error { return nil }
 
 type acceptRecorder struct {
 	conn net.Conn
