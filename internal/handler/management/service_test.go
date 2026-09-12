@@ -412,31 +412,59 @@ func (suite *ServiceTestSuite) TestRequestLimit() {
 func TestNewService(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	conf := &config.Configuration{}
+	for uc, tc := range map[string]struct {
+		tls   *config.TLS
+		http2 bool
+	}{
+		"cleartext enables http1 only": {},
+		"tls enables http1 and http2": {
+			tls:   &config.TLS{},
+			http2: true,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
 
-	conf.Management.Timeout.Write = 12 * time.Second
-	conf.Management.Requests.Headers.MaxSize = 42 * bytesize.KB
-	conf.Management.Requests.Headers.ReadTimeout = 11 * time.Second
-	conf.Management.Connections.IdleTimeout = 13 * time.Second
+			// GIVEN
+			conf := &config.Configuration{}
 
-	// WHEN
-	srv := newService(
-		conf,
-		log.Logger,
-		nil,
-	)
+			conf.Management.TLS = tc.tls
+			conf.Management.Timeout.Read = 98 * time.Second
+			conf.Management.Timeout.Write = 99 * time.Second
+			conf.Management.Requests.ReadTimeout = 10 * time.Second
+			conf.Management.Requests.Headers.MaxSize = 42 * bytesize.KB
+			conf.Management.Requests.Headers.ReadTimeout = 11 * time.Second
+			conf.Management.Responses.WriteTimeout = 12 * time.Second
+			conf.Management.Responses.WriteIdleTimeout = 14 * time.Second
+			conf.Management.Connections.IdleTimeout = 13 * time.Second
 
-	// THEN
-	assert.Zero(t, srv.ReadTimeout)
-	assert.Equal(t, 11*time.Second, srv.ReadHeaderTimeout)
-	assert.Equal(t, 12*time.Second, srv.WriteTimeout)
-	assert.Equal(t, 13*time.Second, srv.IdleTimeout)
-	assert.Equal(t, int(42*bytesize.KB), srv.MaxHeaderBytes)
+			// WHEN
+			srv := newService(
+				conf,
+				log.Logger,
+				nil,
+			)
 
-	require.NotNil(t, srv.HTTP2)
-	assert.Equal(t, 100, srv.HTTP2.MaxConcurrentStreams)
+			// THEN
+			assert.Equal(t, 10*time.Second, srv.ReadTimeout)
+			assert.Equal(t, 11*time.Second, srv.ReadHeaderTimeout)
+			assert.Equal(t, 12*time.Second, srv.WriteTimeout)
+			assert.Equal(t, 13*time.Second, srv.IdleTimeout)
+			assert.Equal(t, int(42*bytesize.KB), srv.MaxHeaderBytes)
 
-	assert.NotNil(t, srv.Handler)
-	assert.NotNil(t, srv.ErrorLog)
+			require.NotNil(t, srv.HTTP2)
+			assert.Equal(t, 100, srv.HTTP2.MaxConcurrentStreams)
+			assert.Equal(t, 30*time.Second, srv.HTTP2.SendPingTimeout)
+			assert.Equal(t, 15*time.Second, srv.HTTP2.PingTimeout)
+			assert.Equal(t, 30*time.Second, srv.HTTP2.WriteByteTimeout)
+
+			require.NotNil(t, srv.Protocols)
+			assert.True(t, srv.Protocols.HTTP1())
+			assert.Equal(t, tc.http2, srv.Protocols.HTTP2())
+			assert.False(t, srv.Protocols.UnencryptedHTTP2())
+
+			assert.NotNil(t, srv.Handler)
+			assert.NotNil(t, srv.ErrorLog)
+		})
+	}
 }
