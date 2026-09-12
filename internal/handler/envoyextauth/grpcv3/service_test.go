@@ -34,6 +34,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
@@ -254,6 +255,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 					Enabled: true,
 				},
 				Serve: config.ServeConfig{
+					Connections: config.DefaultIngressConnections(),
 					Requests: config.IngressRequests{
 						Headers: config.IngressRequestHeaders{
 							MaxSize: 64 * 1024,
@@ -610,4 +612,217 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			require.FailNow(t, "first response was not received")
 		}
 	})
+}
+
+func TestGRPCHeaderLimit(t *testing.T) {
+	// GIVEN
+	conf := newGRPCTestConfig()
+	conf.Serve.Requests.Headers.MaxSize = 512
+
+	exec := mocks3.NewExecutorMock(t)
+	client := newGRPCTestClient(t, conf, exec)
+	ctx := metadata.AppendToOutgoingContext(
+		t.Context(),
+		"x-oversized-metadata",
+		strings.Repeat("x", 2*1024),
+	)
+
+	// WHEN
+	_, err := client.Check(ctx, newGRPCTestRequest())
+
+	// THEN
+	require.Error(t, err)
+	assert.Equal(t, codes.Internal, status.Code(err))
+	assert.Contains(t, err.Error(), "header list size")
+}
+
+func TestUnaryRPCLifetime(t *testing.T) {
+	t.Run("http io timeouts do not become an rpc lifetime", func(t *testing.T) {
+		// GIVEN
+		conf := newGRPCTestConfig()
+		conf.Serve.Requests.ReadTimeout = time.Millisecond
+		conf.Serve.Requests.Body.ReadIdleTimeout = time.Millisecond
+		conf.Serve.Responses.WriteTimeout = time.Millisecond
+		conf.Serve.Responses.WriteIdleTimeout = time.Millisecond
+
+		exec := mocks3.NewExecutorMock(t)
+		exec.EXPECT().Execute(mock.Anything).RunAndReturn(func(ctx pipeline.ExecutionContext) error {
+			select {
+			case <-time.After(25 * time.Millisecond):
+				return nil
+			case <-ctx.Context().Done():
+				return ctx.Context().Err()
+			}
+		})
+
+		client := newGRPCTestClient(t, conf, exec)
+		ctx, cancel := context.WithTimeout(t.Context(), 2*time.Second)
+		defer cancel()
+
+		// WHEN
+		resp, err := client.Check(ctx, newGRPCTestRequest())
+
+		// THEN
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+		assert.Equal(t, int32(codes.OK), resp.GetStatus().GetCode())
+	})
+
+	t.Run("client deadline propagates into the pipeline context", func(t *testing.T) {
+		// GIVEN
+		conf := newGRPCTestConfig()
+		exec := mocks3.NewExecutorMock(t)
+
+		type observedContext struct {
+			deadline time.Time
+			ok       bool
+		}
+
+		observed := make(chan observedContext, 1)
+
+		exec.EXPECT().Execute(mock.Anything).RunAndReturn(func(ctx pipeline.ExecutionContext) error {
+			deadline, ok := ctx.Context().Deadline()
+			observed <- observedContext{
+				deadline: deadline,
+				ok:       ok,
+			}
+
+			<-ctx.Context().Done()
+
+			return ctx.Context().Err()
+		})
+
+		client := newGRPCTestClient(t, conf, exec)
+		ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+		defer cancel()
+
+		clientDeadline, ok := ctx.Deadline()
+		require.True(t, ok)
+
+		// WHEN
+		_, err := client.Check(ctx, newGRPCTestRequest())
+
+		// THEN
+		require.Error(t, err)
+		assert.Equal(t, codes.DeadlineExceeded, status.Code(err))
+
+		select {
+		case observedContext := <-observed:
+			require.True(t, observedContext.ok)
+			assert.WithinDuration(t, clientDeadline, observedContext.deadline, 10*time.Millisecond)
+		case <-time.After(time.Second):
+			require.FailNow(t, "pipeline did not observe the rpc deadline")
+		}
+	})
+
+	t.Run("client cancellation propagates into the pipeline context", func(t *testing.T) {
+		// GIVEN
+		conf := newGRPCTestConfig()
+		exec := mocks3.NewExecutorMock(t)
+		entered := make(chan struct{})
+		observed := make(chan error, 1)
+
+		exec.EXPECT().Execute(mock.Anything).RunAndReturn(func(ctx pipeline.ExecutionContext) error {
+			close(entered)
+			<-ctx.Context().Done()
+			observed <- ctx.Context().Err()
+
+			return ctx.Context().Err()
+		})
+
+		client := newGRPCTestClient(t, conf, exec)
+		ctx, cancel := context.WithCancel(t.Context())
+		result := make(chan error, 1)
+
+		go func() {
+			_, err := client.Check(ctx, newGRPCTestRequest())
+			result <- err
+		}()
+
+		select {
+		case <-entered:
+		case <-time.After(time.Second):
+			cancel()
+			require.FailNow(t, "request did not reach the pipeline")
+		}
+
+		// WHEN
+		cancel()
+
+		// THEN
+		select {
+		case err := <-result:
+			require.Error(t, err)
+			assert.Equal(t, codes.Canceled, status.Code(err))
+		case <-time.After(time.Second):
+			require.FailNow(t, "rpc did not complete after cancellation")
+		}
+
+		select {
+		case observedErr := <-observed:
+			require.ErrorIs(t, observedErr, context.Canceled)
+		case <-time.After(time.Second):
+			require.FailNow(t, "pipeline did not observe the rpc cancellation")
+		}
+	})
+}
+
+func newGRPCTestConfig() *config.Configuration {
+	return &config.Configuration{
+		Serve: config.ServeConfig{
+			Connections: config.DefaultIngressConnections(),
+			Requests: config.IngressRequests{
+				Headers: config.IngressRequestHeaders{
+					MaxSize: 64 * bytesize.KB,
+				},
+			},
+		},
+	}
+}
+
+func newGRPCTestClient(
+	t *testing.T,
+	conf *config.Configuration,
+	exec pipeline.Executor,
+) envoy_auth.AuthorizationClient {
+	t.Helper()
+
+	listener := bufconn.Listen(8 * 1024 * 1024)
+	srv := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+
+	go func() {
+		_ = srv.Serve(listener)
+	}()
+
+	conn, err := grpc.NewClient(
+		"passthrough:///bufnet",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+			return listener.Dial()
+		}),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+
+	t.Cleanup(func() {
+		_ = conn.Close()
+		srv.Stop()
+		_ = listener.Close()
+	})
+
+	return envoy_auth.NewAuthorizationClient(conn)
+}
+
+func newGRPCTestRequest() *envoy_auth.CheckRequest {
+	return &envoy_auth.CheckRequest{
+		Attributes: &envoy_auth.AttributeContext{
+			Request: &envoy_auth.AttributeContext_Request{
+				Http: &envoy_auth.AttributeContext_HttpRequest{
+					Method: http.MethodGet,
+					Scheme: "http",
+					Host:   "example.com",
+					Path:   "/",
+				},
+			},
+		},
+	}
 }

@@ -18,6 +18,7 @@ package grpcv3
 
 import (
 	"math"
+	"time"
 
 	"github.com/ccoveille/go-safecast/v2"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
@@ -59,6 +60,12 @@ func newService(
 		otelmetrics.WithSubsystem("decision"),
 	)
 
+	unknownServiceHandler := grpc.StreamHandler(func(_ any, _ grpc.ServerStream) error {
+		return status.Error(codes.Unknown, "unknown service or method")
+	})
+	unknownServiceHandler = logHandler.UnknownServiceHandler(unknownServiceHandler)
+	unknownServiceHandler = metrics.UnknownServiceHandler(unknownServiceHandler)
+
 	srv := grpc.NewServer(
 		grpc.MaxHeaderListSize(safecast.MustConvert[uint32](cfg.Requests.Headers.MaxSize)),
 		grpc.MaxConcurrentStreams(safecast.MustConvert[uint32](cfg.Connections.Streams.MaxConcurrent)),
@@ -68,12 +75,15 @@ func newService(
 			math.MaxInt,
 		)),
 		grpc.KeepaliveParams(keepalive.ServerParameters{
-			Timeout:           cfg.Timeout.Idle,
 			MaxConnectionIdle: cfg.Connections.IdleTimeout,
+			Timeout:           cfg.Connections.Liveness.ProbeTimeout,
+			Time: x.IfThenElse(
+				cfg.Connections.Liveness.ProbeAfter != 0,
+				cfg.Connections.Liveness.ProbeAfter,
+				time.Duration(math.MaxInt64),
+			),
 		}),
-		grpc.UnknownServiceHandler(func(_ any, _ grpc.ServerStream) error {
-			return status.Error(codes.Unknown, "unknown service or method")
-		}),
+		grpc.UnknownServiceHandler(unknownServiceHandler),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			recovery.UnaryServerInterceptor(recoveryHandler),
@@ -96,11 +106,6 @@ func newService(
 			logHandler.UnaryServerInterceptor(),
 			requestlimit.New(cfg.Requests.MaxInFlight),
 			cachemiddleware.New(cch),
-		),
-		grpc.ChainStreamInterceptor(
-			recovery.StreamServerInterceptor(recoveryHandler),
-			metrics.StreamServerInterceptor(),
-			logHandler.StreamServerInterceptor(),
 		),
 	)
 
