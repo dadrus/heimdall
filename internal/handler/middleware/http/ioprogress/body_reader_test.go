@@ -323,7 +323,7 @@ func TestBodyReadCloserRestoresHardDeadlineAfterRead(t *testing.T) {
 	)(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
 		buffer := make([]byte, 1)
 		_, err := req.Body.Read(buffer)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	}))
 
 	// WHEN
@@ -399,7 +399,7 @@ func TestReadMinimumRateCountsApplicationPause(t *testing.T) {
 	)(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
 		buffer := make([]byte, 1)
 		_, firstErr := req.Body.Read(buffer)
-		require.NoError(t, firstErr)
+		assert.NoError(t, firstErr)
 
 		time.Sleep(100 * time.Millisecond)
 		secondReadStartedAt = time.Now()
@@ -430,12 +430,12 @@ func TestReadIdleAllowsApplicationPauseLongerThanIdleTimeout(t *testing.T) {
 		func(_ http.ResponseWriter, req *http.Request) {
 			buffer := make([]byte, 1)
 			_, firstErr := req.Body.Read(buffer)
-			require.NoError(t, firstErr)
+			assert.NoError(t, firstErr)
 
 			time.Sleep(3 * idleTimeout)
 			secondReadStartedAt = time.Now()
 			_, secondErr := req.Body.Read(buffer)
-			require.NoError(t, secondErr)
+			assert.NoError(t, secondErr)
 		},
 	))
 

@@ -54,6 +54,7 @@ import (
 // purposes.
 var tlsClientConfig *tls.Config // nolint: gochecknoglobals
 
+//nolint:funlen
 func newService(
 	conf *config.Configuration,
 	cch cache.Cache,
