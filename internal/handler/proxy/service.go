@@ -17,14 +17,11 @@
 package proxy
 
 import (
-	"context"
 	"crypto/tls"
-	"net"
 	"net/http"
 	"strings"
 
 	"github.com/ccoveille/go-safecast/v2"
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/bodyreadidle"
 	"github.com/justinas/alice"
 	"github.com/rs/cors"
 	"github.com/rs/zerolog"
@@ -36,6 +33,7 @@ import (
 	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/http/cache"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/ioprogress"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
@@ -56,41 +54,12 @@ import (
 // purposes.
 var tlsClientConfig *tls.Config // nolint: gochecknoglobals
 
-type deadlineResetter struct{}
-
-func (dr *deadlineResetter) handler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		if val := req.Context().Value(dr); val != nil {
-			type DeadlinesResetter interface{ MonitorAndResetDeadlines(flag bool) }
-
-			monitor, ok := val.(DeadlinesResetter)
-
-			if ok {
-				monitor.MonitorAndResetDeadlines(true)
-
-				defer monitor.MonitorAndResetDeadlines(false)
-			}
-		}
-
-		next.ServeHTTP(rw, req)
-	})
-}
-
-func (dr *deadlineResetter) contexter(ctx context.Context, con net.Conn) context.Context {
-	if tlsCon, ok := con.(*tls.Conn); ok {
-		return context.WithValue(ctx, dr, tlsCon.NetConn())
-	}
-
-	return context.WithValue(ctx, dr, con)
-}
-
 func newService(
 	conf *config.Configuration,
 	cch cache.Cache,
 	log zerolog.Logger,
 	exec pipeline.Executor,
 ) *http.Server {
-	der := &deadlineResetter{}
 	cfg := conf.Serve
 	eh := errorhandler.New(
 		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
@@ -107,6 +76,15 @@ func newService(
 	coordinator := requestcoordinator.New(exec, newContextFactory(), newCommitter(rt))
 
 	hc := alice.New(
+		ioprogress.New(
+			log,
+			ioprogress.WithRequestReadTimeout(cfg.Requests.ReadTimeout),
+			ioprogress.WithRequestBodyReadIdleTimeout(cfg.Requests.Body.ReadIdleTimeout),
+			ioprogress.WithRequestBodyReadMinRate(cfg.Requests.Body.ReadMinRate),
+			ioprogress.WithResponseWriteTimeout(cfg.Responses.WriteTimeout),
+			ioprogress.WithResponseWriteIdleTimeout(cfg.Responses.WriteIdleTimeout),
+			ioprogress.WithResponseWriteMinRate(cfg.Responses.WriteMinRate),
+		),
 		trustedproxy.New(
 			log,
 			cfg.TrustedProxies...,
@@ -128,10 +106,8 @@ func newService(
 		),
 		requestlimit.New(cfg.Requests.MaxInFlight, eh),
 		bodylimit.New(cfg.Requests.Body.MaxSize, eh),
-		bodyreadidle.New(cfg.Requests.Body.ReadIdleTimeout),
 		requestvalidation.New(),
 		dump.New(),
-		der.handler,
 		x.IfThenElseExec(cfg.CORS != nil,
 			func() func(http.Handler) http.Handler {
 				return cors.New(
@@ -150,16 +126,25 @@ func newService(
 		cachemiddleware.New(cch),
 	).Then(service.NewHandler(coordinator, eh))
 
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetHTTP2(cfg.TLS != nil)
+	protocols.SetUnencryptedHTTP2(cfg.TLS == nil)
+
 	return &http.Server{
 		Handler:           hc,
+		ReadTimeout:       cfg.Requests.ReadTimeout,
 		ReadHeaderTimeout: cfg.Requests.Headers.ReadTimeout,
-		WriteTimeout:      cfg.Timeout.Write,
+		WriteTimeout:      cfg.Responses.WriteTimeout,
 		IdleTimeout:       cfg.Connections.IdleTimeout,
 		MaxHeaderBytes:    safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
 		ErrorLog:          loggeradapter.NewStdLogger(log),
 		HTTP2: &http.HTTP2Config{
-			MaxConcurrentStreams: cfg.HTTP2.MaxConcurrentStreams,
+			MaxConcurrentStreams: cfg.Connections.Streams.MaxConcurrent,
+			SendPingTimeout:      cfg.Connections.Liveness.ProbeAfter,
+			PingTimeout:          cfg.Connections.Liveness.ProbeTimeout,
+			WriteByteTimeout:     cfg.Connections.WriteIdleTimeout,
 		},
-		ConnContext: der.contexter,
+		Protocols: protocols,
 	}
 }

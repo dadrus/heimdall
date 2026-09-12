@@ -39,6 +39,7 @@ import (
 
 	"github.com/gorilla/websocket"
 	"github.com/inhies/go-bytesize"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -76,37 +77,69 @@ func (t testUpstreamTarget) ForwardHostHeader() bool    { return t.forwardHostHe
 func TestNewService(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	conf := &config.Configuration{}
+	for uc, tc := range map[string]struct {
+		tls              *config.TLS
+		http2            bool
+		unencryptedHTTP2 bool
+	}{
+		"cleartext enables http1 and h2c": {
+			unencryptedHTTP2: true,
+		},
+		"tls enables http1 and http2": {
+			tls:   &config.TLS{},
+			http2: true,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			conf := &config.Configuration{}
 
-	conf.Serve.Timeout.Write = 12 * time.Second
-	conf.Serve.Requests.Headers.MaxSize = 42 * bytesize.KB
-	conf.Serve.Requests.Headers.ReadTimeout = 11 * time.Second
-	conf.Serve.Connections.IdleTimeout = 13 * time.Second
-	conf.Serve.HTTP2.MaxConcurrentStreams = 17
+			conf.Serve.TLS = tc.tls
+			conf.Serve.Timeout.Read = 98 * time.Second
+			conf.Serve.Timeout.Write = 99 * time.Second
+			conf.Serve.Requests.ReadTimeout = 10 * time.Second
+			conf.Serve.Requests.Headers.MaxSize = 42 * bytesize.KB
+			conf.Serve.Requests.Headers.ReadTimeout = 11 * time.Second
+			conf.Serve.Responses.WriteTimeout = 12 * time.Second
+			conf.Serve.Responses.WriteIdleTimeout = 19 * time.Second
+			conf.Serve.Connections.IdleTimeout = 13 * time.Second
+			conf.Serve.Connections.WriteIdleTimeout = 14 * time.Second
+			conf.Serve.Connections.Streams.MaxConcurrent = 17
+			conf.Serve.Connections.Liveness.ProbeAfter = 15 * time.Second
+			conf.Serve.Connections.Liveness.ProbeTimeout = 16 * time.Second
 
-	// WHEN
-	srv := newService(
-		conf,
-		mocks.NewCacheMock(t),
-		log.Logger,
-		mocks2.NewExecutorMock(t),
-	)
+			// WHEN
+			srv := newService(
+				conf,
+				mocks.NewCacheMock(t),
+				log.Logger,
+				mocks2.NewExecutorMock(t),
+			)
 
-	// THEN
-	assert.NotNil(t, srv.Handler)
+			// THEN
+			assert.NotNil(t, srv.Handler)
 
-	assert.Zero(t, srv.ReadTimeout)
-	assert.Equal(t, 11*time.Second, srv.ReadHeaderTimeout)
-	assert.Equal(t, 12*time.Second, srv.WriteTimeout)
-	assert.Equal(t, 13*time.Second, srv.IdleTimeout)
-	assert.Equal(t, int(42*bytesize.KB), srv.MaxHeaderBytes)
+			assert.Equal(t, 10*time.Second, srv.ReadTimeout)
+			assert.Equal(t, 11*time.Second, srv.ReadHeaderTimeout)
+			assert.Equal(t, 12*time.Second, srv.WriteTimeout)
+			assert.Equal(t, 13*time.Second, srv.IdleTimeout)
+			assert.Equal(t, int(42*bytesize.KB), srv.MaxHeaderBytes)
 
-	require.NotNil(t, srv.HTTP2)
-	assert.Equal(t, 17, srv.HTTP2.MaxConcurrentStreams)
+			require.NotNil(t, srv.HTTP2)
+			assert.Equal(t, 17, srv.HTTP2.MaxConcurrentStreams)
+			assert.Equal(t, 15*time.Second, srv.HTTP2.SendPingTimeout)
+			assert.Equal(t, 16*time.Second, srv.HTTP2.PingTimeout)
+			assert.Equal(t, 14*time.Second, srv.HTTP2.WriteByteTimeout)
 
-	assert.NotNil(t, srv.ErrorLog)
-	assert.NotNil(t, srv.ConnContext)
+			require.NotNil(t, srv.Protocols)
+			assert.True(t, srv.Protocols.HTTP1())
+			assert.Equal(t, tc.http2, srv.Protocols.HTTP2())
+			assert.Equal(t, tc.unencryptedHTTP2, srv.Protocols.UnencryptedHTTP2())
+
+			assert.NotNil(t, srv.ErrorLog)
+			assert.Nil(t, srv.ConnContext)
+		})
+	}
 }
 
 func TestProxyService(t *testing.T) {
@@ -2088,6 +2121,11 @@ func TestWebSocketSupport(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, []byte("ping 1"), message)
 
+		// The HTTP response write policy ends at a successful hijack. A quiet
+		// tunnel must therefore remain usable even after the configured response
+		// write-idle window has elapsed.
+		time.Sleep(150 * time.Millisecond)
+
 		err = con.WriteMessage(websocket.TextMessage, []byte("ping 2"))
 		assert.NoError(t, err)
 
@@ -2119,17 +2157,17 @@ func TestWebSocketSupport(t *testing.T) {
 
 	conf := &config.Configuration{
 		Serve: config.ServeConfig{
-			Timeout: config.Timeout{
-				Read:  1 * time.Second,
-				Write: 1 * time.Second,
-				Idle:  1 * time.Second,
-			},
 			Host: "127.0.0.1",
 			Port: port,
+			Responses: config.IngressResponses{
+				WriteIdleTimeout: 50 * time.Millisecond,
+				WriteMinRate:     500,
+			},
 		},
 	}
 
-	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+	traceLogger := zerolog.New(io.Discard).Level(zerolog.TraceLevel)
+	proxy := newService(conf, mocks.NewCacheMock(t), traceLogger, exec)
 
 	defer proxy.Shutdown(t.Context())
 
@@ -2198,7 +2236,13 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 			assert.NoError(t, rc.Flush())
 
-			time.Sleep(50 * time.Millisecond)
+			if i == 1 {
+				// A stream may be legitimately silent for longer than the response
+				// write-idle timeout when no write is in flight.
+				time.Sleep(150 * time.Millisecond)
+			} else {
+				time.Sleep(20 * time.Millisecond)
+			}
 		}
 	}))
 	defer upstreamSrv.Close()
@@ -2225,13 +2269,12 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 	conf := &config.Configuration{
 		Serve: config.ServeConfig{
-			Timeout: config.Timeout{
-				Read:  40 * time.Millisecond,
-				Write: 50 * time.Millisecond,
-				Idle:  1 * time.Second,
-			},
 			Host: "127.0.0.1",
 			Port: port,
+			Responses: config.IngressResponses{
+				WriteIdleTimeout: 50 * time.Millisecond,
+				WriteMinRate:     0,
+			},
 		},
 	}
 
@@ -2281,6 +2324,4 @@ func TestServerSentEventsSupport(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, i, val)
 	}
-
-	time.Sleep(60 * time.Millisecond)
 }
