@@ -31,37 +31,37 @@ const (
 	defaultRequestHeaderMaxSize = 64 * bytesize.KB
 	defaultRequestBodyMaxSize   = 5 * bytesize.MB
 
-	defaultRequestReadTimeout         = 0
-	defaultRequestHeaderReadTimeout   = 5 * time.Second
-	defaultRequestBodyReadIdleTimeout = 20 * time.Second
-	defaultRequestBodyReadMinRate     = 0
-	defaultResponseWriteTimeout       = 0
-	defaultResponseWriteIdleTimeout   = 30 * time.Second
-	defaultResponseWriteMinRate       = 0
-	defaultConnectionIdleTimeout      = 2 * time.Minute
+	defaultRequestReadTimeout             = 0
+	defaultRequestHeaderReadTimeout       = 5 * time.Second
+	defaultRequestBodyReadIdleTimeout     = 20 * time.Second
+	defaultRequestBodyReadMinRate         = 0
+	defaultResponseWriteTimeout           = 0
+	defaultResponseWriteIdleTimeout       = 30 * time.Second
+	defaultResponseWriteMinRate           = 0
+	defaultConnectionIdleTimeout          = 2 * time.Minute
+	defaultConnectionWriteIdleTimeout     = 30 * time.Second
+	defaultConnectionLivenessProbeAfter   = 30 * time.Second
+	defaultConnectionLivenessProbeTimeout = 15 * time.Second
 
 	defaultMaxConnections       = 1024
 	defaultMaxInFlightRequests  = 512
 	defaultMaxConcurrentStreams = 100
 
-	defaultHTTP2ReadIdleTimeout = 30 * time.Second
-	defaultHTTP2PingTimeout     = 15 * time.Second
-
 	defaultUpstreamMaxConnectionsPerHost = 100
 	defaultUpstreamMaxIdleConnections    = 100
 	defaultUpstreamMaxIdlePerHost        = 100
 
-	defaultUpstreamDialTimeout           = 5 * time.Second
-	defaultUpstreamTLSHandshakeTimeout   = 10 * time.Second
-	defaultUpstreamIdleTimeout           = 90 * time.Second
-	defaultUpstreamExpectContinueTimeout = time.Second
-	defaultUpstreamWriteIdleTimeout      = 30 * time.Second
+	defaultUpstreamDialTimeout                    = 5 * time.Second
+	defaultUpstreamTLSHandshakeTimeout            = 10 * time.Second
+	defaultUpstreamIdleTimeout                    = 90 * time.Second
+	defaultUpstreamConnectionWriteIdleTimeout     = 30 * time.Second
+	defaultUpstreamConnectionLivenessProbeAfter   = 30 * time.Second
+	defaultUpstreamConnectionLivenessProbeTimeout = 15 * time.Second
+	defaultUpstreamExpectContinueTimeout          = time.Second
+	defaultUpstreamWriteIdleTimeout               = 30 * time.Second
 
 	defaultUpstreamResponseHeaderMaxSize     = bytesize.MB
 	defaultUpstreamResponseHeaderReadTimeout = 30 * time.Second
-
-	defaultUpstreamHTTP2ReadIdleTimeout = 30 * time.Second
-	defaultUpstreamHTTP2PingTimeout     = 15 * time.Second
 
 	defaultServePort             = 4456
 	defaultManagementServicePort = 4457
@@ -69,6 +69,21 @@ const (
 
 	loopbackIP = "127.0.0.1"
 )
+
+func DefaultIngressConnections() IngressConnections {
+	return IngressConnections{
+		Max:              defaultMaxConnections,
+		IdleTimeout:      defaultConnectionIdleTimeout,
+		WriteIdleTimeout: defaultConnectionWriteIdleTimeout,
+		Streams: MultiplexedStreams{
+			MaxConcurrent: defaultMaxConcurrentStreams,
+		},
+		Liveness: ConnectionLiveness{
+			ProbeAfter:   defaultConnectionLivenessProbeAfter,
+			ProbeTimeout: defaultConnectionLivenessProbeTimeout,
+		},
+	}
+}
 
 //nolint:funlen
 func defaultConfig() Configuration {
@@ -98,15 +113,7 @@ func defaultConfig() Configuration {
 				WriteIdleTimeout: defaultResponseWriteIdleTimeout,
 				WriteMinRate:     defaultResponseWriteMinRate,
 			},
-			Connections: IngressConnections{
-				Max:         defaultMaxConnections,
-				IdleTimeout: defaultConnectionIdleTimeout,
-			},
-			HTTP2: IngressHTTP2{
-				MaxConcurrentStreams: defaultMaxConcurrentStreams,
-				ReadIdleTimeout:      defaultHTTP2ReadIdleTimeout,
-				PingTimeout:          defaultHTTP2PingTimeout,
-			},
+			Connections: DefaultIngressConnections(),
 			Upstream: UpstreamConfig{
 				Connections: UpstreamConnections{
 					MaxPerHost:          defaultUpstreamMaxConnectionsPerHost,
@@ -115,6 +122,11 @@ func defaultConfig() Configuration {
 					DialTimeout:         defaultUpstreamDialTimeout,
 					TLSHandshakeTimeout: defaultUpstreamTLSHandshakeTimeout,
 					IdleTimeout:         defaultUpstreamIdleTimeout,
+					WriteIdleTimeout:    defaultUpstreamConnectionWriteIdleTimeout,
+					Liveness: ConnectionLiveness{
+						ProbeAfter:   defaultUpstreamConnectionLivenessProbeAfter,
+						ProbeTimeout: defaultUpstreamConnectionLivenessProbeTimeout,
+					},
 				},
 				Requests: UpstreamRequests{
 					ExpectContinueTimeout: defaultUpstreamExpectContinueTimeout,
@@ -125,10 +137,6 @@ func defaultConfig() Configuration {
 						MaxSize:     defaultUpstreamResponseHeaderMaxSize,
 						ReadTimeout: defaultUpstreamResponseHeaderReadTimeout,
 					},
-				},
-				HTTP2: UpstreamHTTP2{
-					ReadIdleTimeout: defaultUpstreamHTTP2ReadIdleTimeout,
-					PingTimeout:     defaultUpstreamHTTP2PingTimeout,
 				},
 			},
 		},
@@ -157,7 +165,7 @@ func defaultConfig() Configuration {
 				WriteIdleTimeout: defaultResponseWriteIdleTimeout,
 				WriteMinRate:     defaultResponseWriteMinRate,
 			},
-			Connections: IngressConnections{
+			Connections: ManagementConnections{
 				Max:         defaultMaxConnections,
 				IdleTimeout: defaultConnectionIdleTimeout,
 			},

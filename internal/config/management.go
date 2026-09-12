@@ -16,17 +16,25 @@
 
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type ManagementConfig struct {
-	Host        string             `koanf:"host"`
-	Port        int                `koanf:"port"`
-	Timeout     Timeout            `koanf:"timeout"`
-	Requests    IngressRequests    `koanf:"requests"`
-	Responses   IngressResponses   `koanf:"responses"`
-	Connections IngressConnections `koanf:"connections"`
-	CORS        *CORS              `koanf:"cors,omitempty"`
-	TLS         *TLS               `koanf:"tls,omitempty"  validate:"enforced=notnil"`
+	Host        string                `koanf:"host"`
+	Port        int                   `koanf:"port"`
+	Timeout     Timeout               `koanf:"timeout"`
+	Requests    IngressRequests       `koanf:"requests"`
+	Responses   IngressResponses      `koanf:"responses"`
+	Connections ManagementConnections `koanf:"connections"`
+	CORS        *CORS                 `koanf:"cors,omitempty"`
+	TLS         *TLS                  `koanf:"tls,omitempty"  validate:"enforced=notnil"`
+}
+
+type ManagementConnections struct {
+	Max         int           `koanf:"max"                 validate:"gte=0"`
+	IdleTimeout time.Duration `koanf:"idle_timeout,string" validate:"gte=0"`
 }
 
 func (c ManagementConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }
