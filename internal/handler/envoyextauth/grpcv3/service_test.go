@@ -300,7 +300,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		// GIVEN
 		conf := &config.Configuration{}
 		conf.Serve.Requests.Headers.MaxSize = 64 * bytesize.KB
-		conf.Serve.HTTP2.MaxConcurrentStreams = 1
+		conf.Serve.Connections.Streams.MaxConcurrent = 1
 
 		exec := mocks3.NewExecutorMock(t)
 
@@ -445,7 +445,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		conf := &config.Configuration{}
 		conf.Serve.Requests.Headers.MaxSize = 64 * bytesize.KB
 		conf.Serve.Requests.MaxInFlight = 1
-		conf.Serve.HTTP2.MaxConcurrentStreams = 100
+		conf.Serve.Connections.Streams.MaxConcurrent = 100
 		conf.Serve.Respond.With.TooManyRequests.Code = http.StatusServiceUnavailable
 
 		exec := mocks3.NewExecutorMock(t)
