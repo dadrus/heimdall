@@ -43,47 +43,85 @@ import (
 func TestNewService(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	conf := &config.Configuration{
-		Serve: config.ServeConfig{
-			Timeout: config.Timeout{
-				Write: 12 * time.Second,
-			},
-			Requests: config.IngressRequests{
-				Headers: config.IngressRequestHeaders{
-					MaxSize:     42 * bytesize.KB,
-					ReadTimeout: 11 * time.Second,
-				},
-			},
-			Connections: config.IngressConnections{
-				IdleTimeout: 13 * time.Second,
-			},
-			HTTP2: config.IngressHTTP2{
-				MaxConcurrentStreams: 17,
-			},
+	for uc, tc := range map[string]struct {
+		tls              *config.TLS
+		http2            bool
+		unencryptedHTTP2 bool
+	}{
+		"cleartext enables http1 and h2c": {
+			unencryptedHTTP2: true,
 		},
+		"tls enables http1 and http2": {
+			tls:   &config.TLS{},
+			http2: true,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// GIVEN
+			conf := &config.Configuration{
+				Serve: config.ServeConfig{
+					TLS: tc.tls,
+					Timeout: config.Timeout{
+						Read:  98 * time.Second,
+						Write: 99 * time.Second,
+					},
+					Requests: config.IngressRequests{
+						ReadTimeout: 10 * time.Second,
+						Headers: config.IngressRequestHeaders{
+							MaxSize:     42 * bytesize.KB,
+							ReadTimeout: 11 * time.Second,
+						},
+					},
+					Responses: config.IngressResponses{
+						WriteTimeout:     12 * time.Second,
+						WriteIdleTimeout: 19 * time.Second,
+					},
+					Connections: config.IngressConnections{
+						IdleTimeout:      13 * time.Second,
+						WriteIdleTimeout: 14 * time.Second,
+						Streams: config.MultiplexedStreams{
+							MaxConcurrent: 17,
+						},
+						Liveness: config.ConnectionLiveness{
+							ProbeAfter:   15 * time.Second,
+							ProbeTimeout: 16 * time.Second,
+						},
+					},
+				},
+			}
+
+			// WHEN
+			srv := newService(
+				conf,
+				mocks.NewCacheMock(t),
+				log.Logger,
+				mocks2.NewExecutorMock(t),
+			)
+
+			// THEN
+			assert.Equal(t, 10*time.Second, srv.ReadTimeout)
+			assert.Equal(t, 11*time.Second, srv.ReadHeaderTimeout)
+			assert.Equal(t, 12*time.Second, srv.WriteTimeout)
+			assert.Equal(t, 13*time.Second, srv.IdleTimeout)
+			assert.Equal(t, 42*bytesize.KB, bytesize.ByteSize(srv.MaxHeaderBytes))
+
+			require.NotNil(t, srv.HTTP2)
+			assert.Equal(t, 17, srv.HTTP2.MaxConcurrentStreams)
+			assert.Equal(t, 15*time.Second, srv.HTTP2.SendPingTimeout)
+			assert.Equal(t, 16*time.Second, srv.HTTP2.PingTimeout)
+			assert.Equal(t, 14*time.Second, srv.HTTP2.WriteByteTimeout)
+
+			require.NotNil(t, srv.Protocols)
+			assert.True(t, srv.Protocols.HTTP1())
+			assert.Equal(t, tc.http2, srv.Protocols.HTTP2())
+			assert.Equal(t, tc.unencryptedHTTP2, srv.Protocols.UnencryptedHTTP2())
+
+			assert.NotNil(t, srv.Handler)
+			assert.NotNil(t, srv.ErrorLog)
+		})
 	}
-
-	// WHEN
-	srv := newService(
-		conf,
-		mocks.NewCacheMock(t),
-		log.Logger,
-		mocks2.NewExecutorMock(t),
-	)
-
-	// THEN
-	assert.Zero(t, srv.ReadTimeout)
-	assert.Equal(t, 11*time.Second, srv.ReadHeaderTimeout)
-	assert.Equal(t, 12*time.Second, srv.WriteTimeout)
-	assert.Equal(t, 13*time.Second, srv.IdleTimeout)
-	assert.Equal(t, 42*bytesize.KB, bytesize.ByteSize(srv.MaxHeaderBytes))
-
-	require.NotNil(t, srv.HTTP2)
-	assert.Equal(t, 17, srv.HTTP2.MaxConcurrentStreams)
-
-	assert.NotNil(t, srv.Handler)
-	assert.NotNil(t, srv.ErrorLog)
 }
 
 //nolint:gocyclo

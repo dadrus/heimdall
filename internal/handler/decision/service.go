@@ -28,10 +28,10 @@ import (
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/bodylimit"
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/bodyreadidle"
 	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/http/cache"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/ioprogress"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
@@ -68,6 +68,15 @@ func newService(
 	coordinator := requestcoordinator.New(exec, newContextFactory(), newCommitter(acceptedCode))
 
 	hc := alice.New(
+		ioprogress.New(
+			log,
+			ioprogress.WithRequestReadTimeout(cfg.Requests.ReadTimeout),
+			ioprogress.WithRequestBodyReadIdleTimeout(cfg.Requests.Body.ReadIdleTimeout),
+			ioprogress.WithRequestBodyReadMinRate(cfg.Requests.Body.ReadMinRate),
+			ioprogress.WithResponseWriteTimeout(cfg.Responses.WriteTimeout),
+			ioprogress.WithResponseWriteIdleTimeout(cfg.Responses.WriteIdleTimeout),
+			ioprogress.WithResponseWriteMinRate(cfg.Responses.WriteMinRate),
+		),
 		trustedproxy.New(
 			log,
 			cfg.TrustedProxies...,
@@ -89,21 +98,30 @@ func newService(
 		),
 		requestlimit.New(cfg.Requests.MaxInFlight, eh),
 		bodylimit.New(cfg.Requests.Body.MaxSize, eh),
-		bodyreadidle.New(cfg.Requests.Body.ReadIdleTimeout),
 		requestvalidation.New(),
 		dump.New(),
 		cachemiddleware.New(cch),
 	).Then(service.NewHandler(coordinator, eh))
 
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetHTTP2(cfg.TLS != nil)
+	protocols.SetUnencryptedHTTP2(cfg.TLS == nil)
+
 	return &http.Server{
 		Handler:           hc,
+		ReadTimeout:       cfg.Requests.ReadTimeout,
 		ReadHeaderTimeout: cfg.Requests.Headers.ReadTimeout,
-		WriteTimeout:      cfg.Timeout.Write,
+		WriteTimeout:      cfg.Responses.WriteTimeout,
 		IdleTimeout:       cfg.Connections.IdleTimeout,
 		MaxHeaderBytes:    safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
 		ErrorLog:          loggeradapter.NewStdLogger(log),
 		HTTP2: &http.HTTP2Config{
-			MaxConcurrentStreams: cfg.HTTP2.MaxConcurrentStreams,
+			MaxConcurrentStreams: cfg.Connections.Streams.MaxConcurrent,
+			SendPingTimeout:      cfg.Connections.Liveness.ProbeAfter,
+			PingTimeout:          cfg.Connections.Liveness.ProbeTimeout,
+			WriteByteTimeout:     cfg.Connections.WriteIdleTimeout,
 		},
+		Protocols: protocols,
 	}
 }
