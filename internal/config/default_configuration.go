@@ -31,9 +31,14 @@ const (
 	defaultRequestHeaderMaxSize = 64 * bytesize.KB
 	defaultRequestBodyMaxSize   = 5 * bytesize.MB
 
-	defaultRequestHeaderReadTimeout = 5 * time.Second
-	defaultResponseWriteIdleTimeout = 30 * time.Second
-	defaultConnectionIdleTimeout    = 2 * time.Minute
+	defaultRequestReadTimeout         = 0
+	defaultRequestHeaderReadTimeout   = 5 * time.Second
+	defaultRequestBodyReadIdleTimeout = 20 * time.Second
+	defaultRequestBodyReadMinRate     = 0
+	defaultResponseWriteTimeout       = 0
+	defaultResponseWriteIdleTimeout   = 30 * time.Second
+	defaultResponseWriteMinRate       = 0
+	defaultConnectionIdleTimeout      = 2 * time.Minute
 
 	defaultMaxConnections       = 1024
 	defaultMaxInFlightRequests  = 512
@@ -77,16 +82,21 @@ func defaultConfig() Configuration {
 			},
 			Requests: IngressRequests{
 				MaxInFlight: defaultMaxInFlightRequests,
+				ReadTimeout: defaultRequestReadTimeout,
 				Headers: IngressRequestHeaders{
 					MaxSize:     defaultRequestHeaderMaxSize,
 					ReadTimeout: defaultRequestHeaderReadTimeout,
 				},
 				Body: IngressRequestBody{
-					MaxSize: defaultRequestBodyMaxSize,
+					MaxSize:         defaultRequestBodyMaxSize,
+					ReadIdleTimeout: defaultRequestBodyReadIdleTimeout,
+					ReadMinRate:     defaultRequestBodyReadMinRate,
 				},
 			},
 			Responses: IngressResponses{
+				WriteTimeout:     defaultResponseWriteTimeout,
 				WriteIdleTimeout: defaultResponseWriteIdleTimeout,
+				WriteMinRate:     defaultResponseWriteMinRate,
 			},
 			Connections: IngressConnections{
 				Max:         defaultMaxConnections,
@@ -131,16 +141,21 @@ func defaultConfig() Configuration {
 			},
 			Requests: IngressRequests{
 				MaxInFlight: defaultMaxInFlightRequests,
+				ReadTimeout: defaultRequestReadTimeout,
 				Headers: IngressRequestHeaders{
 					MaxSize:     defaultRequestHeaderMaxSize,
 					ReadTimeout: defaultRequestHeaderReadTimeout,
 				},
 				Body: IngressRequestBody{
-					MaxSize: defaultRequestBodyMaxSize,
+					MaxSize:         defaultRequestBodyMaxSize,
+					ReadIdleTimeout: defaultRequestBodyReadIdleTimeout,
+					ReadMinRate:     defaultRequestBodyReadMinRate,
 				},
 			},
 			Responses: IngressResponses{
+				WriteTimeout:     defaultResponseWriteTimeout,
 				WriteIdleTimeout: defaultResponseWriteIdleTimeout,
+				WriteMinRate:     defaultResponseWriteMinRate,
 			},
 			Connections: IngressConnections{
 				Max:         defaultMaxConnections,

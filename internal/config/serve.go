@@ -53,6 +53,7 @@ type Timeout struct {
 
 type IngressRequests struct {
 	MaxInFlight int64                 `koanf:"max_in_flight" validate:"gte=0"`
+	ReadTimeout time.Duration         `koanf:"read_timeout,string" validate:"gte=0"`
 	Headers     IngressRequestHeaders `koanf:"headers"`
 	Body        IngressRequestBody    `koanf:"body"`
 }
@@ -64,11 +65,14 @@ type IngressRequestHeaders struct {
 
 type IngressRequestBody struct {
 	MaxSize         bytesize.ByteSize `koanf:"max_size"                 validate:"max_bytes=7EB"`
-	ReadIdleTimeout time.Duration     `koanf:"read_idle_timeout,string" validate:"gte=0"`
+	ReadIdleTimeout time.Duration     `koanf:"read_idle_timeout,string" validate:"gte=0,required_with=ReadMinRate"`
+	ReadMinRate     int64             `koanf:"read_min_rate"            validate:"gte=0"`
 }
 
 type IngressResponses struct {
-	WriteIdleTimeout time.Duration `koanf:"write_idle_timeout,string" validate:"gte=0"`
+	WriteTimeout     time.Duration `koanf:"write_timeout,string"      validate:"gte=0"`
+	WriteIdleTimeout time.Duration `koanf:"write_idle_timeout,string" validate:"gte=0,required_with=WriteMinRate"`
+	WriteMinRate     int64         `koanf:"write_min_rate"            validate:"gte=0"`
 }
 
 type IngressConnections struct {
