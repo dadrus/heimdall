@@ -38,6 +38,50 @@ func (_m *ServerMock) EXPECT() *ServerMock_Expecter {
 	return &ServerMock_Expecter{mock: &_m.Mock}
 }
 
+// Close provides a mock function for the type ServerMock
+func (_mock *ServerMock) Close() error {
+	ret := _mock.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Close")
+	}
+
+	var r0 error
+	if returnFunc, ok := ret.Get(0).(func() error); ok {
+		r0 = returnFunc()
+	} else {
+		r0 = ret.Error(0)
+	}
+	return r0
+}
+
+// ServerMock_Close_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Close'
+type ServerMock_Close_Call struct {
+	*mock.Call
+}
+
+// Close is a helper method to define mock.On call
+func (_e *ServerMock_Expecter) Close() *ServerMock_Close_Call {
+	return &ServerMock_Close_Call{Call: _e.mock.On("Close")}
+}
+
+func (_c *ServerMock_Close_Call) Run(run func()) *ServerMock_Close_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *ServerMock_Close_Call) Return(err error) *ServerMock_Close_Call {
+	_c.Call.Return(err)
+	return _c
+}
+
+func (_c *ServerMock_Close_Call) RunAndReturn(run func() error) *ServerMock_Close_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // Serve provides a mock function for the type ServerMock
 func (_mock *ServerMock) Serve(l net.Listener) error {
 	ret := _mock.Called(l)

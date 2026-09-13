@@ -21,6 +21,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog"
 
@@ -31,7 +32,13 @@ import (
 type Server interface {
 	Serve(l net.Listener) error
 	Shutdown(ctx context.Context) error
+	Close() error
 }
+
+const (
+	forceCloseTailFraction = 10
+	maxForceCloseTail      = time.Second
+)
 
 type tlsAwareListener interface {
 	TLSEnabled() bool
@@ -83,10 +90,40 @@ func (m *LifecycleManager) Start(ctx context.Context) error {
 func (m *LifecycleManager) Stop(ctx context.Context) error {
 	m.Logger.Info().Str("_service", m.ServiceName).Msg("Tearing down service")
 
-	err := m.Server.Shutdown(ctx)
-	if err != nil {
-		m.Logger.Warn().Err(err).Str("_service", m.ServiceName).Msg("Graceful shutdown failed")
+	graceCtx, cancel := gracefulShutdownContext(ctx)
+	defer cancel()
+
+	shutdownErr := m.Server.Shutdown(graceCtx)
+	if shutdownErr == nil {
+		return nil
 	}
 
-	return err
+	m.Logger.Warn().Err(shutdownErr).
+		Str("_service", m.ServiceName).
+		Msg("Graceful shutdown failed, forcing service to stop")
+
+	closeErr := m.Server.Close()
+	if closeErr != nil {
+		m.Logger.Warn().Err(closeErr).
+			Str("_service", m.ServiceName).
+			Msg("Forced shutdown failed")
+	}
+
+	return errors.Join(shutdownErr, closeErr)
+}
+
+func gracefulShutdownContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return context.WithCancel(ctx)
+	}
+
+	remaining := time.Until(deadline)
+	if remaining <= 0 {
+		return context.WithCancel(ctx)
+	}
+
+	tail := min(remaining/forceCloseTailFraction, maxForceCloseTail)
+
+	return context.WithDeadline(ctx, deadline.Add(-tail))
 }
