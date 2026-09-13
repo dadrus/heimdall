@@ -118,6 +118,7 @@ func TestNewService(t *testing.T) {
 
 			// THEN
 			assert.NotNil(t, srv.Handler)
+			require.NotNil(t, srv.rt)
 
 			assert.Equal(t, 10*time.Second, srv.ReadTimeout)
 			assert.Equal(t, 11*time.Second, srv.ReadHeaderTimeout)
@@ -138,6 +139,67 @@ func TestNewService(t *testing.T) {
 
 			assert.NotNil(t, srv.ErrorLog)
 			assert.Nil(t, srv.ConnContext)
+		})
+	}
+}
+
+func TestProxyServiceClosesIdleUpstreamConnections(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		force bool
+	}{
+		"graceful shutdown": {},
+		"forced close": {
+			force: true,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// GIVEN
+			remoteAddresses := make(chan string, 2)
+			upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				remoteAddresses <- req.RemoteAddr
+				_, err := rw.Write([]byte("ok"))
+				assert.NoError(t, err)
+			}))
+			defer upstream.Close()
+
+			rt := newProfileRoundTripper(config.ServeConfig{}, nil)
+			srv := &proxyService{
+				Server: new(http.Server),
+				rt:     rt,
+			}
+
+			roundTrip := func() string {
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, upstream.URL, nil)
+				require.NoError(t, err)
+
+				resp, err := rt.normal.RoundTrip(req)
+				require.NoError(t, err)
+
+				_, err = io.Copy(io.Discard, resp.Body)
+				require.NoError(t, err)
+				require.NoError(t, resp.Body.Close())
+
+				return <-remoteAddresses
+			}
+
+			firstRemoteAddress := roundTrip()
+
+			// WHEN
+			var err error
+			if tc.force {
+				err = srv.Close()
+			} else {
+				err = srv.Shutdown(t.Context())
+			}
+			require.NoError(t, err)
+
+			// THEN
+			secondRemoteAddress := roundTrip()
+			assert.NotEqual(t, firstRemoteAddress, secondRemoteAddress)
 		})
 	}
 }

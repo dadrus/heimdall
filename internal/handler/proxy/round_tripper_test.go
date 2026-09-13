@@ -318,6 +318,72 @@ func TestProfileRoundTripperReusesUpstreamConnection(t *testing.T) {
 	}
 }
 
+func TestProfileRoundTripperCloseIdleConnections(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		transport func(*profileRoundTripper) *http.Transport
+		h2c       bool
+	}{
+		"normal profile": {
+			transport: func(rt *profileRoundTripper) *http.Transport { return rt.normal },
+		},
+		"http1 only profile": {
+			transport: func(rt *profileRoundTripper) *http.Transport { return rt.http1Only },
+		},
+		"http2 required profile": {
+			transport: func(rt *profileRoundTripper) *http.Transport { return rt.http2Required },
+			h2c:       true,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// GIVEN
+			remoteAddresses := make(chan string, 3)
+			upstream := httptest.NewUnstartedServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				remoteAddresses <- req.RemoteAddr
+				_, err := rw.Write([]byte("ok"))
+				assert.NoError(t, err)
+			}))
+			if tc.h2c {
+				upstream.Config.Protocols = new(http.Protocols)
+				upstream.Config.Protocols.SetUnencryptedHTTP2(true)
+			}
+			upstream.Start()
+			defer upstream.Close()
+
+			rt := newProfileRoundTripper(config.ServeConfig{}, nil)
+			transport := tc.transport(rt)
+
+			roundTrip := func() string {
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, upstream.URL, nil)
+				require.NoError(t, err)
+
+				resp, err := transport.RoundTrip(req)
+				require.NoError(t, err)
+
+				_, err = io.Copy(io.Discard, resp.Body)
+				require.NoError(t, err)
+				require.NoError(t, resp.Body.Close())
+
+				return <-remoteAddresses
+			}
+
+			firstRemoteAddress := roundTrip()
+			secondRemoteAddress := roundTrip()
+			require.Equal(t, firstRemoteAddress, secondRemoteAddress)
+
+			// WHEN
+			rt.CloseIdleConnections()
+
+			// THEN
+			thirdRemoteAddress := roundTrip()
+			assert.NotEqual(t, firstRemoteAddress, thirdRemoteAddress)
+		})
+	}
+}
+
 func TestProfileRoundTripperPropagatesCancellation(t *testing.T) {
 	t.Parallel()
 

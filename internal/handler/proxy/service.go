@@ -17,6 +17,7 @@
 package proxy
 
 import (
+	"context"
 	"crypto/tls"
 	"net/http"
 	"strings"
@@ -54,13 +55,35 @@ import (
 // purposes.
 var tlsClientConfig *tls.Config // nolint: gochecknoglobals
 
+type proxyService struct {
+	*http.Server
+
+	rt *profileRoundTripper
+}
+
+func (s *proxyService) Shutdown(ctx context.Context) error {
+	if err := s.Server.Shutdown(ctx); err != nil {
+		return err
+	}
+
+	s.rt.CloseIdleConnections()
+
+	return nil
+}
+
+func (s *proxyService) Close() error {
+	defer s.rt.CloseIdleConnections()
+
+	return s.Server.Close()
+}
+
 //nolint:funlen
 func newService(
 	conf *config.Configuration,
 	cch cache.Cache,
 	log zerolog.Logger,
 	exec pipeline.Executor,
-) *http.Server {
+) *proxyService {
 	cfg := conf.Serve
 	eh := errorhandler.New(
 		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
@@ -73,7 +96,8 @@ func newService(
 		errorhandler.WithRequestBodyTooLargeErrorCode(cfg.Respond.With.RequestBodyTooLarge.Code),
 		errorhandler.WithTooManyRequestsErrorCode(cfg.Respond.With.TooManyRequests.Code),
 	)
-	rt := newObservedRoundTripper(newProfileRoundTripper(cfg, tlsClientConfig))
+	profileRT := newProfileRoundTripper(cfg, tlsClientConfig)
+	rt := newObservedRoundTripper(profileRT)
 	coordinator := requestcoordinator.New(exec, newContextFactory(), newCommitter(rt))
 
 	hc := alice.New(
@@ -132,20 +156,23 @@ func newService(
 	protocols.SetHTTP2(cfg.TLS != nil)
 	protocols.SetUnencryptedHTTP2(cfg.TLS == nil)
 
-	return &http.Server{
-		Handler:           hc,
-		ReadTimeout:       cfg.Requests.ReadTimeout,
-		ReadHeaderTimeout: cfg.Requests.Headers.ReadTimeout,
-		WriteTimeout:      cfg.Responses.WriteTimeout,
-		IdleTimeout:       cfg.Connections.IdleTimeout,
-		MaxHeaderBytes:    safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
-		ErrorLog:          loggeradapter.NewStdLogger(log),
-		HTTP2: &http.HTTP2Config{
-			MaxConcurrentStreams: cfg.Connections.Streams.MaxConcurrent,
-			SendPingTimeout:      cfg.Connections.Liveness.ProbeAfter,
-			PingTimeout:          cfg.Connections.Liveness.ProbeTimeout,
-			WriteByteTimeout:     cfg.Connections.WriteIdleTimeout,
+	return &proxyService{
+		Server: &http.Server{
+			Handler:           hc,
+			ReadTimeout:       cfg.Requests.ReadTimeout,
+			ReadHeaderTimeout: cfg.Requests.Headers.ReadTimeout,
+			WriteTimeout:      cfg.Responses.WriteTimeout,
+			IdleTimeout:       cfg.Connections.IdleTimeout,
+			MaxHeaderBytes:    safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
+			ErrorLog:          loggeradapter.NewStdLogger(log),
+			HTTP2: &http.HTTP2Config{
+				MaxConcurrentStreams: cfg.Connections.Streams.MaxConcurrent,
+				SendPingTimeout:      cfg.Connections.Liveness.ProbeAfter,
+				PingTimeout:          cfg.Connections.Liveness.ProbeTimeout,
+				WriteByteTimeout:     cfg.Connections.WriteIdleTimeout,
+			},
+			Protocols: protocols,
 		},
-		Protocols: protocols,
+		rt: profileRT,
 	}
 }

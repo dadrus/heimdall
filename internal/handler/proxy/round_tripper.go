@@ -88,6 +88,12 @@ func (rt *profileRoundTripper) RoundTrip(req *http.Request) (*http.Response, err
 	return transport.RoundTrip(req)
 }
 
+func (rt *profileRoundTripper) CloseIdleConnections() {
+	rt.normal.CloseIdleConnections()
+	rt.http1Only.CloseIdleConnections()
+	rt.http2Required.CloseIdleConnections()
+}
+
 func (rt *profileRoundTripper) transportFor(rc *requestContext) (*http.Transport, error) {
 	switch rc.upstreamScheme {
 	case upstreamSchemeHTTP:
