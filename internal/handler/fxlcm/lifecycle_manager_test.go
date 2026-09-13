@@ -196,7 +196,11 @@ func TestLifecycleManagerStop(t *testing.T) {
 			assert: func(t *testing.T, err error, logs string) {
 				t.Helper()
 
+				require.ErrorIs(t, err, errServiceStop)
+				require.ErrorIs(t, err, errGracefulShutdown)
 				require.ErrorIs(t, err, assert.AnError)
+				require.NotErrorIs(t, err, errForcedShutdown)
+				require.ErrorContains(t, err, "foo service")
 				assert.Contains(t, logs, "Graceful shutdown failed, forcing service to stop")
 				assert.Contains(t, logs, assert.AnError.Error())
 				assert.NotContains(t, logs, forceCloseErr.Error())
@@ -212,8 +216,13 @@ func TestLifecycleManagerStop(t *testing.T) {
 			assert: func(t *testing.T, err error, logs string) {
 				t.Helper()
 
+				require.ErrorIs(t, err, errServiceStop)
+				require.ErrorIs(t, err, errGracefulShutdown)
+				require.ErrorIs(t, err, errForcedShutdown)
 				require.ErrorIs(t, err, assert.AnError)
 				require.ErrorIs(t, err, forceCloseErr)
+				require.ErrorContains(t, err, "foo service")
+
 				assert.Contains(t, logs, "Graceful shutdown failed, forcing service to stop")
 				assert.Contains(t, logs, "Forced shutdown failed")
 				assert.Contains(t, logs, forceCloseErr.Error())

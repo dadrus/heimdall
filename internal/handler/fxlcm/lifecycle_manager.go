@@ -29,6 +29,12 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+var (
+	errServiceStop      = errors.New("failed to stop service")
+	errGracefulShutdown = errors.New("graceful shutdown failed")
+	errForcedShutdown   = errors.New("forced shutdown failed")
+)
+
 type Server interface {
 	Serve(l net.Listener) error
 	Shutdown(ctx context.Context) error
@@ -102,14 +108,25 @@ func (m *LifecycleManager) Stop(ctx context.Context) error {
 		Str("_service", m.ServiceName).
 		Msg("Graceful shutdown failed, forcing service to stop")
 
+	causes := []error{
+		errorchain.NewWithMessagef(errGracefulShutdown, "%s service", m.ServiceName).
+			CausedBy(shutdownErr),
+	}
+
 	closeErr := m.Server.Close()
 	if closeErr != nil {
 		m.Logger.Warn().Err(closeErr).
 			Str("_service", m.ServiceName).
 			Msg("Forced shutdown failed")
+
+		causes = append(causes,
+			errorchain.NewWithMessagef(errForcedShutdown, "%s service", m.ServiceName).
+				CausedBy(closeErr),
+		)
 	}
 
-	return errors.Join(shutdownErr, closeErr)
+	return errorchain.NewWithMessagef(errServiceStop, "%s service", m.ServiceName).
+		CausedBy(errorchain.List(causes...))
 }
 
 func gracefulShutdownContext(ctx context.Context) (context.Context, context.CancelFunc) {
