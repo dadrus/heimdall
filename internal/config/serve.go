@@ -111,21 +111,15 @@ type UpstreamConnections struct {
 
 type UpstreamRequests struct {
 	ExpectContinueTimeout time.Duration `koanf:"expect_continue_timeout,string" validate:"gte=0"`
-	WriteIdleTimeout      time.Duration `koanf:"write_idle_timeout,string"      validate:"gte=0"`
 }
 
 type UpstreamResponses struct {
 	Headers UpstreamResponseHeaders `koanf:"headers"`
-	Body    UpstreamResponseBody    `koanf:"body"`
 }
 
 type UpstreamResponseHeaders struct {
 	MaxSize     bytesize.ByteSize `koanf:"max_size"            validate:"gt=0,max_bytes=7EB"`
 	ReadTimeout time.Duration     `koanf:"read_timeout,string" validate:"gte=0"`
-}
-
-type UpstreamResponseBody struct {
-	ReadIdleTimeout time.Duration `koanf:"read_idle_timeout,string" validate:"gte=0"`
 }
 
 type CORS struct {

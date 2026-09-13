@@ -58,7 +58,6 @@ const (
 	defaultUpstreamConnectionLivenessProbeAfter   = 30 * time.Second
 	defaultUpstreamConnectionLivenessProbeTimeout = 15 * time.Second
 	defaultUpstreamExpectContinueTimeout          = time.Second
-	defaultUpstreamWriteIdleTimeout               = 30 * time.Second
 
 	defaultUpstreamResponseHeaderMaxSize     = bytesize.MB
 	defaultUpstreamResponseHeaderReadTimeout = 30 * time.Second
@@ -130,7 +129,6 @@ func defaultConfig() Configuration {
 				},
 				Requests: UpstreamRequests{
 					ExpectContinueTimeout: defaultUpstreamExpectContinueTimeout,
-					WriteIdleTimeout:      defaultUpstreamWriteIdleTimeout,
 				},
 				Responses: UpstreamResponses{
 					Headers: UpstreamResponseHeaders{

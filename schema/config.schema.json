@@ -865,7 +865,7 @@
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
         },
         "write_idle_timeout": {
-          "description": "Maximum time an upstream multiplexed connection may make no write progress while data is pending. 0 disables connection-scoped write-progress protection.",
+          "description": "Maximum time allowed for a single active write to an upstream connection. Each Write operation gets a fresh deadline that is cleared afterwards, so otherwise idle connections and tunnels are unaffected. This is connection-scoped and does not provide per-request or per-stream write-idle semantics. 0 disables the protection.",
           "type": "string",
           "default": "30s",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"

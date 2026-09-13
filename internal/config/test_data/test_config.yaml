@@ -58,6 +58,10 @@ serve:
       dial_timeout: 5s
       tls_handshake_timeout: 10s
       idle_timeout: 90s
+      write_idle_timeout: 17s
+      liveness:
+        probe_after: 19s
+        probe_timeout: 7s
     requests:
       expect_continue_timeout: 1s
     responses:
