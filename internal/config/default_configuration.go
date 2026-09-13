@@ -24,6 +24,8 @@ import (
 )
 
 const (
+	defaultShutdownTimeout = 30 * time.Second
+
 	defaultReadTimeout  = time.Second * 5
 	defaultWriteTimeout = time.Second * 10
 	defaultIdleTimeout  = time.Second * 120
@@ -87,6 +89,9 @@ func DefaultIngressConnections() IngressConnections {
 //nolint:funlen
 func defaultConfig() Configuration {
 	return Configuration{
+		Shutdown: ShutdownConfig{
+			Timeout: defaultShutdownTimeout,
+		},
 		Serve: ServeConfig{
 			Port: defaultServePort,
 			Timeout: Timeout{
