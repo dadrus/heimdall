@@ -83,6 +83,67 @@ func TestErrorChainNewWithCause(t *testing.T) {
 	require.NotErrorAs(t, err, &fooer)
 }
 
+func TestList(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		errs            []error
+		expected        []error
+		expectedMessage string
+	}{
+		"no errors": {},
+		"single error": {
+			errs:     []error{errTest1},
+			expected: []error{errTest1},
+		},
+		"multiple independent errors": {
+			errs:            []error{errTest1, nil, errTest2},
+			expected:        []error{errTest1, errTest2},
+			expectedMessage: "[test error 1, test error 2]",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN
+			err := errorchain.List(tc.errs...)
+
+			// THEN
+			if len(tc.expected) == 0 {
+				require.NoError(t, err)
+
+				return
+			}
+
+			require.Error(t, err)
+			for _, expected := range tc.expected {
+				require.ErrorIs(t, err, expected)
+			}
+			if len(tc.expectedMessage) != 0 {
+				require.ErrorContains(t, err, tc.expectedMessage)
+			}
+		})
+	}
+}
+
+func TestErrorChainNewWithIndependentCauses(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	causeErr := &testError{}
+
+	// WHEN
+	err := errorchain.NewWithMessage(errTest1, "operation failed").
+		CausedBy(errorchain.List(errTest2, causeErr))
+
+	// THEN
+	require.ErrorIs(t, err, errTest1)
+	require.ErrorIs(t, err, errTest2)
+	require.ErrorIs(t, err, causeErr)
+	require.ErrorContains(t, err, "operation failed")
+	require.ErrorContains(t, err, "[test error 2, test error 3]")
+}
+
 func TestErrorChainErrorAsFindsAspectFromTopLevel(t *testing.T) {
 	t.Parallel()
 

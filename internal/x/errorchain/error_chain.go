@@ -40,23 +40,31 @@ type message struct { //nolint:musttag
 	Message string   `json:"message,omitempty" xml:"message,omitempty"`
 }
 
+// ErrorChain represents a linear causal chain where each error is caused by the next.
 type ErrorChain struct { // nolint: errname
 	head *element
 	tail *element
 }
 
+type errorList struct {
+	errs []error
+}
+
+// New starts a causal chain with err as its sentinel error.
 func New(err error) *ErrorChain {
 	chain := &ErrorChain{}
 
 	return chain.causedBy(err, "")
 }
 
+// NewWithMessage starts a causal chain with a sentinel error and context.
 func NewWithMessage(err error, message string) *ErrorChain {
 	chain := &ErrorChain{}
 
 	return chain.causedBy(err, message)
 }
 
+// NewWithMessagef starts a causal chain with a sentinel error and formatted context.
 func NewWithMessagef(err error, format string, a ...any) *ErrorChain {
 	chain := &ErrorChain{}
 
@@ -78,8 +86,41 @@ func (ec *ErrorChain) Error() string {
 	return strings.Join(errs, ": ")
 }
 
+// CausedBy appends err as the cause of the preceding error. Use List for independent causes.
 func (ec *ErrorChain) CausedBy(err error) *ErrorChain {
 	return ec.causedBy(err, "")
+}
+
+// List groups independent errors into one visible cause. Nil errors are ignored.
+func List(errs ...error) error {
+	nonNil := make([]error, 0, len(errs))
+	for _, err := range errs {
+		if err != nil {
+			nonNil = append(nonNil, err)
+		}
+	}
+
+	switch len(nonNil) {
+	case 0:
+		return nil
+	case 1:
+		return nonNil[0]
+	default:
+		return &errorList{errs: nonNil}
+	}
+}
+
+func (e *errorList) Error() string {
+	messages := make([]string, 0, len(e.errs))
+	for _, err := range e.errs {
+		messages = append(messages, err.Error())
+	}
+
+	return "[" + strings.Join(messages, ", ") + "]"
+}
+
+func (e *errorList) Unwrap() []error {
+	return e.errs
 }
 
 func (ec *ErrorChain) WithAspects(values ...any) *ErrorChain {
