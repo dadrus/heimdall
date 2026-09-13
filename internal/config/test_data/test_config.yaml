@@ -38,7 +38,9 @@ secret_management:
 master_key:
   source: master_secrets
   selector: key_1
-
+  
+shutdown:
+  timeout: 23s
 
 serve:
   host: 0.0.0.0
