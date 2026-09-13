@@ -2986,6 +2986,19 @@
       "type": "string",
       "pattern": "^v(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
     },
+    "shutdown": {
+      "description": "Application shutdown configuration.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "timeout": {
+          "description": "Maximum total duration of the Fx-coordinated application shutdown.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]*[1-9][0-9]*(ns|us|ms|s|m|h)$"
+        }
+      }
+    },
     "serve": {
       "description": "HTTP(s) configuration of the main service",
       "additionalProperties": false,

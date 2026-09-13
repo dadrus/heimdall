@@ -18,6 +18,7 @@ package config
 
 import (
 	"os"
+	"time"
 
 	"github.com/go-viper/mapstructure/v2"
 
@@ -26,6 +27,7 @@ import (
 )
 
 type Configuration struct { //nolint:musttag
+	Shutdown         ShutdownConfig      `koanf:"shutdown"`
 	Serve            ServeConfig         `koanf:"serve"`
 	Management       ManagementConfig    `koanf:"management"`
 	Log              LoggingConfig       `koanf:"log"`
@@ -38,6 +40,10 @@ type Configuration struct { //nolint:musttag
 	Catalogue        *MechanismCatalogue `koanf:"mechanisms,omitempty"`
 	Default          *DefaultRule        `koanf:"default_rule,omitempty"`
 	Providers        RuleProviders       `koanf:"providers,omitempty"`
+}
+
+type ShutdownConfig struct {
+	Timeout time.Duration `koanf:"timeout,string" validate:"gt=0"`
 }
 
 func NewConfiguration(
