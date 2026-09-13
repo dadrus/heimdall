@@ -636,6 +636,12 @@ func TestGRPCHeaderLimit(t *testing.T) {
 	assert.Contains(t, err.Error(), "header list size")
 }
 
+type executorFunc func(ctx pipeline.ExecutionContext) error
+
+func (f executorFunc) Execute(ctx pipeline.ExecutionContext) error {
+	return f(ctx)
+}
+
 func TestUnaryRPCLifetime(t *testing.T) {
 	t.Run("http io timeouts do not become an rpc lifetime", func(t *testing.T) {
 		// GIVEN
@@ -645,8 +651,7 @@ func TestUnaryRPCLifetime(t *testing.T) {
 		conf.Serve.Responses.WriteTimeout = time.Millisecond
 		conf.Serve.Responses.WriteIdleTimeout = time.Millisecond
 
-		exec := mocks3.NewExecutorMock(t)
-		exec.EXPECT().Execute(mock.Anything).RunAndReturn(func(ctx pipeline.ExecutionContext) error {
+		exec := executorFunc(func(ctx pipeline.ExecutionContext) error {
 			select {
 			case <-time.After(25 * time.Millisecond):
 				return nil
@@ -671,8 +676,6 @@ func TestUnaryRPCLifetime(t *testing.T) {
 	t.Run("client deadline propagates into the pipeline context", func(t *testing.T) {
 		// GIVEN
 		conf := newGRPCTestConfig()
-		exec := mocks3.NewExecutorMock(t)
-
 		type observedContext struct {
 			deadline time.Time
 			ok       bool
@@ -680,7 +683,7 @@ func TestUnaryRPCLifetime(t *testing.T) {
 
 		observed := make(chan observedContext, 1)
 
-		exec.EXPECT().Execute(mock.Anything).RunAndReturn(func(ctx pipeline.ExecutionContext) error {
+		exec := executorFunc(func(ctx pipeline.ExecutionContext) error {
 			deadline, ok := ctx.Context().Deadline()
 			observed <- observedContext{
 				deadline: deadline,
@@ -718,11 +721,10 @@ func TestUnaryRPCLifetime(t *testing.T) {
 	t.Run("client cancellation propagates into the pipeline context", func(t *testing.T) {
 		// GIVEN
 		conf := newGRPCTestConfig()
-		exec := mocks3.NewExecutorMock(t)
 		entered := make(chan struct{})
 		observed := make(chan error, 1)
 
-		exec.EXPECT().Execute(mock.Anything).RunAndReturn(func(ctx pipeline.ExecutionContext) error {
+		exec := executorFunc(func(ctx pipeline.ExecutionContext) error {
 			close(entered)
 			<-ctx.Context().Done()
 			observed <- ctx.Context().Err()

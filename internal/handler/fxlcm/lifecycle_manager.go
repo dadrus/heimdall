@@ -68,7 +68,7 @@ func (m *LifecycleManager) Start(ctx context.Context) error {
 				Msg("TLS is disabled.")
 		}
 
-		if err = m.Server.Serve(ln); err != nil {
+		if err := m.Server.Serve(ln); err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
 				m.Logger.Fatal().Err(err).Str("_service", m.ServiceName).Msg("Could not start service")
 			} else {

@@ -19,10 +19,8 @@ package proxy
 import (
 	"crypto/tls"
 	"errors"
-	"net"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/ccoveille/go-safecast/v2"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -130,10 +128,12 @@ func newBaseTransport(cfg config.ServeConfig, tlsCfg *tls.Config) *http.Transpor
 		// is possible per upstream
 		Proxy: http.ProxyFromEnvironment,
 
-		DialContext: (&net.Dialer{
-			Timeout:   cfg.Upstream.Connections.DialTimeout,
-			KeepAlive: 30 * time.Second, //nolint:mnd
-		}).DialContext,
+		DialContext: newUpstreamDialContext(cfg.Upstream.Connections),
+
+		HTTP2: &http.HTTP2Config{
+			SendPingTimeout: cfg.Upstream.Connections.Liveness.ProbeAfter,
+			PingTimeout:     cfg.Upstream.Connections.Liveness.ProbeTimeout,
+		},
 
 		ResponseHeaderTimeout:  cfg.Upstream.Responses.Headers.ReadTimeout,
 		MaxResponseHeaderBytes: safecast.MustConvert[int64](cfg.Upstream.Responses.Headers.MaxSize),

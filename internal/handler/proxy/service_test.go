@@ -383,6 +383,11 @@ func TestProxyService(t *testing.T) {
 			upstreamScheme: "http",
 			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+				Upstream: config.UpstreamConfig{
+					Connections: config.UpstreamConnections{
+						WriteIdleTimeout: 250 * time.Millisecond,
+					},
+				},
 			},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
@@ -926,6 +931,15 @@ func TestProxyService(t *testing.T) {
 		"http2 usage": {
 			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 1000 * time.Second, Write: 1000 * time.Second, Idle: 1000 * time.Second},
+				Upstream: config.UpstreamConfig{
+					Connections: config.UpstreamConnections{
+						WriteIdleTimeout: 250 * time.Millisecond,
+						Liveness: config.ConnectionLiveness{
+							ProbeAfter:   100 * time.Millisecond,
+							ProbeTimeout: 100 * time.Millisecond,
+						},
+					},
+				},
 				TLS: &config.TLS{
 					Secret: config.Secret{Source: "proxy", Selector: "server"},
 				},
@@ -1047,6 +1061,15 @@ func TestProxyService(t *testing.T) {
 			upstreamScheme: "h2c",
 			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+				Upstream: config.UpstreamConfig{
+					Connections: config.UpstreamConnections{
+						WriteIdleTimeout: 250 * time.Millisecond,
+						Liveness: config.ConnectionLiveness{
+							ProbeAfter:   100 * time.Millisecond,
+							ProbeTimeout: 100 * time.Millisecond,
+						},
+					},
+				},
 			},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
@@ -1105,6 +1128,15 @@ func TestProxyService(t *testing.T) {
 		"native gRPC uses http2 over https": {
 			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+				Upstream: config.UpstreamConfig{
+					Connections: config.UpstreamConnections{
+						WriteIdleTimeout: 250 * time.Millisecond,
+						Liveness: config.ConnectionLiveness{
+							ProbeAfter:   100 * time.Millisecond,
+							ProbeTimeout: 100 * time.Millisecond,
+						},
+					},
+				},
 			},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
@@ -1342,6 +1374,15 @@ func TestProxyService(t *testing.T) {
 			disableHTTP2: true,
 			serviceConf: config.ServeConfig{
 				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+				Upstream: config.UpstreamConfig{
+					Connections: config.UpstreamConnections{
+						WriteIdleTimeout: 250 * time.Millisecond,
+						Liveness: config.ConnectionLiveness{
+							ProbeAfter:   100 * time.Millisecond,
+							ProbeTimeout: 100 * time.Millisecond,
+						},
+					},
+				},
 				TLS: &config.TLS{
 					Secret: config.Secret{Source: "proxy", Selector: "server"},
 				},
@@ -2121,9 +2162,10 @@ func TestWebSocketSupport(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, []byte("ping 1"), message)
 
-		// The HTTP response write policy ends at a successful hijack. A quiet
-		// tunnel must therefore remain usable even after the configured response
-		// write-idle window has elapsed.
+		// The HTTP response write policy ends at a successful hijack, while the
+		// upstream connection write policy is only active during an actual write.
+		// A quiet tunnel must therefore remain usable after both configured
+		// write-idle windows have elapsed.
 		time.Sleep(150 * time.Millisecond)
 
 		err = con.WriteMessage(websocket.TextMessage, []byte("ping 2"))
@@ -2159,6 +2201,11 @@ func TestWebSocketSupport(t *testing.T) {
 		Serve: config.ServeConfig{
 			Host: "127.0.0.1",
 			Port: port,
+			Upstream: config.UpstreamConfig{
+				Connections: config.UpstreamConnections{
+					WriteIdleTimeout: 50 * time.Millisecond,
+				},
+			},
 			Responses: config.IngressResponses{
 				WriteIdleTimeout: 50 * time.Millisecond,
 				WriteMinRate:     500,

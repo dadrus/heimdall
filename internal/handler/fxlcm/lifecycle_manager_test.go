@@ -18,7 +18,9 @@ package fxlcm
 
 import (
 	"fmt"
+	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,50 +36,77 @@ import (
 
 func TestLifecycleManagerStart(t *testing.T) {
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, srv *mocks.ServerMock)
-		assert func(t *testing.T, exit *testsupport.PatchedOSExit, logs string)
+		setup      func(t *testing.T, srv *mocks.ServerMock) <-chan struct{}
+		assert     func(t *testing.T, exit *testsupport.PatchedOSExit, logs string)
+		waitFor    string
+		expectExit bool
 	}{
 		"successful start": {
-			setup: func(t *testing.T, srv *mocks.ServerMock) {
+			setup: func(t *testing.T, srv *mocks.ServerMock) <-chan struct{} {
 				t.Helper()
 
-				srv.EXPECT().Serve(mock.Anything).Return(nil)
+				served := make(chan struct{})
+				srv.EXPECT().Serve(mock.Anything).RunAndReturn(func(net.Listener) error {
+					close(served)
+
+					return nil
+				})
+
+				return served
 			},
 			assert: func(t *testing.T, exit *testsupport.PatchedOSExit, logs string) {
 				t.Helper()
 
-				require.False(t, exit.Called)
+				require.False(t, exit.Called())
 				assert.Contains(t, logs, "Starting listening")
 				assert.NotContains(t, logs, "error")
 			},
+			waitFor: "Starting listening",
 		},
 		"failed to start": {
-			setup: func(t *testing.T, srv *mocks.ServerMock) {
+			setup: func(t *testing.T, srv *mocks.ServerMock) <-chan struct{} {
 				t.Helper()
 
-				srv.EXPECT().Serve(mock.Anything).Return(assert.AnError)
+				served := make(chan struct{})
+				srv.EXPECT().Serve(mock.Anything).RunAndReturn(func(net.Listener) error {
+					close(served)
+
+					return assert.AnError
+				})
+
+				return served
 			},
 			assert: func(t *testing.T, exit *testsupport.PatchedOSExit, logs string) {
 				t.Helper()
 
-				require.True(t, exit.Called)
+				require.True(t, exit.Called())
 				assert.Contains(t, logs, "Starting listening")
 				assert.Contains(t, logs, assert.AnError.Error())
 			},
+			waitFor:    assert.AnError.Error(),
+			expectExit: true,
 		},
 		"started and resumed successfully": {
-			setup: func(t *testing.T, srv *mocks.ServerMock) {
+			setup: func(t *testing.T, srv *mocks.ServerMock) <-chan struct{} {
 				t.Helper()
 
-				srv.EXPECT().Serve(mock.Anything).Return(http.ErrServerClosed)
+				served := make(chan struct{})
+				srv.EXPECT().Serve(mock.Anything).RunAndReturn(func(net.Listener) error {
+					close(served)
+
+					return http.ErrServerClosed
+				})
+
+				return served
 			},
 			assert: func(t *testing.T, exit *testsupport.PatchedOSExit, logs string) {
 				t.Helper()
 
-				require.False(t, exit.Called)
+				require.False(t, exit.Called())
 				assert.Contains(t, logs, "Starting listening")
 				assert.NotContains(t, logs, "error")
 			},
+			waitFor: "Service stopped",
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
@@ -89,7 +118,7 @@ func TestLifecycleManagerStart(t *testing.T) {
 			require.NoError(t, err)
 
 			srv := mocks.NewServerMock(t)
-			tc.setup(t, srv)
+			served := tc.setup(t, srv)
 
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
@@ -112,10 +141,21 @@ func TestLifecycleManagerStart(t *testing.T) {
 			// WHEN
 			err = lcm.Start(t.Context())
 
-			time.Sleep(50 * time.Millisecond)
-
 			// THEN
 			require.NoError(t, err)
+			select {
+			case <-served:
+			case <-time.After(time.Second):
+				require.FailNow(t, "server was not started")
+			}
+
+			require.Eventually(t, func() bool {
+				if !strings.Contains(tb.CollectedLog(), tc.waitFor) {
+					return false
+				}
+
+				return !tc.expectExit || exit.Called()
+			}, time.Second, 10*time.Millisecond)
 			tc.assert(t, exit, tb.CollectedLog())
 		})
 	}

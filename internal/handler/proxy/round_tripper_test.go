@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/tls"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -55,6 +56,9 @@ func TestNewProfileRoundTripper(t *testing.T) {
 	cfg.Upstream.Connections.DialTimeout = 11 * time.Second
 	cfg.Upstream.Connections.TLSHandshakeTimeout = 12 * time.Second
 	cfg.Upstream.Connections.IdleTimeout = 13 * time.Second
+	cfg.Upstream.Connections.WriteIdleTimeout = 16 * time.Second
+	cfg.Upstream.Connections.Liveness.ProbeAfter = 18 * time.Second
+	cfg.Upstream.Connections.Liveness.ProbeTimeout = 20 * time.Second
 	cfg.Upstream.Connections.MaxIdle = 17
 	cfg.Upstream.Connections.MaxIdlePerHost = 19
 	cfg.Upstream.Connections.MaxPerHost = 23
@@ -83,6 +87,10 @@ func TestNewProfileRoundTripper(t *testing.T) {
 	assertTransportConfiguration(t, rt.http1Only, cfg, tlsCfg)
 	assertTransportConfiguration(t, rt.http2Required, cfg, tlsCfg)
 
+	assertIdleConnectionWriterDialContext(t, rt.normal, cfg.Upstream.Connections.WriteIdleTimeout)
+	assertIdleConnectionWriterDialContext(t, rt.http1Only, cfg.Upstream.Connections.WriteIdleTimeout)
+	assertIdleConnectionWriterDialContext(t, rt.http2Required, cfg.Upstream.Connections.WriteIdleTimeout)
+
 	assertTransportProtocols(t, rt.normal, true, true, false)
 	assertTransportProtocols(t, rt.http1Only, true, false, false)
 	assertTransportProtocols(t, rt.http2Required, false, true, true)
@@ -97,6 +105,10 @@ func TestNewProfileRoundTripper(t *testing.T) {
 	assert.NotSame(t, rt.normal.TLSClientConfig, rt.http1Only.TLSClientConfig)
 	assert.NotSame(t, rt.normal.TLSClientConfig, rt.http2Required.TLSClientConfig)
 	assert.NotSame(t, rt.http1Only.TLSClientConfig, rt.http2Required.TLSClientConfig)
+
+	assert.NotSame(t, rt.normal.HTTP2, rt.http1Only.HTTP2)
+	assert.NotSame(t, rt.normal.HTTP2, rt.http2Required.HTTP2)
+	assert.NotSame(t, rt.http1Only.HTTP2, rt.http2Required.HTTP2)
 }
 
 func TestProfileRoundTripperTransportFor(t *testing.T) {
@@ -238,6 +250,161 @@ func TestProfileRoundTripperClosesRequestBodyOnSelectionError(t *testing.T) {
 	assert.True(t, body.closed)
 }
 
+func TestProfileRoundTripperReusesUpstreamConnection(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		scheme    upstreamScheme
+		rawScheme string
+		h2c       bool
+	}{
+		"http1": {
+			scheme:    upstreamSchemeHTTP,
+			rawScheme: "http",
+		},
+		"h2c": {
+			scheme:    upstreamSchemeH2C,
+			rawScheme: "h2c",
+			h2c:       true,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// GIVEN
+			remoteAddresses := make(chan string, 2)
+			upstream := httptest.NewUnstartedServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				remoteAddresses <- req.RemoteAddr
+				_, err := rw.Write([]byte("ok"))
+				assert.NoError(t, err)
+			}))
+			if tc.h2c {
+				upstream.Config.Protocols = new(http.Protocols)
+				upstream.Config.Protocols.SetUnencryptedHTTP2(true)
+			}
+			upstream.Start()
+			defer upstream.Close()
+
+			cfg := config.ServeConfig{}
+			cfg.Upstream.Connections.WriteIdleTimeout = 250 * time.Millisecond
+			cfg.Upstream.Connections.Liveness.ProbeAfter = 100 * time.Millisecond
+			cfg.Upstream.Connections.Liveness.ProbeTimeout = 100 * time.Millisecond
+
+			rt := newProfileRoundTripper(cfg, nil)
+			defer rt.normal.CloseIdleConnections()
+			defer rt.http1Only.CloseIdleConnections()
+			defer rt.http2Required.CloseIdleConnections()
+
+			// WHEN
+			for range 2 {
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, upstream.URL, nil)
+				require.NoError(t, err)
+
+				req = withProxyInvocation(req, tc.scheme, tc.rawScheme)
+
+				resp, err := rt.RoundTrip(req)
+				require.NoError(t, err)
+
+				_, err = io.Copy(io.Discard, resp.Body)
+				require.NoError(t, err)
+				require.NoError(t, resp.Body.Close())
+			}
+
+			// THEN
+			firstRemoteAddress := <-remoteAddresses
+			secondRemoteAddress := <-remoteAddresses
+			assert.Equal(t, firstRemoteAddress, secondRemoteAddress)
+		})
+	}
+}
+
+func TestProfileRoundTripperPropagatesCancellation(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		scheme    upstreamScheme
+		rawScheme string
+		h2c       bool
+	}{
+		"http1": {
+			scheme:    upstreamSchemeHTTP,
+			rawScheme: "http",
+		},
+		"h2c": {
+			scheme:    upstreamSchemeH2C,
+			rawScheme: "h2c",
+			h2c:       true,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// GIVEN
+			requestStarted := make(chan struct{})
+			requestCanceled := make(chan struct{})
+			upstream := httptest.NewUnstartedServer(http.HandlerFunc(func(_ http.ResponseWriter, req *http.Request) {
+				close(requestStarted)
+				<-req.Context().Done()
+				close(requestCanceled)
+			}))
+			if tc.h2c {
+				upstream.Config.Protocols = new(http.Protocols)
+				upstream.Config.Protocols.SetUnencryptedHTTP2(true)
+			}
+			upstream.Start()
+			defer upstream.Close()
+
+			cfg := config.ServeConfig{}
+			cfg.Upstream.Connections.WriteIdleTimeout = 250 * time.Millisecond
+			cfg.Upstream.Connections.Liveness.ProbeAfter = 100 * time.Millisecond
+			cfg.Upstream.Connections.Liveness.ProbeTimeout = 100 * time.Millisecond
+
+			rt := newProfileRoundTripper(cfg, nil)
+			defer rt.normal.CloseIdleConnections()
+			defer rt.http1Only.CloseIdleConnections()
+			defer rt.http2Required.CloseIdleConnections()
+
+			ctx, cancel := context.WithCancel(t.Context())
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, upstream.URL, nil)
+			require.NoError(t, err)
+			req = withProxyInvocation(req, tc.scheme, tc.rawScheme)
+
+			result := make(chan error, 1)
+			go func() {
+				resp, err := rt.RoundTrip(req)
+				if resp != nil {
+					_ = resp.Body.Close()
+				}
+
+				result <- err
+			}()
+
+			select {
+			case <-requestStarted:
+			case <-time.After(time.Second):
+				require.FailNow(t, "upstream request did not start")
+			}
+
+			// WHEN
+			cancel()
+
+			// THEN
+			select {
+			case err := <-result:
+				require.ErrorIs(t, err, context.Canceled)
+			case <-time.After(time.Second):
+				require.FailNow(t, "round trip did not observe cancellation")
+			}
+
+			select {
+			case <-requestCanceled:
+			case <-time.After(time.Second):
+				require.FailNow(t, "upstream request did not observe cancellation")
+			}
+		})
+	}
+}
+
 func TestIsUpgradeRequest(t *testing.T) {
 	t.Parallel()
 
@@ -377,8 +544,50 @@ func assertTransportConfiguration(
 	assert.Equal(t, cfg.Upstream.Connections.TLSHandshakeTimeout, transport.TLSHandshakeTimeout)
 	assert.Equal(t, cfg.Upstream.Requests.ExpectContinueTimeout, transport.ExpectContinueTimeout)
 
+	require.NotNil(t, transport.HTTP2)
+	assert.Equal(t, cfg.Upstream.Connections.Liveness.ProbeAfter, transport.HTTP2.SendPingTimeout)
+	assert.Equal(t, cfg.Upstream.Connections.Liveness.ProbeTimeout, transport.HTTP2.PingTimeout)
+	assert.Zero(t, transport.HTTP2.WriteByteTimeout)
+
 	require.NotNil(t, transport.TLSClientConfig)
 	assert.Equal(t, tlsCfg.MinVersion, transport.TLSClientConfig.MinVersion)
+}
+
+func assertIdleConnectionWriterDialContext(
+	t *testing.T,
+	transport *http.Transport,
+	timeout time.Duration,
+) {
+	t.Helper()
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = listener.Close() })
+
+	conn, err := transport.DialContext(t.Context(), "tcp", listener.Addr().String())
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = conn.Close() })
+
+	peer, err := listener.Accept()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = peer.Close() })
+
+	wrapped, ok := conn.(*idleConnectionWriter)
+	require.True(t, ok)
+	assert.Equal(t, timeout, wrapped.timeout)
+}
+
+func withProxyInvocation(req *http.Request, scheme upstreamScheme, rawScheme string) *http.Request {
+	return req.WithContext(context.WithValue(
+		req.Context(),
+		proxyInvocationKey{},
+		&proxyInvocation{
+			request: &requestContext{
+				routingURL:     url.URL{Scheme: rawScheme},
+				upstreamScheme: scheme,
+			},
+		},
+	))
 }
 
 func assertTransportProtocols(

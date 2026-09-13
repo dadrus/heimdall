@@ -19,27 +19,40 @@ package testsupport
 import (
 	"bytes"
 	"fmt"
+	"sync"
 	"testing"
 )
 
 type TestingLog struct {
 	testing.TB
 
-	buf bytes.Buffer
+	mutex sync.Mutex
+	buf   bytes.Buffer
 }
 
 func (t *TestingLog) Log(args ...any) {
-	if _, err := t.buf.WriteString(fmt.Sprint(args...)); err != nil {
+	t.mutex.Lock()
+	_, err := t.buf.WriteString(fmt.Sprint(args...))
+	t.mutex.Unlock()
+
+	if err != nil {
 		t.Error(err)
 	}
 }
 
 func (t *TestingLog) Logf(format string, args ...any) {
-	if _, err := t.buf.WriteString(fmt.Sprintf(format, args...)); err != nil {
+	t.mutex.Lock()
+	_, err := t.buf.WriteString(fmt.Sprintf(format, args...))
+	t.mutex.Unlock()
+
+	if err != nil {
 		t.Error(err)
 	}
 }
 
 func (t *TestingLog) CollectedLog() string {
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
+
 	return t.buf.String()
 }
