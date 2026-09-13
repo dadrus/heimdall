@@ -31,6 +31,7 @@ import (
 
 type writeDeadlineTrackingConn struct {
 	net.Conn
+
 	deadlines   []time.Time
 	written     []byte
 	writeErr    error
