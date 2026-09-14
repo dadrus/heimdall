@@ -29,21 +29,16 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-var (
-	errServiceStop      = errors.New("failed to stop service")
-	errGracefulShutdown = errors.New("graceful shutdown failed")
-	errForcedShutdown   = errors.New("forced shutdown failed")
-)
+var errServiceStop = errors.New("failed to stop service")
 
 type Server interface {
 	Serve(l net.Listener) error
 	Shutdown(ctx context.Context) error
-	Close() error
 }
 
 const (
-	forceCloseTailFraction = 10
-	maxForceCloseTail      = time.Second
+	cleanupTailFraction = 10
+	maxCleanupTail      = time.Second
 )
 
 type tlsAwareListener interface {
@@ -99,34 +94,17 @@ func (m *LifecycleManager) Stop(ctx context.Context) error {
 	graceCtx, cancel := gracefulShutdownContext(ctx)
 	defer cancel()
 
-	shutdownErr := m.Server.Shutdown(graceCtx)
-	if shutdownErr == nil {
+	err := m.Server.Shutdown(graceCtx)
+	if err == nil {
 		return nil
 	}
 
-	m.Logger.Warn().Err(shutdownErr).
+	m.Logger.Warn().Err(err).
 		Str("_service", m.ServiceName).
-		Msg("Graceful shutdown failed, forcing service to stop")
-
-	causes := []error{
-		errorchain.NewWithMessagef(errGracefulShutdown, "%s service", m.ServiceName).
-			CausedBy(shutdownErr),
-	}
-
-	closeErr := m.Server.Close()
-	if closeErr != nil {
-		m.Logger.Warn().Err(closeErr).
-			Str("_service", m.ServiceName).
-			Msg("Forced shutdown failed")
-
-		causes = append(causes,
-			errorchain.NewWithMessagef(errForcedShutdown, "%s service", m.ServiceName).
-				CausedBy(closeErr),
-		)
-	}
+		Msg("Service shutdown failed")
 
 	return errorchain.NewWithMessagef(errServiceStop, "%s service", m.ServiceName).
-		CausedBy(errorchain.List(causes...))
+		CausedBy(err)
 }
 
 func gracefulShutdownContext(ctx context.Context) (context.Context, context.CancelFunc) {
@@ -140,7 +118,7 @@ func gracefulShutdownContext(ctx context.Context) (context.Context, context.Canc
 		return context.WithCancel(ctx)
 	}
 
-	tail := min(remaining/forceCloseTailFraction, maxForceCloseTail)
+	tail := min(remaining/cleanupTailFraction, maxCleanupTail)
 
 	return context.WithDeadline(ctx, deadline.Add(-tail))
 }

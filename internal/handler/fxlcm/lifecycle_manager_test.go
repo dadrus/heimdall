@@ -18,7 +18,6 @@ package fxlcm
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -166,13 +165,11 @@ func TestLifecycleManagerStart(t *testing.T) {
 func TestLifecycleManagerStop(t *testing.T) {
 	t.Parallel()
 
-	forceCloseErr := errors.New("force close failed")
-
 	for uc, tc := range map[string]struct {
 		setup  func(t *testing.T, srv *mocks.ServerMock)
 		assert func(t *testing.T, err error, logs string)
 	}{
-		"stopped gracefully": {
+		"stopped successfully": {
 			setup: func(t *testing.T, srv *mocks.ServerMock) {
 				t.Helper()
 
@@ -183,49 +180,23 @@ func TestLifecycleManagerStop(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.Contains(t, logs, "Tearing down service")
-				assert.NotContains(t, logs, "Graceful shutdown failed")
+				assert.NotContains(t, logs, "Service shutdown failed")
 			},
 		},
-		"graceful shutdown failed and service is forced to stop": {
+		"shutdown failed": {
 			setup: func(t *testing.T, srv *mocks.ServerMock) {
 				t.Helper()
 
 				srv.EXPECT().Shutdown(mock.Anything).Return(assert.AnError)
-				srv.EXPECT().Close().Return(nil)
 			},
 			assert: func(t *testing.T, err error, logs string) {
 				t.Helper()
 
 				require.ErrorIs(t, err, errServiceStop)
-				require.ErrorIs(t, err, errGracefulShutdown)
 				require.ErrorIs(t, err, assert.AnError)
-				require.NotErrorIs(t, err, errForcedShutdown)
 				require.ErrorContains(t, err, "foo service")
-				assert.Contains(t, logs, "Graceful shutdown failed, forcing service to stop")
+				assert.Contains(t, logs, "Service shutdown failed")
 				assert.Contains(t, logs, assert.AnError.Error())
-				assert.NotContains(t, logs, forceCloseErr.Error())
-			},
-		},
-		"graceful and forced shutdown fail": {
-			setup: func(t *testing.T, srv *mocks.ServerMock) {
-				t.Helper()
-
-				srv.EXPECT().Shutdown(mock.Anything).Return(assert.AnError)
-				srv.EXPECT().Close().Return(forceCloseErr)
-			},
-			assert: func(t *testing.T, err error, logs string) {
-				t.Helper()
-
-				require.ErrorIs(t, err, errServiceStop)
-				require.ErrorIs(t, err, errGracefulShutdown)
-				require.ErrorIs(t, err, errForcedShutdown)
-				require.ErrorIs(t, err, assert.AnError)
-				require.ErrorIs(t, err, forceCloseErr)
-				require.ErrorContains(t, err, "foo service")
-
-				assert.Contains(t, logs, "Graceful shutdown failed, forcing service to stop")
-				assert.Contains(t, logs, "Forced shutdown failed")
-				assert.Contains(t, logs, forceCloseErr.Error())
 			},
 		},
 	} {
@@ -265,5 +236,5 @@ func TestGracefulShutdownContext(t *testing.T) {
 
 	graceDeadline, ok := graceCtx.Deadline()
 	require.True(t, ok)
-	assert.Equal(t, maxForceCloseTail, parentDeadline.Sub(graceDeadline))
+	assert.Equal(t, maxCleanupTail, parentDeadline.Sub(graceDeadline))
 }
