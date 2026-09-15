@@ -23,6 +23,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -111,6 +112,61 @@ func TestWebSocketGoingAwayTeardownStrategyIgnoresWriteFailures(t *testing.T) {
 	// THEN
 	assert.Equal(t, int32(1), conn.writeCalls.Load())
 	assert.Equal(t, int32(0), conn.closeCalls.Load())
+}
+
+type canceledContextWebSocketConnection struct {
+	writeStarted    chan struct{}
+	closed          chan struct{}
+	closeOnce       sync.Once
+	closedFlag      atomic.Bool
+	writeAfterClose atomic.Bool
+}
+
+func (*canceledContextWebSocketConnection) Read([]byte) (int, error) { return 0, io.EOF }
+func (c *canceledContextWebSocketConnection) Write([]byte) (int, error) {
+	if c.closedFlag.Load() {
+		c.writeAfterClose.Store(true)
+	}
+	close(c.writeStarted)
+	<-c.closed
+
+	return 0, net.ErrClosed
+}
+
+func (c *canceledContextWebSocketConnection) Close() error {
+	c.closedFlag.Store(true)
+	c.closeOnce.Do(func() {
+		close(c.closed)
+	})
+
+	return nil
+}
+
+func TestWebSocketGoingAwayTeardownStrategyAttemptsWriteBeforeCloseWithCanceledContext(t *testing.T) {
+	previousMaxProcs := runtime.GOMAXPROCS(1)
+	t.Cleanup(func() {
+		runtime.GOMAXPROCS(previousMaxProcs)
+	})
+
+	// GIVEN
+	conn := &canceledContextWebSocketConnection{
+		writeStarted: make(chan struct{}),
+		closed:       make(chan struct{}),
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	// WHEN
+	webSocketServerGoingAwayTeardownStrategy.apply(ctx, conn)
+	require.NoError(t, conn.Close())
+
+	// THEN
+	select {
+	case <-conn.writeStarted:
+	case <-time.After(time.Second):
+		require.Fail(t, "websocket close frame write was not attempted")
+	}
+	assert.False(t, conn.writeAfterClose.Load())
 }
 
 type blockingWebSocketConnection struct {

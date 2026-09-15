@@ -38,21 +38,46 @@ type webSocketGoingAwayTeardownStrategy struct {
 	role webSocketRole
 }
 
+type writeAttemptNotifier struct {
+	io.Writer
+
+	attempted chan<- struct{}
+}
+
+func (w writeAttemptNotifier) Write(data []byte) (int, error) {
+	close(w.attempted)
+
+	return w.Writer.Write(data)
+}
+
 func (s webSocketGoingAwayTeardownStrategy) apply(ctx context.Context, conn io.ReadWriteCloser) {
+	writeAttempted := make(chan struct{})
 	writeDone := make(chan struct{})
 	go func() {
-		_ = writeWebSocketGoingAway(conn, s.role)
-		close(writeDone)
+		defer close(writeDone)
+
+		_ = writeWebSocketGoingAway(writeAttemptNotifier{
+			Writer:    conn,
+			attempted: writeAttempted,
+		}, s.role)
 	}()
+
+	select {
+	case <-writeAttempted:
+	case <-writeDone:
+		return
+	}
 
 	select {
 	case <-writeDone:
 	case <-ctx.Done():
 		// Best effort only. The registry closes the owned connection after all
-		// teardown strategies had a chance to run, unblocking pending writes.
+		// teardown strategies had a chance to issue their write attempt,
+		// unblocking any write still pending at the end of the shutdown budget.
 	}
 }
 
+//nolint:gochecknoglobals
 var (
 	webSocketServerGoingAwayTeardownStrategy = webSocketGoingAwayTeardownStrategy{role: webSocketServer}
 	webSocketClientGoingAwayTeardownStrategy = webSocketGoingAwayTeardownStrategy{role: webSocketClient}
