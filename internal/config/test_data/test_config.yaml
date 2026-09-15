@@ -46,8 +46,28 @@ serve:
   host: 0.0.0.0
   port: 4456
   requests:
+    max_in_flight: 37
+    read_timeout: 41s
     headers:
       max_size: 64KB
+      read_timeout: 43s
+    body:
+      max_size: 7MB
+      read_idle_timeout: 47s
+      read_min_rate: 53
+  responses:
+    write_timeout: 59s
+    write_idle_timeout: 61s
+    write_min_rate: 67
+  connections:
+    max: 71
+    idle_timeout: 73s
+    write_idle_timeout: 79s
+    streams:
+      max_concurrent: 83
+    liveness:
+      probe_after: 89s
+      probe_timeout: 97s
   upstream:
     connections:
       max_per_host: 100
@@ -106,6 +126,10 @@ serve:
         code: 404
       communication_error:
         code: 502
+      request_body_too_large:
+        code: 413
+      too_many_requests:
+        code: 503
       internal_error:
         code: 500
       no_rule_error:
@@ -115,8 +139,20 @@ management:
   host: 127.0.0.1
   port: 4457
   requests:
+    max_in_flight: 101
+    read_timeout: 103s
     headers:
       max_size: 4KB
+      read_timeout: 107s
+    body:
+      max_size: 11MB
+  responses:
+    write_timeout: 109s
+    write_idle_timeout: 113s
+    write_min_rate: 127
+  connections:
+    max: 131
+    idle_timeout: 137s
   cors:
     allowed_origins:
       - example.org
