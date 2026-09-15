@@ -571,7 +571,7 @@ func assertIdleConnectionWriterDialContext(
 ) {
 	t.Helper()
 
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := net.Listen("tcp", "127.0.0.1:0") //nolint: noctx
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = listener.Close() })
 

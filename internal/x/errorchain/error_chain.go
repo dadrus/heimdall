@@ -46,7 +46,7 @@ type ErrorChain struct { // nolint: errname
 	tail *element
 }
 
-type errorList struct {
+type errorList struct { //nolint:errname
 	errs []error
 }
 

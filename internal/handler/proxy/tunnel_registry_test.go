@@ -65,6 +65,7 @@ func (s teardownOrderStrategy) apply(context.Context, io.ReadWriteCloser) {
 
 type teardownOrderConnection struct {
 	testTunnelConnection
+
 	state *teardownOrderState
 }
 
@@ -81,19 +82,6 @@ func tunnelRegistrySize(r *tunnelRegistry) int {
 	defer r.mu.Unlock()
 
 	return len(r.entries)
-}
-
-func singleTunnelEndpoint(t *testing.T, tr *tunnelRegistry) *tunnelEndpoint {
-	t.Helper()
-	tr.mu.Lock()
-	defer tr.mu.Unlock()
-
-	require.Len(t, tr.entries, 1)
-	for entry := range tr.entries {
-		return entry
-	}
-
-	return nil
 }
 
 func TestTunnelEndpointCloseIsIdempotent(t *testing.T) {

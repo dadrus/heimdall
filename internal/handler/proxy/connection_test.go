@@ -30,6 +30,7 @@ type testTunnelConnection struct {
 
 type capabilityTunnelConn struct {
 	testTunnelConnection
+
 	closeWriteCalls atomic.Int32
 	readFromCalls   atomic.Int32
 }
@@ -38,6 +39,7 @@ func (*testTunnelConnection) Read([]byte) (int, error) { return 0, io.EOF }
 func (*testTunnelConnection) Write(data []byte) (int, error) {
 	return len(data), nil
 }
+
 func (c *testTunnelConnection) Close() error {
 	c.closeCalls.Add(1)
 
@@ -54,6 +56,7 @@ func (c *capabilityTunnelConn) CloseWrite() error {
 
 	return nil
 }
+
 func (c *capabilityTunnelConn) ReadFrom(src io.Reader) (int64, error) {
 	c.readFromCalls.Add(1)
 

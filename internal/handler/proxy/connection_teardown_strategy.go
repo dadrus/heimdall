@@ -22,7 +22,7 @@ import (
 )
 
 type connectionTeardownStrategy interface {
-	apply(context.Context, io.ReadWriteCloser)
+	apply(ctx context.Context, rwc io.ReadWriteCloser)
 }
 
 type noopConnectionTeardownStrategy struct{}

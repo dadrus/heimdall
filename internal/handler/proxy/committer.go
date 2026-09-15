@@ -52,18 +52,18 @@ type committer struct {
 }
 
 func newCommitter(rt http.RoundTripper, tunnels tunnelTracker) *committer {
-	c := &committer{
+	cmtr := &committer{
 		tunnels: tunnels,
 	}
-	c.proxy = &httputil.ReverseProxy{
+	cmtr.proxy = &httputil.ReverseProxy{
 		Rewrite:        rewriteRequest,
 		ErrorHandler:   handleProxyError,
-		ModifyResponse: c.trackUpgradeResponse,
+		ModifyResponse: cmtr.trackUpgradeResponse,
 		Transport:      rt,
 		BufferPool:     newBufferPool(),
 	}
 
-	return c
+	return cmtr
 }
 
 func (c *committer) Commit(rw http.ResponseWriter, rc *requestContext) (struct{}, error) {
