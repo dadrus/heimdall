@@ -65,7 +65,7 @@ func (c *hijackedConn) ReadFrom(src io.Reader) (int64, error) {
 		return readerFrom.ReadFrom(src)
 	}
 
-	return io.Copy(struct{ io.Writer }{Writer: c.Conn}, src)
+	return io.Copy(c.Conn, src)
 }
 
 type closeWriteConn struct {

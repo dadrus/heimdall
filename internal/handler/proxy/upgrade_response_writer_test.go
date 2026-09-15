@@ -139,7 +139,7 @@ func TestUpgradeResponseWriterHijack(t *testing.T) {
 				t.Helper()
 
 				conn := &capabilityTunnelConn{
-					testTunnelConnection: testTunnelConnection{closeErr: closeErr},
+					closeErr: closeErr,
 				}
 				strategy := noopConnectionTeardownStrategy{}
 				tracker.EXPECT().track(conn, strategy).Return(nil, errTunnelRegistrySealed)
