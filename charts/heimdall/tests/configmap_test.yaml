@@ -81,19 +81,55 @@ tests:
             path: /path/to/signing.pem
             password: VeryInsecure!
             watch: true
+      shutdown:
+        timeout: 45s
       serve:
         host: 127.0.0.1
+        requests:
+          max_in_flight: 222
+          read_timeout: 34s
+          headers:
+            max_size: 32KB
+            read_timeout: 4s
+          body:
+            max_size: 6MB
+            read_idle_timeout: 21s
+            read_min_rate: 1234
+        responses:
+          write_timeout: 35s
+          write_idle_timeout: 36s
+          write_min_rate: 2345
+        connections:
+          max: 111
+          idle_timeout: 31s
+          write_idle_timeout: 32s
+          streams:
+            max_concurrent: 101
+          liveness:
+            probe_after: 33s
+            probe_timeout: 7s
+        upstream:
+          connections:
+            max_per_host: 10
+            max_idle: 20
+            max_idle_per_host: 15
+            dial_timeout: 3s
+            tls_handshake_timeout: 4s
+            idle_timeout: 1m
+            write_idle_timeout: 5s
+            liveness:
+              probe_after: 6s
+              probe_timeout: 7s
+          requests:
+            expect_continue_timeout: 500ms
+          responses:
+            headers:
+              max_size: 2MB
+              read_timeout: 8s
         tls:
           secret:
             source: tls_keys
             selector: key1
-        timeout:
-          read: 1s
-          write: 2s
-          idle: 30s
-        buffer_limit:
-          read: 4KB
-          write: 10KB
         trusted_proxies:
           - 192.168.1.0/24
         respond:
@@ -103,19 +139,31 @@ tests:
               code: 404
             authorization_error:
               code: 404
+            request_body_too_large:
+              code: 413
+            too_many_requests:
+              code: 503
       management:
         host: 127.0.0.1
+        requests:
+          max_in_flight: 333
+          read_timeout: 37s
+          headers:
+            max_size: 8KB
+            read_timeout: 3s
+          body:
+            max_size: 2MB
+        responses:
+          write_timeout: 38s
+          write_idle_timeout: 39s
+          write_min_rate: 3456
+        connections:
+          max: 444
+          idle_timeout: 40s
         tls:
           secret:
             source: tls_keys
             selector: key2
-        timeout:
-          read: 1s
-          write: 2s
-          idle: 30s
-        buffer_limit:
-          read: 4KB
-          write: 10KB
       metrics:
         enabled: true
       profiling:
@@ -197,12 +245,30 @@ tests:
                   path: /path/to/keystore.pem
                   watch: true
                 type: pem
+            shutdown:
+              timeout: 45s
             serve:
-              buffer_limit:
-                read: 4KB
-                write: 10KB
+              connections:
+                idle_timeout: 31s
+                liveness:
+                  probe_after: 33s
+                  probe_timeout: 7s
+                max: 111
+                streams:
+                  max_concurrent: 101
+                write_idle_timeout: 32s
               host: 127.0.0.1
               port: 4456
+              requests:
+                body:
+                  max_size: 6MB
+                  read_idle_timeout: 21s
+                  read_min_rate: 1234
+                headers:
+                  max_size: 32KB
+                  read_timeout: 4s
+                max_in_flight: 222
+                read_timeout: 34s
               respond:
                 verbose: true
                 with:
@@ -210,26 +276,56 @@ tests:
                     code: 404
                   authorization_error:
                     code: 404
-              timeout:
-                idle: 30s
-                read: 1s
-                write: 2s
+                  request_body_too_large:
+                    code: 413
+                  too_many_requests:
+                    code: 503
+              responses:
+                write_idle_timeout: 36s
+                write_min_rate: 2345
+                write_timeout: 35s
               tls:
                 secret:
                   selector: key1
                   source: tls_keys
               trusted_proxies:
               - 192.168.1.0/24
+              upstream:
+                connections:
+                  dial_timeout: 3s
+                  idle_timeout: 1m
+                  liveness:
+                    probe_after: 6s
+                    probe_timeout: 7s
+                  max_idle: 20
+                  max_idle_per_host: 15
+                  max_per_host: 10
+                  tls_handshake_timeout: 4s
+                  write_idle_timeout: 5s
+                requests:
+                  expect_continue_timeout: 500ms
+                responses:
+                  headers:
+                    max_size: 2MB
+                    read_timeout: 8s
             management:
-              buffer_limit:
-                read: 4KB
-                write: 10KB
+              connections:
+                idle_timeout: 40s
+                max: 444
               host: 127.0.0.1
               port: 4457
-              timeout:
-                idle: 30s
-                read: 1s
-                write: 2s
+              requests:
+                body:
+                  max_size: 2MB
+                headers:
+                  max_size: 8KB
+                  read_timeout: 3s
+                max_in_flight: 333
+                read_timeout: 37s
+              responses:
+                write_idle_timeout: 39s
+                write_min_rate: 3456
+                write_timeout: 38s
               tls:
                 secret:
                   selector: key2
