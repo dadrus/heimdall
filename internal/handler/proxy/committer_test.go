@@ -42,6 +42,16 @@ func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
 }
 
+type failingWriteTunnelConn struct {
+	capabilityTunnelConn
+
+	writeErr error
+}
+
+func (c *failingWriteTunnelConn) Write([]byte) (int, error) {
+	return 0, c.writeErr
+}
+
 func TestCommitterCommit(t *testing.T) {
 	t.Parallel()
 
@@ -633,6 +643,60 @@ func TestCommitterCommit(t *testing.T) {
 			tc.assert(t, err, upstreamReq)
 		})
 	}
+}
+
+func TestCommitterDoesNotMaterializeProxyErrorAfterHijack(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	writeErr := errors.New("downstream write failed")
+	downstream := &failingWriteTunnelConn{writeErr: writeErr}
+	upstream := new(testTunnelConnection)
+	rt := roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusSwitchingProtocols,
+			Status:     "101 Switching Protocols",
+			Proto:      "HTTP/1.1",
+			ProtoMajor: 1,
+			ProtoMinor: 1,
+			Header: http.Header{
+				"Connection": []string{"Upgrade"},
+				"Upgrade":    []string{"websocket"},
+			},
+			Body:    upstream,
+			Request: req,
+		}, nil
+	})
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://client.example/tunnel", nil)
+	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Upgrade", "websocket")
+
+	cf := newContextFactory()
+	ctx := cf.Create(req)
+	defer cf.Destroy(ctx)
+
+	target := mocks.NewUpstreamTargetMock(t)
+	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+		*targetURL = url.URL{Scheme: "http", Host: "upstream.example", Path: "/tunnel"}
+	})
+	target.EXPECT().ForwardHostHeader().Return(true)
+	ctx.PrepareUpstreamView(target)
+
+	registry := newTunnelRegistry()
+	committer := newCommitter(rt, registry)
+	rw := &hijackResponseWriter{conn: downstream}
+
+	// WHEN
+	_, err := committer.Commit(rw, ctx)
+
+	// THEN
+	require.NoError(t, err)
+	require.Eventually(t, func() bool {
+		return tunnelRegistrySize(registry) == 0
+	}, time.Second, 10*time.Millisecond)
+	assert.Equal(t, int32(1), downstream.closeCalls.Load())
+	assert.Equal(t, int32(1), upstream.closeCalls.Load())
 }
 
 func TestCommitterConcurrentIsolation(t *testing.T) {

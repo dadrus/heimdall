@@ -28,6 +28,7 @@ type upgradeResponseWriter struct {
 
 	tunnels          tunnelTracker
 	teardownStrategy connectionTeardownStrategy
+	hijacked         bool
 }
 
 func (w *upgradeResponseWriter) Unwrap() http.ResponseWriter {
@@ -39,6 +40,8 @@ func (w *upgradeResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	if err != nil {
 		return conn, rw, err
 	}
+
+	w.hijacked = true
 
 	endpoint, err := w.tunnels.track(conn, w.teardownStrategy)
 	if err != nil {

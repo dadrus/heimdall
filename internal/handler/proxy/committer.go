@@ -139,18 +139,22 @@ func rewriteRequest(req *httputil.ProxyRequest) {
 	invocation.request.rewriteRequest(req)
 }
 
-func handleProxyError(_ http.ResponseWriter, req *http.Request, err error) {
+func handleProxyError(rw http.ResponseWriter, req *http.Request, err error) {
+	zerolog.Ctx(req.Context()).
+		Error().
+		Err(err).
+		Msg("Proxying error")
+
+	if writer, ok := rw.(*upgradeResponseWriter); ok && writer.hijacked {
+		return
+	}
+
 	invocation := proxyInvocationFrom(req.Context())
 	perr := pipeline.ErrCommunication
 
 	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 		perr = pipeline.ErrRequestBodyTooLarge
 	}
-
-	zerolog.Ctx(req.Context()).
-		Error().
-		Err(err).
-		Msg("Proxying error")
 
 	invocation.err = errorchain.New(perr).CausedBy(err)
 }

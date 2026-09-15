@@ -621,6 +621,53 @@ func TestProxyServiceShutdownClosesWebSocketAfterHTTPGraceIsExhausted(t *testing
 	}
 }
 
+func TestProxyServiceAbortsCommittedResponseOnUpstreamBodyFailure(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		conn, brw, err := http.NewResponseController(rw).Hijack()
+		if !assert.NoError(t, err) {
+			return
+		}
+		defer conn.Close()
+
+		_, err = io.WriteString(
+			brw,
+			"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n",
+		)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		assert.NoError(t, brw.Flush())
+	}))
+	defer upstream.Close()
+
+	upstreamURL, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+
+	_, addr := startProxyService(t, config.ServeConfig{}, upstreamURL)
+	transport := new(http.Transport)
+	client := &http.Client{Transport: transport}
+	t.Cleanup(transport.CloseIdleConnections)
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/broken", nil)
+	require.NoError(t, err)
+
+	resp, err := client.Do(req) //nolint:bodyclose
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	// WHEN
+	body, readErr := io.ReadAll(resp.Body)
+
+	// THEN
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "hello", string(body))
+	require.ErrorIs(t, readErr, io.ErrUnexpectedEOF)
+}
+
 func TestProxyService(t *testing.T) {
 	t.Parallel()
 
