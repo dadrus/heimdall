@@ -41,7 +41,7 @@ func BenchmarkProfileRoundTripperTransportFor(b *testing.B) {
 		"http1 only": {
 			request: &requestContext{
 				upstreamScheme: upstreamSchemeHTTPS,
-				upgrade:        true,
+				upgrade:        upgradeKindOther,
 			},
 			expected: rt.http1Only,
 		},

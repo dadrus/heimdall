@@ -26,7 +26,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"github.com/dadrus/heimdall/internal/config"
-	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
@@ -97,7 +96,7 @@ func (rt *profileRoundTripper) CloseIdleConnections() {
 func (rt *profileRoundTripper) transportFor(rc *requestContext) (*http.Transport, error) {
 	switch rc.upstreamScheme {
 	case upstreamSchemeHTTP:
-		if rc.upgrade {
+		if rc.upgrade != upgradeKindNone {
 			return rt.http1Only, nil
 		}
 
@@ -107,7 +106,7 @@ func (rt *profileRoundTripper) transportFor(rc *requestContext) (*http.Transport
 
 		return rt.normal, nil
 	case upstreamSchemeHTTPS:
-		if rc.upgrade {
+		if rc.upgrade != upgradeKindNone {
 			return rt.http1Only, nil
 		}
 
@@ -117,7 +116,7 @@ func (rt *profileRoundTripper) transportFor(rc *requestContext) (*http.Transport
 
 		return rt.normal, nil
 	case upstreamSchemeH2C:
-		if rc.upgrade {
+		if rc.upgrade != upgradeKindNone {
 			return nil, errUpgradeOverH2C
 		}
 
@@ -193,20 +192,6 @@ func normalizeUpstreamScheme(req *http.Request, scheme upstreamScheme) {
 	if scheme == upstreamSchemeH2C {
 		req.URL.Scheme = "http"
 	}
-}
-
-func isUpgradeRequest(req *http.Request) bool {
-	if len(req.Header.Get("Upgrade")) == 0 {
-		return false
-	}
-
-	for option := range requestcontext.ConnectionOptions(req.Header) {
-		if option == "Upgrade" {
-			return true
-		}
-	}
-
-	return false
 }
 
 func isNativeGRPCContentType(contentType string) bool {

@@ -46,6 +46,7 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/service"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
@@ -58,23 +59,17 @@ var tlsClientConfig *tls.Config // nolint: gochecknoglobals
 type proxyService struct {
 	*http.Server
 
-	rt *profileRoundTripper
+	rt      *profileRoundTripper
+	tunnels *tunnelRegistry
 }
 
 func (s *proxyService) Shutdown(ctx context.Context) error {
-	if err := s.Server.Shutdown(ctx); err != nil {
-		return err
-	}
-
-	s.rt.CloseIdleConnections()
-
-	return nil
-}
-
-func (s *proxyService) Close() error {
 	defer s.rt.CloseIdleConnections()
 
-	return s.Server.Close()
+	return errorchain.List(
+		s.Server.Shutdown(ctx),
+		s.tunnels.shutdown(ctx),
+	)
 }
 
 //nolint:funlen
@@ -98,7 +93,8 @@ func newService(
 	)
 	profileRT := newProfileRoundTripper(cfg, tlsClientConfig)
 	rt := newObservedRoundTripper(profileRT)
-	coordinator := requestcoordinator.New(exec, newContextFactory(), newCommitter(rt))
+	tunnels := newTunnelRegistry()
+	coordinator := requestcoordinator.New(exec, newContextFactory(), newCommitter(rt, tunnels))
 
 	hc := alice.New(
 		ioprogress.New(
@@ -173,6 +169,7 @@ func newService(
 			},
 			Protocols: protocols,
 		},
-		rt: profileRT,
+		rt:      profileRT,
+		tunnels: tunnels,
 	}
 }

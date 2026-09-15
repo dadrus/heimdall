@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -623,7 +624,7 @@ func TestCommitterCommit(t *testing.T) {
 				rt = transport
 			}
 
-			committer := newCommitter(rt)
+			committer := newCommitter(rt, newTunnelRegistry())
 
 			// WHEN
 			_, err = committer.Commit(rw, ctx)
@@ -687,7 +688,7 @@ func TestCommitterConcurrentIsolation(t *testing.T) {
 		}
 	})
 
-	committer := newCommitter(rt)
+	committer := newCommitter(rt, newTunnelRegistry())
 	cf := newContextFactory()
 
 	reqA := httptest.NewRequestWithContext(
@@ -811,4 +812,156 @@ func TestCommitterConcurrentIsolation(t *testing.T) {
 	require.ErrorIs(t, results["b"], pipeline.ErrCommunication)
 	require.ErrorIs(t, results["b"], errB)
 	require.NotErrorIs(t, results["b"], errA)
+}
+
+func TestCommitterTracksUpgradeResponseBody(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	tracker := NewTunnelTrackerMock(t)
+	committer := &committer{tunnels: tracker}
+	conn := new(capabilityTunnelConn)
+	endpoint := &tunnelEndpoint{conn: conn}
+	tracker.EXPECT().track(conn, noopConnectionTeardownStrategy{}).Return(endpoint, nil)
+	resp := &http.Response{
+		StatusCode: http.StatusSwitchingProtocols,
+		Body:       conn,
+	}
+
+	// WHEN
+	err := committer.trackUpgradeResponse(resp)
+
+	// THEN
+	require.NoError(t, err)
+	require.Implements(t, (*io.ReadWriteCloser)(nil), resp.Body)
+	closeWriter, ok := resp.Body.(closeWriter)
+	require.True(t, ok)
+	require.NoError(t, closeWriter.CloseWrite())
+	assert.Equal(t, int32(1), conn.closeWriteCalls.Load())
+}
+
+func TestCommitterTracksWebSocketUpgradeResponse(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	tracker := NewTunnelTrackerMock(t)
+	committer := &committer{tunnels: tracker}
+	conn := new(recordingTunnelConnection)
+	endpoint := &tunnelEndpoint{conn: conn}
+	tracker.EXPECT().track(conn, webSocketClientGoingAwayTeardownStrategy).Return(endpoint, nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", nil)
+	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Upgrade", "websocket")
+	resp := &http.Response{
+		StatusCode: http.StatusSwitchingProtocols,
+		Request:    req,
+		Header: http.Header{
+			"Connection": []string{"Upgrade"},
+			"Upgrade":    []string{"websocket"},
+		},
+		Body: conn,
+	}
+
+	// WHEN
+	err := committer.trackUpgradeResponse(resp)
+
+	// THEN
+	require.NoError(t, err)
+	_, ok := resp.Body.(closeWriter)
+	assert.False(t, ok)
+}
+
+func TestCommitterPreservesCloseWriteForWebSocketUpgradeResponse(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	tracker := NewTunnelTrackerMock(t)
+	committer := &committer{tunnels: tracker}
+	conn := new(capabilityTunnelConn)
+	endpoint := &tunnelEndpoint{conn: conn}
+	tracker.EXPECT().track(conn, webSocketClientGoingAwayTeardownStrategy).Return(endpoint, nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", nil)
+	req.Header.Set("Connection", "Upgrade")
+	req.Header.Set("Upgrade", "websocket")
+	resp := &http.Response{
+		StatusCode: http.StatusSwitchingProtocols,
+		Request:    req,
+		Header: http.Header{
+			"Connection": []string{"Upgrade"},
+			"Upgrade":    []string{"websocket"},
+		},
+		Body: conn,
+	}
+
+	// WHEN
+	err := committer.trackUpgradeResponse(resp)
+
+	// THEN
+	require.NoError(t, err)
+	closeWriter, ok := resp.Body.(closeWriter)
+	require.True(t, ok)
+	require.NoError(t, closeWriter.CloseWrite())
+	assert.Equal(t, int32(1), conn.closeWriteCalls.Load())
+}
+
+func TestCommitterDoesNotTrackRegularResponseBody(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	tracker := NewTunnelTrackerMock(t)
+	committer := &committer{tunnels: tracker}
+	conn := new(testTunnelConnection)
+	resp := &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       conn,
+	}
+
+	// WHEN
+	err := committer.trackUpgradeResponse(resp)
+
+	// THEN
+	require.NoError(t, err)
+	assert.Same(t, conn, resp.Body)
+}
+
+func TestCommitterKeepsNonWritableUpgradeBodyForReverseProxyValidation(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	tracker := NewTunnelTrackerMock(t)
+	committer := &committer{tunnels: tracker}
+	body := io.NopCloser(strings.NewReader(""))
+	resp := &http.Response{
+		StatusCode: http.StatusSwitchingProtocols,
+		Body:       body,
+	}
+
+	// WHEN
+	err := committer.trackUpgradeResponse(resp)
+
+	// THEN
+	require.NoError(t, err)
+	assert.Equal(t, body, resp.Body)
+}
+
+func TestCommitterRejectsUpgradeResponseIfTunnelCannotBeTracked(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	tracker := NewTunnelTrackerMock(t)
+	committer := &committer{tunnels: tracker}
+	conn := new(testTunnelConnection)
+	tracker.EXPECT().track(conn, noopConnectionTeardownStrategy{}).Return(nil, errTunnelRegistrySealed)
+	resp := &http.Response{
+		StatusCode: http.StatusSwitchingProtocols,
+		Body:       conn,
+	}
+
+	// WHEN
+	err := committer.trackUpgradeResponse(resp)
+
+	// THEN
+	require.ErrorIs(t, err, errTunnelRegistrySealed)
+	assert.Same(t, conn, resp.Body)
+	assert.Equal(t, int32(0), conn.closeCalls.Load())
 }

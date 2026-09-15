@@ -19,6 +19,7 @@ package proxy
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httputil"
 
@@ -28,35 +29,41 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
-type proxyInvocation struct {
-	request *requestContext
-	err     error
+type closeWriteReadWriteCloser struct {
+	io.ReadWriteCloser
+	closeWriter
 }
 
-type proxyInvocationKey struct{}
-
-func proxyInvocationFrom(ctx context.Context) *proxyInvocation {
-	invocation, ok := ctx.Value(proxyInvocationKey{}).(*proxyInvocation)
+func preserveCloseWrite(source, wrapped io.ReadWriteCloser) io.ReadWriteCloser {
+	writer, ok := source.(closeWriter)
 	if !ok {
-		panic("proxy invocation missing")
+		return wrapped
 	}
 
-	return invocation
+	return &closeWriteReadWriteCloser{
+		ReadWriteCloser: wrapped,
+		closeWriter:     writer,
+	}
 }
 
 type committer struct {
-	proxy *httputil.ReverseProxy
+	proxy   *httputil.ReverseProxy
+	tunnels tunnelTracker
 }
 
-func newCommitter(rt http.RoundTripper) *committer {
-	return &committer{
-		proxy: &httputil.ReverseProxy{
-			Rewrite:      rewriteRequest,
-			ErrorHandler: handleProxyError,
-			Transport:    rt,
-			BufferPool:   newBufferPool(),
-		},
+func newCommitter(rt http.RoundTripper, tunnels tunnelTracker) *committer {
+	c := &committer{
+		tunnels: tunnels,
 	}
+	c.proxy = &httputil.ReverseProxy{
+		Rewrite:        rewriteRequest,
+		ErrorHandler:   handleProxyError,
+		ModifyResponse: c.trackUpgradeResponse,
+		Transport:      rt,
+		BufferPool:     newBufferPool(),
+	}
+
+	return c
 }
 
 func (c *committer) Commit(rw http.ResponseWriter, rc *requestContext) (struct{}, error) {
@@ -82,9 +89,48 @@ func (c *committer) Commit(rw http.ResponseWriter, rc *requestContext) (struct{}
 		&invocation,
 	)
 
-	c.proxy.ServeHTTP(rw, rc.req.WithContext(ctx))
+	writer := rw
+	if rc.upgrade != upgradeKindNone {
+		var teardownStrategy connectionTeardownStrategy = noopConnectionTeardownStrategy{}
+		if rc.upgrade == upgradeKindWebSocket {
+			teardownStrategy = webSocketServerGoingAwayTeardownStrategy
+		}
+
+		writer = &upgradeResponseWriter{
+			ResponseWriter:   rw,
+			tunnels:          c.tunnels,
+			teardownStrategy: teardownStrategy,
+		}
+	}
+
+	c.proxy.ServeHTTP(writer, rc.req.WithContext(ctx))
 
 	return struct{}{}, invocation.err
+}
+
+func (c *committer) trackUpgradeResponse(res *http.Response) error {
+	if res.StatusCode != http.StatusSwitchingProtocols {
+		return nil
+	}
+
+	conn, ok := res.Body.(io.ReadWriteCloser)
+	if !ok {
+		return nil
+	}
+
+	var teardownStrategy connectionTeardownStrategy = noopConnectionTeardownStrategy{}
+	if isWebSocketUpgradeResponse(res) {
+		teardownStrategy = webSocketClientGoingAwayTeardownStrategy
+	}
+
+	endpoint, err := c.tunnels.track(conn, teardownStrategy)
+	if err != nil {
+		return err
+	}
+
+	res.Body = preserveCloseWrite(conn, endpoint)
+
+	return nil
 }
 
 func rewriteRequest(req *httputil.ProxyRequest) {
@@ -106,6 +152,5 @@ func handleProxyError(_ http.ResponseWriter, req *http.Request, err error) {
 		Err(err).
 		Msg("Proxying error")
 
-	invocation.err = errorchain.NewWithMessage(perr, "Failed to proxy request").
-		CausedBy(err)
+	invocation.err = errorchain.New(perr).CausedBy(err)
 }

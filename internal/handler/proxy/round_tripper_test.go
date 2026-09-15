@@ -124,7 +124,7 @@ func TestProfileRoundTripperTransportFor(t *testing.T) {
 		scheme          upstreamScheme
 		rawScheme       string
 		nativeGRPC      bool
-		upgrade         bool
+		upgrade         upgradeKind
 		expectedProfile transportProfile
 		expectedErr     error
 	}{
@@ -141,13 +141,13 @@ func TestProfileRoundTripperTransportFor(t *testing.T) {
 		"http upgrade request uses HTTP/1-only profile": {
 			scheme:          upstreamSchemeHTTP,
 			rawScheme:       "http",
-			upgrade:         true,
+			upgrade:         upgradeKindOther,
 			expectedProfile: transportProfileHTTP1Only,
 		},
 		"https upgrade request uses HTTP/1-only profile": {
 			scheme:          upstreamSchemeHTTPS,
 			rawScheme:       "https",
-			upgrade:         true,
+			upgrade:         upgradeKindOther,
 			expectedProfile: transportProfileHTTP1Only,
 		},
 		"h2c request uses HTTP/2-required profile": {
@@ -176,7 +176,7 @@ func TestProfileRoundTripperTransportFor(t *testing.T) {
 		"h2c upgrade request is rejected": {
 			scheme:      upstreamSchemeH2C,
 			rawScheme:   "h2c",
-			upgrade:     true,
+			upgrade:     upgradeKindOther,
 			expectedErr: errUpgradeOverH2C,
 		},
 		"unsupported upstream scheme is rejected": {
@@ -467,61 +467,6 @@ func TestProfileRoundTripperPropagatesCancellation(t *testing.T) {
 			case <-time.After(time.Second):
 				require.FailNow(t, "upstream request did not observe cancellation")
 			}
-		})
-	}
-}
-
-func TestIsUpgradeRequest(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		headers  http.Header
-		expected bool
-	}{
-		"upgrade connection option and upgrade header are present": {
-			headers: http.Header{
-				"Connection": []string{"keep-alive, Upgrade"},
-				"Upgrade":    []string{"websocket"},
-			},
-			expected: true,
-		},
-		"upgrade connection option is present multiple times": {
-			headers: http.Header{
-				"Connection": []string{"keep-alive", "upgrade"},
-				"Upgrade":    []string{"websocket"},
-			},
-			expected: true,
-		},
-		"upgrade header is missing": {
-			headers: http.Header{
-				"Connection": []string{"Upgrade"},
-			},
-			expected: false,
-		},
-		"upgrade connection option is missing": {
-			headers: http.Header{
-				"Connection": []string{"keep-alive"},
-				"Upgrade":    []string{"websocket"},
-			},
-			expected: false,
-		},
-		"connection header is missing": {
-			headers: http.Header{
-				"Upgrade": []string{"websocket"},
-			},
-			expected: false,
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			// GIVEN
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
-			req.Header = tc.headers
-
-			// WHEN
-			actual := isUpgradeRequest(req)
-
-			// THEN
-			assert.Equal(t, tc.expected, actual)
 		})
 	}
 }

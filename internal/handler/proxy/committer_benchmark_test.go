@@ -18,7 +18,6 @@ package proxy
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -40,39 +39,6 @@ type benchmarkUpstreamTarget struct {
 
 func (t benchmarkUpstreamTarget) ApplyTo(targetURL *url.URL) { *targetURL = t.targetURL }
 func (benchmarkUpstreamTarget) ForwardHostHeader() bool      { return false }
-
-func BenchmarkProxyInvocation(b *testing.B) {
-	req := httptest.NewRequestWithContext(
-		b.Context(),
-		http.MethodGet,
-		"https://foo.bar/test",
-		nil,
-	)
-	rc := &requestContext{}
-
-	var result *proxyInvocation
-
-	b.ReportAllocs()
-
-	for b.Loop() {
-		invocation := proxyInvocation{
-			request: rc,
-		}
-
-		ctx := context.WithValue(
-			req.Context(),
-			proxyInvocationKey{},
-			&invocation,
-		)
-
-		proxyReq := req.WithContext(ctx)
-		result = proxyInvocationFrom(proxyReq.Context())
-	}
-
-	if result == nil || result.request != rc {
-		b.Fatal("unexpected proxy invocation")
-	}
-}
 
 func BenchmarkCommitterCommit(b *testing.B) {
 	cf := newContextFactory()
@@ -100,7 +66,7 @@ func BenchmarkCommitterCommit(b *testing.B) {
 		}, nil
 	})
 
-	committer := newCommitter(rt)
+	committer := newCommitter(rt, newTunnelRegistry())
 	rw := &benchmarkResponseWriter{
 		header: make(http.Header),
 	}
@@ -166,7 +132,7 @@ func BenchmarkCommitterCommitWithResponseBody(b *testing.B) {
 				}, nil
 			})
 
-			committer := newCommitter(rt)
+			committer := newCommitter(rt, newTunnelRegistry())
 			if !tc.bufferPool {
 				committer.proxy.BufferPool = nil
 			}

@@ -40,7 +40,7 @@ type requestContext struct {
 	routingURL           url.URL
 	upstreamScheme       upstreamScheme
 	nativeGRPC           bool
-	upgrade              bool
+	upgrade              upgradeKind
 	upstreamViewPrepared bool
 	hasUpstreamTarget    bool
 }
@@ -48,7 +48,7 @@ type requestContext struct {
 func (r *requestContext) Init(req *http.Request) {
 	r.req = req
 	r.nativeGRPC = isNativeGRPCContentType(req.Header.Get("Content-Type"))
-	r.upgrade = isUpgradeRequest(req)
+	r.upgrade = classifyUpgrade(req)
 
 	r.NetHTTPRequestContext.Init(req)
 }
@@ -59,7 +59,7 @@ func (r *requestContext) Reset() {
 	r.routingURL = url.URL{}
 	r.upstreamScheme = upstreamSchemeUnknown
 	r.nativeGRPC = false
-	r.upgrade = false
+	r.upgrade = upgradeKindNone
 	r.upstreamViewPrepared = false
 	r.hasUpstreamTarget = false
 

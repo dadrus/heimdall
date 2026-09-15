@@ -59,7 +59,7 @@ func TestRequestContextReset(t *testing.T) {
 	require.Empty(t, ctx.routingURL)
 	require.Equal(t, upstreamSchemeUnknown, ctx.upstreamScheme)
 	require.False(t, ctx.nativeGRPC)
-	require.False(t, ctx.upgrade)
+	require.Equal(t, upgradeKindNone, ctx.upgrade)
 	require.False(t, ctx.upstreamViewPrepared)
 	require.False(t, ctx.hasUpstreamTarget)
 	require.Empty(t, ctx.UpstreamHeaders())
@@ -185,11 +185,12 @@ func TestRequestContextTransportClassification(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		contentType   string
-		routingScheme string
-		upgrade       bool
-		nativeGRPC    bool
-		scheme        upstreamScheme
+		contentType     string
+		routingScheme   string
+		upgradeProtocol string
+		expectedUpgrade upgradeKind
+		nativeGRPC      bool
+		scheme          upstreamScheme
 	}{
 		"ordinary http request": {
 			routingScheme: "http",
@@ -209,10 +210,17 @@ func TestRequestContextTransportClassification(t *testing.T) {
 			routingScheme: "h2c",
 			scheme:        upstreamSchemeH2C,
 		},
-		"upgrade request": {
-			routingScheme: "https",
-			upgrade:       true,
-			scheme:        upstreamSchemeHTTPS,
+		"websocket upgrade request": {
+			routingScheme:   "https",
+			upgradeProtocol: "websocket",
+			expectedUpgrade: upgradeKindWebSocket,
+			scheme:          upstreamSchemeHTTPS,
+		},
+		"other upgrade request": {
+			routingScheme:   "https",
+			upgradeProtocol: "example",
+			expectedUpgrade: upgradeKindOther,
+			scheme:          upstreamSchemeHTTPS,
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
@@ -222,9 +230,9 @@ func TestRequestContextTransportClassification(t *testing.T) {
 				req.Header.Set("Content-Type", tc.contentType)
 			}
 
-			if tc.upgrade {
+			if len(tc.upgradeProtocol) != 0 {
 				req.Header.Set("Connection", "Upgrade")
-				req.Header.Set("Upgrade", "websocket")
+				req.Header.Set("Upgrade", tc.upgradeProtocol)
 			}
 
 			ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
@@ -248,7 +256,7 @@ func TestRequestContextTransportClassification(t *testing.T) {
 
 			// THEN
 			assert.Equal(t, tc.nativeGRPC, ctx.nativeGRPC)
-			assert.Equal(t, tc.upgrade, ctx.upgrade)
+			assert.Equal(t, tc.expectedUpgrade, ctx.upgrade)
 			assert.Equal(t, tc.scheme, ctx.upstreamScheme)
 		})
 	}
