@@ -51,7 +51,7 @@ func TestAdapterShutdown(t *testing.T) {
 		require.NoError(t, adapter.Shutdown(t.Context()))
 	})
 
-	t.Run("leaves forced stop to Close when graceful shutdown times out", func(t *testing.T) {
+	t.Run("forces stop when graceful shutdown times out", func(t *testing.T) {
 		listener := bufconn.Listen(1024 * 1024)
 		service := &blockingService{started: make(chan struct{})}
 		srv := grpc.NewServer()
@@ -71,7 +71,7 @@ func TestAdapterShutdown(t *testing.T) {
 		)
 		require.NoError(t, err)
 		t.Cleanup(func() {
-			_ = adapter.Close()
+			srv.Stop()
 			_ = conn.Close()
 			_ = listener.Close()
 		})
@@ -97,14 +97,6 @@ func TestAdapterShutdown(t *testing.T) {
 
 		err = adapter.Shutdown(graceCtx)
 		require.ErrorIs(t, err, context.DeadlineExceeded)
-
-		select {
-		case err = <-rpcDone:
-			require.Failf(t, "RPC finished during graceful shutdown", "error: %v", err)
-		default:
-		}
-
-		require.NoError(t, adapter.Close())
 
 		select {
 		case err = <-rpcDone:

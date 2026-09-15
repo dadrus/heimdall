@@ -41,12 +41,8 @@ func (a *adapter) Shutdown(ctx context.Context) error {
 	case <-done:
 		return nil
 	case <-ctx.Done():
+		a.s.Stop()
+
 		return ctx.Err()
 	}
-}
-
-func (a *adapter) Close() error {
-	a.s.Stop()
-
-	return nil
 }
