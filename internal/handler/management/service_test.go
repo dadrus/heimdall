@@ -118,9 +118,9 @@ func (suite *ServiceTestSuite) SetupTest() {
 			Host: "127.0.0.1",
 			Port: port,
 			CORS: &config.CORS{},
-			Requests: config.IngressRequests{
+			Requests: config.ManagementRequests{
 				MaxInFlight: 1,
-				Body: config.IngressRequestBody{
+				Body: config.ManagementRequestBody{
 					MaxSize: 5 * bytesize.B,
 				},
 			},
@@ -429,8 +429,6 @@ func TestNewService(t *testing.T) {
 			conf := &config.Configuration{}
 
 			conf.Management.TLS = tc.tls
-			conf.Management.Timeout.Read = 98 * time.Second
-			conf.Management.Timeout.Write = 99 * time.Second
 			conf.Management.Requests.ReadTimeout = 10 * time.Second
 			conf.Management.Requests.Headers.MaxSize = 42 * bytesize.KB
 			conf.Management.Requests.Headers.ReadTimeout = 11 * time.Second

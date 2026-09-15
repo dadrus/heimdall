@@ -26,10 +26,6 @@ import (
 const (
 	defaultShutdownTimeout = 30 * time.Second
 
-	defaultReadTimeout  = time.Second * 5
-	defaultWriteTimeout = time.Second * 10
-	defaultIdleTimeout  = time.Second * 120
-
 	defaultRequestHeaderMaxSize = 64 * bytesize.KB
 	defaultRequestBodyMaxSize   = 5 * bytesize.MB
 
@@ -94,11 +90,6 @@ func defaultConfig() Configuration {
 		},
 		Serve: ServeConfig{
 			Port: defaultServePort,
-			Timeout: Timeout{
-				Read:  defaultReadTimeout,
-				Write: defaultWriteTimeout,
-				Idle:  defaultIdleTimeout,
-			},
 			Requests: IngressRequests{
 				MaxInFlight: defaultMaxInFlightRequests,
 				ReadTimeout: defaultRequestReadTimeout,
@@ -145,22 +136,15 @@ func defaultConfig() Configuration {
 		},
 		Management: ManagementConfig{
 			Port: defaultManagementServicePort,
-			Timeout: Timeout{
-				Read:  defaultReadTimeout,
-				Write: defaultWriteTimeout,
-				Idle:  defaultIdleTimeout,
-			},
-			Requests: IngressRequests{
+			Requests: ManagementRequests{
 				MaxInFlight: defaultMaxInFlightRequests,
 				ReadTimeout: defaultRequestReadTimeout,
 				Headers: IngressRequestHeaders{
 					MaxSize:     defaultRequestHeaderMaxSize,
 					ReadTimeout: defaultRequestHeaderReadTimeout,
 				},
-				Body: IngressRequestBody{
-					MaxSize:         defaultRequestBodyMaxSize,
-					ReadIdleTimeout: defaultRequestBodyReadIdleTimeout,
-					ReadMinRate:     defaultRequestBodyReadMinRate,
+				Body: ManagementRequestBody{
+					MaxSize: defaultRequestBodyMaxSize,
 				},
 			},
 			Responses: IngressResponses{

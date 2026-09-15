@@ -19,17 +19,29 @@ package config
 import (
 	"fmt"
 	"time"
+
+	"github.com/inhies/go-bytesize"
 )
 
 type ManagementConfig struct {
 	Host        string                `koanf:"host"`
 	Port        int                   `koanf:"port"`
-	Timeout     Timeout               `koanf:"timeout"`
-	Requests    IngressRequests       `koanf:"requests"`
+	Requests    ManagementRequests    `koanf:"requests"`
 	Responses   IngressResponses      `koanf:"responses"`
 	Connections ManagementConnections `koanf:"connections"`
 	CORS        *CORS                 `koanf:"cors,omitempty"`
 	TLS         *TLS                  `koanf:"tls,omitempty"  validate:"enforced=notnil"`
+}
+
+type ManagementRequests struct {
+	MaxInFlight int64                 `koanf:"max_in_flight"       validate:"gte=0"`
+	ReadTimeout time.Duration         `koanf:"read_timeout,string" validate:"gte=0"`
+	Headers     IngressRequestHeaders `koanf:"headers"`
+	Body        ManagementRequestBody `koanf:"body"`
+}
+
+type ManagementRequestBody struct {
+	MaxSize bytesize.ByteSize `koanf:"max_size" validate:"max_bytes=7EB"`
 }
 
 type ManagementConnections struct {

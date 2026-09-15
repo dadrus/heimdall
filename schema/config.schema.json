@@ -252,87 +252,75 @@
       "description": "Configuration options supported by all Redis cache types",
       "type": "object",
       "properties": {
-        "type": {
-          "const": "redis"
+        "credentials": {
+          "description": "The credentials to use for authentication. If not set, no authentication is performed.",
+          "$ref": "#/definitions/secretReference"
         },
-        "config": {
-          "description": "Redis client configuration",
+        "client_cache": {
+          "description": "Local client cache configuration to enhance performance and reduce roundtrips",
           "type": "object",
-          "required": [
-            "address"
-          ],
+          "additionalProperties": false,
           "properties": {
-            "credentials": {
-              "description": "The credentials to use for authentication. If not set, no authentication is performed.",
-              "$ref": "#/definitions/secretReference"
+            "disabled": {
+              "description": "Whether the client cache should be disabled. Defaults to false.",
+              "type": "boolean",
+              "default": false
             },
-            "client_cache": {
-              "description": "Local client cache configuration to enhance performance and reduce roundtrips",
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "disabled": {
-                  "description": "Whether the client cache should be disabled. Defaults to false.",
-                  "type": "boolean",
-                  "default": false
-                },
-                "ttl": {
-                  "description": "Specifies the maximum TTL on the client side for all used keys. If the key's TTL on the server is smaller than the client side TTL, the client side TTL will be capped.",
-                  "type": "string",
-                  "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-                  "default": "5m",
-                  "examples": [
-                    "1h",
-                    "1m",
-                    "30s"
-                  ]
-                },
-                "size_per_connection": {
-                  "description": "Optional client side cache size that bind to each TCP connection to a single redis instance. Defaults to 128MB",
-                  "type": "string",
-                  "default": "128MB",
-                  "pattern": "^[0-9]+(B|KB|MB|GB)$",
-                  "examples": [
-                    "1GB",
-                    "256MB",
-                    "128KB"
-                  ]
-                }
-              }
-            },
-            "buffer_limit": {
-              "$ref": "#/definitions/bufferLimitConfig"
-            },
-            "timeout": {
-              "$ref": "#/definitions/timeoutConfig"
-            },
-            "max_flush_delay": {
-              "description": "Maximum delay after pipeline flushes. This gives pipeline a chance to collect more commands to send to Redis. Adding this delay increases latency, reduces throughput, but in most cases may significantly reduce application and Redis CPU utilization due to less executed system calls.",
+            "ttl": {
+              "description": "Specifies the maximum TTL on the client side for all used keys. If the key's TTL on the server is smaller than the client side TTL, the client side TTL will be capped.",
               "type": "string",
               "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-              "default": "0s",
+              "default": "5m",
               "examples": [
-                "1ms",
-                "20us"
+                "1h",
+                "1m",
+                "30s"
               ]
             },
-            "tls": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/tlsConfig"
-                },
-                {
-                  "properties": {
-                    "disabled": {
-                      "description": "Whether tls should be disabled. Defaults to false.",
-                      "type": "boolean",
-                      "default": false
-                    }
-                  }
-                }
+            "size_per_connection": {
+              "description": "Optional client side cache size that bind to each TCP connection to a single redis instance. Defaults to 128MB",
+              "type": "string",
+              "default": "128MB",
+              "pattern": "^[0-9]+(B|KB|MB|GB)$",
+              "examples": [
+                "1GB",
+                "256MB",
+                "128KB"
               ]
             }
           }
+        },
+        "buffer_limit": {
+          "$ref": "#/definitions/bufferLimitConfig"
+        },
+        "timeout": {
+          "$ref": "#/definitions/redisTimeoutConfig"
+        },
+        "max_flush_delay": {
+          "description": "Maximum delay after pipeline flushes. This gives pipeline a chance to collect more commands to send to Redis. Adding this delay increases latency, reduces throughput, but in most cases may significantly reduce application and Redis CPU utilization due to less executed system calls.",
+          "type": "string",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+          "default": "0s",
+          "examples": [
+            "1ms",
+            "20us"
+          ]
+        },
+        "tls": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/tlsConfig"
+            },
+            {
+              "properties": {
+                "disabled": {
+                  "description": "Whether tls should be disabled. Defaults to false.",
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -552,35 +540,13 @@
         }
       }
     },
-    "timeoutConfig": {
-      "description": "Controls the HTTP timeouts.",
+    "redisTimeoutConfig": {
+      "description": "Redis connection write timeout configuration.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "read": {
-          "description": "The maximum duration for reading the entire request, including the body.",
-          "type": "string",
-          "default": "5s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-          "examples": [
-            "5s",
-            "5m",
-            "5h"
-          ]
-        },
         "write": {
-          "description": "The maximum duration before timing out writes of the response. Increase this parameter to prevent unexpected closing a client connection if an upstream request is responding slowly.",
-          "type": "string",
-          "default": "120s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-          "examples": [
-            "5s",
-            "5m",
-            "5h"
-          ]
-        },
-        "idle": {
-          "description": "The maximum amount of time to wait for any action of a request session, reading data or writing the response.",
+          "description": "Maximum duration for writing a command to a Redis connection.",
           "type": "string",
           "default": "120s",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
@@ -726,6 +692,49 @@
         },
         "body": {
           "$ref": "#/definitions/ingressRequestBodyConfig"
+        }
+      }
+    },
+    "managementRequestsConfig": {
+      "type": "object",
+      "description": "Limits for incoming management requests.",
+      "additionalProperties": false,
+      "properties": {
+        "max_in_flight": {
+          "description": "Maximum number of requests processed concurrently. 0 disables this limit.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 512
+        },
+        "read_timeout": {
+          "description": "Optional hard wall-clock ceiling for reading the complete incoming request, including its body. 0 disables the hard ceiling.",
+          "type": "string",
+          "default": "0s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "headers": {
+          "$ref": "#/definitions/ingressRequestHeadersConfig"
+        },
+        "body": {
+          "$ref": "#/definitions/managementRequestBodyConfig"
+        }
+      }
+    },
+    "managementRequestBodyConfig": {
+      "type": "object",
+      "description": "Limits for incoming management request bodies.",
+      "additionalProperties": false,
+      "properties": {
+        "max_size": {
+          "description": "Maximum size of an incoming request body. 0 disables Heimdall's request body size limit.",
+          "type": "string",
+          "default": "5MB",
+          "pattern": "^[0-9]+(B|KB|MB|GB|TB|PB|EB)$",
+          "examples": [
+            "0B",
+            "5MB",
+            "1GB"
+          ]
         }
       }
     },
@@ -3018,9 +3027,6 @@
             "127.0.0.1"
           ]
         },
-        "timeout": {
-          "$ref": "#/definitions/timeoutConfig"
-        },
         "connections": {
           "$ref": "#/definitions/serveConnectionsConfig"
         },
@@ -3070,14 +3076,11 @@
             "127.0.0.1"
           ]
         },
-        "timeout": {
-          "$ref": "#/definitions/timeoutConfig"
-        },
         "connections": {
           "$ref": "#/definitions/ingressConnectionsConfig"
         },
         "requests": {
-          "$ref": "#/definitions/ingressRequestsConfig"
+          "$ref": "#/definitions/managementRequestsConfig"
         },
         "responses": {
           "$ref": "#/definitions/ingressResponsesConfig"

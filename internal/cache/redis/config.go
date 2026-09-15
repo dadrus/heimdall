@@ -56,11 +56,15 @@ type tlsConfig struct {
 	Disabled bool `mapstructure:"disabled" validate:"enforced=false"`
 }
 
+type timeoutConfig struct {
+	Write time.Duration `mapstructure:"write"`
+}
+
 type baseConfig struct {
 	Credentials   *config.Secret     `mapstructure:"credentials"`
 	ClientCache   clientCache        `mapstructure:"client_cache"`
 	BufferLimit   config.BufferLimit `mapstructure:"buffer_limit"`
-	Timeout       config.Timeout     `mapstructure:"timeout"`
+	Timeout       timeoutConfig      `mapstructure:"timeout"`
 	MaxFlushDelay time.Duration      `mapstructure:"max_flush_delay"`
 	TLS           tlsConfig          `mapstructure:"tls"`
 }

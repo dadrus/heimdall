@@ -63,10 +63,6 @@ func TestNewService(t *testing.T) {
 			conf := &config.Configuration{
 				Serve: config.ServeConfig{
 					TLS: tc.tls,
-					Timeout: config.Timeout{
-						Read:  98 * time.Second,
-						Write: 99 * time.Second,
-					},
 					Requests: config.IngressRequests{
 						ReadTimeout: 10 * time.Second,
 						Headers: config.IngressRequestHeaders{

@@ -98,8 +98,6 @@ func TestNewService(t *testing.T) {
 			conf := &config.Configuration{}
 
 			conf.Serve.TLS = tc.tls
-			conf.Serve.Timeout.Read = 98 * time.Second
-			conf.Serve.Timeout.Write = 99 * time.Second
 			conf.Serve.Requests.ReadTimeout = 10 * time.Second
 			conf.Serve.Requests.Headers.MaxSize = 42 * bytesize.KB
 			conf.Serve.Requests.Headers.ReadTimeout = 11 * time.Second
@@ -908,7 +906,6 @@ func TestProxyService(t *testing.T) {
 		"successful rule execution - request method and path are taken from the real request (trusted proxy not configured)": {
 			upstreamScheme: "http",
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				Upstream: config.UpstreamConfig{
 					Connections: config.UpstreamConnections{
 						WriteIdleTimeout: 250 * time.Millisecond,
@@ -1005,9 +1002,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"successful rule execution - headers are set": {
 			disableHTTP2: true,
-			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
-			},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -1085,7 +1079,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"successful rule execution - request method is taken from the header (trusted proxy configured)": {
 			serviceConf: config.ServeConfig{
-				Timeout:        config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				TrustedProxies: []string{"0.0.0.0/0"},
 			},
 			createRequest: func(t *testing.T, host string) *http.Request {
@@ -1175,7 +1168,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"successful rule execution - request path is taken from the header (trusted proxy configured)": {
 			serviceConf: config.ServeConfig{
-				Timeout:        config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				TrustedProxies: []string{"0.0.0.0/0"},
 			},
 			createRequest: func(t *testing.T, host string) *http.Request {
@@ -1265,7 +1257,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"CORS test actual request": {
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				CORS: &config.CORS{
 					AllowedMethods:   []string{http.MethodGet},
 					AllowedOrigins:   []string{"https://foo.bar"},
@@ -1359,7 +1350,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"CORS test preflight request": {
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 10 * time.Second},
 				CORS: &config.CORS{
 					AllowedMethods:   []string{http.MethodGet},
 					AllowedOrigins:   []string{"https://foo.bar"},
@@ -1409,7 +1399,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"test metrics collection": {
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 10 * time.Second},
 				CORS: &config.CORS{
 					AllowedMethods:   []string{http.MethodGet},
 					AllowedOrigins:   []string{"https://foo.bar"},
@@ -1456,7 +1445,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"http2 usage": {
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1000 * time.Second, Write: 1000 * time.Second, Idle: 1000 * time.Second},
 				Upstream: config.UpstreamConfig{
 					Connections: config.UpstreamConnections{
 						WriteIdleTimeout: 250 * time.Millisecond,
@@ -1586,7 +1574,6 @@ func TestProxyService(t *testing.T) {
 		"h2c usage": {
 			upstreamScheme: "h2c",
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				Upstream: config.UpstreamConfig{
 					Connections: config.UpstreamConnections{
 						WriteIdleTimeout: 250 * time.Millisecond,
@@ -1653,7 +1640,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"native gRPC uses http2 over https": {
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				Upstream: config.UpstreamConfig{
 					Connections: config.UpstreamConnections{
 						WriteIdleTimeout: 250 * time.Millisecond,
@@ -1722,9 +1708,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"native gRPC uses h2c": {
 			upstreamScheme: "h2c",
-			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
-			},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -1783,9 +1766,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"native gRPC over http is rejected": {
 			upstreamScheme: "http",
-			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
-			},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -1840,9 +1820,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"upgrade over h2c is rejected": {
 			upstreamScheme: "h2c",
-			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
-			},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -1899,7 +1876,6 @@ func TestProxyService(t *testing.T) {
 		"http2 not supported by upstream server": {
 			disableHTTP2: true,
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				Upstream: config.UpstreamConfig{
 					Connections: config.UpstreamConnections{
 						WriteIdleTimeout: 250 * time.Millisecond,
@@ -2028,9 +2004,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"native gRPC does not fall back to http1": {
 			disableHTTP2: true,
-			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
-			},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -2593,11 +2566,6 @@ func TestProxyServiceUsesUpdatedUpstreamScheme(t *testing.T) {
 		Serve: config.ServeConfig{
 			Host: "127.0.0.1",
 			Port: port,
-			Timeout: config.Timeout{
-				Read:  1 * time.Second,
-				Write: 1 * time.Second,
-				Idle:  1 * time.Second,
-			},
 		},
 	}
 

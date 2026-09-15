@@ -26,7 +26,6 @@ import (
 type ServeConfig struct {
 	Host           string             `koanf:"host"`
 	Port           int                `koanf:"port"`
-	Timeout        Timeout            `koanf:"timeout"`
 	Requests       IngressRequests    `koanf:"requests"`
 	Responses      IngressResponses   `koanf:"responses"`
 	Connections    IngressConnections `koanf:"connections"`
@@ -42,12 +41,6 @@ func (c ServeConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Po
 type BufferLimit struct {
 	Read  bytesize.ByteSize `koanf:"read"  mapstructure:"read"`
 	Write bytesize.ByteSize `koanf:"write" mapstructure:"write"`
-}
-
-type Timeout struct {
-	Read  time.Duration `koanf:"read,string"  mapstructure:"read"`
-	Write time.Duration `koanf:"write,string" mapstructure:"write"`
-	Idle  time.Duration `koanf:"idle,string"  mapstructure:"idle"`
 }
 
 type IngressRequests struct {

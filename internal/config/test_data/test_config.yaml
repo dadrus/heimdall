@@ -45,10 +45,6 @@ shutdown:
 serve:
   host: 0.0.0.0
   port: 4456
-  timeout:
-    read: 2s
-    write: 5s
-    idle: 2m
   requests:
     headers:
       max_size: 64KB
@@ -118,10 +114,6 @@ serve:
 management:
   host: 127.0.0.1
   port: 4457
-  timeout:
-    read: 2s
-    write: 5s
-    idle: 2m
   requests:
     headers:
       max_size: 4KB
@@ -147,7 +139,8 @@ cache:
     address: foo:12345
     db: 1
     credentials:
-      path: /path/to/credentials.yaml
+      source: inline_secrets
+      selector: basic_auth
     client_cache:
       disabled: false
       ttl: 5m
