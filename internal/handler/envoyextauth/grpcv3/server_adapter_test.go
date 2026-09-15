@@ -19,6 +19,7 @@ package grpcv3
 import (
 	"context"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -35,13 +36,32 @@ type blockingServiceServer interface {
 
 type blockingService struct {
 	started chan struct{}
+	release <-chan struct{}
+	once    sync.Once
 }
 
 func (s *blockingService) Block(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
-	close(s.started)
-	<-ctx.Done()
+	s.once.Do(func() { close(s.started) })
 
-	return nil, ctx.Err()
+	select {
+	case <-s.release:
+		return &emptypb.Empty{}, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
+}
+
+type closeNotifyingListener struct {
+	net.Listener
+
+	closed chan struct{}
+	once   sync.Once
+}
+
+func (l *closeNotifyingListener) Close() error {
+	l.once.Do(func() { close(l.closed) })
+
+	return l.Listener.Close()
 }
 
 func TestAdapterShutdown(t *testing.T) {
@@ -49,6 +69,82 @@ func TestAdapterShutdown(t *testing.T) {
 		adapter := &adapter{s: grpc.NewServer()}
 
 		require.NoError(t, adapter.Shutdown(t.Context()))
+	})
+
+	t.Run("waits for active work during graceful shutdown", func(t *testing.T) {
+		baseListener := bufconn.Listen(1024 * 1024)
+		listener := &closeNotifyingListener{
+			Listener: baseListener,
+			closed:   make(chan struct{}),
+		}
+		release := make(chan struct{})
+		service := &blockingService{started: make(chan struct{}), release: release}
+		srv := grpc.NewServer()
+		srv.RegisterService(&blockingServiceDesc, service)
+		adapter := &adapter{s: srv}
+
+		go func() { _ = adapter.Serve(listener) }()
+
+		conn, err := grpc.NewClient(
+			"passthrough:///bufnet",
+			grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) {
+				return baseListener.Dial()
+			}),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		)
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			srv.Stop()
+			_ = conn.Close()
+			_ = listener.Close()
+		})
+
+		rpcDone := make(chan error, 1)
+		go func() {
+			rpcDone <- conn.Invoke(
+				t.Context(),
+				"/test.BlockingService/Block",
+				&emptypb.Empty{},
+				&emptypb.Empty{},
+			)
+		}()
+
+		select {
+		case <-service.started:
+		case <-time.After(time.Second):
+			require.FailNow(t, "gRPC request was not started")
+		}
+
+		shutdownDone := make(chan error, 1)
+		go func() { shutdownDone <- adapter.Shutdown(t.Context()) }()
+
+		select {
+		case <-listener.closed:
+		case <-time.After(time.Second):
+			require.FailNow(t, "graceful shutdown did not begin")
+		}
+
+		select {
+		case err = <-shutdownDone:
+			require.Failf(t, "shutdown returned before active RPC completed", "error: %v", err)
+		default:
+		}
+
+		close(release)
+
+		select {
+		case err = <-rpcDone:
+			require.NoError(t, err)
+		case <-time.After(time.Second):
+			require.FailNow(t, "active RPC did not complete")
+		}
+
+		select {
+		case err = <-shutdownDone:
+			require.NoError(t, err)
+		case <-time.After(time.Second):
+			require.FailNow(t, "graceful shutdown did not complete")
+		}
 	})
 
 	t.Run("forces stop when graceful shutdown times out", func(t *testing.T) {

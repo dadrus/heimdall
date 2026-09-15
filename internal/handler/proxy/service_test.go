@@ -17,6 +17,7 @@
 package proxy
 
 import (
+	"bufio"
 	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
@@ -392,6 +393,232 @@ func TestProxyServiceForceCloseClosesRemainingTunnels(t *testing.T) {
 	assert.Equal(t, int32(1), firstConn.closeCalls.Load())
 	assert.Equal(t, int32(1), secondConn.closeCalls.Load())
 	assert.Equal(t, 0, tunnelRegistrySize(registry))
+}
+
+func TestProxyServiceShutdownDrainsActiveRequests(t *testing.T) {
+	for uc, tc := range map[string]struct {
+		transport     func() *http.Transport
+		expectedProto string
+	}{
+		"http1": {
+			transport:     func() *http.Transport { return new(http.Transport) },
+			expectedProto: "HTTP/1.1",
+		},
+		"h2c": {
+			transport: func() *http.Transport {
+				transport := new(http.Transport)
+				transport.Protocols = new(http.Protocols)
+				transport.Protocols.SetHTTP2(true)
+				transport.Protocols.SetUnencryptedHTTP2(true)
+
+				return transport
+			},
+			expectedProto: "HTTP/2.0",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			requestEntered := make(chan struct{})
+			releaseRequest := make(chan struct{})
+			var releaseOnce sync.Once
+			release := func() { releaseOnce.Do(func() { close(releaseRequest) }) }
+			t.Cleanup(release)
+
+			upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+				close(requestEntered)
+				<-releaseRequest
+				rw.WriteHeader(http.StatusNoContent)
+			}))
+			defer upstream.Close()
+
+			upstreamURL, err := url.Parse(upstream.URL)
+			require.NoError(t, err)
+
+			proxy, addr := startProxyService(t, config.ServeConfig{}, upstreamURL)
+			shutdownStarted := make(chan struct{})
+			var shutdownStartedOnce sync.Once
+			proxy.RegisterOnShutdown(func() {
+				shutdownStartedOnce.Do(func() { close(shutdownStarted) })
+			})
+
+			transport := tc.transport()
+			client := &http.Client{Transport: transport}
+			t.Cleanup(transport.CloseIdleConnections)
+
+			type requestResult struct {
+				response *http.Response
+				err      error
+			}
+
+			requestDone := make(chan requestResult, 1)
+			go func() {
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/drain", nil)
+				if err != nil {
+					requestDone <- requestResult{err: err}
+
+					return
+				}
+
+				resp, err := client.Do(req) //nolint:bodyclose
+				requestDone <- requestResult{response: resp, err: err}
+			}()
+
+			select {
+			case <-requestEntered:
+			case <-time.After(time.Second):
+				require.FailNow(t, "request did not reach upstream")
+			}
+
+			shutdownCtx, cancel := context.WithTimeout(t.Context(), time.Second)
+			defer cancel()
+			shutdownDone := make(chan error, 1)
+			go func() { shutdownDone <- proxy.Shutdown(shutdownCtx) }()
+
+			select {
+			case <-shutdownStarted:
+			case <-time.After(time.Second):
+				require.FailNow(t, "shutdown did not start")
+			}
+
+			select {
+			case err = <-shutdownDone:
+				require.Failf(t, "shutdown returned before active request drained", "error: %v", err)
+			default:
+			}
+
+			// WHEN
+			release()
+
+			// THEN
+			select {
+			case result := <-requestDone:
+				require.NoError(t, result.err)
+				require.NotNil(t, result.response)
+				defer result.response.Body.Close()
+				assert.Equal(t, http.StatusNoContent, result.response.StatusCode)
+				assert.Equal(t, tc.expectedProto, result.response.Proto)
+			case <-time.After(time.Second):
+				require.FailNow(t, "request did not complete")
+			}
+
+			select {
+			case err = <-shutdownDone:
+				require.NoError(t, err)
+			case <-time.After(time.Second):
+				require.FailNow(t, "shutdown did not complete after request drained")
+			}
+		})
+	}
+}
+
+func TestProxyServiceShutdownClosesWebSocketAfterHTTPGraceIsExhausted(t *testing.T) {
+	// GIVEN
+	var releaseBlockOnce sync.Once
+	releaseBlock := make(chan struct{})
+	blockEntered := make(chan struct{})
+	upstreamReady := make(chan error, 1)
+	upstreamClosed := make(chan error, 1)
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		switch req.URL.Path {
+		case "/block":
+			close(blockEntered)
+			<-releaseBlock
+			rw.WriteHeader(http.StatusNoContent)
+		case "/tunnel":
+			conn, err := (&websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}).Upgrade(rw, req, nil)
+			if err != nil {
+				upstreamReady <- err
+
+				return
+			}
+			defer conn.Close()
+			conn.SetCloseHandler(func(int, string) error { return nil })
+			upstreamReady <- nil
+
+			_, _, err = conn.ReadMessage()
+			upstreamClosed <- err
+		default:
+			rw.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer upstream.Close()
+	defer releaseBlockOnce.Do(func() { close(releaseBlock) })
+
+	upstreamURL, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+
+	proxy, addr := startProxyService(t, config.ServeConfig{}, upstreamURL)
+
+	wsConn, resp, err := websocket.DefaultDialer.Dial("ws://"+addr+"/tunnel", nil)
+	require.NoError(t, err)
+	defer wsConn.Close()
+	defer resp.Body.Close()
+	wsConn.SetCloseHandler(func(int, string) error { return nil })
+
+	select {
+	case err = <-upstreamReady:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "upstream websocket did not become ready")
+	}
+
+	require.Eventually(t, func() bool {
+		return tunnelRegistrySize(proxy.tunnels) == 2
+	}, time.Second, 10*time.Millisecond)
+
+	blockClient := &http.Client{Transport: new(http.Transport)}
+	defer blockClient.CloseIdleConnections()
+	blockDone := make(chan error, 1)
+	go func() {
+		response, err := blockClient.Get("http://" + addr + "/block") //nolint:noctx,bodyclose
+		if response != nil {
+			_ = response.Body.Close()
+		}
+		blockDone <- err
+	}()
+
+	select {
+	case <-blockEntered:
+	case <-time.After(time.Second):
+		require.FailNow(t, "blocking request did not reach upstream")
+	}
+
+	// WHEN
+	shutdownCtx, cancel := context.WithTimeout(t.Context(), 75*time.Millisecond)
+	err = proxy.Shutdown(shutdownCtx)
+	cancel()
+
+	// THEN
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.ErrorIs(t, err, errTunnelDrain)
+
+	_, _, err = wsConn.ReadMessage()
+	require.Error(t, err)
+
+	select {
+	case err = <-upstreamClosed:
+		require.Error(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "upstream websocket was not closed")
+	}
+
+	assert.Equal(t, 0, tunnelRegistrySize(proxy.tunnels))
+
+	select {
+	case err = <-blockDone:
+		require.Failf(t, "normal HTTP request was force-closed by proxy shutdown", "error: %v", err)
+	default:
+	}
+
+	releaseBlockOnce.Do(func() { close(releaseBlock) })
+
+	select {
+	case err = <-blockDone:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "normal HTTP request did not finish after test released it")
+	}
 }
 
 func TestProxyService(t *testing.T) {
@@ -2514,6 +2741,84 @@ func TestWebSocketSupport(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestWebSocketTunnelHoldsRequestAdmissionSlot(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	upstreamReady := make(chan error, 1)
+	upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		if websocket.IsWebSocketUpgrade(req) {
+			conn, err := (&websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}).Upgrade(rw, req, nil)
+			if err != nil {
+				upstreamReady <- err
+
+				return
+			}
+			upstreamReady <- nil
+			defer conn.Close()
+
+			for {
+				if _, _, err = conn.ReadMessage(); err != nil {
+					return
+				}
+			}
+		}
+
+		rw.WriteHeader(http.StatusNoContent)
+	}))
+	defer upstream.Close()
+
+	upstreamURL, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+
+	serveConfig := config.ServeConfig{}
+	serveConfig.Requests.MaxInFlight = 1
+	serveConfig.Respond.With.TooManyRequests.Code = http.StatusServiceUnavailable
+	proxy, addr := startProxyService(t, serveConfig, upstreamURL)
+
+	wsConn, resp, err := websocket.DefaultDialer.Dial("ws://"+addr+"/tunnel", nil)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	select {
+	case err = <-upstreamReady:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "upstream websocket did not become ready")
+	}
+
+	require.Eventually(t, func() bool {
+		return tunnelRegistrySize(proxy.tunnels) == 2
+	}, time.Second, 10*time.Millisecond)
+
+	client := &http.Client{Transport: new(http.Transport)}
+	defer client.CloseIdleConnections()
+
+	response, err := client.Get("http://" + addr + "/ordinary") //nolint:noctx,bodyclose
+	require.NoError(t, err)
+	require.NotNil(t, response)
+	assert.Equal(t, http.StatusServiceUnavailable, response.StatusCode)
+	require.NoError(t, response.Body.Close())
+
+	// WHEN
+	require.NoError(t, wsConn.Close())
+
+	// THEN
+	require.Eventually(t, func() bool {
+		return tunnelRegistrySize(proxy.tunnels) == 0
+	}, time.Second, 10*time.Millisecond)
+
+	require.Eventually(t, func() bool {
+		response, err = client.Get("http://" + addr + "/ordinary") //nolint:noctx,bodyclose
+		if err != nil {
+			return false
+		}
+		defer response.Body.Close()
+
+		return response.StatusCode == http.StatusNoContent
+	}, time.Second, 10*time.Millisecond)
+}
+
 func TestWebSocketTunnelTracksBothEnds(t *testing.T) {
 	t.Parallel()
 
@@ -2874,4 +3179,202 @@ func TestServerSentEventsSupport(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, i, val)
 	}
+}
+
+func TestServerSentEventsDrainOnShutdown(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	releaseUpstream := make(chan struct{})
+	var releaseOnce sync.Once
+	release := func() { releaseOnce.Do(func() { close(releaseUpstream) }) }
+	t.Cleanup(release)
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		rw.Header().Set("Content-Type", "text/event-stream")
+		rw.WriteHeader(http.StatusOK)
+		rc := http.NewResponseController(rw)
+
+		if _, err := io.WriteString(rw, "data: ready\n\n"); !assert.NoError(t, err) {
+			return
+		}
+		if !assert.NoError(t, rc.Flush()) {
+			return
+		}
+
+		<-releaseUpstream
+
+		if _, err := io.WriteString(rw, "data: done\n\n"); !assert.NoError(t, err) {
+			return
+		}
+		assert.NoError(t, rc.Flush())
+	}))
+	defer upstream.Close()
+
+	upstreamURL, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+
+	proxy, addr := startProxyService(t, config.ServeConfig{}, upstreamURL)
+	shutdownStarted := make(chan struct{})
+	var shutdownStartedOnce sync.Once
+	proxy.RegisterOnShutdown(func() {
+		shutdownStartedOnce.Do(func() { close(shutdownStarted) })
+	})
+
+	client := &http.Client{Transport: new(http.Transport)}
+	defer client.CloseIdleConnections()
+
+	resp, err := client.Get("http://" + addr + "/events") //nolint:noctx,bodyclose
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	reader := bufio.NewReader(resp.Body)
+	assertServerSentEvent(t, reader, "data: ready")
+
+	shutdownCtx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+	shutdownDone := make(chan error, 1)
+	go func() { shutdownDone <- proxy.Shutdown(shutdownCtx) }()
+
+	select {
+	case <-shutdownStarted:
+	case <-time.After(time.Second):
+		require.FailNow(t, "shutdown did not start")
+	}
+
+	select {
+	case err = <-shutdownDone:
+		require.Failf(t, "shutdown returned before SSE stream drained", "error: %v", err)
+	default:
+	}
+
+	// WHEN
+	release()
+
+	// THEN
+	assertServerSentEvent(t, reader, "data: done")
+
+	select {
+	case err = <-shutdownDone:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "shutdown did not complete after SSE stream drained")
+	}
+}
+
+func TestServerSentEventsSurviveShutdownTimeout(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	releaseUpstream := make(chan struct{})
+	var releaseOnce sync.Once
+	release := func() { releaseOnce.Do(func() { close(releaseUpstream) }) }
+	t.Cleanup(release)
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		rw.Header().Set("Content-Type", "text/event-stream")
+		rw.WriteHeader(http.StatusOK)
+		rc := http.NewResponseController(rw)
+
+		if _, err := io.WriteString(rw, "data: ready\n\n"); !assert.NoError(t, err) {
+			return
+		}
+		if !assert.NoError(t, rc.Flush()) {
+			return
+		}
+
+		<-releaseUpstream
+
+		if _, err := io.WriteString(rw, "data: done\n\n"); !assert.NoError(t, err) {
+			return
+		}
+		assert.NoError(t, rc.Flush())
+	}))
+	defer upstream.Close()
+
+	upstreamURL, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+
+	proxy, addr := startProxyService(t, config.ServeConfig{}, upstreamURL)
+	client := &http.Client{Transport: new(http.Transport)}
+	defer client.CloseIdleConnections()
+
+	resp, err := client.Get("http://" + addr + "/events") //nolint:noctx,bodyclose
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	reader := bufio.NewReader(resp.Body)
+	assertServerSentEvent(t, reader, "data: ready")
+
+	// WHEN
+	shutdownCtx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	err = proxy.Shutdown(shutdownCtx)
+	cancel()
+
+	// THEN
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	release()
+	assertServerSentEvent(t, reader, "data: done")
+}
+
+func startProxyService(
+	t *testing.T,
+	serveConfig config.ServeConfig,
+	upstreamURL *url.URL,
+) (*proxyService, string) {
+	t.Helper()
+
+	exec := testExecutor(func(ctx pipeline.ExecutionContext) error {
+		targetURL := *upstreamURL
+		targetURL.Path = ctx.Request().URL.Path
+		targetURL.RawQuery = ctx.Request().URL.RawQuery
+		ctx.PrepareUpstreamView(testUpstreamTarget{
+			targetURL:         targetURL,
+			forwardHostHeader: true,
+		})
+
+		return nil
+	})
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0") //nolint: noctx
+	require.NoError(t, err)
+
+	host, rawPort, err := net.SplitHostPort(ln.Addr().String())
+	require.NoError(t, err)
+	port, err := strconv.Atoi(rawPort)
+	require.NoError(t, err)
+
+	serveConfig.Host = host
+	serveConfig.Port = port
+	proxy := newService(
+		&config.Configuration{Serve: serveConfig},
+		mocks.NewCacheMock(t),
+		zerolog.Nop(),
+		exec,
+	)
+
+	go func() { _ = proxy.Serve(ln) }()
+
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+
+		_ = proxy.Shutdown(ctx)
+		_ = ln.Close()
+	})
+
+	return proxy, ln.Addr().String()
+}
+
+func assertServerSentEvent(t *testing.T, reader *bufio.Reader, expected string) {
+	t.Helper()
+
+	line, err := reader.ReadString('\n')
+	require.NoError(t, err)
+	assert.Equal(t, expected, strings.TrimSpace(line))
+
+	line, err = reader.ReadString('\n')
+	require.NoError(t, err)
+	assert.Empty(t, strings.TrimSpace(line))
 }

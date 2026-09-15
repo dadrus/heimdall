@@ -222,6 +222,34 @@ func TestLifecycleManagerStop(t *testing.T) {
 	}
 }
 
+func TestLifecycleManagerStopUsesGraceContext(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	parentDeadline := time.Now().Add(30 * time.Second)
+	ctx, cancel := context.WithDeadline(context.Background(), parentDeadline)
+	defer cancel()
+
+	srv := mocks.NewServerMock(t)
+	srv.EXPECT().Shutdown(mock.MatchedBy(func(ctx context.Context) bool {
+		deadline, ok := ctx.Deadline()
+
+		return ok && deadline.Equal(parentDeadline.Add(-maxCleanupTail))
+	})).Return(nil).Once()
+
+	lcm := &LifecycleManager{
+		ServiceName: "foo",
+		Server:      srv,
+		Logger:      zerolog.Nop(),
+	}
+
+	// WHEN
+	err := lcm.Stop(ctx)
+
+	// THEN
+	require.NoError(t, err)
+}
+
 func TestGracefulShutdownContext(t *testing.T) {
 	t.Parallel()
 
