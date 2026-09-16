@@ -75,6 +75,7 @@ packages:
     interfaces:
       Provider: {}
       DependenciesResolver: {}
+      ChangeObserver: {}
   github.com/dadrus/heimdall/internal/secrets:
     interfaces:
       handleBinding:
@@ -108,6 +109,9 @@ packages:
   github.com/dadrus/heimdall/internal/rules/endpoint:
     interfaces:
       AuthenticationStrategy: {}
+  github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors:
+    interfaces:
+      AuthDataExtractStrategy: {}
   github.com/dadrus/heimdall/internal/rules/mechanisms:
     interfaces:
       Mechanism: {}
