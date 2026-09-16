@@ -70,7 +70,7 @@ type AuthDataExtractStrategyMock_GetAuthData_Call struct {
 
 // GetAuthData is a helper method to define mock.On call
 //   - ctx pipeline.Context
-func (_e *AuthDataExtractStrategyMock_Expecter) GetAuthData(ctx interface{}) *AuthDataExtractStrategyMock_GetAuthData_Call {
+func (_e *AuthDataExtractStrategyMock_Expecter) GetAuthData(ctx any) *AuthDataExtractStrategyMock_GetAuthData_Call {
 	return &AuthDataExtractStrategyMock_GetAuthData_Call{Call: _e.mock.On("GetAuthData", ctx)}
 }
 
