@@ -82,7 +82,7 @@ func newService(
 	cfg := conf.Serve
 	eh := errorhandler.New(
 		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
-		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
+		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.PreconditionError.Code),
 		errorhandler.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
 		errorhandler.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
 		errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),

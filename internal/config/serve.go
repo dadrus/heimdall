@@ -126,7 +126,7 @@ type RespondConfig struct {
 	Verbose bool `koanf:"verbose"`
 	With    struct {
 		Accepted            ResponseOverride `koanf:"accepted"`
-		ArgumentError       ResponseOverride `koanf:"argument_error"`
+		PreconditionError   ResponseOverride `koanf:"precondition_error"`
 		AuthenticationError ResponseOverride `koanf:"authentication_error"`
 		AuthorizationError  ResponseOverride `koanf:"authorization_error"`
 		CommunicationError  ResponseOverride `koanf:"communication_error"`
