@@ -33,6 +33,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/mocks"
@@ -260,25 +261,6 @@ func TestErrorInterceptor(t *testing.T) {
 			expHTTPCode: http.StatusInternalServerError,
 			expBody:     "<p>internal error</p>",
 		},
-		"too many requests error default": {
-			interceptor: New(),
-			err:         pipeline.ErrTooManyRequests,
-			expGRPCCode: codes.ResourceExhausted,
-			expHTTPCode: http.StatusTooManyRequests,
-		},
-		"too many requests error overridden": {
-			interceptor: New(WithTooManyRequestsErrorCode(http.StatusContinue)),
-			err:         pipeline.ErrTooManyRequests,
-			expGRPCCode: codes.ResourceExhausted,
-			expHTTPCode: http.StatusContinue,
-		},
-		"too many requests error verbose": {
-			interceptor: New(WithVerboseErrors(true)),
-			err:         pipeline.ErrTooManyRequests,
-			expGRPCCode: codes.ResourceExhausted,
-			expHTTPCode: http.StatusTooManyRequests,
-			expBody:     "<p>too many requests</p>",
-		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -347,4 +329,41 @@ func TestErrorInterceptor(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestErrorInterceptorPassesThroughGRPCStatusError(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	lis := bufconn.Listen(1024 * 1024)
+	handler := &mocks.MockHandler{}
+	handler.On("Check", mock.Anything, mock.Anything).
+		Return(nil, grpcstatus.Error(codes.ResourceExhausted, "service overloaded"))
+
+	srv := grpc.NewServer(grpc.UnaryInterceptor(New()))
+	envoy_auth.RegisterAuthorizationServer(srv, handler)
+
+	go func() {
+		_ = srv.Serve(lis)
+	}()
+
+	t.Cleanup(srv.Stop)
+
+	conn, err := grpc.NewClient(
+		"passthrough://bufnet",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, conn.Close()) })
+
+	client := envoy_auth.NewAuthorizationClient(conn)
+
+	// WHEN
+	resp, err := client.Check(t.Context(), &envoy_auth.CheckRequest{})
+
+	// THEN
+	assert.Nil(t, resp)
+	require.Error(t, err)
+	assert.Equal(t, codes.ResourceExhausted, grpcstatus.Code(err))
 }

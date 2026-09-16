@@ -91,8 +91,6 @@ serve:
         code: 404
       request_body_too_large:
         code: 413
-      too_many_requests:
-        code: 503
 
 management:
   port: 4457

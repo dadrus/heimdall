@@ -843,7 +843,6 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		}
 
 		srvConf.Requests.MaxInFlight = 1
-		srvConf.Respond.With.TooManyRequests.Code = http.StatusServiceUnavailable
 
 		factory, err := listener.NewFactory(
 			srvConf.Address(),

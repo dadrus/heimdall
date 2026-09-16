@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,19 +14,23 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package errorhandler
+package proxy
 
 import (
 	"net/http"
+	"strconv"
 
 	"google.golang.org/grpc/codes"
 )
 
-var defaultOptions = opts{ //nolint:gochecknoglobals
-	authenticationError: responseWith(codes.Unauthenticated, http.StatusUnauthorized),
-	authorizationError:  responseWith(codes.PermissionDenied, http.StatusForbidden),
-	communicationError:  responseWith(codes.DeadlineExceeded, http.StatusBadGateway),
-	preconditionError:   responseWith(codes.InvalidArgument, http.StatusBadRequest),
-	noRuleError:         responseWith(codes.NotFound, http.StatusNotFound),
-	internalError:       responseWith(codes.Internal, http.StatusInternalServerError),
+func rejectAdmissionOverload(rw http.ResponseWriter, req *http.Request) {
+	if isNativeGRPCContentType(req.Header.Get("Content-Type")) {
+		rw.Header().Set("Content-Type", grpcContentType)
+		rw.Header().Set("Grpc-Status", strconv.Itoa(int(codes.Unavailable)))
+		rw.WriteHeader(http.StatusOK)
+
+		return
+	}
+
+	rw.WriteHeader(http.StatusServiceUnavailable)
 }

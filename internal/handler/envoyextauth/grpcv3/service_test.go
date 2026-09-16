@@ -448,7 +448,6 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		conf.Serve.Requests.Headers.MaxSize = 64 * bytesize.KB
 		conf.Serve.Requests.MaxInFlight = 1
 		conf.Serve.Connections.Streams.MaxConcurrent = 100
-		conf.Serve.Respond.With.TooManyRequests.Code = http.StatusServiceUnavailable
 
 		exec := mocks3.NewExecutorMock(t)
 
@@ -554,25 +553,9 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			)
 
 		case <-secondDone:
-			require.NoError(t, secondErr)
-			require.NotNil(t, secondResponse)
-
-			assert.Equal(
-				t,
-				int32(codes.ResourceExhausted),
-				secondResponse.GetStatus().GetCode(),
-			)
-
-			deniedResponse := secondResponse.GetDeniedResponse()
-			require.NotNil(t, deniedResponse)
-
-			assert.Equal(
-				t,
-				typev3.StatusCode(http.StatusServiceUnavailable),
-				deniedResponse.GetStatus().GetCode(),
-			)
-			assert.Empty(t, deniedResponse.GetBody())
-			assert.Empty(t, deniedResponse.GetHeaders())
+			assert.Nil(t, secondResponse)
+			require.Error(t, secondErr)
+			assert.Equal(t, codes.ResourceExhausted, status.Code(secondErr))
 
 		case <-ctx.Done():
 			require.FailNow(t, "second request was not rejected immediately")

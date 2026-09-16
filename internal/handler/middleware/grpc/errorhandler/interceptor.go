@@ -24,9 +24,10 @@ import (
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	envoy_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"github.com/rs/zerolog"
-	"google.golang.org/genproto/googleapis/rpc/status"
+	rpcstatus "google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	grpcstatus "google.golang.org/grpc/status"
 
 	"github.com/dadrus/heimdall/internal/accesscontext"
 	"github.com/dadrus/heimdall/internal/pipeline"
@@ -70,6 +71,10 @@ func (h *interceptor) intercept(
 
 	if resp, handled := h.handleRedirectError(ctx, err); handled {
 		return resp, nil
+	}
+
+	if _, ok := grpcstatus.FromError(err); ok {
+		return nil, err
 	}
 
 	return h.handleDefaultErrors(ctx, err, acceptType(req))
@@ -134,8 +139,6 @@ func (h *interceptor) handleDefaultErrors(ctx context.Context, err error, mimeTy
 		return h.preconditionError(err, h.verboseErrors, mimeType)
 	case errors.Is(err, pipeline.ErrNoRuleFound):
 		return h.noRuleError(err, h.verboseErrors, mimeType)
-	case errors.Is(err, pipeline.ErrTooManyRequests):
-		return h.tooManyRequestsError(err, h.verboseErrors, mimeType)
 	default:
 		logger := zerolog.Ctx(ctx)
 		logger.Error().Err(err).Msg("Internal error occurred")
@@ -159,7 +162,7 @@ func buildDeniedResponse(
 	body string,
 ) *envoy_auth.CheckResponse {
 	return &envoy_auth.CheckResponse{
-		Status: &status.Status{Code: int32(codes.FailedPrecondition)},
+		Status: &rpcstatus.Status{Code: int32(codes.FailedPrecondition)},
 		HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
 			DeniedResponse: &envoy_auth.DeniedHttpResponse{
 				Status:  &envoy_type.HttpStatus{Code: statusCode},

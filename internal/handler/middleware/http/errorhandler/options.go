@@ -21,15 +21,14 @@ import (
 )
 
 type opts struct {
-	verboseErrors          bool
-	onAuthenticationError  func(rw http.ResponseWriter, req *http.Request, err error)
-	onAuthorizationError   func(rw http.ResponseWriter, req *http.Request, err error)
-	onCommunicationError   func(rw http.ResponseWriter, req *http.Request, err error)
-	onPreconditionError    func(rw http.ResponseWriter, req *http.Request, err error)
-	onNoRuleError          func(rw http.ResponseWriter, req *http.Request, err error)
-	onInternalError        func(rw http.ResponseWriter, req *http.Request, err error)
-	onRequestBodyTooLarge  func(rw http.ResponseWriter, req *http.Request, err error)
-	onTooManyRequestsError func(rw http.ResponseWriter, req *http.Request, err error)
+	verboseErrors         bool
+	onAuthenticationError func(rw http.ResponseWriter, req *http.Request, err error)
+	onAuthorizationError  func(rw http.ResponseWriter, req *http.Request, err error)
+	onCommunicationError  func(rw http.ResponseWriter, req *http.Request, err error)
+	onPreconditionError   func(rw http.ResponseWriter, req *http.Request, err error)
+	onNoRuleError         func(rw http.ResponseWriter, req *http.Request, err error)
+	onInternalError       func(rw http.ResponseWriter, req *http.Request, err error)
+	onRequestBodyTooLarge func(rw http.ResponseWriter, req *http.Request, err error)
 }
 
 type Option func(*opts)
@@ -86,14 +85,6 @@ func WithRequestBodyTooLargeErrorCode(code int) Option {
 	return func(o *opts) {
 		if code != 0 {
 			o.onRequestBodyTooLarge = errorWriter(o, code)
-		}
-	}
-}
-
-func WithTooManyRequestsErrorCode(code int) Option {
-	return func(o *opts) {
-		if code != 0 {
-			o.onTooManyRequestsError = errorWriter(o, code)
 		}
 	}
 }

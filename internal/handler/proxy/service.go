@@ -89,7 +89,6 @@ func newService(
 		errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
 		errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
 		errorhandler.WithRequestBodyTooLargeErrorCode(cfg.Respond.With.RequestBodyTooLarge.Code),
-		errorhandler.WithTooManyRequestsErrorCode(cfg.Respond.With.TooManyRequests.Code),
 	)
 	profileRT := newProfileRoundTripper(cfg, tlsClientConfig)
 	rt := newObservedRoundTripper(profileRT)
@@ -125,7 +124,10 @@ func newService(
 			logger.WithAccessStatusEnabled(true),
 			logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled),
 		),
-		requestlimit.New(cfg.Requests.MaxInFlight, eh),
+		requestlimit.New(
+			cfg.Requests.MaxInFlight,
+			requestlimit.WithRejectHandler(rejectAdmissionOverload),
+		),
 		bodylimit.New(cfg.Requests.Body.MaxSize, eh),
 		requestvalidation.New(),
 		dump.New(),

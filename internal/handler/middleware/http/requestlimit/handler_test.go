@@ -26,8 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	errorhandlermocks "github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler/mocks"
-	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/accesscontext"
 )
 
 type handlerRecorder struct {
@@ -46,7 +45,7 @@ func TestNew(t *testing.T) {
 		next := &handlerRecorder{}
 
 		// WHEN
-		handler := New(0, errorhandlermocks.NewErrorHandlerMock(t))(next)
+		handler := New(0)(next)
 
 		// THEN
 		assert.Same(t, next, handler)
@@ -54,8 +53,6 @@ func TestNew(t *testing.T) {
 
 	t.Run("rejects request while capacity is exhausted and releases capacity afterwards", func(t *testing.T) {
 		// GIVEN
-		eh := errorhandlermocks.NewErrorHandlerMock(t)
-
 		requestEntered := make(chan struct{}, 2)
 		releaseRequest := make(chan struct{})
 
@@ -75,7 +72,7 @@ func TestNew(t *testing.T) {
 			rw.WriteHeader(http.StatusNoContent)
 		})
 
-		handler := New(1, eh)(next)
+		handler := New(1)(next)
 
 		firstDone := make(chan struct{})
 
@@ -94,17 +91,18 @@ func TestNew(t *testing.T) {
 			require.FailNow(t, "first request did not enter handler")
 		}
 
-		secondRequest := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 		secondResponse := httptest.NewRecorder()
 
-		eh.EXPECT().
-			HandleError(secondResponse, secondRequest, pipeline.ErrTooManyRequests).
-			Return()
-
 		// WHEN
-		handler.ServeHTTP(secondResponse, secondRequest)
+		handler.ServeHTTP(
+			secondResponse,
+			httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil),
+		)
 
 		// THEN
+		assert.Equal(t, http.StatusServiceUnavailable, secondResponse.Code)
+		assert.Empty(t, secondResponse.Body.String())
+
 		select {
 		case <-requestEntered:
 			require.Fail(t, "request entered handler while capacity was exhausted")
@@ -129,5 +127,55 @@ func TestNew(t *testing.T) {
 
 		// THEN
 		assert.Equal(t, http.StatusNoContent, thirdResponse.Code)
+	})
+
+	t.Run("uses configured reject handler", func(t *testing.T) {
+		// GIVEN
+		requestEntered := make(chan struct{}, 1)
+		releaseRequest := make(chan struct{})
+
+		next := http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			requestEntered <- struct{}{}
+			<-releaseRequest
+		})
+
+		var rejectionErr error
+		handler := New(1, WithRejectHandler(func(rw http.ResponseWriter, req *http.Request) {
+			rejectionErr = accesscontext.Error(req.Context())
+			rw.WriteHeader(http.StatusTeapot)
+		}))(next)
+
+		firstDone := make(chan struct{})
+		go func() {
+			defer close(firstDone)
+
+			handler.ServeHTTP(
+				httptest.NewRecorder(),
+				httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil),
+			)
+		}()
+
+		select {
+		case <-requestEntered:
+		case <-time.After(time.Second):
+			require.FailNow(t, "first request did not enter handler")
+		}
+
+		response := httptest.NewRecorder()
+		ctx := accesscontext.New(t.Context())
+
+		// WHEN
+		handler.ServeHTTP(
+			response,
+			httptest.NewRequestWithContext(ctx, http.MethodGet, "/", nil),
+		)
+
+		// THEN
+		assert.Equal(t, http.StatusTeapot, response.Code)
+		require.Error(t, rejectionErr)
+		assert.Equal(t, "service overloaded", rejectionErr.Error())
+
+		close(releaseRequest)
+		<-firstDone
 	})
 }

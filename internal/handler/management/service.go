@@ -73,7 +73,7 @@ func newService(
 			otelmetrics.WithOperationFilter(opFilter),
 		),
 		logger.New(log, logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled)),
-		requestlimit.New(cfg.Requests.MaxInFlight, eh),
+		requestlimit.New(cfg.Requests.MaxInFlight),
 		bodylimit.New(cfg.Requests.Body.MaxSize, eh),
 		requestvalidation.New(),
 		dump.New(),

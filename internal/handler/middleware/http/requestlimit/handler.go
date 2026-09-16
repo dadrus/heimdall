@@ -17,18 +17,46 @@
 package requestlimit
 
 import (
+	"errors"
 	"net/http"
 
-	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
+	"github.com/dadrus/heimdall/internal/accesscontext"
 	limit "github.com/dadrus/heimdall/internal/handler/middleware/requestlimit"
-	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
-func New(maxInFlight int64, eh errorhandler.ErrorHandler) func(http.Handler) http.Handler {
+var errServiceOverloaded = errors.New("service overloaded") //nolint:gochecknoglobals
+
+type RejectHandler func(http.ResponseWriter, *http.Request)
+
+type Option func(*options)
+
+type options struct {
+	reject RejectHandler
+}
+
+func WithRejectHandler(handler RejectHandler) Option {
+	return func(opts *options) {
+		if handler != nil {
+			opts.reject = handler
+		}
+	}
+}
+
+func New(maxInFlight int64, opts ...Option) func(http.Handler) http.Handler {
 	if maxInFlight == 0 {
 		return func(next http.Handler) http.Handler {
 			return next
 		}
+	}
+
+	conf := options{
+		reject: func(rw http.ResponseWriter, _ *http.Request) {
+			rw.WriteHeader(http.StatusServiceUnavailable)
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&conf)
 	}
 
 	limiter := limit.New(maxInFlight)
@@ -36,7 +64,8 @@ func New(maxInFlight int64, eh errorhandler.ErrorHandler) func(http.Handler) htt
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			if !limiter.TryAcquire() {
-				eh.HandleError(rw, req, pipeline.ErrTooManyRequests)
+				accesscontext.SetError(req.Context(), errServiceOverloaded)
+				conf.reject(rw, req)
 
 				return
 			}

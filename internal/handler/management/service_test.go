@@ -381,7 +381,7 @@ func (suite *ServiceTestSuite) TestRequestLimit() {
 
 	defer secondResponse.Body.Close()
 
-	suite.Equal(http.StatusTooManyRequests, secondResponse.StatusCode)
+	suite.Equal(http.StatusServiceUnavailable, secondResponse.StatusCode)
 
 	data, err := io.ReadAll(secondResponse.Body)
 	suite.Require().NoError(err)

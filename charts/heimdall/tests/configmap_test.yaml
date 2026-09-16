@@ -138,8 +138,6 @@ tests:
               code: 404
             request_body_too_large:
               code: 413
-            too_many_requests:
-              code: 503
       management:
         host: 127.0.0.1
         requests:
@@ -275,8 +273,6 @@ tests:
                     code: 404
                   request_body_too_large:
                     code: 413
-                  too_many_requests:
-                    code: 503
               responses:
                 write_idle_timeout: 36s
                 write_min_rate: 2345

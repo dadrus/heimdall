@@ -51,6 +51,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
@@ -2311,7 +2316,6 @@ func TestProxyService(t *testing.T) {
 		}
 
 		proxyConf.Requests.MaxInFlight = 1
-		proxyConf.Respond.With.TooManyRequests.Code = http.StatusServiceUnavailable
 
 		factory, err := listener.NewFactory(proxyConf.Address(), proxyConf.TLS, 0, nil)
 		require.NoError(t, err)
@@ -2443,6 +2447,105 @@ func TestProxyService(t *testing.T) {
 			assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 		case <-time.After(time.Second):
 			require.FailNow(t, "first response was not received")
+		}
+	})
+
+	t.Run("rejects native gRPC request with unavailable if maximum number of requests is in flight", func(t *testing.T) {
+		// GIVEN
+		port, err := testsupport.GetFreePort()
+		require.NoError(t, err)
+
+		proxyConf := config.ServeConfig{
+			Host: "127.0.0.1",
+			Port: port,
+		}
+		proxyConf.Requests.MaxInFlight = 1
+
+		factory, err := listener.NewFactory(proxyConf.Address(), proxyConf.TLS, 0, nil)
+		require.NoError(t, err)
+
+		lstnr, err := factory.Create(t.Context())
+		require.NoError(t, err)
+
+		conf := &config.Configuration{Serve: proxyConf}
+		exec := mocks2.NewExecutorMock(t)
+
+		requestEntered := make(chan struct{}, 2)
+		releaseRequest := make(chan struct{})
+
+		var releaseOnce sync.Once
+		release := func() {
+			releaseOnce.Do(func() {
+				close(releaseRequest)
+			})
+		}
+
+		exec.EXPECT().Execute(mock.Anything).
+			Run(func(_ pipeline.ExecutionContext) {
+				requestEntered <- struct{}{}
+
+				<-releaseRequest
+			}).
+			Return(pipeline.ErrNoRuleFound)
+
+		proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+
+		defer func() {
+			release()
+			_ = proxy.Shutdown(t.Context())
+		}()
+
+		go func() {
+			_ = proxy.Serve(lstnr)
+		}()
+
+		conn, err := grpc.NewClient(
+			"passthrough:///"+proxyConf.Address(),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		)
+		require.NoError(t, err)
+		defer conn.Close()
+
+		firstDone := make(chan error, 1)
+		go func() {
+			firstDone <- conn.Invoke(
+				t.Context(),
+				"/test.Service/Method",
+				&emptypb.Empty{},
+				&emptypb.Empty{},
+			)
+		}()
+
+		select {
+		case <-requestEntered:
+		case <-time.After(time.Second):
+			require.FailNow(t, "first request did not enter pipeline")
+		}
+
+		// WHEN
+		secondErr := conn.Invoke(
+			t.Context(),
+			"/test.Service/Method",
+			&emptypb.Empty{},
+			&emptypb.Empty{},
+		)
+
+		// THEN
+		require.Error(t, secondErr)
+		assert.Equal(t, codes.Unavailable, status.Code(secondErr))
+
+		select {
+		case <-requestEntered:
+			require.FailNow(t, "second request entered pipeline while maximum number of requests was in flight")
+		default:
+		}
+
+		release()
+
+		select {
+		case <-firstDone:
+		case <-time.After(time.Second):
+			require.FailNow(t, "first request did not complete")
 		}
 	})
 
@@ -2788,7 +2891,6 @@ func TestWebSocketTunnelHoldsRequestAdmissionSlot(t *testing.T) {
 
 	serveConfig := config.ServeConfig{}
 	serveConfig.Requests.MaxInFlight = 1
-	serveConfig.Respond.With.TooManyRequests.Code = http.StatusServiceUnavailable
 	proxy, addr := startProxyService(t, serveConfig, upstreamURL)
 
 	wsConn, resp, err := websocket.DefaultDialer.Dial("ws://"+addr+"/tunnel", nil)

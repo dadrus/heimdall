@@ -125,8 +125,6 @@ serve:
         code: 502
       request_body_too_large:
         code: 413
-      too_many_requests:
-        code: 503
       internal_error:
         code: 500
       no_rule_error:

@@ -20,9 +20,10 @@ import (
 	"context"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	limit "github.com/dadrus/heimdall/internal/handler/middleware/requestlimit"
-	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
 func New(maxInFlight int64) grpc.UnaryServerInterceptor {
@@ -36,7 +37,7 @@ func New(maxInFlight int64) grpc.UnaryServerInterceptor {
 
 	return func(ctx context.Context, req any, _ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		if !limiter.TryAcquire() {
-			return nil, pipeline.ErrTooManyRequests
+			return nil, status.Error(codes.ResourceExhausted, "service overloaded")
 		}
 
 		defer limiter.Release()

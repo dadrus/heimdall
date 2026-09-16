@@ -97,7 +97,6 @@ func newService(
 				errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
 				errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
 				errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
-				errorhandler.WithTooManyRequestsErrorCode(cfg.Respond.With.TooManyRequests.Code),
 			),
 			// the logHandler is used here to have access to the error object
 			// as it will be replaced by a CheckResponse object returned to envoy

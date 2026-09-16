@@ -952,9 +952,6 @@
             "request_body_too_large": {
               "$ref": "#/definitions/responseOverride"
             },
-            "too_many_requests": {
-              "$ref": "#/definitions/responseOverride"
-            },
             "internal_error": {
               "$ref": "#/definitions/responseOverride"
             },

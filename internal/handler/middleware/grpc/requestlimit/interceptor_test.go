@@ -24,8 +24,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dadrus/heimdall/internal/pipeline"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestNew(t *testing.T) {
@@ -130,7 +130,8 @@ func TestNew(t *testing.T) {
 		// THEN
 		select {
 		case err := <-secondDone:
-			require.ErrorIs(t, err, pipeline.ErrTooManyRequests)
+			require.Error(t, err)
+			assert.Equal(t, codes.ResourceExhausted, status.Code(err))
 		case <-requestEntered:
 			require.FailNow(t, "second request entered handler while capacity was exhausted")
 		case <-time.After(time.Second):
