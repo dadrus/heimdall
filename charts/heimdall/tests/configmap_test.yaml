@@ -114,14 +114,11 @@ tests:
             max_idle: 20
             max_idle_per_host: 15
             dial_timeout: 3s
-            tls_handshake_timeout: 4s
             idle_timeout: 1m
             write_idle_timeout: 5s
             liveness:
               probe_after: 6s
               probe_timeout: 7s
-          requests:
-            expect_continue_timeout: 500ms
           responses:
             headers:
               max_size: 2MB
@@ -300,10 +297,7 @@ tests:
                   max_idle: 20
                   max_idle_per_host: 15
                   max_per_host: 10
-                  tls_handshake_timeout: 4s
                   write_idle_timeout: 5s
-                requests:
-                  expect_continue_timeout: 500ms
                 responses:
                   headers:
                     max_size: 2MB

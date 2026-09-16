@@ -54,7 +54,6 @@ func TestNewProfileRoundTripper(t *testing.T) {
 	// GIVEN
 	cfg := config.ServeConfig{}
 	cfg.Upstream.Connections.DialTimeout = 11 * time.Second
-	cfg.Upstream.Connections.TLSHandshakeTimeout = 12 * time.Second
 	cfg.Upstream.Connections.IdleTimeout = 13 * time.Second
 	cfg.Upstream.Connections.WriteIdleTimeout = 16 * time.Second
 	cfg.Upstream.Connections.Liveness.ProbeAfter = 18 * time.Second
@@ -62,7 +61,6 @@ func TestNewProfileRoundTripper(t *testing.T) {
 	cfg.Upstream.Connections.MaxIdle = 17
 	cfg.Upstream.Connections.MaxIdlePerHost = 19
 	cfg.Upstream.Connections.MaxPerHost = 23
-	cfg.Upstream.Requests.ExpectContinueTimeout = 14 * time.Second
 	cfg.Upstream.Responses.Headers.ReadTimeout = 15 * time.Second
 	cfg.Upstream.Responses.Headers.MaxSize = 42 * bytesize.KB
 
@@ -552,8 +550,8 @@ func assertTransportConfiguration(
 	assert.Equal(t, cfg.Upstream.Connections.MaxIdlePerHost, transport.MaxIdleConnsPerHost)
 	assert.Equal(t, cfg.Upstream.Connections.MaxPerHost, transport.MaxConnsPerHost)
 	assert.Equal(t, cfg.Upstream.Connections.IdleTimeout, transport.IdleConnTimeout)
-	assert.Equal(t, cfg.Upstream.Connections.TLSHandshakeTimeout, transport.TLSHandshakeTimeout)
-	assert.Equal(t, cfg.Upstream.Requests.ExpectContinueTimeout, transport.ExpectContinueTimeout)
+	assert.Equal(t, defaultUpstreamTLSHandshakeTimeout, transport.TLSHandshakeTimeout)
+	assert.Equal(t, defaultUpstreamExpectContinueTimeout, transport.ExpectContinueTimeout)
 
 	require.NotNil(t, transport.HTTP2)
 	assert.Equal(t, cfg.Upstream.Connections.Liveness.ProbeAfter, transport.HTTP2.SendPingTimeout)

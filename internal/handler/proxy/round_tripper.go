@@ -21,6 +21,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ccoveille/go-safecast/v2"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
@@ -30,7 +31,12 @@ import (
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
-const grpcContentType = "application/grpc"
+const (
+	grpcContentType = "application/grpc"
+
+	defaultUpstreamTLSHandshakeTimeout   = 10 * time.Second
+	defaultUpstreamExpectContinueTimeout = time.Second
+)
 
 var (
 	errNativeGRPCOverHTTP        = errors.New("native gRPC request cannot use an http upstream")
@@ -148,8 +154,8 @@ func newBaseTransport(cfg config.ServeConfig, tlsCfg *tls.Config) *http.Transpor
 		MaxConnsPerHost:     cfg.Upstream.Connections.MaxPerHost,
 
 		IdleConnTimeout:       cfg.Upstream.Connections.IdleTimeout,
-		TLSHandshakeTimeout:   cfg.Upstream.Connections.TLSHandshakeTimeout,
-		ExpectContinueTimeout: cfg.Upstream.Requests.ExpectContinueTimeout,
+		TLSHandshakeTimeout:   defaultUpstreamTLSHandshakeTimeout,
+		ExpectContinueTimeout: defaultUpstreamExpectContinueTimeout,
 
 		TLSClientConfig: tlsCfg,
 	}

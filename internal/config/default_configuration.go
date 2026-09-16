@@ -50,12 +50,10 @@ const (
 	defaultUpstreamMaxIdlePerHost        = 100
 
 	defaultUpstreamDialTimeout                    = 5 * time.Second
-	defaultUpstreamTLSHandshakeTimeout            = 10 * time.Second
 	defaultUpstreamIdleTimeout                    = 90 * time.Second
 	defaultUpstreamConnectionWriteIdleTimeout     = 30 * time.Second
 	defaultUpstreamConnectionLivenessProbeAfter   = 30 * time.Second
 	defaultUpstreamConnectionLivenessProbeTimeout = 15 * time.Second
-	defaultUpstreamExpectContinueTimeout          = time.Second
 
 	defaultUpstreamResponseHeaderMaxSize     = bytesize.MB
 	defaultUpstreamResponseHeaderReadTimeout = 30 * time.Second
@@ -111,20 +109,16 @@ func defaultConfig() Configuration {
 			Connections: DefaultIngressConnections(),
 			Upstream: UpstreamConfig{
 				Connections: UpstreamConnections{
-					MaxPerHost:          defaultUpstreamMaxConnectionsPerHost,
-					MaxIdle:             defaultUpstreamMaxIdleConnections,
-					MaxIdlePerHost:      defaultUpstreamMaxIdlePerHost,
-					DialTimeout:         defaultUpstreamDialTimeout,
-					TLSHandshakeTimeout: defaultUpstreamTLSHandshakeTimeout,
-					IdleTimeout:         defaultUpstreamIdleTimeout,
-					WriteIdleTimeout:    defaultUpstreamConnectionWriteIdleTimeout,
+					MaxPerHost:       defaultUpstreamMaxConnectionsPerHost,
+					MaxIdle:          defaultUpstreamMaxIdleConnections,
+					MaxIdlePerHost:   defaultUpstreamMaxIdlePerHost,
+					DialTimeout:      defaultUpstreamDialTimeout,
+					IdleTimeout:      defaultUpstreamIdleTimeout,
+					WriteIdleTimeout: defaultUpstreamConnectionWriteIdleTimeout,
 					Liveness: ConnectionLiveness{
 						ProbeAfter:   defaultUpstreamConnectionLivenessProbeAfter,
 						ProbeTimeout: defaultUpstreamConnectionLivenessProbeTimeout,
 					},
-				},
-				Requests: UpstreamRequests{
-					ExpectContinueTimeout: defaultUpstreamExpectContinueTimeout,
 				},
 				Responses: UpstreamResponses{
 					Headers: UpstreamResponseHeaders{

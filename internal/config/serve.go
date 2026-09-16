@@ -86,7 +86,6 @@ type ConnectionLiveness struct {
 
 type UpstreamConfig struct {
 	Connections UpstreamConnections `koanf:"connections"`
-	Requests    UpstreamRequests    `koanf:"requests"`
 	Responses   UpstreamResponses   `koanf:"responses"`
 }
 
@@ -95,15 +94,10 @@ type UpstreamConnections struct {
 	MaxIdle        int `koanf:"max_idle"          validate:"gt=0"`
 	MaxIdlePerHost int `koanf:"max_idle_per_host" validate:"gt=0,ltefield=MaxIdle"`
 
-	DialTimeout         time.Duration      `koanf:"dial_timeout,string"          validate:"gte=0"`
-	TLSHandshakeTimeout time.Duration      `koanf:"tls_handshake_timeout,string" validate:"gte=0"`
-	IdleTimeout         time.Duration      `koanf:"idle_timeout,string"          validate:"gte=0"`
-	WriteIdleTimeout    time.Duration      `koanf:"write_idle_timeout,string"    validate:"gte=0"`
-	Liveness            ConnectionLiveness `koanf:"liveness"`
-}
-
-type UpstreamRequests struct {
-	ExpectContinueTimeout time.Duration `koanf:"expect_continue_timeout,string" validate:"gte=0"`
+	DialTimeout      time.Duration      `koanf:"dial_timeout,string"       validate:"gte=0"`
+	IdleTimeout      time.Duration      `koanf:"idle_timeout,string"       validate:"gte=0"`
+	WriteIdleTimeout time.Duration      `koanf:"write_idle_timeout,string" validate:"gte=0"`
+	Liveness         ConnectionLiveness `koanf:"liveness"`
 }
 
 type UpstreamResponses struct {

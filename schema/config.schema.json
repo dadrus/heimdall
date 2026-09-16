@@ -824,9 +824,6 @@
         "connections": {
           "$ref": "#/definitions/upstreamConnectionsConfig"
         },
-        "requests": {
-          "$ref": "#/definitions/upstreamRequestsConfig"
-        },
         "responses": {
           "$ref": "#/definitions/upstreamResponsesConfig"
         }
@@ -861,12 +858,6 @@
           "default": "5s",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
         },
-        "tls_handshake_timeout": {
-          "description": "Maximum time allowed for an upstream TLS handshake. 0 disables the timeout.",
-          "type": "string",
-          "default": "10s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
-        },
         "idle_timeout": {
           "description": "Maximum time an idle upstream connection remains in the pool. 0 disables the timeout.",
           "type": "string",
@@ -881,19 +872,6 @@
         },
         "liveness": {
           "$ref": "#/definitions/connectionLivenessConfig"
-        }
-      }
-    },
-    "upstreamRequestsConfig": {
-      "type": "object",
-      "description": "Timeouts for sending proxy requests to upstream services.",
-      "additionalProperties": false,
-      "properties": {
-        "expect_continue_timeout": {
-          "description": "Maximum time to wait for an upstream 100 Continue response before sending the request body. 0 sends the body immediately.",
-          "type": "string",
-          "default": "1s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
         }
       }
     },

@@ -96,14 +96,11 @@ serve:
       max_idle: 100
       max_idle_per_host: 100
       dial_timeout: 5s
-      tls_handshake_timeout: 10s
       idle_timeout: 90s
       write_idle_timeout: 30s
       liveness:
         probe_after: 30s
         probe_timeout: 15s
-    requests:
-      expect_continue_timeout: 1s
     responses:
       headers:
         max_size: 1MB
