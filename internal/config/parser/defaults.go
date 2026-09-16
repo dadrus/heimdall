@@ -21,5 +21,6 @@ import "io"
 // nolint: gochecknoglobals
 var defaultOptions = opts{
 	validateSyntax:    func(_ io.Reader) error { return nil },
+	validateConfig:    func(_ map[string]any) error { return nil },
 	validateSemantics: func(_ any) error { return nil },
 }

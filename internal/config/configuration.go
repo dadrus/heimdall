@@ -66,6 +66,7 @@ func NewConfiguration(
 		parser.WithDefaultConfigFilename("heimdall.yaml"),
 		parser.WithConfigFile(string(configFile)),
 		parser.WithConfigSyntaxValidator(ValidateConfigSchema),
+		parser.WithConfigValidator(validateConfigSchema),
 		parser.WithConfigSemanticsValidator(validator.ValidateStruct),
 	}
 

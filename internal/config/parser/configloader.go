@@ -57,17 +57,27 @@ func (c *configLoader) Load(config any) error {
 		return err
 	}
 
+	overrides := koanf.New(".")
+
 	if len(configFile) != 0 {
-		if err = c.loadAndMergeConfig(parser, func() (*koanf.Koanf, error) {
+		if err = c.loadAndMergeConfig(overrides, func() (*koanf.Koanf, error) {
 			return koanfFromYaml(configFile, c.o.validateSyntax)
 		}); err != nil {
 			return err
 		}
 	}
 
-	if err = c.loadAndMergeConfig(parser, func() (*koanf.Koanf, error) {
+	if err = c.loadAndMergeConfig(overrides, func() (*koanf.Koanf, error) {
 		return koanfFromEnv(c.o.envPrefix)
 	}); err != nil {
+		return err
+	}
+
+	if err = c.o.validateConfig(overrides.Raw()); err != nil {
+		return err
+	}
+
+	if err = c.mergeConfig(parser, overrides); err != nil {
 		return err
 	}
 
@@ -112,7 +122,11 @@ func (c *configLoader) loadAndMergeConfig(parser *koanf.Koanf, loadConfig func()
 		return err
 	}
 
-	err = parser.Load(
+	return c.mergeConfig(parser, konf)
+}
+
+func (c *configLoader) mergeConfig(parser, konf *koanf.Koanf) error {
+	err := parser.Load(
 		confmap.Provider(konf.Raw(), ""),
 		nil,
 		koanf.WithMergeFunc(func(src, dest map[string]any) error {
