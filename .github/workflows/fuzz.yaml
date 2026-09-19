@@ -41,7 +41,7 @@ concurrency:
 jobs:
   fuzz:
     name: Fuzz all targets (${{ matrix.branch || github.base_ref || github.ref_name }})
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     timeout-minutes: 120
