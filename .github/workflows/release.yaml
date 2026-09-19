@@ -17,7 +17,7 @@ permissions: {}
 
 jobs:
   release-binaries:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
       id-token: write
@@ -80,7 +80,7 @@ jobs:
 
 
   release-container-image:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       packages: write
@@ -242,7 +242,7 @@ jobs:
 
 
   release-helm-chart:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
       packages: write
@@ -332,7 +332,7 @@ jobs:
       - create-dockerhub-image-provenance
       - create-ghcr-image-provenance
       - create-ghcr-helm-provenance
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
       packages: read
@@ -387,7 +387,7 @@ jobs:
           slsa-verifier verify-image "${IMAGE}" --source-uri github.com/${{ github.repository }} --source-tag ${{ github.ref_name }}
 
   release-documentation:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write
     steps:
@@ -479,7 +479,7 @@ jobs:
           keep_files: true
 
   create-pr-for-docs-versions-update:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs:
       - release-documentation
     permissions:
