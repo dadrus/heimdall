@@ -21,7 +21,7 @@ tags:
 
       These endpoints are available only on heimdall's **management port**.
 
-  - name: Main
+  - name: Main Service
     description: |
       Main service exposed by heimdall on the **main port**.
 
@@ -192,7 +192,7 @@ paths:
     get:
       summary: Get Prometheus-style metrics
       description: |
-        Returns the available metrics. The `/metrics` path is configurable and may differ between deployments.
+        Returns the available metrics.
       tags:
         - Metrics
       operationId: metrics_get
@@ -200,7 +200,7 @@ paths:
         '200':
           description: Available metrics.
           content:
-            text/html:
+            text/plain:
               schema:
                 type: string
 
