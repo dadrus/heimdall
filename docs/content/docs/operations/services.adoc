@@ -53,7 +53,7 @@ If the limit is exhausted, the wire representation depends on the active adapter
 
 ** *`read_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
 +
-Defines an optional hard wall-clock limit for reading the complete incoming HTTP request, including its body. Defaults to `0s`, which disables this hard limit.
+Defines a hard timeout for reading an incoming HTTP request. Defaults to `0s`, which disables this timeout.
 +
 This setting applies to the HTTP proxy and HTTP decision adapters only.
 
@@ -69,9 +69,9 @@ For the HTTP proxy and HTTP decision adapters this value limits HTTP request hea
 
 *** *`read_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
 +
-Defines the maximum time allowed to read incoming HTTP request headers. Defaults to `5s`. Setting the value to `0s` disables this timeout.
+Defines the maximum time allowed to read incoming HTTP/1 request headers. Defaults to `5s`. Setting the value to `0s` disables this timeout.
 +
-This setting has no effect for Envoy `ext_authz` gRPC adapter.
+HTTP/2 has no equivalent per-stream header read timeout. This setting has no effect for the Envoy `ext_authz` gRPC adapter.
 
 ** *`body`*: _Request body limits_ (optional)
 +
@@ -333,7 +333,7 @@ If the limit is exhausted, heimdall rejects the new request immediately with `50
 
 ** *`read_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
 +
-Defines an optional hard wall-clock limit for reading the complete incoming request, including its body. Defaults to `0s`, which disables this hard limit.
+Defines a hard timeout for reading an incoming HTTP request. Defaults to `0s`, which disables this timeout.
 
 ** *`headers`*: _Request header limits_ (optional)
 +
@@ -345,7 +345,9 @@ Defines the maximum size of incoming request headers. Defaults to `64KB`.
 
 *** *`read_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
 +
-Defines the maximum time allowed to read incoming request headers. Defaults to `5s`. Setting the value to `0s` disables this timeout.
+Defines the maximum time allowed to read incoming HTTP/1 request headers. Defaults to `5s`. Setting the value to `0s` disables this timeout.
++
+HTTP/2 has no equivalent per-stream header read timeout.
 
 ** *`body`*: _Request body limits_ (optional)
 +

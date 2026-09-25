@@ -682,7 +682,7 @@
           "default": 512
         },
         "read_timeout": {
-          "description": "Optional hard wall-clock ceiling for reading the complete incoming request, including its body. 0 disables the hard ceiling.",
+          "description": "Hard timeout for reading an incoming HTTP request. 0 disables the timeout.",
           "type": "string",
           "default": "0s",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
@@ -707,7 +707,7 @@
           "default": 512
         },
         "read_timeout": {
-          "description": "Optional hard wall-clock ceiling for reading the complete incoming request, including its body. 0 disables the hard ceiling.",
+          "description": "Hard timeout for reading an incoming HTTP request. 0 disables the timeout.",
           "type": "string",
           "default": "0s",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
@@ -754,7 +754,7 @@
           ]
         },
         "read_timeout": {
-          "description": "Maximum time allowed to read incoming request headers. 0 disables the timeout.",
+          "description": "Maximum time allowed to read incoming HTTP/1 request headers. HTTP/2 has no equivalent per-stream header read timeout. 0 disables the timeout.",
           "type": "string",
           "default": "5s",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
