@@ -160,7 +160,7 @@ If the event is emitted for a gRPC request, the following field is set:
 
 * `_grpc_method` - The full gRPC method used.
 
-If the request comes from an intermediary (for example, an API Gateway) and heimdall is configured to trust that proxy (see link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration]), the following fields are also included when the corresponding HTTP headers are present.
+If the request comes from an intermediary (for example, an API Gateway) and heimdall is configured to trust that proxy (see link:{{< relref "/docs/operations/services.adoc#_trusted_proxies" >}}[`trusted_proxies` configuration]), the following fields are also included when the corresponding HTTP headers are present.
 
 * `_http_x_forwarded_proto` - The value of the "X-Forwarded-Proto" header.
 * `_http_x_forwarded_host` - The value of the "X-Forwarded-Host" header.
@@ -412,7 +412,7 @@ By default, metrics are pushed to the OTEL collector using the `http/protobuf` t
 
 To configure where heimdall pushes metrics, define either https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_metrics_endpoint[`OTEL_EXPORTER_OTLP_METRICS_ENDPOINT`] or https://opentelemetry.io/docs/concepts/sdk-configuration/otlp-exporter-configuration/#otel_exporter_otlp_endpoint[`OTEL_EXPORTER_OTLP_ENDPOINT`].
 
-To expose metrics via a pull-based endpoint (https://grafana.com/oss/prometheus/[Prometheus] style), set https://opentelemetry.io/docs/concepts/sdk-configuration/general-sdk-configuration/#otel_metrics_exporter[`OTEL_METRICS_EXPORTER`] to `"prometheus"`. In this mode, heimdall exposes `127.0.0.1:9464/metrics`, which can be queried using HTTP GET. You can change the host and port by setting https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_HOST`] and https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_PORT`].
+To expose metrics via a pull-based endpoint (https://grafana.com/oss/prometheus/[Prometheus] style), set https://opentelemetry.io/docs/concepts/sdk-configuration/general-sdk-configuration/#otel_metrics_exporter[`OTEL_METRICS_EXPORTER`] to `"prometheus"`. In this mode, heimdall exposes `127.0.0.1:9464/metrics`, which can be queried using HTTP GET. You can change the host and port by setting https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_HOST`] and https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter[`OTEL_EXPORTER_PROMETHEUS_PORT`]. For details about the listener, see the link:{{< relref "/docs/operations/services.adoc#_metrics_service" >}}[Metrics Service].
 
 You can also disable metrics export by setting the `OTEL_METRICS_EXPORTER` environment variable to `none`.
 
@@ -536,7 +536,7 @@ The number of loaded rules per rule set. The metric type is Gauge.
 
 == Runtime Profiling
 
-If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `10251` (see configuration options below), where runtime profiling data in `profile.proto` format (also known as `pprof`) can be consumed by APM tools such as https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope], and others for visualization. The following information is available:
+If enabled, heimdall exposes runtime profiling data in `profile.proto` format (also known as `pprof`), which can be consumed by APM tools such as https://github.com/google/pprof[Google's pprof], https://grafana.com/oss/phlare/[Grafana Phlare], https://pyroscope.io/[Pyroscope], and others for visualization. The following information is available:
 
 * `allocs` - A sampling of all past memory allocations.
 * `block` - Stack traces that led to blocking on synchronization primitives.
@@ -549,49 +549,4 @@ If enabled, heimdall exposes a `/debug/pprof` HTTP endpoint on port `10251` (see
 * `threadcreate` - Stack traces that led to the creation of new OS threads.
 * `trace` - Execution trace in binary form. Tracing lasts for the duration specified in the `seconds` parameter, or 1 second if not specified.
 
-See also the link:{{< relref "/openapi/_index.adoc#tag/Profiling" >}}[API] documentation for details about the actual API.
-
-=== Configuration
-
-Configuration for this service can be adjusted in heimdall's `profiling` section using the following properties.
-
-* *`enabled`*: _boolean_ (optional)
-+
-Enables or disables runtime profiling. Defaults to `false`.
-+
-.Enabling profiling.
-====
-[source, yaml]
-----
-profiling:
-  enabled: true
-----
-====
-
-* *`host`*: _string_ (optional)
-+
-Specifies the TCP/IP address on which heimdall listens for client connections requesting profiling data. The value `0.0.0.0` listens on all IPv4 addresses. Defaults to `127.0.0.1`, which allows only local TCP/IP loopback connections.
-+
-NOTE: If you run heimdall in a container, set this property to a value that allows your APM system to scrape this information.
-+
-.Configure heimdall to listen on `192.168.2.10`.
-====
-[source, yaml]
-----
-profiling:
-  host: 192.168.2.10
-----
-====
-
-* *`port`*: _integer_ (optional)
-+
-Specifies the TCP port heimdall should listen on. Defaults to `10251`.
-+
-.Configure heimdall to listen on port `9999` for runtime profiling requests.
-====
-[source, yaml]
-----
-profiling:
-  port: 9999
-----
-====
+See the link:{{< relref "/openapi/_index.adoc#tag/Profiling" >}}[API] documentation for details about the HTTP interface. For enabling profiling and configuring its listener, see the link:{{< relref "/docs/operations/services.adoc#_profiling_service" >}}[Profiling Service].

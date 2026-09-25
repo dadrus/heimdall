@@ -1,0 +1,548 @@
+---
+title: "Services"
+date: 2026-09-24T00:00:00+02:00
+draft: false
+weight: 31
+menu:
+  docs:
+    weight: 1
+    parent: "Operations"
+description: Describes the network services exposed by heimdall and their configuration.
+---
+
+:toc:
+
+When heimdall is started using one of the `serve` commands, it exposes the Main Service and Management Service. Additional network services are started when the corresponding features are enabled.
+
+
+== Main Service
+
+To make use of this service you have to start heimdall with either `heimdall serve proxy` or `heimdall serve decision`. By default, heimdall listens on port `4456` on all network interfaces for incoming requests. You can, and should however adjust the configuration for your needs.
+
+The Main Service is implemented by different protocol adapters depending on the selected operation mode:
+
+* `heimdall serve proxy` starts the reverse proxy adapter.
+* `heimdall serve decision` starts the HTTP decision adapter.
+* `heimdall serve decision --envoy-grpc` starts the Envoy `ext_authz` gRPC adapter.
+
+The HTTP interface exposed by the proxy and HTTP decision adapters is documented in the link:{{< relref "/openapi/_index.adoc#tag/Main-Service" >}}[API] documentation. The Envoy `ext_authz` adapter uses gRPC and is therefore not part of the OpenAPI specification.
+
+=== Configuration
+
+The configuration of this service can be adjusted in the `serve` property, which lives on the top level of heimdall's configuration and supports the following properties.
+
+* *`host`*: _string_ (optional)
++
+By making use of this property, you can specify the TCP/IP address on which heimdall should listen for connections from client applications. Leaving the value empty causes heimdall to listen on all available interfaces, which is the default behavior.
+
+* *`port`*: _integer_ (optional)
++
+By making use of this property, you can specify the TCP port that heimdall should listen on. Defaults to `4456`.
+
+* *`requests`*: _Request limits_ (optional)
++
+Controls admission and limits for incoming requests. The following properties are supported:
+
+** *`max_in_flight`*: _integer_ (optional)
++
+Defines the maximum number of requests or RPCs that can be processed concurrently. Defaults to `512`. Setting the value to `0` disables this limit.
++
+A request is admitted immediately or rejected. Streaming requests hold one slot until they terminate.
++
+If the limit is exhausted, the wire representation depends on the active adapter: regular HTTP proxy requests and HTTP decision requests receive `503 Service Unavailable`, native gRPC proxy requests receive a trailers-only `UNAVAILABLE` response, and Envoy `ext_authz` receives a gRPC `RESOURCE_EXHAUSTED` error without a `CheckResponse`.
+
+** *`read_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines an optional hard wall-clock limit for reading the complete incoming HTTP request, including its body. Defaults to `0s`, which disables this hard limit.
++
+This setting applies to the HTTP proxy and HTTP decision adapters only.
+
+** *`headers`*: _Request header limits_ (optional)
++
+Controls processing of incoming request headers.
+
+*** *`max_size`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+Defines the maximum size of incoming request headers. Defaults to `64KB`.
++
+For the HTTP proxy and HTTP decision adapters this value limits HTTP request headers. For Envoy `ext_authz` it limits gRPC transport metadata.
+
+*** *`read_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines the maximum time allowed to read incoming HTTP request headers. Defaults to `5s`. Setting the value to `0s` disables this timeout.
++
+This setting has no effect for Envoy `ext_authz` gRPC adapter.
+
+** *`body`*: _Request body limits_ (optional)
++
+Controls size and read progress of incoming request bodies.
+
+*** *`max_size`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+Defines the maximum size of an incoming request body. Defaults to `5MB`. Setting the value to `0B` disables heimdall's own request body size limit.
++
+For HTTP proxy and decision requests, the request body remains streaming and is not fully buffered by this limit. For Envoy `ext_authz`, the value limits the complete received `CheckRequest` gRPC message.
+
+*** *`read_idle_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines the progress timeout for active HTTP request body reads. Defaults to `20s`. Setting the value to `0s` disables request body progress protection.
++
+With `read_min_rate` set to `0` (see below), every blocking read receives a fresh idle window. With a positive minimum rate, this value is used as the initial grace period for the minimum-rate deadline.
++
+This setting applies to HTTP proxy and decision requests only and has no effect for Envoy `ext_authz` adapter.
+
+*** *`read_min_rate`*: _integer_ (optional)
++
+Defines the minimum request body transfer rate in bytes per second. Defaults to `0`, which enables idle-timeout-only behavior if `read_idle_timeout` is positive. A positive value requires `read_idle_timeout` to be greater than `0s`.
+
+* *`responses`*: _Response limits_ (optional)
++
+Controls hard and progress limits while heimdall writes HTTP responses and has no effect for Envoy `ext_authz` adapter.
+
+** *`write_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines an optional hard wall-clock limit for the response write phase. Defaults to `0s`, which disables this hard limit.
+
+** *`write_idle_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines the progress timeout for active response writes. Defaults to `30s`. Setting the value to `0s` disables response write progress protection.
++
+With `write_min_rate` set to `0`, every blocking write receives a fresh idle window. A long-lived response such as an SSE stream can therefore remain application-level idle between write operations without being terminated.
+
+** *`write_min_rate`*: _integer_ (optional)
++
+Defines the minimum response transfer rate in bytes per second. Defaults to `0`, which enables idle-timeout-only behavior if `write_idle_timeout` is positive.
+
+* *`connections`*: _Connection limits_ (optional)
++
+Controls accepted transport connections and, where supported, multiplexed connection resources.
+
+** *`max`*: _integer_ (optional)
++
+Defines the maximum number of simultaneously accepted connections. Defaults to `1024`. Setting the value to `0` disables heimdall's connection limit.
+
+** *`idle_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines how long an idle incoming connection may remain open between requests. Defaults to `2m`. Setting the value to `0s` disables the timeout.
+
+** *`write_idle_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines connection-scoped write-progress protection for multiplexed HTTP/2 connections while data is pending. Defaults to `30s`. Setting the value to `0s` disables this protection. This setting has no effect for Envoy `ext_authz` adapter.
+
+** *`streams`*: _Multiplexed stream limits_ (optional)
++
+Controls the number of concurrent multiplexed streams on one connection.
+
+*** *`max_concurrent`*: _integer_ (optional)
++
+Defines the maximum number of concurrent HTTP/2 or gRPC streams per connection. Defaults to `100`.
+
+** *`liveness`*: _Connection liveness_ (optional)
++
+Controls active liveness probing for multiplexed connections.
+
+*** *`probe_after`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines the period without inbound connection activity after which heimdall starts an active liveness probe. Defaults to `30s`. Setting the value to `0s` disables active liveness probing.
+
+*** *`probe_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines the maximum time to wait for an active liveness probe to succeed. Defaults to `15s` and must be greater than `0s`.
+
+* *`upstream`*: _Upstream transport configuration_ (optional)
++
+Controls the hop from heimdall to the rule-selected protected service. This configuration is only used in proxy mode and has no effect in decision mode.
+
+** *`connections`*: _Upstream connection configuration_ (optional)
++
+Controls upstream connection pools and connection phases.
+
+*** *`max_per_host`*: _integer_ (optional)
++
+Defines the maximum number of connections managed for one upstream host by one internal transport profile. Defaults to `100`. Setting the value to `0` disables this limit.
+
+*** *`max_idle`*: _integer_ (optional)
++
+Defines the maximum number of idle upstream connections retained by one internal transport profile. Defaults to `100` and must be greater than `0`.
+
+*** *`max_idle_per_host`*: _integer_ (optional)
++
+Defines the maximum number of idle upstream connections retained for one host by one internal transport profile. Defaults to `100`, must be greater than `0`, and cannot exceed `max_idle`.
+
+*** *`dial_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines the maximum time allowed to establish a new upstream network connection. Defaults to `5s`. Setting the value to `0s` disables this timeout.
+
+*** *`idle_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines how long an idle upstream connection remains in the connection pool. Defaults to `90s`. Setting the value to `0s` disables this timeout.
+
+*** *`write_idle_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines the maximum time allowed for a single active write to an upstream connection. Defaults to `30s`. Each write receives a fresh connection deadline, so this setting does not terminate an otherwise idle connection or tunnel. Setting the value to `0s` disables this protection.
+
+*** *`liveness`*: _Connection liveness_ (optional)
++
+Controls active liveness probing for upstream HTTP/2 connections.
+
+**** *`probe_after`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defaults to `30s` and can be set to `0s` to disable active probing.
+
+**** *`probe_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defaults to `15s` and must be greater than `0s`.
+
+** *`responses`*: _Upstream response limits_ (optional)
++
+Controls handling of responses received from upstream services.
+
+*** *`headers`*: _Upstream response header limits_ (optional)
++
+Controls upstream response headers.
+
+**** *`max_size`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+Defines the maximum size of upstream response headers. Defaults to `1MB`.
+
+**** *`read_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines the maximum time to wait for upstream response headers. Defaults to `30s`. Setting the value to `0s` disables this timeout.
+
+* *`cors`*: _link:{{< relref "/docs/configuration/types.adoc#_cors" >}}[CORS]_ (optional)
++
+If heimdall is operated in proxy mode, https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be added and configured by making use of this option. This functionality allows for advanced security features to quickly be set. If CORS headers are set, then heimdall does not pass preflight requests neither to its pipeline, nor to the upstream service. Instead, the response will be generated and sent back to the client directly.
+
+* *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
++
+TLS-related configuration to ensure secure communication.
++
+NOTE: Although this property is optional, heimdall enforces its usage by default. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-ingress-tls-enforcement` flag.
+
+[#_trusted_proxies]
+* *`trusted_proxies`*: _string array_ (optional)
++
+heimdall can process `X-Forwarded-*` headers, such as `X-Forwarded-For`, `X-Forwarded-Method`, etc., as well as the https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Forwarded[`Forwarded`] header sent by its clients. Additionally, heimdall can forward some of these headers (`X-Forwarded-For` and `Forwarded`) to the configured upstream services. However, since these headers can easily be spoofed, they are only used when the request originates from a trusted source. This is typically the case when heimdall operates behind another proxy. For example, while the `Host` HTTP header is usually used to determine the client's requested host, when heimdall is behind a proxy, the actual host of the ultimate client may be stored in an `X-Forwarded-Host` header, which, however, can also be spoofed.
++
+Depending on your setup, you may need to rely on these headers. In such cases, you must configure the `trusted_proxies` option and specify the IP addresses or IP ranges (in CIDR notation) of the proxies in front of heimdall. If this option is not configured, heimdall will reject these headers from all clients to prevent spoofing, as improper use could lead to privilege escalation.
++
+CAUTION: Be sure to review the link:{{< relref "/docs/operations/security.adoc#_http_header" >}}[security implications] before enabling this property.
++
+NOTE: heimdall does not allow configuring this property to accept these headers from any sources. Specifically, the networks `0.0.0.0/0`, `0/0`, `0000:0000:0000:0000:0000:0000:0000:0000/0`, and `::/0` are disallowed by default. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-trusted-proxies-enforcement` flag if necessary.
+
+* *`respond`*: _link:{{< relref "/docs/configuration/types.adoc#_respond" >}}[Respond]_ (optional)
++
+By making use of this property, you can instruct heimdall to preserve error information and provide it in the response body to the caller, as well as to use HTTP status codes deviating from those heimdall would usually use.
++
+NOTE: The `accepted` response mapping applies to successful HTTP decision responses. In proxy mode, successful upstream responses retain the status code produced by the upstream service.
+
+.Complex main service configuration
+====
+[source, yaml]
+----
+serve:
+  host: 127.0.0.1
+  port: 4456
+  requests:
+    max_in_flight: 512
+    read_timeout: 0s
+    headers:
+      max_size: 64KB
+      read_timeout: 5s
+    body:
+      max_size: 5MB
+      read_idle_timeout: 20s
+      read_min_rate: 0
+  responses:
+    write_timeout: 0s
+    write_idle_timeout: 30s
+    write_min_rate: 0
+  connections:
+    max: 1024
+    idle_timeout: 2m
+    write_idle_timeout: 30s
+    streams:
+      max_concurrent: 100
+    liveness:
+      probe_after: 30s
+      probe_timeout: 15s
+  upstream:
+    connections:
+      max_per_host: 100
+      max_idle: 100
+      max_idle_per_host: 100
+      dial_timeout: 5s
+      idle_timeout: 90s
+      write_idle_timeout: 30s
+      liveness:
+        probe_after: 30s
+        probe_timeout: 15s
+    responses:
+      headers:
+        max_size: 1MB
+        read_timeout: 30s
+  tls:
+    secret:
+      source: key_store
+      selector: tls_key
+  trusted_proxies:
+    - 192.168.1.0/24
+  cors:
+    allowed_origins:
+      - example.org
+    allowed_methods:
+      - HEAD
+      - PATCH
+    allow_credentials: true
+    max_age: 10s
+  respond:
+    verbose: true
+    with:
+      authentication_error:
+        code: 404
+      authorization_error:
+        code: 404
+----
+====
+
+== Management Service
+
+The Management Service is started together with the Main Service and provides health and JWKS functionality. By default, heimdall listens on port `4457` on all network interfaces. Its HTTP interface is documented in the link:{{< relref "/openapi/_index.adoc#tag/Well-Known" >}}[API] documentation.
+
+=== Configuration
+
+The configuration of the Management Service is defined under the `management` property. It supports the following properties.
+
+* *`host`*: _string_ (optional)
++
+Use this property to specify the TCP/IP address on which heimdall should listen for incoming connections. Defaults to listen on all available interfaces.
+
+* *`port`*: _integer_ (optional)
++
+Use this property to specify the TCP port heimdall should listen on. Defaults to `4457`.
+
+* *`requests`*: _Request limits_ (optional)
++
+Controls admission and limits for incoming Management Service requests.
+
+** *`max_in_flight`*: _integer_ (optional)
++
+Defines the maximum number of requests processed concurrently. Defaults to `512`. Setting the value to `0` disables this limit.
++
+If the limit is exhausted, heimdall rejects the new request immediately with `503 Service Unavailable`.
+
+** *`read_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines an optional hard wall-clock limit for reading the complete incoming request, including its body. Defaults to `0s`, which disables this hard limit.
+
+** *`headers`*: _Request header limits_ (optional)
++
+Controls processing of incoming request headers.
+
+*** *`max_size`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+Defines the maximum size of incoming request headers. Defaults to `64KB`.
+
+*** *`read_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines the maximum time allowed to read incoming request headers. Defaults to `5s`. Setting the value to `0s` disables this timeout.
+
+** *`body`*: _Request body limits_ (optional)
++
+Controls the size of incoming request bodies.
+
+*** *`max_size`*: _link:{{< relref "/docs/configuration/types.adoc#_bytesize" >}}[ByteSize]_ (optional)
++
+Defines the maximum size of an incoming request body. Defaults to `5MB`. Setting the value to `0B` disables heimdall's own request body size limit.
+
+* *`responses`*: _Response limits_ (optional)
++
+Controls hard and progress limits while heimdall writes Management Service responses.
+
+** *`write_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines an optional hard wall-clock limit for the response write phase. Defaults to `0s`, which disables this hard limit.
+
+** *`write_idle_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines the progress timeout for active response writes. Defaults to `30s`. Setting the value to `0s` disables response write progress protection.
+
+** *`write_min_rate`*: _integer_ (optional)
++
+Defines the minimum response transfer rate in bytes per second. Defaults to `0`, which enables idle-timeout-only behavior if `write_idle_timeout` is positive.
+
+* *`connections`*: _Connection limits_ (optional)
++
+Controls accepted Management Service connections.
+
+** *`max`*: _integer_ (optional)
++
+Defines the maximum number of simultaneously accepted connections. Defaults to `1024`. Setting the value to `0` disables connection limit.
+
+** *`idle_timeout`*: _link:{{< relref "/docs/configuration/types.adoc#_duration" >}}[Duration]_ (optional)
++
+Defines how long an idle incoming connection may remain open between requests. Defaults to `2m`. Setting the value to `0s` disables this timeout.
+
+* *`cors`*: _link:{{< relref "/docs/configuration/types.adoc#_cors" >}}[CORS]_ (optional)
++
+https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS[CORS] (Cross-Origin Resource Sharing) headers can be configured using this option. This allows for fine-grained security settings.
+
+* *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
++
+TLS-related configuration to ensure secure communication.
++
+NOTE: Although this property is optional, heimdall enforces its usage by default. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-ingress-tls-enforcement` flag.
+
+.Complex management service configuration
+====
+[source, yaml]
+----
+management:
+  host: 127.0.0.1
+  port: 4457
+  requests:
+    max_in_flight: 256
+    read_timeout: 0s
+    headers:
+      max_size: 64KB
+      read_timeout: 5s
+    body:
+      max_size: 5MB
+  responses:
+    write_timeout: 0s
+    write_idle_timeout: 30s
+    write_min_rate: 0
+  connections:
+    max: 512
+    idle_timeout: 2m
+  cors:
+    allowed_origins:
+      - example.org
+    allowed_methods:
+      - GET
+  tls:
+    secret:
+      source: key_store
+      selector: tls_key
+----
+====
+
+== Auxiliary Services
+
+In addition to the Main and Management Services, heimdall can expose feature-specific network services. These services are only started when the corresponding feature is enabled.
+
+=== Metrics Service
+
+Heimdall emits metrics through OpenTelemetry. When the Prometheus metrics exporter is selected (the `OTEL_METRICS_EXPORTER` environment variable is set to `prometheus`; see link:{{< relref "/docs/operations/observability.adoc#_metric_exporters" >}}[Metric Exporters] for details), heimdall starts the Metrics Service for pull-based scraping. By default, the service listens on `127.0.0.1:9464`. Its HTTP interface is documented in the link:{{< relref "/openapi/_index.adoc#tag/Metrics" >}}[API] documentation.
+
+For information about the emitted metrics, rule and cache coverage, and other OpenTelemetry exporters, see link:{{< relref "/docs/operations/observability.adoc#_metrics" >}}[Metrics].
+
+==== Configuration
+
+The listening address is configured through the OpenTelemetry Prometheus exporter environment variables:
+
+* *`OTEL_EXPORTER_PROMETHEUS_HOST`*: _string_ (optional)
++
+Specifies the host to listen on. Defaults to `127.0.0.1`.
+
+* *`OTEL_EXPORTER_PROMETHEUS_PORT`*: _integer_ (optional)
++
+Specifies the port to listen on. Defaults to `9464`.
+
+.Enable Prometheus scraping
+====
+[source, yaml]
+----
+metrics:
+  enabled: true
+----
+
+[source, bash]
+----
+export OTEL_METRICS_EXPORTER=prometheus
+export OTEL_EXPORTER_PROMETHEUS_HOST=127.0.0.1
+export OTEL_EXPORTER_PROMETHEUS_PORT=9464
+----
+====
+
+=== Profiling Service
+
+The Profiling Service exposes Go runtime profiling information via the standard `pprof` HTTP handlers. It is disabled by default and must be explicitly enabled. By default, the service listens on `127.0.0.1:10251`. Its HTTP interface is documented in the link:{{< relref "/openapi/_index.adoc#tag/Profiling" >}}[API] documentation.
+
+For information about the available profiling data and tools which can consume it, see link:{{< relref "/docs/operations/observability.adoc#_runtime_profiling" >}}[Runtime Profiling].
+
+==== Configuration
+
+Configuration for this service can be adjusted in heimdall's top-level `profiling` section using the following properties.
+
+* *`enabled`*: _boolean_ (optional)
++
+Enables or disables runtime profiling. Defaults to `false`.
+
+* *`host`*: _string_ (optional)
++
+Specifies the TCP/IP address on which heimdall listens for profiling requests. The value `0.0.0.0` listens on all IPv4 addresses. Defaults to `127.0.0.1`, which restricts the service to local loopback connections.
++
+NOTE: If you run heimdall in a container, set this property to a value that allows your profiling system to reach the service without exposing it publicly.
+
+* *`port`*: _integer_ (optional)
++
+Specifies the TCP port on which heimdall listens for profiling requests. Defaults to `10251`.
+
+.Enable profiling on the default loopback interface
+====
+[source, yaml]
+----
+profiling:
+  enabled: true
+  host: 127.0.0.1
+  port: 10251
+----
+====
+
+=== Kubernetes Webhook Service
+
+When the Kubernetes rule provider is configured with TLS, heimdall starts a dedicated HTTPS service used by the Kubernetes API server for `RuleSet` validation and conversion. The service listens on port `4458` on all interfaces. Its HTTP interface is documented in the link:{{< relref "/openapi/_index.adoc#tag/Kubernetes-Admission-Controller" >}}[API] documentation.
+
+Both webhooks use the same heimdall listener. The Helm chart nevertheless creates separate Kubernetes `Service` resources for validation and conversion as required by the webhook and CRD configuration.
+
+==== Configuration
+
+The service is enabled and its server certificate is configured through the Kubernetes rule provider's `tls` property. Without this property, the webhook listener is not started.
+
+* *`tls`*: _link:{{< relref "/docs/configuration/types.adoc#_tls" >}}[TLS]_ (optional)
++
+Configures TLS for communication with the Kubernetes API server.
++
+[CAUTION]
+====
+The Kubernetes API server must trust the certificate used by this service. When using heimdall's Helm chart, the https://github.com/dadrus/heimdall/blob/main/charts/heimdall/README.adoc#configuration[`webhooks.caBundle`] value must therefore be set or injected. Otherwise, the API server will refuse to call the webhook endpoints.
+
+Although both webhooks use the same heimdall listener, the Helm chart creates separate Kubernetes `Service` resources for validation and conversion. The X.509 certificate used by the webhook service must therefore include DNS Subject Alternative Names matching both service names.
+
+For example, if heimdall is installed with `helm upgrade --install myrelease ...` without overriding the release or chart names, the validation service is named `myrelease-heimdall-validation` and the conversion service is named `myrelease-heimdall-conversion-v1beta1`.
+
+If https://cert-manager.io/[cert-manager] is used to issue the certificate, a corresponding `Certificate` can contain a `dnsNames` section such as:
+
+[source,yaml]
+----
+dnsNames:
+- myrelease-heimdall-validation.mynamespace.svc.cluster.local
+- myrelease-heimdall-conversion-v1beta1.mynamespace.svc.cluster.local
+----
+====
+
+For the remaining Kubernetes rule provider configuration, see link:{{< relref "/docs/rules/providers.adoc#_kubernetes" >}}[Kubernetes Rule Provider].
+
+.Enable the Kubernetes Webhook Service
+====
+[source, yaml]
+----
+providers:
+  kubernetes:
+    tls:
+      secret:
+        source: key_store
+        selector: webhooks_key
+----
+====
