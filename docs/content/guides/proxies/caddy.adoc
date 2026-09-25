@@ -21,7 +21,7 @@ https://caddyserver.com[Caddy] is a modern web server and reverse proxy known fo
 
 Since Caddy offers extensive configuration options and heimdall supports multiple integration methods, you can choose any of the examples below. Each setup ensures heimdall can construct the URL of the protected backend server for rule matching purposes.
 
-In most cases, you need to configure heimdall to trust your Caddy instances by setting link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[trusted_proxies]. Exceptions are detailed in the sections below.
+In most cases, you need to configure heimdall to trust your Caddy instances by setting link:{{< relref "/docs/operations/services.adoc#_trusted_proxies" >}}[trusted_proxies]. Exceptions are detailed in the sections below.
 
 === Forward all information in `X-Forwarded-*` headers
 
