@@ -3089,13 +3089,13 @@
           ]
         },
         "format": {
-          "description": "The log format can either be 'text' or 'gelf'. If format is not recognized, 'gelf' format is used",
+          "description": "The log format can either be 'text' or 'gelf'.",
           "type": "string",
           "enum": [
             "gelf",
             "text"
           ],
-          "default": "gelf"
+          "default": "text"
         },
         "access_log_enabled": {
           "description": "Set to false if you don't need Heimdall to perform access logging (like TX started / TX finished). Defaults to true.",
@@ -3217,7 +3217,7 @@
         "host": {
           "description": "The network interface to listen on. Leave empty to listen on all interfaces.",
           "type": "string",
-          "default": "",
+          "default": "127.0.0.1",
           "examples": [
             "localhost",
             "127.0.0.1"
