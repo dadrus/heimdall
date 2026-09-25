@@ -2994,8 +2994,9 @@
           "default": 4456
         },
         "host": {
-          "description": "The network interface to listen on.",
+          "description": "The network interface to listen on. An empty value listens on all interfaces.",
           "type": "string",
+          "default": "",
           "examples": [
             "0.0.0.0",
             "localhost",
