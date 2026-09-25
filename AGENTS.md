@@ -540,8 +540,7 @@ Use the existing organization:
 * `docs/content/docs/configuration/` — configuration reference.
 * `docs/content/docs/mechanisms/` — mechanism reference.
 * `docs/content/docs/rules/` — rules and matching.
-* `docs/content/docs/services/` — exposed services.
-* `docs/content/docs/operations/` — operational concerns.
+* `docs/content/docs/operations/` — operational concerns and exposed services.
 * `docs/content/docs/getting_started/` — introductory end-to-end material.
 * `docs/content/guides/` — concrete tasks and integrations.
 
