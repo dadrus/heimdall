@@ -93,7 +93,7 @@ This setting applies to HTTP proxy and decision requests only and has no effect 
 
 *** *`read_min_rate`*: _integer_ (optional)
 +
-Defines the minimum request body transfer rate in bytes per second. Defaults to `0`, which enables idle-timeout-only behavior if `read_idle_timeout` is positive. A positive value requires `read_idle_timeout` to be greater than `0s`.
+Defines the minimum request body transfer rate in bytes per second. Defaults to `0`, which disables the rate check. If `read_idle_timeout` is configured, it still applies. A positive value requires `read_idle_timeout` to be greater than `0s`. This setting does not apply to Envoy `ext_authz`.
 
 * *`responses`*: _Response limits_ (optional)
 +
