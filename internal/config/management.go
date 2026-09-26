@@ -16,15 +16,37 @@
 
 package config
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+
+	"github.com/inhies/go-bytesize"
+)
 
 type ManagementConfig struct {
-	Host        string      `koanf:"host"`
-	Port        int         `koanf:"port"`
-	Timeout     Timeout     `koanf:"timeout"`
-	BufferLimit BufferLimit `koanf:"buffer_limit"`
-	CORS        *CORS       `koanf:"cors,omitempty"`
-	TLS         *TLS        `koanf:"tls,omitempty"  validate:"enforced=notnil"`
+	Host        string                `koanf:"host"`
+	Port        int                   `koanf:"port"`
+	Requests    ManagementRequests    `koanf:"requests"`
+	Responses   IngressResponses      `koanf:"responses"`
+	Connections ManagementConnections `koanf:"connections"`
+	CORS        *CORS                 `koanf:"cors,omitempty"`
+	TLS         *TLS                  `koanf:"tls,omitempty"  validate:"enforced=notnil"`
+}
+
+type ManagementRequests struct {
+	MaxInFlight int64                 `koanf:"max_in_flight"       validate:"gte=0"`
+	ReadTimeout time.Duration         `koanf:"read_timeout,string" validate:"gte=0"`
+	Headers     IngressRequestHeaders `koanf:"headers"`
+	Body        ManagementRequestBody `koanf:"body"`
+}
+
+type ManagementRequestBody struct {
+	MaxSize bytesize.ByteSize `koanf:"max_size" validate:"max_bytes=7EB"`
+}
+
+type ManagementConnections struct {
+	Max         int           `koanf:"max"                 validate:"gte=0"`
+	IdleTimeout time.Duration `koanf:"idle_timeout,string" validate:"gte=0"`
 }
 
 func (c ManagementConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }

@@ -284,11 +284,12 @@ func TestHandlerObserveUnknownRequests(t *testing.T) {
 		WithAttributes(attribute.Key("baz").String("zab")),
 		WithServerName(":8080"),
 	)
-	srv := grpc.NewServer(
-		grpc.UnknownServiceHandler(func(_ any, _ grpc.ServerStream) error {
+	unknownServiceHandler := metricsIntercepter.UnknownServiceHandler(
+		func(_ any, _ grpc.ServerStream) error {
 			return status.Error(codes.Unknown, "unknown service or method")
-		}),
-		grpc.StreamInterceptor(metricsIntercepter.StreamServerInterceptor()))
+		},
+	)
+	srv := grpc.NewServer(grpc.UnknownServiceHandler(unknownServiceHandler))
 
 	envoy_auth.RegisterAuthorizationServer(srv, handler)
 

@@ -252,87 +252,75 @@
       "description": "Configuration options supported by all Redis cache types",
       "type": "object",
       "properties": {
-        "type": {
-          "const": "redis"
+        "credentials": {
+          "description": "The credentials to use for authentication. If not set, no authentication is performed.",
+          "$ref": "#/definitions/secretReference"
         },
-        "config": {
-          "description": "Redis client configuration",
+        "client_cache": {
+          "description": "Local client cache configuration to enhance performance and reduce roundtrips",
           "type": "object",
-          "required": [
-            "address"
-          ],
+          "additionalProperties": false,
           "properties": {
-            "credentials": {
-              "description": "The credentials to use for authentication. If not set, no authentication is performed.",
-              "$ref": "#/definitions/secretReference"
+            "disabled": {
+              "description": "Whether the client cache should be disabled. Defaults to false.",
+              "type": "boolean",
+              "default": false
             },
-            "client_cache": {
-              "description": "Local client cache configuration to enhance performance and reduce roundtrips",
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "disabled": {
-                  "description": "Whether the client cache should be disabled. Defaults to false.",
-                  "type": "boolean",
-                  "default": false
-                },
-                "ttl": {
-                  "description": "Specifies the maximum TTL on the client side for all used keys. If the key's TTL on the server is smaller than the client side TTL, the client side TTL will be capped.",
-                  "type": "string",
-                  "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-                  "default": "5m",
-                  "examples": [
-                    "1h",
-                    "1m",
-                    "30s"
-                  ]
-                },
-                "size_per_connection": {
-                  "description": "Optional client side cache size that bind to each TCP connection to a single redis instance. Defaults to 128MB",
-                  "type": "string",
-                  "default": "128MB",
-                  "pattern": "^[0-9]+(B|KB|MB|GB)$",
-                  "examples": [
-                    "1GB",
-                    "256MB",
-                    "128KB"
-                  ]
-                }
-              }
-            },
-            "buffer_limit": {
-              "$ref": "#/definitions/bufferLimitConfig"
-            },
-            "timeout": {
-              "$ref": "#/definitions/timeoutConfig"
-            },
-            "max_flush_delay": {
-              "description": "Maximum delay after pipeline flushes. This gives pipeline a chance to collect more commands to send to Redis. Adding this delay increases latency, reduces throughput, but in most cases may significantly reduce application and Redis CPU utilization due to less executed system calls.",
+            "ttl": {
+              "description": "Specifies the maximum TTL on the client side for all used keys. If the key's TTL on the server is smaller than the client side TTL, the client side TTL will be capped.",
               "type": "string",
               "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-              "default": "0s",
+              "default": "5m",
               "examples": [
-                "1ms",
-                "20us"
+                "1h",
+                "1m",
+                "30s"
               ]
             },
-            "tls": {
-              "allOf": [
-                {
-                  "$ref": "#/definitions/tlsConfig"
-                },
-                {
-                  "properties": {
-                    "disabled": {
-                      "description": "Whether tls should be disabled. Defaults to false.",
-                      "type": "boolean",
-                      "default": false
-                    }
-                  }
-                }
+            "size_per_connection": {
+              "description": "Optional client side cache size that bind to each TCP connection to a single redis instance. Defaults to 128MB",
+              "type": "string",
+              "default": "128MB",
+              "pattern": "^[0-9]+(B|KB|MB|GB)$",
+              "examples": [
+                "1GB",
+                "256MB",
+                "128KB"
               ]
             }
           }
+        },
+        "buffer_limit": {
+          "$ref": "#/definitions/bufferLimitConfig"
+        },
+        "timeout": {
+          "$ref": "#/definitions/redisTimeoutConfig"
+        },
+        "max_flush_delay": {
+          "description": "Maximum delay after pipeline flushes. This gives pipeline a chance to collect more commands to send to Redis. Adding this delay increases latency, reduces throughput, but in most cases may significantly reduce application and Redis CPU utilization due to less executed system calls.",
+          "type": "string",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
+          "default": "0s",
+          "examples": [
+            "1ms",
+            "20us"
+          ]
+        },
+        "tls": {
+          "allOf": [
+            {
+              "$ref": "#/definitions/tlsConfig"
+            },
+            {
+              "properties": {
+                "disabled": {
+                  "description": "Whether tls should be disabled. Defaults to false.",
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -552,35 +540,13 @@
         }
       }
     },
-    "timeoutConfig": {
-      "description": "Controls the HTTP timeouts.",
+    "redisTimeoutConfig": {
+      "description": "Redis connection write timeout configuration.",
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "read": {
-          "description": "The maximum duration for reading the entire request, including the body.",
-          "type": "string",
-          "default": "5s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-          "examples": [
-            "5s",
-            "5m",
-            "5h"
-          ]
-        },
         "write": {
-          "description": "The maximum duration before timing out writes of the response. Increase this parameter to prevent unexpected closing a client connection if an upstream request is responding slowly.",
-          "type": "string",
-          "default": "120s",
-          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
-          "examples": [
-            "5s",
-            "5m",
-            "5h"
-          ]
-        },
-        "idle": {
-          "description": " The maximum amount of time to wait for any action of a request session, reading data or writing the response.",
+          "description": "Maximum duration for writing a command to a Redis connection.",
           "type": "string",
           "default": "120s",
           "pattern": "^[0-9]+(ns|us|ms|s|m|h)$",
@@ -621,25 +587,324 @@
         }
       }
     },
-    "connectionsLimitConfig": {
+    "connectionStreamsConfig": {
       "type": "object",
-      "description": "Overrides the default limits for connections",
+      "description": "Capacity limits for multiplexed transport streams within one connection.",
+      "additionalProperties": false,
+      "properties": {
+        "max_concurrent": {
+          "description": "Maximum number of concurrent multiplexed transport streams per connection.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4294967295,
+          "default": 100
+        }
+      }
+    },
+    "connectionLivenessConfig": {
+      "type": "object",
+      "description": "Active liveness probing for multiplexed connections.",
+      "additionalProperties": false,
+      "properties": {
+        "probe_after": {
+          "description": "Time without inbound connection activity before starting an active liveness probe. 0 disables active liveness probing.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "probe_timeout": {
+          "description": "Maximum time to wait for an active connection liveness probe to succeed.",
+          "type": "string",
+          "default": "15s",
+          "pattern": "^[0-9]*[1-9][0-9]*(ns|us|ms|s|m|h)$"
+        }
+      }
+    },
+    "serveConnectionsConfig": {
+      "type": "object",
+      "description": "Limits and liveness policies for incoming transport connections.",
+      "additionalProperties": false,
+      "properties": {
+        "max": {
+          "description": "Maximum number of simultaneously accepted connections. 0 disables Heimdall's connection limit.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 1024
+        },
+        "idle_timeout": {
+          "description": "Maximum time an idle incoming connection waits between requests. 0 disables the timeout.",
+          "type": "string",
+          "default": "2m",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "write_idle_timeout": {
+          "description": "Maximum time a multiplexed connection may make no write progress while data is pending. 0 disables connection-scoped write-progress protection.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "streams": {
+          "$ref": "#/definitions/connectionStreamsConfig"
+        },
+        "liveness": {
+          "$ref": "#/definitions/connectionLivenessConfig"
+        }
+      }
+    },
+    "ingressConnectionsConfig": {
+      "type": "object",
+      "description": "Limits for incoming transport connections.",
+      "additionalProperties": false,
+      "properties": {
+        "max": {
+          "description": "Maximum number of simultaneously accepted connections. 0 disables Heimdall's connection limit.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 1024
+        },
+        "idle_timeout": {
+          "description": "Maximum time an idle incoming connection waits between requests. 0 disables the timeout.",
+          "type": "string",
+          "default": "2m",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        }
+      }
+    },
+    "ingressRequestsConfig": {
+      "type": "object",
+      "description": "Limits for incoming requests.",
+      "additionalProperties": false,
+      "properties": {
+        "max_in_flight": {
+          "description": "Maximum number of requests processed concurrently. 0 disables this limit.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 512
+        },
+        "read_timeout": {
+          "description": "Hard timeout for reading an incoming HTTP request. 0 disables the timeout.",
+          "type": "string",
+          "default": "0s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "headers": {
+          "$ref": "#/definitions/ingressRequestHeadersConfig"
+        },
+        "body": {
+          "$ref": "#/definitions/ingressRequestBodyConfig"
+        }
+      }
+    },
+    "managementRequestsConfig": {
+      "type": "object",
+      "description": "Limits for incoming management requests.",
+      "additionalProperties": false,
+      "properties": {
+        "max_in_flight": {
+          "description": "Maximum number of requests processed concurrently. 0 disables this limit.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 512
+        },
+        "read_timeout": {
+          "description": "Hard timeout for reading an incoming HTTP request. 0 disables the timeout.",
+          "type": "string",
+          "default": "0s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "headers": {
+          "$ref": "#/definitions/ingressRequestHeadersConfig"
+        },
+        "body": {
+          "$ref": "#/definitions/managementRequestBodyConfig"
+        }
+      }
+    },
+    "managementRequestBodyConfig": {
+      "type": "object",
+      "description": "Limits for incoming management request bodies.",
+      "additionalProperties": false,
+      "properties": {
+        "max_size": {
+          "description": "Maximum size of an incoming request body. 0 disables Heimdall's request body size limit.",
+          "type": "string",
+          "default": "5MB",
+          "pattern": "^[0-9]+(B|KB|MB|GB|TB|PB|EB)$",
+          "examples": [
+            "0B",
+            "5MB",
+            "1GB"
+          ]
+        }
+      }
+    },
+    "ingressRequestHeadersConfig": {
+      "type": "object",
+      "description": "Limits for incoming request headers.",
+      "additionalProperties": false,
+      "properties": {
+        "max_size": {
+          "description": "Maximum size of incoming request headers.",
+          "type": "string",
+          "default": "64KB",
+          "pattern": "^[1-9][0-9]*(B|KB|MB|GB)$",
+          "examples": [
+            "64KB",
+            "1MB"
+          ]
+        },
+        "read_timeout": {
+          "description": "Maximum time allowed to read incoming HTTP/1 request headers. HTTP/2 has no equivalent per-stream header read timeout. 0 disables the timeout.",
+          "type": "string",
+          "default": "5s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        }
+      }
+    },
+    "ingressRequestBodyConfig": {
+      "type": "object",
+      "description": "Limits for incoming request bodies.",
+      "additionalProperties": false,
+      "properties": {
+        "max_size": {
+          "description": "Maximum size of an incoming request body. 0 disables Heimdall's request body size limit.",
+          "type": "string",
+          "default": "5MB",
+          "pattern": "^[0-9]+(B|KB|MB|GB|TB|PB|EB)$",
+          "examples": [
+            "0B",
+            "5MB",
+            "1GB"
+          ]
+        },
+        "read_idle_timeout": {
+          "description": "Progress timeout for request body reads. With read_min_rate 0, each read gets a fresh idle window. With a positive read_min_rate, this value is the initial grace period for the minimum-rate deadline. 0 disables body progress protection.",
+          "type": "string",
+          "default": "20s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "read_min_rate": {
+          "description": "Minimum request body transfer rate in bytes per second, calculated from a fixed transfer start with read_idle_timeout as the initial grace period. 0 uses sliding idle-timeout semantics only. A positive value requires read_idle_timeout to be positive.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        }
+      }
+    },
+    "ingressResponsesConfig": {
+      "type": "object",
+      "description": "Timeouts and progress limits for outgoing HTTP responses.",
+      "additionalProperties": false,
+      "properties": {
+        "write_timeout": {
+          "description": "Optional hard wall-clock ceiling for the response write phase. 0 disables the hard ceiling.",
+          "type": "string",
+          "default": "0s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "write_idle_timeout": {
+          "description": "Progress timeout for response writes. With write_min_rate 0, each write gets a fresh idle window. With a positive write_min_rate, this value is the initial grace period for the minimum-rate deadline. 0 disables response progress protection.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "write_min_rate": {
+          "description": "Minimum response transfer rate in bytes per second, calculated from a fixed transfer start with write_idle_timeout as the initial grace period. 0 uses sliding idle-timeout semantics only. A positive value requires write_idle_timeout to be positive.",
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        }
+      }
+    },
+    "upstreamConfig": {
+      "type": "object",
+      "description": "Transport configuration for proxy requests to rule-selected upstream services.",
+      "additionalProperties": false,
+      "properties": {
+        "connections": {
+          "$ref": "#/definitions/upstreamConnectionsConfig"
+        },
+        "responses": {
+          "$ref": "#/definitions/upstreamResponsesConfig"
+        }
+      }
+    },
+    "upstreamConnectionsConfig": {
+      "type": "object",
+      "description": "Connection pool limits and connection phase timeouts for proxy upstreams.",
       "additionalProperties": false,
       "properties": {
         "max_per_host": {
-          "description": "Max allowed connections per host. 0 means no limits (default)",
+          "description": "Maximum number of connections per upstream host and transport profile. 0 disables this limit.",
           "type": "integer",
-          "default": 0
+          "minimum": 0,
+          "default": 100
         },
         "max_idle": {
-          "description": "Max allowed idle connections. Defaults to 100",
+          "description": "Maximum number of idle upstream connections per transport profile.",
           "type": "integer",
+          "minimum": 1,
           "default": 100
         },
         "max_idle_per_host": {
-          "description": "Max allowed idle connections per host. Defaults to 100",
+          "description": "Maximum number of idle upstream connections per host and transport profile. Must not exceed max_idle.",
           "type": "integer",
+          "minimum": 1,
           "default": 100
+        },
+        "dial_timeout": {
+          "description": "Maximum time allowed to establish an upstream network connection. 0 disables the timeout.",
+          "type": "string",
+          "default": "5s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "idle_timeout": {
+          "description": "Maximum time an idle upstream connection remains in the pool. 0 disables the timeout.",
+          "type": "string",
+          "default": "90s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "write_idle_timeout": {
+          "description": "Maximum time allowed for a single active write to an upstream connection. Each Write operation gets a fresh deadline that is cleared afterwards, so otherwise idle connections and tunnels are unaffected. This is connection-scoped and does not provide per-request or per-stream write-idle semantics. 0 disables the protection.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
+        },
+        "liveness": {
+          "$ref": "#/definitions/connectionLivenessConfig"
+        }
+      }
+    },
+    "upstreamResponsesConfig": {
+      "type": "object",
+      "description": "Limits and timeouts for proxy responses from upstream services.",
+      "additionalProperties": false,
+      "properties": {
+        "headers": {
+          "$ref": "#/definitions/upstreamResponseHeadersConfig"
+        }
+      }
+    },
+    "upstreamResponseHeadersConfig": {
+      "type": "object",
+      "description": "Limits and timeouts for upstream response headers.",
+      "additionalProperties": false,
+      "properties": {
+        "max_size": {
+          "description": "Maximum size of upstream response headers.",
+          "type": "string",
+          "default": "1MB",
+          "pattern": "^[1-9][0-9]*(B|KB|MB|GB)$",
+          "examples": [
+            "64KB",
+            "1MB"
+          ]
+        },
+        "read_timeout": {
+          "description": "Maximum time to wait for upstream response headers. 0 disables the timeout.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]+(ns|us|ms|s|m|h)$"
         }
       }
     },
@@ -682,6 +947,9 @@
               "$ref": "#/definitions/responseOverride"
             },
             "communication_error": {
+              "$ref": "#/definitions/responseOverride"
+            },
+            "request_body_too_large": {
               "$ref": "#/definitions/responseOverride"
             },
             "internal_error": {
@@ -848,7 +1116,7 @@
     },
     "endpointConfiguration": {
       "description": "Endpoint to to communicate to",
-      "type": ["object", "string"],
+      "type": [ "object", "string" ],
       "allOf": [
         {
           "if": { "type": "object" },
@@ -926,8 +1194,8 @@
                       "1h",
                       "1m",
                       "30s"
-                  ]
-                }
+                    ]
+                  }
                 }
               }
             }
@@ -939,14 +1207,14 @@
             "type": "string",
             "description": "If only URL should be configured for the endpoint",
             "format": "uri-reference",
-            "examples": ["http://some.endpoint"]
+            "examples": [ "http://some.endpoint" ]
           }
         }
       ]
     },
     "metadataEndpointConfiguration": {
       "description": "Metadata endpoint settings to discover OAuth2/OIDC configuration",
-      "type": ["object", "string"],
+      "type": [ "object", "string" ],
       "allOf": [
         {
           "if": { "type": "object" },
@@ -1053,7 +1321,7 @@
             "type": "string",
             "description": "If only URL should be configured for the endpoint",
             "format": "uri-reference",
-            "examples": ["http://some.endpoint"]
+            "examples": [ "http://some.endpoint" ]
           }
         }
       ]
@@ -1112,37 +1380,37 @@
     "endpointAuthConfiguration": {
       "description": "How to authenticate against the endpoint",
       "type": "object",
-      "required": ["type"],
+      "required": [ "type" ],
       "properties": {
         "type": {
-          "enum": ["api_key", "basic_auth", "oauth2_client_credentials", "http_message_signatures"]
+          "enum": [ "api_key", "basic_auth", "oauth2_client_credentials", "http_message_signatures" ]
         }
       },
       "allOf": [
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "api_key" } }
           },
           "then": { "$ref": "#/definitions/endpointAuthApiKeyProperties" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "basic_auth" } }
           },
           "then": { "$ref": "#/definitions/endpointAuthBasicAuthProperties" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "oauth2_client_credentials" } }
           },
           "then": { "$ref": "#/definitions/endpointAuth2ClientCredentialsProperties" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "http_message_signatures" } }
           },
           "then": { "$ref": "#/definitions/endpointAuthHTTPMessageSignaturesProperties" }
@@ -1308,10 +1576,10 @@
           "body_parameter": { "type": "string" }
         },
         "oneOf": [
-          { "required": ["header"] },
-          { "required": ["cookie"] },
-          { "required": ["query_parameter"] },
-          { "required": ["body_parameter"] }
+          { "required": [ "header" ] },
+          { "required": [ "cookie" ] },
+          { "required": [ "query_parameter" ] },
+          { "required": [ "body_parameter" ] }
         ]
       }
     },
@@ -1322,7 +1590,7 @@
         "scopes": {
           "oneOf": [
             {
-              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this mechanism.\n If the token used in the Authorization header did not request that specific scope, the request is denied.",
+              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this mechanism. If the token used in the Authorization header did not request that specific scope, the request is denied.",
               "type": "object",
               "properties": {
                 "matching_strategy": {
@@ -1344,7 +1612,7 @@
               }
             },
             {
-              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this mechanism.\n If the token used in the Authorization header did not request that specific scope, the request is denied. When only the actual scopes are configured the matching strategy is 'exact'",
+              "description": "An array of OAuth 2.0 scopes that are required when accessing an endpoint protected by this mechanism. If the token used in the Authorization header did not request that specific scope, the request is denied. When only the actual scopes are configured the matching strategy is 'exact'",
               "type": "array",
               "items": {
                 "type": "string"
@@ -2217,7 +2485,7 @@
           "additionalProperties": false,
           "properties": {
             "realm": {
-              "description": "Message that will be displayed by the browser. Most browsers show a message like \"The website says: `,<realm>`\". Using a real message is thus more appropriate than a Realm identifier.",
+              "description": "Message that will be displayed by the browser. Most browsers show a message like \"The website says: <realm>\". Using a real message is thus more appropriate than a Realm identifier.",
               "type": "string",
               "default": "Please authenticate."
             }
@@ -2461,37 +2729,37 @@
           "additionalItems": false,
           "items": {
             "type": "object",
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": {
               "type": {
-                "enum": ["www_authenticate", "redirect", "default", "generic"]
+                "enum": [ "www_authenticate", "redirect", "default", "generic" ]
               }
             },
             "allOf": [
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "www_authenticate" } }
                 },
                 "then": { "$ref": "#/definitions/errorHandlerWWWAuthenticate" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "redirect" } }
                 },
                 "then": { "$ref": "#/definitions/errorsHandlerRedirect" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "default" } }
                 },
                 "then": { "$ref": "#/definitions/errorsHandlerDefault" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "generic" } }
                 },
                 "then": { "$ref": "#/definitions/errorHandlerGeneric" }
@@ -2506,46 +2774,46 @@
           "uniqueItems": true,
           "items": {
             "type": "object",
-            "required": ["type"],
+            "required": [ "type" ],
             "allOf": [
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "anonymous" } }
                 },
                 "then": { "$ref": "#/definitions/authenticatorAnonymous" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "unauthorized" } }
                 },
                 "then": { "$ref": "#/definitions/authenticatorUnauthorized" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "generic" } }
                 },
                 "then": { "$ref": "#/definitions/authenticatorGeneric" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "oauth2_introspection" } }
                 },
                 "then": { "$ref": "#/definitions/authenticatorOAuth2Introspection" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "jwt" } }
                 },
                 "then": { "$ref": "#/definitions/authenticatorJwt" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "basic_auth" } }
                 },
                 "then": { "$ref": "#/definitions/authenticatorBasicAuth" }
@@ -2572,37 +2840,37 @@
           "uniqueItems": true,
           "items": {
             "type": "object",
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": {
               "type": {
-                "enum": ["allow", "deny", "remote", "cel"]
+                "enum": [ "allow", "deny", "remote", "cel" ]
               }
             },
             "allOf": [
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "allow" } }
                 },
                 "then": { "$ref": "#/definitions/authorizerAllow" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "deny" } }
                 },
                 "then": { "$ref": "#/definitions/authorizerDeny" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "remote" } }
                 },
                 "then": { "$ref": "#/definitions/authorizerRemote" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "cel" } }
                 },
                 "then": { "$ref": "#/definitions/authorizerLocalCEL" }
@@ -2617,23 +2885,23 @@
           "uniqueItems": true,
           "items": {
             "type": "object",
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": {
               "type": {
-                "enum": ["generic", "map"]
+                "enum": [ "generic", "map" ]
               }
             },
             "allOf": [
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "generic" } }
                 },
                 "then": { "$ref": "#/definitions/contextualizerGeneric" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "map" } }
                 },
                 "then": { "$ref": "#/definitions/contextualizerMap" }
@@ -2648,44 +2916,44 @@
           "uniqueItems": true,
           "items": {
             "type": "object",
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": {
               "type": {
-                "enum": ["noop", "jwt", "header", "cookie", "oauth2_client_credentials"]
+                "enum": [ "noop", "jwt", "header", "cookie", "oauth2_client_credentials" ]
               }
             },
             "allOf": [
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "noop" } }
                 },
                 "then": { "$ref": "#/definitions/finalizerNoop" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "jwt" } }
                 },
                 "then": { "$ref": "#/definitions/finalizerJwt" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "header" } }
                 },
                 "then": { "$ref": "#/definitions/finalizerHeader" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "cookie" } }
                 },
                 "then": { "$ref": "#/definitions/finalizerCookie" }
               },
               {
                 "if": {
-                  "required": ["type"],
+                  "required": [ "type" ],
                   "properties": { "type": { "const": "oauth2_client_credentials" } }
                 },
                 "then": { "$ref": "#/definitions/finalizerClientCredentials" }
@@ -2702,6 +2970,19 @@
       "type": "string",
       "pattern": "^v(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$"
     },
+    "shutdown": {
+      "description": "Application shutdown configuration.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "timeout": {
+          "description": "Maximum total duration of the Fx-coordinated application shutdown.",
+          "type": "string",
+          "default": "30s",
+          "pattern": "^[0-9]*[1-9][0-9]*(ns|us|ms|s|m|h)$"
+        }
+      }
+    },
     "serve": {
       "description": "HTTP(s) configuration of the main service",
       "additionalProperties": false,
@@ -2709,25 +2990,30 @@
       "properties": {
         "port": {
           "description": "The port to listen on.",
-          "type": "integer"
+          "type": "integer",
+          "default": 4456
         },
         "host": {
-          "description": "The network interface to listen on.",
+          "description": "The network interface to listen on. An empty value listens on all interfaces.",
           "type": "string",
           "default": "",
           "examples": [
+            "0.0.0.0",
             "localhost",
             "127.0.0.1"
           ]
         },
-        "timeout": {
-          "$ref": "#/definitions/timeoutConfig"
+        "connections": {
+          "$ref": "#/definitions/serveConnectionsConfig"
         },
-        "buffer_limit": {
-          "$ref": "#/definitions/bufferLimitConfig"
+        "requests": {
+          "$ref": "#/definitions/ingressRequestsConfig"
         },
-        "connections_limit": {
-          "$ref": "#/definitions/connectionsLimitConfig"
+        "responses": {
+          "$ref": "#/definitions/ingressResponsesConfig"
+        },
+        "upstream": {
+          "$ref": "#/definitions/upstreamConfig"
         },
         "cors": {
           "$ref": "#/definitions/corsConfig"
@@ -2754,7 +3040,8 @@
       "properties": {
         "port": {
           "description": "The port to listen on.",
-          "type": "integer"
+          "type": "integer",
+          "default": 4457
         },
         "host": {
           "description": "The network interface to listen on.",
@@ -2765,11 +3052,14 @@
             "127.0.0.1"
           ]
         },
-        "timeout": {
-          "$ref": "#/definitions/timeoutConfig"
+        "connections": {
+          "$ref": "#/definitions/ingressConnectionsConfig"
         },
-        "buffer_limit": {
-          "$ref": "#/definitions/bufferLimitConfig"
+        "requests": {
+          "$ref": "#/definitions/managementRequestsConfig"
+        },
+        "responses": {
+          "$ref": "#/definitions/ingressResponsesConfig"
         },
         "cors": {
           "$ref": "#/definitions/corsConfig"
@@ -2799,13 +3089,13 @@
           ]
         },
         "format": {
-          "description": "The log format can either be 'text' or 'gelf'. If format is not recognized, 'gelf' format is used",
+          "description": "The log format can either be 'text' or 'gelf'.",
           "type": "string",
           "enum": [
             "gelf",
             "text"
           ],
-          "default": "gelf"
+          "default": "text"
         },
         "access_log_enabled": {
           "description": "Set to false if you don't need Heimdall to perform access logging (like TX started / TX finished). Defaults to true.",
@@ -2817,44 +3107,44 @@
     "cache": {
       "description": "Configure caches",
       "type": "object",
-      "required": ["type"],
+      "required": [ "type" ],
       "properties": {
         "type": {
-          "enum": ["noop", "in-memory", "redis", "redis-cluster", "redis-sentinel"]
+          "enum": [ "noop", "in-memory", "redis", "redis-cluster", "redis-sentinel" ]
         }
       },
       "allOf": [
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "noop" } }
           },
           "then": { "$ref": "#/definitions/cacheNoop" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "in-memory" } }
           },
           "then": { "$ref": "#/definitions/cacheInMemory" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "redis" } }
           },
           "then": { "$ref": "#/definitions/cacheRedisStandalone" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "redis-cluster" } }
           },
           "then": { "$ref": "#/definitions/cacheRedisCluster" }
         },
         {
           "if": {
-            "required": ["type"],
+            "required": [ "type" ],
             "properties": { "type": { "const": "redis-sentinel" } }
           },
           "then": { "$ref": "#/definitions/cacheRedisSentinel" }
@@ -2927,7 +3217,7 @@
         "host": {
           "description": "The network interface to listen on. Leave empty to listen on all interfaces.",
           "type": "string",
-          "default": "",
+          "default": "127.0.0.1",
           "examples": [
             "localhost",
             "127.0.0.1"
@@ -2987,37 +3277,37 @@
       "type": "object",
       "additionalProperties": {
         "type": "object",
-        "required": ["type"],
+        "required": [ "type" ],
         "properties": {
           "type": {
-            "enum": ["pem", "file", "inline", "jwks"]
+            "enum": [ "pem", "file", "inline", "jwks" ]
           }
         },
         "allOf": [
           {
             "if": {
-              "required": ["type"],
+              "required": [ "type" ],
               "properties": { "type": { "const": "pem" } }
             },
             "then": { "$ref": "#/definitions/secretSourcePem" }
           },
           {
             "if": {
-              "required": ["type"],
+              "required": [ "type" ],
               "properties": { "type": { "const": "file" } }
             },
             "then": { "$ref": "#/definitions/secretSourceFile" }
           },
           {
             "if": {
-              "required": ["type"],
+              "required": [ "type" ],
               "properties": { "type": { "const": "inline" } }
             },
             "then": { "$ref": "#/definitions/secretSourceInline" }
           },
           {
             "if": {
-              "required": ["type"],
+              "required": [ "type" ],
               "properties": { "type": { "const": "jwks" } }
             },
             "then": { "$ref": "#/definitions/secretSourceJWKS" }

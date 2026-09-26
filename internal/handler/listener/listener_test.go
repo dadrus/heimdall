@@ -24,6 +24,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"io"
 	"math/big"
 	"net"
 	"testing"
@@ -48,12 +49,8 @@ func TestFactoryCreate(t *testing.T) {
 	address := "127.0.0.1:8443"
 
 	for uc, tc := range map[string]struct {
-		tlsConf *config.TLS
-		setup   func(
-			t *testing.T,
-			sr *secretsmocks.ResolverMock,
-			handle *secretsmocks.SecretHandleMock,
-		)
+		tlsConf   *config.TLS
+		setup     func(t *testing.T, sr *secretsmocks.ResolverMock, handle *secretsmocks.SecretHandleMock)
 		listener  net.Listener
 		listenErr error
 		assert    func(t *testing.T, err error, ln net.Listener, capturedAddress string)
@@ -169,7 +166,7 @@ func TestFactoryCreate(t *testing.T) {
 				tc.setup(t, sr, handle)
 			}
 
-			factory, err := NewFactory(address, tc.tlsConf, sr)
+			factory, err := NewFactory(address, tc.tlsConf, 0, sr)
 			if err != nil {
 				tc.assert(t, err, nil, capturedAddress)
 
@@ -187,49 +184,110 @@ func TestFactoryCreate(t *testing.T) {
 			tc.assert(t, err, ln, capturedAddress)
 		})
 	}
+
+	t.Run("connection limit is disabled", func(t *testing.T) {
+		// GIVEN
+		prevListen := listen
+		t.Cleanup(func() { listen = prevListen })
+
+		listen = func(_ context.Context, _ string) (net.Listener, error) {
+			return &acceptRecorder{conn: &connRecorder{}}, nil
+		}
+
+		factory, err := NewFactory(address, nil, 0, nil)
+		require.NoError(t, err)
+
+		ln, err := factory.Create(t.Context())
+		require.NoError(t, err)
+
+		defer ln.Close()
+
+		accepted := make(chan net.Conn, 2)
+
+		// WHEN
+		go func() {
+			conn, _ := ln.Accept()
+			accepted <- conn
+
+			conn, _ = ln.Accept()
+			accepted <- conn
+		}()
+
+		// THEN
+		for range 2 {
+			select {
+			case conn := <-accepted:
+				require.NotNil(t, conn)
+				require.NoError(t, conn.Close())
+			case <-time.After(time.Second):
+				require.Fail(t, "connection acceptance unexpectedly blocked")
+			}
+		}
+	})
+
+	t.Run("connection limit blocks acceptance until capacity is released", func(t *testing.T) {
+		// GIVEN
+		prevListen := listen
+		t.Cleanup(func() { listen = prevListen })
+
+		listen = func(_ context.Context, _ string) (net.Listener, error) {
+			return &acceptRecorder{conn: &connRecorder{}}, nil
+		}
+
+		factory, err := NewFactory(address, nil, 1, nil)
+		require.NoError(t, err)
+
+		ln, err := factory.Create(t.Context())
+		require.NoError(t, err)
+
+		defer ln.Close()
+
+		first, err := ln.Accept()
+		require.NoError(t, err)
+
+		secondAccepted := make(chan net.Conn, 1)
+
+		// WHEN
+		go func() {
+			conn, _ := ln.Accept()
+			secondAccepted <- conn
+		}()
+
+		// THEN
+		select {
+		case conn := <-secondAccepted:
+			if conn != nil {
+				_ = conn.Close()
+			}
+
+			require.Fail(t, "second connection was accepted while capacity was exhausted")
+		case <-time.After(50 * time.Millisecond):
+		}
+
+		// WHEN
+		require.NoError(t, first.Close())
+
+		// THEN
+		select {
+		case second := <-secondAccepted:
+			require.NotNil(t, second)
+			require.NoError(t, second.Close())
+		case <-time.After(time.Second):
+			require.Fail(t, "second connection was not accepted after capacity was released")
+		}
+	})
 }
 
-func TestListenerAccept(t *testing.T) {
-	t.Parallel()
+type connRecorder struct{}
 
-	expectedConn := &connRecorder{}
-	expectedErr := assert.AnError
-
-	tests := map[string]struct {
-		listener net.Listener
-		assert   func(t *testing.T, accepted net.Conn, err error)
-	}{
-		"wraps accepted connection": {
-			listener: &acceptRecorder{conn: expectedConn},
-			assert: func(t *testing.T, accepted net.Conn, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				wrapped, ok := accepted.(*conn)
-				require.True(t, ok)
-				assert.Same(t, expectedConn, wrapped.Conn)
-			},
-		},
-		"returns accept error": {
-			listener: &acceptRecorder{err: expectedErr},
-			assert: func(t *testing.T, accepted net.Conn, err error) {
-				t.Helper()
-
-				require.ErrorIs(t, err, expectedErr)
-				assert.Nil(t, accepted)
-			},
-		},
-	}
-
-	for name, tc := range tests {
-		t.Run(name, func(t *testing.T) {
-			conn, err := (&listener{Listener: tc.listener}).Accept()
-
-			tc.assert(t, conn, err)
-		})
-	}
-}
+func (*connRecorder) Read([]byte) (int, error)         { return 0, io.EOF }
+func (*connRecorder) Write(data []byte) (int, error)   { return len(data), nil }
+func (*connRecorder) Close() error                     { return nil }
+func (*connRecorder) LocalAddr() net.Addr              { return &net.TCPAddr{} }
+func (*connRecorder) RemoteAddr() net.Addr             { return &net.TCPAddr{} }
+func (*connRecorder) SetDeadline(time.Time) error      { return nil }
+func (*connRecorder) SetReadDeadline(time.Time) error  { return nil }
+func (*connRecorder) SetWriteDeadline(time.Time) error { return nil }
 
 type acceptRecorder struct {
 	conn net.Conn

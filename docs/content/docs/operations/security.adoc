@@ -24,7 +24,7 @@ The following configurations and behaviors are enforced by default:
 
 * If heimdall is operated as part of e.g. a service mesh, that handles secure communication between the services, you may choose to disable TLS enforcement. This can be done by using the individual flags mentioned above or, alternatively, by using the `--insecure-skip-all-tls-enforcement` flag, which enables all the above options at once.
 
-* Configuring the link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[`trusted_proxies`] property to allow insecure networks (`0.0.0.0/0`, `0/0`, `0000:0000:0000:0000:0000:0000:0000:0000/0`, and `::/0`) is prohibited. See also link:{{< relref "security.adoc#_http_header" >}}[HTTP Header]. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-trusted-proxies-enforcement` flag.
+* Configuring the link:{{< relref "/docs/operations/services.adoc#_trusted_proxies" >}}[`trusted_proxies`] property to allow insecure networks (`0.0.0.0/0`, `0/0`, `0000:0000:0000:0000:0000:0000:0000:0000/0`, and `::/0`) is prohibited. See also link:{{< relref "security.adoc#_http_header" >}}[HTTP Header]. This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-trusted-proxies-enforcement` flag.
 
 * The authentication stage of the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule] cannot start with an insecure authenticator (i.e., authenticators that allow all requests to pass through). This enforcement can be disabled (not recommended) by starting heimdall with the `--insecure-skip-secure-default-rule-enforcement` flag.
 
@@ -36,11 +36,23 @@ If any of the above enforcement settings are disabled and an insecure configurat
 ====
 
 
+== Resource Exhaustion and Availability
+
+Heimdall applies independent limits to resources used while receiving, processing, forwarding, and responding to requests. These include request headers and bodies, concurrent requests, connections and HTTP/2 streams, response progress and, in proxy mode, upstream connections and response headers. The corresponding settings and their defaults are documented in link:{{< relref "/docs/operations/services.adoc" >}}[Services]. These limits protect different resources and do not replace each other.
+
+Where a protection can be disabled, do so only if an equivalent trusted limit exists elsewhere in the request path. Size limits should account for the expected size of authentication credentials, cookies, tracing headers, and request bodies. Streaming workloads should rely on progress and idle limits.
+
 == Request Security Considerations
+
+=== External Authorization
+
+When heimdall is used in link:{{< relref "/docs/concepts/operating_modes.adoc#_decision_mode" >}}[Decision Operation Mode], the component forwarding the request remains the enforcement point. It must fail closed if heimdall is unavailable, including admission overload, or cannot provide an authorization decision.
+
+For Envoy `ext_authz`, ensure `failure_mode_allow` is set to `false`. Equivalent fail-open options in other integrations should likewise be disabled.
 
 === HTTP Header
 
-If the `trusted_proxies` property is configured (see also the corresponding link:{{< relref "/docs/services/main.adoc#_trusted_proxies" >}}[configuration options]), heimdall may use specific HTTP headers to build the URL and HTTP method for rule matching. In that case, the following logic applies:
+If the `trusted_proxies` property is configured (see also the corresponding link:{{< relref "/docs/operations/services.adoc#_trusted_proxies" >}}[configuration options]), heimdall may use specific HTTP headers to build the URL and HTTP method for rule matching. In that case, the following logic applies:
 
 * The HTTP scheme is taken from the `X-Forwarded-Proto` header.
 * The HTTP host and port are taken from the `X-Forwarded-Host` header.
@@ -60,12 +72,21 @@ The link:{{< relref "/guides/proxies/_index.adoc" >}}[API Gateways & Proxies Gui
 
 === Request Path
 
-To mitigate path traversal attacks and interpretation conflicts between heimdall and upstream components, the following measures are implemented:
+Before rule lookup, heimdall applies the following path handling:
 
-* Request paths are normalized before rule evaluation. Dot segments (`.` and `..`) delimited by literal path separators (`/`) are removed, and adjacent literal slashes are merged. For example, `/user/../admin` is normalized to `/admin`, and `/api//admin` is normalized to `/api/admin`. A trailing slash is preserved.
-* Percent-encoded https://datatracker.ietf.org/doc/html/rfc3986#section-2.3[RFC 3986] unreserved characters (`ALPHA`, `DIGIT`, `-`, `.`, `_`, and `~`) are decoded. For example, `/api/%61dmin` is evaluated as `/api/admin`.
-* Requests are rejected with `400 Bad Request` if the evaluated request path contains ambiguous or encoded dot segment patterns that cannot be safely normalized. This includes URL-encoded variants (case-insensitive), e.g. `%2e`, as well as combinations with encoded or alternative separators such as `%2f` and `%5c`.
-* Additionally, URL-encoded slash handling can be configured via `allow_encoded_slashes` in link:{{< relref "/docs/rules/regular_rule.adoc" >}}[regular rules]. The default value `off` rejects encoded slashes, while less strict settings can increase the risk of interpretation conflicts depending on your proxy and upstream setup, but may be required for specific use cases where encoded slashes are part of the path semantics (e.g., object keys).
+* Literal dot segments (`.` and `..`) delimited by `/` are removed, adjacent literal slashes are merged, and a trailing slash is preserved. For example, `/user/../admin` becomes `/admin`, and `/api//admin` becomes `/api/admin`.
+* Percent-encoded https://datatracker.ietf.org/doc/html/rfc3986#section-2.3[RFC 3986] unreserved characters (`ALPHA`, `DIGIT`, `-`, `.`, `_`, and `~`) are treated equivalently during rule lookup. For example, `/api/%61dmin` is matched as `/api/admin`.
+* Encoded dot-segment forms are detected case-insensitively, including forms that use encoded slash (`%2f`) or backslash (`%5c`) as separators, and are rejected before rule execution.
+* URL-encoded slashes are handled according to `allow_encoded_slashes` in link:{{< relref "/docs/rules/regular_rule.adoc" >}}[regular rules]. The default `off` rejects them. `on` accepts and decodes them, while `no_decode` accepts them without decoding.
+
+The path authorized by heimdall is the path resulting from these rules. In proxy mode, this path is also the basis for the request forwarded by heimdall, subject to any configured URL rewrite. In decision mode, the integrating proxy is responsible for ensuring that the request it forwards represents the same target that was evaluated by heimdall.
+
+[CAUTION]
+====
+Authorization is reliable only if heimdall and the component that ultimately routes or serves the request interpret the effective request target consistently. Heimdall cannot reproduce every downstream-specific URI or routing semantic. Ambiguous request targets should therefore be rejected before authorization or handled equivalently by all trusted components involved.
+
+A known example is semicolon-delimited path parameters. `/public/..;/admin` does not contain an RFC 3986 `..` dot segment, so heimdall can match it below `/public`. A downstream that removes the semicolon-delimited path parameter first can subsequently normalize the resulting `/public/../admin` to `/admin`. The request can then reach a different resource than the one authorized by heimdall. This conflict can affect both proxy and decision mode and is documented in https://github.com/dadrus/heimdall/security/advisories/GHSA-9q28-xj2j-qpv8[GHSA-9q28-xj2j-qpv8]. Until the interpretations are equivalent, such ambiguous paths must be rejected by a trusted component before authorization or by the downstream before dispatch.
+====
 
 == Observability Information
 

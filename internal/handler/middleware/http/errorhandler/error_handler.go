@@ -99,6 +99,8 @@ func (h *errorHandler) HandleError(rw http.ResponseWriter, req *http.Request, er
 		h.onAuthenticationError(rw, req, err)
 	case errors.Is(err, pipeline.ErrAuthorization):
 		h.onAuthorizationError(rw, req, err)
+	case errors.Is(err, pipeline.ErrRequestBodyTooLarge):
+		h.onRequestBodyTooLarge(rw, req, err)
 	case errors.Is(err, pipeline.ErrCommunicationTimeout) || errors.Is(err, pipeline.ErrCommunication):
 		h.onCommunicationError(rw, req, err)
 	case errors.Is(err, pipeline.ErrArgument):

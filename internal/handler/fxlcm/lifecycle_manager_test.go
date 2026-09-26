@@ -17,8 +17,11 @@
 package fxlcm
 
 import (
+	"context"
 	"fmt"
+	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,50 +37,77 @@ import (
 
 func TestLifecycleManagerStart(t *testing.T) {
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, srv *mocks.ServerMock)
-		assert func(t *testing.T, exit *testsupport.PatchedOSExit, logs string)
+		setup      func(t *testing.T, srv *mocks.ServerMock) <-chan struct{}
+		assert     func(t *testing.T, exit *testsupport.PatchedOSExit, logs string)
+		waitFor    string
+		expectExit bool
 	}{
 		"successful start": {
-			setup: func(t *testing.T, srv *mocks.ServerMock) {
+			setup: func(t *testing.T, srv *mocks.ServerMock) <-chan struct{} {
 				t.Helper()
 
-				srv.EXPECT().Serve(mock.Anything).Return(nil)
+				served := make(chan struct{})
+				srv.EXPECT().Serve(mock.Anything).RunAndReturn(func(net.Listener) error {
+					close(served)
+
+					return nil
+				})
+
+				return served
 			},
 			assert: func(t *testing.T, exit *testsupport.PatchedOSExit, logs string) {
 				t.Helper()
 
-				require.False(t, exit.Called)
+				require.False(t, exit.Called())
 				assert.Contains(t, logs, "Starting listening")
 				assert.NotContains(t, logs, "error")
 			},
+			waitFor: "Starting listening",
 		},
 		"failed to start": {
-			setup: func(t *testing.T, srv *mocks.ServerMock) {
+			setup: func(t *testing.T, srv *mocks.ServerMock) <-chan struct{} {
 				t.Helper()
 
-				srv.EXPECT().Serve(mock.Anything).Return(assert.AnError)
+				served := make(chan struct{})
+				srv.EXPECT().Serve(mock.Anything).RunAndReturn(func(net.Listener) error {
+					close(served)
+
+					return assert.AnError
+				})
+
+				return served
 			},
 			assert: func(t *testing.T, exit *testsupport.PatchedOSExit, logs string) {
 				t.Helper()
 
-				require.True(t, exit.Called)
+				require.True(t, exit.Called())
 				assert.Contains(t, logs, "Starting listening")
 				assert.Contains(t, logs, assert.AnError.Error())
 			},
+			waitFor:    assert.AnError.Error(),
+			expectExit: true,
 		},
 		"started and resumed successfully": {
-			setup: func(t *testing.T, srv *mocks.ServerMock) {
+			setup: func(t *testing.T, srv *mocks.ServerMock) <-chan struct{} {
 				t.Helper()
 
-				srv.EXPECT().Serve(mock.Anything).Return(http.ErrServerClosed)
+				served := make(chan struct{})
+				srv.EXPECT().Serve(mock.Anything).RunAndReturn(func(net.Listener) error {
+					close(served)
+
+					return http.ErrServerClosed
+				})
+
+				return served
 			},
 			assert: func(t *testing.T, exit *testsupport.PatchedOSExit, logs string) {
 				t.Helper()
 
-				require.False(t, exit.Called)
+				require.False(t, exit.Called())
 				assert.Contains(t, logs, "Starting listening")
 				assert.NotContains(t, logs, "error")
 			},
+			waitFor: "Service stopped",
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
@@ -89,12 +119,17 @@ func TestLifecycleManagerStart(t *testing.T) {
 			require.NoError(t, err)
 
 			srv := mocks.NewServerMock(t)
-			tc.setup(t, srv)
+			served := tc.setup(t, srv)
 
 			tb := &testsupport.TestingLog{TB: t}
 			logger := zerolog.New(zerolog.TestWriter{T: tb})
 
-			lf, err := listener.NewFactory(fmt.Sprintf("127.0.0.1:%d", port), nil, nil)
+			lf, err := listener.NewFactory(
+				fmt.Sprintf("127.0.0.1:%d", port),
+				nil,
+				0,
+				nil,
+			)
 			require.NoError(t, err)
 
 			lcm := &LifecycleManager{
@@ -107,10 +142,21 @@ func TestLifecycleManagerStart(t *testing.T) {
 			// WHEN
 			err = lcm.Start(t.Context())
 
-			time.Sleep(50 * time.Millisecond)
-
 			// THEN
 			require.NoError(t, err)
+			select {
+			case <-served:
+			case <-time.After(time.Second):
+				require.FailNow(t, "server was not started")
+			}
+
+			require.Eventually(t, func() bool {
+				if !strings.Contains(tb.CollectedLog(), tc.waitFor) {
+					return false
+				}
+
+				return !tc.expectExit || exit.Called()
+			}, time.Second, 10*time.Millisecond)
 			tc.assert(t, exit, tb.CollectedLog())
 		})
 	}
@@ -123,7 +169,7 @@ func TestLifecycleManagerStop(t *testing.T) {
 		setup  func(t *testing.T, srv *mocks.ServerMock)
 		assert func(t *testing.T, err error, logs string)
 	}{
-		"stopped without error": {
+		"stopped successfully": {
 			setup: func(t *testing.T, srv *mocks.ServerMock) {
 				t.Helper()
 
@@ -134,10 +180,10 @@ func TestLifecycleManagerStop(t *testing.T) {
 
 				require.NoError(t, err)
 				assert.Contains(t, logs, "Tearing down service")
-				assert.NotContains(t, logs, "error")
+				assert.NotContains(t, logs, "Service shutdown failed")
 			},
 		},
-		"stopped with error": {
+		"shutdown failed": {
 			setup: func(t *testing.T, srv *mocks.ServerMock) {
 				t.Helper()
 
@@ -146,8 +192,10 @@ func TestLifecycleManagerStop(t *testing.T) {
 			assert: func(t *testing.T, err error, logs string) {
 				t.Helper()
 
-				require.Error(t, err)
-				assert.Contains(t, logs, "Tearing down service")
+				require.ErrorIs(t, err, errServiceStop)
+				require.ErrorIs(t, err, assert.AnError)
+				require.ErrorContains(t, err, "foo service")
+				assert.Contains(t, logs, "Service shutdown failed")
 				assert.Contains(t, logs, assert.AnError.Error())
 			},
 		},
@@ -172,4 +220,49 @@ func TestLifecycleManagerStop(t *testing.T) {
 			tc.assert(t, err, tb.CollectedLog())
 		})
 	}
+}
+
+func TestLifecycleManagerStopUsesGraceContext(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	parentDeadline := time.Now().Add(30 * time.Second)
+	ctx, cancel := context.WithDeadline(context.Background(), parentDeadline)
+	defer cancel()
+
+	srv := mocks.NewServerMock(t)
+	srv.EXPECT().Shutdown(mock.MatchedBy(func(ctx context.Context) bool {
+		deadline, ok := ctx.Deadline()
+
+		return ok && deadline.Equal(parentDeadline.Add(-maxCleanupTail))
+	})).Return(nil).Once()
+
+	lcm := &LifecycleManager{
+		ServiceName: "foo",
+		Server:      srv,
+		Logger:      zerolog.Nop(),
+	}
+
+	// WHEN
+	err := lcm.Stop(ctx)
+
+	// THEN
+	require.NoError(t, err)
+}
+
+func TestGracefulShutdownContext(t *testing.T) {
+	t.Parallel()
+
+	parent, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+	defer cancel()
+
+	parentDeadline, ok := parent.Deadline()
+	require.True(t, ok)
+
+	graceCtx, graceCancel := gracefulShutdownContext(parent)
+	defer graceCancel()
+
+	graceDeadline, ok := graceCtx.Deadline()
+	require.True(t, ok)
+	assert.Equal(t, maxCleanupTail, parentDeadline.Sub(graceDeadline))
 }

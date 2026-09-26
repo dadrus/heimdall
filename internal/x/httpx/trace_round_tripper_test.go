@@ -18,6 +18,8 @@ package httpx
 
 import (
 	"bufio"
+	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -155,3 +157,124 @@ X-Bar: Foo
 		})
 	}
 }
+
+func TestTraceRoundTripperDoesNotMaterializeStreamingRequestBody(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		contentLength int64
+		contentType   string
+		upgrade       string
+	}{
+		"unknown length": {contentLength: -1, contentType: "application/json"},
+		"native grpc":    {contentLength: 6, contentType: "application/grpc"},
+		"sse":            {contentLength: 6, contentType: "text/event-stream"},
+		"upgrade":        {contentLength: 6, contentType: "application/json", upgrade: "websocket"},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			body := &trackingReadCloser{Reader: strings.NewReader("Foobar")}
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "https://foo.bar", body)
+			require.NoError(t, err)
+			req.ContentLength = tc.contentLength
+			req.Header.Set("Content-Type", tc.contentType)
+			req.Header.Set("Upgrade", tc.upgrade)
+
+			logger := zerolog.New(io.Discard).Level(zerolog.TraceLevel)
+			req = req.WithContext(logger.WithContext(req.Context()))
+
+			trt := NewTraceRoundTripper(roundTripFunc(func(*http.Request) (*http.Response, error) {
+				assert.False(t, body.read)
+
+				return &http.Response{ //nolint:bodyclose
+					StatusCode:    http.StatusNoContent,
+					Status:        "204 No Content",
+					Proto:         "HTTP/1.1",
+					ProtoMajor:    1,
+					ProtoMinor:    1,
+					Header:        make(http.Header),
+					Body:          http.NoBody,
+					ContentLength: 0,
+					Request:       req,
+				}, nil
+			}))
+
+			resp, err := trt.RoundTrip(req)
+			require.NoError(t, err)
+			require.NotNil(t, resp)
+			assert.False(t, body.read)
+			require.NoError(t, resp.Body.Close())
+		})
+	}
+}
+
+func TestTraceRoundTripperDoesNotMaterializeStreamingResponseBody(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		contentLength int64
+		contentType   string
+		statusCode    int
+	}{
+		"unknown length":      {contentLength: -1, contentType: "application/json", statusCode: http.StatusOK},
+		"native grpc":         {contentLength: 6, contentType: "application/grpc", statusCode: http.StatusOK},
+		"sse":                 {contentLength: 6, contentType: "text/event-stream", statusCode: http.StatusOK},
+		"switching protocols": {contentLength: 6, contentType: "application/json", statusCode: http.StatusSwitchingProtocols},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			logger := zerolog.New(io.Discard).Level(zerolog.TraceLevel)
+			req, err := http.NewRequestWithContext(
+				logger.WithContext(t.Context()),
+				http.MethodGet,
+				"https://foo.bar",
+				nil,
+			)
+			require.NoError(t, err)
+
+			body := &trackingReadCloser{Reader: strings.NewReader("Foobar")}
+			resp := &http.Response{ //nolint:bodyclose
+				StatusCode:    tc.statusCode,
+				Status:        fmt.Sprintf("%d %s", tc.statusCode, http.StatusText(tc.statusCode)),
+				Proto:         "HTTP/1.1",
+				ProtoMajor:    1,
+				ProtoMinor:    1,
+				Header:        make(http.Header),
+				Body:          body,
+				ContentLength: tc.contentLength,
+				Request:       req,
+			}
+			resp.Header.Set("Content-Type", tc.contentType)
+
+			trt := NewTraceRoundTripper(roundTripFunc(func(*http.Request) (*http.Response, error) {
+				return resp, nil
+			}))
+
+			result, err := trt.RoundTrip(req)
+			require.NoError(t, err)
+			require.Same(t, resp, result)
+			assert.False(t, body.read)
+			require.NoError(t, result.Body.Close())
+		})
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) { return f(req) }
+
+type trackingReadCloser struct {
+	io.Reader
+
+	read bool
+}
+
+func (r *trackingReadCloser) Read(data []byte) (int, error) {
+	r.read = true
+
+	return r.Reader.Read(data)
+}
+
+func (*trackingReadCloser) Close() error { return nil }

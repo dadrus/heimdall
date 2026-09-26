@@ -44,7 +44,6 @@ type EnforcementSettings struct {
 	EnforceIngressTLS           bool
 	EnforceEgressTLS            bool
 	EnforceUpstreamTLS          bool
-	EnforceHTTPSReferences      bool
 }
 
 func (v EnforcementSettings) Tag() string { return "enforced" }

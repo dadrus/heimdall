@@ -17,12 +17,15 @@
 package proxy
 
 import (
+	"bufio"
+	"context"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -32,10 +35,14 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/inhies/go-bytesize"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -44,6 +51,11 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/dadrus/heimdall/internal/cache/mocks"
 	"github.com/dadrus/heimdall/internal/config"
@@ -58,6 +70,608 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
+type testExecutor func(pipeline.ExecutionContext) error
+
+func (e testExecutor) Execute(ctx pipeline.ExecutionContext) error { return e(ctx) }
+
+type testUpstreamTarget struct {
+	targetURL         url.URL
+	forwardHostHeader bool
+}
+
+func (t testUpstreamTarget) ApplyTo(targetURL *url.URL) { *targetURL = t.targetURL }
+func (t testUpstreamTarget) ForwardHostHeader() bool    { return t.forwardHostHeader }
+
+func TestNewService(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		tls              *config.TLS
+		http2            bool
+		unencryptedHTTP2 bool
+	}{
+		"cleartext enables http1 and h2c": {
+			unencryptedHTTP2: true,
+		},
+		"tls enables http1 and http2": {
+			tls:   &config.TLS{},
+			http2: true,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			conf := &config.Configuration{}
+
+			conf.Serve.TLS = tc.tls
+			conf.Serve.Requests.ReadTimeout = 10 * time.Second
+			conf.Serve.Requests.Headers.MaxSize = 42 * bytesize.KB
+			conf.Serve.Requests.Headers.ReadTimeout = 11 * time.Second
+			conf.Serve.Responses.WriteTimeout = 12 * time.Second
+			conf.Serve.Responses.WriteIdleTimeout = 19 * time.Second
+			conf.Serve.Connections.IdleTimeout = 13 * time.Second
+			conf.Serve.Connections.WriteIdleTimeout = 14 * time.Second
+			conf.Serve.Connections.Streams.MaxConcurrent = 17
+			conf.Serve.Connections.Liveness.ProbeAfter = 15 * time.Second
+			conf.Serve.Connections.Liveness.ProbeTimeout = 16 * time.Second
+
+			// WHEN
+			srv := newService(
+				conf,
+				mocks.NewCacheMock(t),
+				log.Logger,
+				mocks2.NewExecutorMock(t),
+			)
+
+			// THEN
+			assert.NotNil(t, srv.Handler)
+			require.NotNil(t, srv.rt)
+
+			assert.Equal(t, 10*time.Second, srv.ReadTimeout)
+			assert.Equal(t, 11*time.Second, srv.ReadHeaderTimeout)
+			assert.Equal(t, 12*time.Second, srv.WriteTimeout)
+			assert.Equal(t, 13*time.Second, srv.IdleTimeout)
+			assert.Equal(t, int(42*bytesize.KB), srv.MaxHeaderBytes)
+
+			require.NotNil(t, srv.HTTP2)
+			assert.Equal(t, 17, srv.HTTP2.MaxConcurrentStreams)
+			assert.Equal(t, 15*time.Second, srv.HTTP2.SendPingTimeout)
+			assert.Equal(t, 16*time.Second, srv.HTTP2.PingTimeout)
+			assert.Equal(t, 14*time.Second, srv.HTTP2.WriteByteTimeout)
+
+			require.NotNil(t, srv.Protocols)
+			assert.True(t, srv.Protocols.HTTP1())
+			assert.Equal(t, tc.http2, srv.Protocols.HTTP2())
+			assert.Equal(t, tc.unencryptedHTTP2, srv.Protocols.UnencryptedHTTP2())
+
+			assert.NotNil(t, srv.ErrorLog)
+			assert.Nil(t, srv.ConnContext)
+		})
+	}
+}
+
+func TestProxyServiceClosesIdleUpstreamConnections(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	remoteAddresses := make(chan string, 2)
+	upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		remoteAddresses <- req.RemoteAddr
+		_, err := rw.Write([]byte("ok"))
+		assert.NoError(t, err)
+	}))
+	defer upstream.Close()
+
+	rt := newProfileRoundTripper(config.ServeConfig{}, nil)
+	srv := &proxyService{
+		Server:  new(http.Server),
+		rt:      rt,
+		tunnels: newTunnelRegistry(),
+	}
+
+	roundTrip := func() string {
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, upstream.URL, nil)
+		require.NoError(t, err)
+
+		resp, err := rt.normal.RoundTrip(req)
+		require.NoError(t, err)
+
+		_, err = io.Copy(io.Discard, resp.Body)
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+
+		return <-remoteAddresses
+	}
+
+	firstRemoteAddress := roundTrip()
+
+	// WHEN
+	require.NoError(t, srv.Shutdown(t.Context()))
+
+	// THEN
+	secondRemoteAddress := roundTrip()
+	assert.NotEqual(t, firstRemoteAddress, secondRemoteAddress)
+}
+
+func TestProxyServiceClosesIdlePoolAfterTunnelDrainFailure(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	remoteAddresses := make(chan string, 2)
+	upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		remoteAddresses <- req.RemoteAddr
+		_, err := rw.Write([]byte("ok"))
+		assert.NoError(t, err)
+	}))
+	defer upstream.Close()
+
+	rt := newProfileRoundTripper(config.ServeConfig{}, nil)
+	registry := newTunnelRegistry()
+	tunnel := new(testTunnelConnection)
+	_, err := registry.track(tunnel, noopConnectionTeardownStrategy{})
+	require.NoError(t, err)
+
+	srv := &proxyService{
+		Server:  new(http.Server),
+		rt:      rt,
+		tunnels: registry,
+	}
+
+	roundTrip := func() string {
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, upstream.URL, nil)
+		require.NoError(t, err)
+
+		resp, err := rt.normal.RoundTrip(req)
+		require.NoError(t, err)
+
+		_, err = io.Copy(io.Discard, resp.Body)
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+
+		return <-remoteAddresses
+	}
+
+	firstRemoteAddress := roundTrip()
+	ctx, cancel := context.WithCancel(t.Context())
+	shutdownDone := make(chan error, 1)
+	go func() {
+		shutdownDone <- srv.Shutdown(ctx)
+	}()
+
+	require.Eventually(t, func() bool {
+		registry.mu.Lock()
+		defer registry.mu.Unlock()
+
+		return registry.sealed
+	}, time.Second, 10*time.Millisecond)
+
+	// WHEN
+	cancel()
+
+	// THEN
+	select {
+	case err = <-shutdownDone:
+		require.ErrorIs(t, err, errTunnelDrain)
+		require.ErrorIs(t, err, context.Canceled)
+	case <-time.After(time.Second):
+		require.Fail(t, "shutdown did not return after tunnel drain context cancellation")
+	}
+
+	assert.Equal(t, int32(1), tunnel.closeCalls.Load())
+	assert.Equal(t, 0, tunnelRegistrySize(registry))
+
+	secondRemoteAddress := roundTrip()
+	assert.NotEqual(t, firstRemoteAddress, secondRemoteAddress)
+}
+
+func TestProxyServiceForceCloseReturnsTunnelError(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	closeErr := errors.New("could not close tunnel")
+	registry := newTunnelRegistry()
+	_, err := registry.track(&testTunnelConnection{closeErr: closeErr}, noopConnectionTeardownStrategy{})
+	require.NoError(t, err)
+
+	srv := &proxyService{
+		Server:  new(http.Server),
+		rt:      newProfileRoundTripper(config.ServeConfig{}, nil),
+		tunnels: registry,
+	}
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	// WHEN
+	err = srv.Shutdown(ctx)
+
+	// THEN
+	require.ErrorIs(t, err, errTunnelDrain)
+	require.ErrorIs(t, err, context.Canceled)
+	require.ErrorIs(t, err, closeErr)
+	assert.Equal(t, 0, tunnelRegistrySize(registry))
+}
+
+func TestProxyServiceShutdownWaitsForTunnels(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	registry := newTunnelRegistry()
+	first, err := registry.track(new(testTunnelConnection), noopConnectionTeardownStrategy{})
+	require.NoError(t, err)
+	second, err := registry.track(new(testTunnelConnection), noopConnectionTeardownStrategy{})
+	require.NoError(t, err)
+
+	srv := &proxyService{
+		Server:  new(http.Server),
+		rt:      newProfileRoundTripper(config.ServeConfig{}, nil),
+		tunnels: registry,
+	}
+
+	shutdownDone := make(chan error, 1)
+	go func() {
+		shutdownDone <- srv.Shutdown(t.Context())
+	}()
+
+	require.Eventually(t, func() bool {
+		registry.mu.Lock()
+		defer registry.mu.Unlock()
+
+		return registry.sealed
+	}, time.Second, 10*time.Millisecond)
+
+	select {
+	case err := <-shutdownDone:
+		require.Failf(t, "shutdown returned before tunnels drained", "error: %v", err)
+	default:
+	}
+
+	// WHEN
+	require.NoError(t, first.Close())
+
+	// THEN
+	select {
+	case err := <-shutdownDone:
+		require.Failf(t, "shutdown returned with one tunnel still tracked", "error: %v", err)
+	default:
+	}
+
+	// WHEN
+	require.NoError(t, second.Close())
+
+	// THEN
+	select {
+	case err := <-shutdownDone:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.Fail(t, "shutdown did not finish after tunnel drain")
+	}
+}
+
+func TestProxyServiceForceCloseClosesRemainingTunnels(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	registry := newTunnelRegistry()
+	firstConn := new(testTunnelConnection)
+	secondConn := new(testTunnelConnection)
+	_, err := registry.track(firstConn, noopConnectionTeardownStrategy{})
+	require.NoError(t, err)
+	_, err = registry.track(secondConn, noopConnectionTeardownStrategy{})
+	require.NoError(t, err)
+
+	srv := &proxyService{
+		Server:  new(http.Server),
+		rt:      newProfileRoundTripper(config.ServeConfig{}, nil),
+		tunnels: registry,
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	shutdownDone := make(chan error, 1)
+	go func() {
+		shutdownDone <- srv.Shutdown(ctx)
+	}()
+
+	require.Eventually(t, func() bool {
+		registry.mu.Lock()
+		defer registry.mu.Unlock()
+
+		return registry.sealed
+	}, time.Second, 10*time.Millisecond)
+
+	assert.Equal(t, int32(0), firstConn.closeCalls.Load())
+	assert.Equal(t, int32(0), secondConn.closeCalls.Load())
+	assert.Equal(t, 2, tunnelRegistrySize(registry))
+
+	// WHEN
+	cancel()
+
+	// THEN
+	select {
+	case err = <-shutdownDone:
+		require.ErrorIs(t, err, errTunnelDrain)
+		require.ErrorIs(t, err, context.Canceled)
+	case <-time.After(time.Second):
+		require.Fail(t, "shutdown did not return after tunnel drain context cancellation")
+	}
+
+	assert.Equal(t, int32(1), firstConn.closeCalls.Load())
+	assert.Equal(t, int32(1), secondConn.closeCalls.Load())
+	assert.Equal(t, 0, tunnelRegistrySize(registry))
+}
+
+func TestProxyServiceShutdownDrainsActiveRequests(t *testing.T) {
+	for uc, tc := range map[string]struct {
+		transport     func() *http.Transport
+		expectedProto string
+	}{
+		"http1": {
+			transport:     func() *http.Transport { return new(http.Transport) },
+			expectedProto: "HTTP/1.1",
+		},
+		"h2c": {
+			transport: func() *http.Transport {
+				transport := new(http.Transport)
+				transport.Protocols = new(http.Protocols)
+				transport.Protocols.SetHTTP2(true)
+				transport.Protocols.SetUnencryptedHTTP2(true)
+
+				return transport
+			},
+			expectedProto: "HTTP/2.0",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			requestEntered := make(chan struct{})
+			releaseRequest := make(chan struct{})
+			var releaseOnce sync.Once
+			release := func() { releaseOnce.Do(func() { close(releaseRequest) }) }
+			t.Cleanup(release)
+
+			upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+				close(requestEntered)
+				<-releaseRequest
+				rw.WriteHeader(http.StatusNoContent)
+			}))
+			defer upstream.Close()
+
+			upstreamURL, err := url.Parse(upstream.URL)
+			require.NoError(t, err)
+
+			proxy, addr := startProxyService(t, config.ServeConfig{}, upstreamURL)
+			shutdownStarted := make(chan struct{})
+			var shutdownStartedOnce sync.Once
+			proxy.RegisterOnShutdown(func() {
+				shutdownStartedOnce.Do(func() { close(shutdownStarted) })
+			})
+
+			transport := tc.transport()
+			client := &http.Client{Transport: transport}
+			t.Cleanup(transport.CloseIdleConnections)
+
+			type requestResult struct {
+				response *http.Response
+				err      error
+			}
+
+			requestDone := make(chan requestResult, 1)
+			go func() {
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/drain", nil)
+				if err != nil {
+					requestDone <- requestResult{err: err}
+
+					return
+				}
+
+				resp, err := client.Do(req) //nolint:bodyclose
+				requestDone <- requestResult{response: resp, err: err}
+			}()
+
+			select {
+			case <-requestEntered:
+			case <-time.After(time.Second):
+				require.FailNow(t, "request did not reach upstream")
+			}
+
+			shutdownCtx, cancel := context.WithTimeout(t.Context(), time.Second)
+			defer cancel()
+			shutdownDone := make(chan error, 1)
+			go func() { shutdownDone <- proxy.Shutdown(shutdownCtx) }()
+
+			select {
+			case <-shutdownStarted:
+			case <-time.After(time.Second):
+				require.FailNow(t, "shutdown did not start")
+			}
+
+			select {
+			case err = <-shutdownDone:
+				require.Failf(t, "shutdown returned before active request drained", "error: %v", err)
+			default:
+			}
+
+			// WHEN
+			release()
+
+			// THEN
+			select {
+			case result := <-requestDone:
+				require.NoError(t, result.err)
+				require.NotNil(t, result.response)
+				defer result.response.Body.Close()
+				assert.Equal(t, http.StatusNoContent, result.response.StatusCode)
+				assert.Equal(t, tc.expectedProto, result.response.Proto)
+			case <-time.After(time.Second):
+				require.FailNow(t, "request did not complete")
+			}
+
+			select {
+			case err = <-shutdownDone:
+				require.NoError(t, err)
+			case <-time.After(time.Second):
+				require.FailNow(t, "shutdown did not complete after request drained")
+			}
+		})
+	}
+}
+
+func TestProxyServiceShutdownClosesWebSocketAfterHTTPGraceIsExhausted(t *testing.T) {
+	// GIVEN
+	var releaseBlockOnce sync.Once
+	releaseBlock := make(chan struct{})
+	blockEntered := make(chan struct{})
+	upstreamReady := make(chan error, 1)
+	upstreamClosed := make(chan error, 1)
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		switch req.URL.Path {
+		case "/block":
+			close(blockEntered)
+			<-releaseBlock
+			rw.WriteHeader(http.StatusNoContent)
+		case "/tunnel":
+			conn, err := (&websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}).Upgrade(rw, req, nil)
+			if err != nil {
+				upstreamReady <- err
+
+				return
+			}
+			defer conn.Close()
+			conn.SetCloseHandler(func(int, string) error { return nil })
+			upstreamReady <- nil
+
+			_, _, err = conn.ReadMessage()
+			upstreamClosed <- err
+		default:
+			rw.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer upstream.Close()
+	defer releaseBlockOnce.Do(func() { close(releaseBlock) })
+
+	upstreamURL, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+
+	proxy, addr := startProxyService(t, config.ServeConfig{}, upstreamURL)
+
+	wsConn, resp, err := websocket.DefaultDialer.Dial("ws://"+addr+"/tunnel", nil)
+	require.NoError(t, err)
+	defer wsConn.Close()
+	defer resp.Body.Close()
+	wsConn.SetCloseHandler(func(int, string) error { return nil })
+
+	select {
+	case err = <-upstreamReady:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "upstream websocket did not become ready")
+	}
+
+	require.Eventually(t, func() bool {
+		return tunnelRegistrySize(proxy.tunnels) == 2
+	}, time.Second, 10*time.Millisecond)
+
+	blockClient := &http.Client{Transport: new(http.Transport)}
+	defer blockClient.CloseIdleConnections()
+	blockDone := make(chan error, 1)
+	go func() {
+		response, err := blockClient.Get("http://" + addr + "/block") //nolint:noctx,bodyclose
+		if response != nil {
+			_ = response.Body.Close()
+		}
+		blockDone <- err
+	}()
+
+	select {
+	case <-blockEntered:
+	case <-time.After(time.Second):
+		require.FailNow(t, "blocking request did not reach upstream")
+	}
+
+	// WHEN
+	shutdownCtx, cancel := context.WithTimeout(t.Context(), 75*time.Millisecond)
+	err = proxy.Shutdown(shutdownCtx)
+	cancel()
+
+	// THEN
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	require.ErrorIs(t, err, errTunnelDrain)
+
+	_, _, err = wsConn.ReadMessage()
+	require.Error(t, err)
+
+	select {
+	case err = <-upstreamClosed:
+		require.Error(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "upstream websocket was not closed")
+	}
+
+	assert.Equal(t, 0, tunnelRegistrySize(proxy.tunnels))
+
+	select {
+	case err = <-blockDone:
+		require.Failf(t, "normal HTTP request was force-closed by proxy shutdown", "error: %v", err)
+	default:
+	}
+
+	releaseBlockOnce.Do(func() { close(releaseBlock) })
+
+	select {
+	case err = <-blockDone:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "normal HTTP request did not finish after test released it")
+	}
+}
+
+func TestProxyServiceAbortsCommittedResponseOnUpstreamBodyFailure(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		conn, brw, err := http.NewResponseController(rw).Hijack()
+		if !assert.NoError(t, err) {
+			return
+		}
+		defer conn.Close()
+
+		_, err = io.WriteString(
+			brw,
+			"HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\n\r\n5\r\nhello\r\n",
+		)
+		if !assert.NoError(t, err) {
+			return
+		}
+
+		assert.NoError(t, brw.Flush())
+	}))
+	defer upstream.Close()
+
+	upstreamURL, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+
+	_, addr := startProxyService(t, config.ServeConfig{}, upstreamURL)
+	transport := new(http.Transport)
+	client := &http.Client{Transport: transport}
+	t.Cleanup(transport.CloseIdleConnections)
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/broken", nil)
+	require.NoError(t, err)
+
+	resp, err := client.Do(req) //nolint:bodyclose
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	// WHEN
+	body, readErr := io.ReadAll(resp.Body)
+
+	// THEN
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, "hello", string(body))
+	require.ErrorIs(t, readErr, io.ErrUnexpectedEOF)
+}
+
+//nolint:gocyclo
 func TestProxyService(t *testing.T) {
 	t.Parallel()
 
@@ -86,6 +700,7 @@ func TestProxyService(t *testing.T) {
 		serviceConf    config.ServeConfig
 		enableMetrics  bool
 		disableHTTP2   bool
+		upstreamScheme string
 		createRequest  func(t *testing.T, host string) *http.Request
 		createClient   func(t *testing.T) *http.Client
 		configureMocks func(
@@ -295,8 +910,13 @@ func TestProxyService(t *testing.T) {
 			},
 		},
 		"successful rule execution - request method and path are taken from the real request (trusted proxy not configured)": {
+			upstreamScheme: "http",
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+				Upstream: config.UpstreamConfig{
+					Connections: config.UpstreamConnections{
+						WriteIdleTimeout: 250 * time.Millisecond,
+					},
+				},
 			},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
@@ -349,6 +969,8 @@ func TestProxyService(t *testing.T) {
 			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
+				assert.Equal(t, "HTTP/1.1", req.Proto)
+
 				assert.Equal(t, http.MethodPost, req.Method)
 				assert.Equal(t, "/foobar", req.URL.Path)
 
@@ -386,9 +1008,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"successful rule execution - headers are set": {
 			disableHTTP2: true,
-			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
-			},
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
 
@@ -466,7 +1085,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"successful rule execution - request method is taken from the header (trusted proxy configured)": {
 			serviceConf: config.ServeConfig{
-				Timeout:        config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				TrustedProxies: []string{"0.0.0.0/0"},
 			},
 			createRequest: func(t *testing.T, host string) *http.Request {
@@ -556,7 +1174,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"successful rule execution - request path is taken from the header (trusted proxy configured)": {
 			serviceConf: config.ServeConfig{
-				Timeout:        config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				TrustedProxies: []string{"0.0.0.0/0"},
 			},
 			createRequest: func(t *testing.T, host string) *http.Request {
@@ -646,7 +1263,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"CORS test actual request": {
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
 				CORS: &config.CORS{
 					AllowedMethods:   []string{http.MethodGet},
 					AllowedOrigins:   []string{"https://foo.bar"},
@@ -740,7 +1356,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"CORS test preflight request": {
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 10 * time.Second},
 				CORS: &config.CORS{
 					AllowedMethods:   []string{http.MethodGet},
 					AllowedOrigins:   []string{"https://foo.bar"},
@@ -790,7 +1405,6 @@ func TestProxyService(t *testing.T) {
 		},
 		"test metrics collection": {
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 10 * time.Second},
 				CORS: &config.CORS{
 					AllowedMethods:   []string{http.MethodGet},
 					AllowedOrigins:   []string{"https://foo.bar"},
@@ -837,7 +1451,15 @@ func TestProxyService(t *testing.T) {
 		},
 		"http2 usage": {
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1000 * time.Second, Write: 1000 * time.Second, Idle: 1000 * time.Second},
+				Upstream: config.UpstreamConfig{
+					Connections: config.UpstreamConnections{
+						WriteIdleTimeout: 250 * time.Millisecond,
+						Liveness: config.ConnectionLiveness{
+							ProbeAfter:   100 * time.Millisecond,
+							ProbeTimeout: 100 * time.Millisecond,
+						},
+					},
+				},
 				TLS: &config.TLS{
 					Secret: config.Secret{Source: "proxy", Selector: "server"},
 				},
@@ -955,10 +1577,320 @@ func TestProxyService(t *testing.T) {
 				assert.JSONEq(t, `{ "foo": "bar" }`, string(data))
 			},
 		},
+		"h2c usage": {
+			upstreamScheme: "h2c",
+			serviceConf: config.ServeConfig{
+				Upstream: config.UpstreamConfig{
+					Connections: config.UpstreamConnections{
+						WriteIdleTimeout: 250 * time.Millisecond,
+						Liveness: config.ConnectionLiveness{
+							ProbeAfter:   100 * time.Millisecond,
+							ProbeTimeout: 100 * time.Millisecond,
+						},
+					},
+				},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodGet,
+					fmt.Sprintf("http://%s/foobar", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+					ctx.PrepareUpstreamView(target)
+				}).Return(nil)
+			},
+			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
+				t.Helper()
+
+				assert.Equal(t, "HTTP/2.0", req.Proto)
+				assert.Equal(t, "/bar", req.URL.Path)
+
+				rw.WriteHeader(http.StatusOK)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.True(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+			},
+		},
+		"native gRPC uses http2 over https": {
+			serviceConf: config.ServeConfig{
+				Upstream: config.UpstreamConfig{
+					Connections: config.UpstreamConnections{
+						WriteIdleTimeout: 250 * time.Millisecond,
+						Liveness: config.ConnectionLiveness{
+							ProbeAfter:   100 * time.Millisecond,
+							ProbeTimeout: 100 * time.Millisecond,
+						},
+					},
+				},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/foobar", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				req.Header.Set("Content-Type", grpcContentType)
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+					ctx.PrepareUpstreamView(target)
+				}).Return(nil)
+			},
+			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
+				t.Helper()
+
+				assert.Equal(t, "HTTP/2.0", req.Proto)
+				assert.Equal(t, grpcContentType, req.Header.Get("Content-Type"))
+
+				rw.WriteHeader(http.StatusOK)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.True(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+			},
+		},
+		"native gRPC uses h2c": {
+			upstreamScheme: "h2c",
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/foobar", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				req.Header.Set("Content-Type", grpcContentType)
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+					ctx.PrepareUpstreamView(target)
+				}).Return(nil)
+			},
+			processRequest: func(t *testing.T, rw http.ResponseWriter, req *http.Request) {
+				t.Helper()
+
+				assert.Equal(t, "HTTP/2.0", req.Proto)
+				assert.Equal(t, grpcContentType, req.Header.Get("Content-Type"))
+
+				rw.WriteHeader(http.StatusOK)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.True(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusOK, resp.StatusCode)
+			},
+		},
+		"native gRPC over http is rejected": {
+			upstreamScheme: "http",
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/foobar", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				req.Header.Set("Content-Type", grpcContentType)
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+					ctx.PrepareUpstreamView(target)
+				}).Return(nil)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.False(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+				data, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
+			},
+		},
+		"upgrade over h2c is rejected": {
+			upstreamScheme: "h2c",
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodGet,
+					fmt.Sprintf("http://%s/foobar", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				req.Header.Set("Connection", "Upgrade")
+				req.Header.Set("Upgrade", "websocket")
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+					ctx.PrepareUpstreamView(target)
+				}).Return(nil)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.False(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+				data, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
+			},
+		},
 		"http2 not supported by upstream server": {
 			disableHTTP2: true,
 			serviceConf: config.ServeConfig{
-				Timeout: config.Timeout{Read: 1 * time.Second, Write: 1 * time.Second, Idle: 1 * time.Second},
+				Upstream: config.UpstreamConfig{
+					Connections: config.UpstreamConnections{
+						WriteIdleTimeout: 250 * time.Millisecond,
+						Liveness: config.ConnectionLiveness{
+							ProbeAfter:   100 * time.Millisecond,
+							ProbeTimeout: 100 * time.Millisecond,
+						},
+					},
+				},
 				TLS: &config.TLS{
 					Secret: config.Secret{Source: "proxy", Selector: "server"},
 				},
@@ -1076,6 +2008,180 @@ func TestProxyService(t *testing.T) {
 				assert.JSONEq(t, `{ "foo": "bar" }`, string(data))
 			},
 		},
+		"native gRPC does not fall back to http1": {
+			disableHTTP2: true,
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/foobar", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				req.Header.Set("Content-Type", grpcContentType)
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/bar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+					ctx.PrepareUpstreamView(target)
+				}).Return(nil)
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.False(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusBadGateway, resp.StatusCode)
+
+				data, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
+			},
+		},
+		"request body exceeds limit with known content length": {
+			serviceConf: config.ServeConfig{
+				Requests: config.IngressRequests{
+					Body: config.IngressRequestBody{
+						MaxSize: 5 * bytesize.B,
+					},
+				},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/foobar", host),
+					strings.NewReader("123456"),
+				)
+				require.NoError(t, err)
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				_ *mocks2.ExecutorMock,
+				_ *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				_ *url.URL,
+			) {
+				t.Helper()
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.False(t, upstreamCalled)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
+
+				data, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
+			},
+		},
+		"request with unknown length exceeds body limit": {
+			serviceConf: config.ServeConfig{
+				Requests: config.IngressRequests{
+					Body: config.IngressRequestBody{
+						MaxSize: 5 * bytesize.B,
+					},
+				},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/foobar", host),
+					strings.NewReader("123456"),
+				)
+				require.NoError(t, err)
+
+				// Force streaming/chunked semantics so the bodylimit middleware
+				// cannot reject the request based on Content-Length.
+				req.ContentLength = -1
+
+				return req
+			},
+			configureMocks: func(
+				t *testing.T,
+				exec *mocks2.ExecutorMock,
+				target *mocks2.UpstreamTargetMock,
+				_ *secretsmocks.ResolverMock,
+				_ *secretsmocks.SecretHandleMock,
+				upstreamURL *url.URL,
+			) {
+				t.Helper()
+
+				target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+					*targetURL = url.URL{
+						Scheme: upstreamURL.Scheme,
+						Host:   upstreamURL.Host,
+						Path:   "/foobar",
+					}
+				})
+				target.EXPECT().ForwardHostHeader().Return(true)
+
+				exec.EXPECT().Execute(
+					mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
+						// Deliberately do not access Body()/RawBody().
+						// The request must reach the proxy path before its
+						// unknown-length body can exceed the limit.
+						ctx.PrepareUpstreamView(target)
+
+						return true
+					}),
+				).Return(nil)
+			},
+			processRequest: func(t *testing.T, _ http.ResponseWriter, req *http.Request) {
+				t.Helper()
+
+				// If the upstream handler is reached, consume the streamed body.
+				// Whether the handler itself is reached is transport timing dependent.
+				_, _ = io.Copy(io.Discard, req.Body)
+			},
+			assertResponse: func(t *testing.T, err error, _ bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, resp)
+
+				assert.Equal(t, http.StatusRequestEntityTooLarge, resp.StatusCode)
+
+				data, err := io.ReadAll(resp.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -1088,7 +2194,7 @@ func TestProxyService(t *testing.T) {
 				))
 			}
 
-			upstreamCalled := false
+			var upstreamCalled atomic.Bool
 
 			processRequest := x.IfThenElse(tc.processRequest != nil, tc.processRequest,
 				func(t *testing.T, rw http.ResponseWriter, _ *http.Request) {
@@ -1098,21 +2204,34 @@ func TestProxyService(t *testing.T) {
 				})
 
 			upstreamSrv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				upstreamCalled = true
+				upstreamCalled.Store(true)
 
 				processRequest(t, w, r)
 			}))
 			defer upstreamSrv.Close()
 
-			upstreamSrv.EnableHTTP2 = !tc.disableHTTP2
-			upstreamSrv.StartTLS()
+			switch tc.upstreamScheme {
+			case "http":
+				upstreamSrv.Start()
+			case "h2c":
+				upstreamSrv.Config.Protocols = new(http.Protocols)
+				upstreamSrv.Config.Protocols.SetUnencryptedHTTP2(true)
+				upstreamSrv.Start()
+			default:
+				upstreamSrv.EnableHTTP2 = !tc.disableHTTP2
+				upstreamSrv.StartTLS()
 
-			certPool := x509.NewCertPool()
-			certPool.AddCert(upstreamSrv.Certificate())
-			tlsClientConfig = &tls.Config{RootCAs: certPool} //nolint:gosec
+				certPool := x509.NewCertPool()
+				certPool.AddCert(upstreamSrv.Certificate())
+				tlsClientConfig = &tls.Config{RootCAs: certPool} //nolint:gosec
+			}
 
 			upstreamURL, err := url.Parse(upstreamSrv.URL)
 			require.NoError(t, err)
+
+			if tc.upstreamScheme == "h2c" {
+				upstreamURL.Scheme = "h2c"
+			}
 
 			createClient := x.IfThenElse(tc.createClient != nil,
 				tc.createClient,
@@ -1144,6 +2263,7 @@ func TestProxyService(t *testing.T) {
 			factory, err := listener.NewFactory(
 				proxyConf.Address(),
 				proxyConf.TLS,
+				0,
 				sr,
 			)
 			require.NoError(t, err)
@@ -1171,7 +2291,7 @@ func TestProxyService(t *testing.T) {
 				defer resp.Body.Close()
 			}
 
-			tc.assertResponse(t, err, upstreamCalled, resp)
+			tc.assertResponse(t, err, upstreamCalled.Load(), resp)
 
 			var rm metricdata.ResourceMetrics
 
@@ -1185,6 +2305,431 @@ func TestProxyService(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("rejects request if maximum number of requests is in flight", func(t *testing.T) {
+		// GIVEN
+		port, err := testsupport.GetFreePort()
+		require.NoError(t, err)
+
+		proxyConf := config.ServeConfig{
+			Host: "127.0.0.1",
+			Port: port,
+		}
+
+		proxyConf.Requests.MaxInFlight = 1
+
+		factory, err := listener.NewFactory(proxyConf.Address(), proxyConf.TLS, 0, nil)
+		require.NoError(t, err)
+
+		lstnr, err := factory.Create(t.Context())
+		require.NoError(t, err)
+
+		conf := &config.Configuration{Serve: proxyConf}
+		exec := mocks2.NewExecutorMock(t)
+
+		requestEntered := make(chan struct{}, 2)
+		releaseRequest := make(chan struct{})
+
+		var releaseOnce sync.Once
+		release := func() {
+			releaseOnce.Do(func() {
+				close(releaseRequest)
+			})
+		}
+
+		exec.EXPECT().Execute(mock.Anything).
+			Run(func(_ pipeline.ExecutionContext) {
+				requestEntered <- struct{}{}
+
+				<-releaseRequest
+			}).
+			Return(pipeline.ErrNoRuleFound)
+
+		proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+
+		defer func() {
+			release()
+			_ = proxy.Shutdown(t.Context())
+		}()
+
+		go func() {
+			_ = proxy.Serve(lstnr)
+		}()
+
+		time.Sleep(50 * time.Millisecond)
+
+		client := &http.Client{Transport: &http.Transport{}}
+
+		firstResponse := make(chan *http.Response, 1)
+		firstError := make(chan error, 1)
+
+		go func() {
+			req, err := http.NewRequestWithContext(
+				t.Context(),
+				http.MethodGet,
+				fmt.Sprintf("http://%s/", proxyConf.Address()),
+				nil,
+			)
+			if err != nil {
+				firstError <- err
+
+				return
+			}
+
+			resp, err := client.Do(req) //nolint:bodyclose
+			firstResponse <- resp
+			firstError <- err
+		}()
+
+		select {
+		case <-requestEntered:
+		case <-time.After(time.Second):
+			require.FailNow(t, "first request did not enter pipeline")
+		}
+
+		secondRequest, err := http.NewRequestWithContext(
+			t.Context(),
+			http.MethodGet,
+			fmt.Sprintf("http://%s/", proxyConf.Address()),
+			nil,
+		)
+		require.NoError(t, err)
+
+		var (
+			secondResponse *http.Response
+			secondErr      error
+		)
+
+		secondDone := make(chan struct{})
+
+		// WHEN
+		go func() {
+			defer close(secondDone)
+
+			secondResponse, secondErr = client.Do(secondRequest) //nolint:bodyclose
+		}()
+
+		// THEN
+		select {
+		case <-requestEntered:
+			require.FailNow(t, "second request entered pipeline while maximum number of requests was in flight")
+
+		case <-secondDone:
+			require.NoError(t, secondErr)
+			require.NotNil(t, secondResponse)
+			defer secondResponse.Body.Close()
+
+			assert.Equal(t, http.StatusServiceUnavailable, secondResponse.StatusCode)
+
+			data, err := io.ReadAll(secondResponse.Body)
+			require.NoError(t, err)
+			assert.Empty(t, data)
+
+		case <-time.After(time.Second):
+			require.FailNow(t, "second request was not rejected immediately")
+		}
+
+		// WHEN
+		release()
+
+		// THEN
+		select {
+		case err := <-firstError:
+			require.NoError(t, err)
+		case <-time.After(time.Second):
+			require.FailNow(t, "first request did not complete")
+		}
+
+		select {
+		case resp := <-firstResponse:
+			require.NotNil(t, resp)
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+		case <-time.After(time.Second):
+			require.FailNow(t, "first response was not received")
+		}
+	})
+
+	t.Run("rejects native gRPC request with unavailable if maximum number of requests is in flight", func(t *testing.T) {
+		// GIVEN
+		port, err := testsupport.GetFreePort()
+		require.NoError(t, err)
+
+		proxyConf := config.ServeConfig{
+			Host: "127.0.0.1",
+			Port: port,
+		}
+		proxyConf.Requests.MaxInFlight = 1
+
+		factory, err := listener.NewFactory(proxyConf.Address(), proxyConf.TLS, 0, nil)
+		require.NoError(t, err)
+
+		lstnr, err := factory.Create(t.Context())
+		require.NoError(t, err)
+
+		conf := &config.Configuration{Serve: proxyConf}
+		exec := mocks2.NewExecutorMock(t)
+
+		requestEntered := make(chan struct{}, 2)
+		releaseRequest := make(chan struct{})
+
+		var releaseOnce sync.Once
+		release := func() {
+			releaseOnce.Do(func() {
+				close(releaseRequest)
+			})
+		}
+
+		exec.EXPECT().Execute(mock.Anything).
+			Run(func(_ pipeline.ExecutionContext) {
+				requestEntered <- struct{}{}
+
+				<-releaseRequest
+			}).
+			Return(pipeline.ErrNoRuleFound)
+
+		proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+
+		defer func() {
+			release()
+			_ = proxy.Shutdown(t.Context())
+		}()
+
+		go func() {
+			_ = proxy.Serve(lstnr)
+		}()
+
+		conn, err := grpc.NewClient(
+			"passthrough:///"+proxyConf.Address(),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		)
+		require.NoError(t, err)
+		defer conn.Close()
+
+		firstDone := make(chan error, 1)
+		go func() {
+			firstDone <- conn.Invoke(
+				t.Context(),
+				"/test.Service/Method",
+				&emptypb.Empty{},
+				&emptypb.Empty{},
+			)
+		}()
+
+		select {
+		case <-requestEntered:
+		case <-time.After(time.Second):
+			require.FailNow(t, "first request did not enter pipeline")
+		}
+
+		// WHEN
+		secondErr := conn.Invoke(
+			t.Context(),
+			"/test.Service/Method",
+			&emptypb.Empty{},
+			&emptypb.Empty{},
+		)
+
+		// THEN
+		require.Error(t, secondErr)
+		assert.Equal(t, codes.Unavailable, status.Code(secondErr))
+
+		select {
+		case <-requestEntered:
+			require.FailNow(t, "second request entered pipeline while maximum number of requests was in flight")
+		default:
+		}
+
+		release()
+
+		select {
+		case <-firstDone:
+		case <-time.After(time.Second):
+			require.FailNow(t, "first request did not complete")
+		}
+	})
+
+	t.Run("applies request body read idle timeout", func(t *testing.T) {
+		// GIVEN
+		port, err := testsupport.GetFreePort()
+		require.NoError(t, err)
+
+		bodyReadResult := make(chan error, 1)
+		exec := testExecutor(func(ctx pipeline.ExecutionContext) error {
+			_, err := ctx.Request().Body()
+			bodyReadResult <- err
+
+			return err
+		})
+		conf := &config.Configuration{
+			Serve: config.ServeConfig{
+				Host: "127.0.0.1",
+				Port: port,
+				Requests: config.IngressRequests{
+					Body: config.IngressRequestBody{
+						ReadIdleTimeout: 100 * time.Millisecond,
+					},
+				},
+			},
+		}
+
+		factory, err := listener.NewFactory(
+			conf.Serve.Address(),
+			conf.Serve.TLS,
+			0,
+			nil,
+		)
+		require.NoError(t, err)
+
+		lstnr, err := factory.Create(t.Context())
+		require.NoError(t, err)
+
+		proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+		defer proxy.Shutdown(t.Context())
+
+		go func() {
+			_ = proxy.Serve(lstnr)
+		}()
+
+		time.Sleep(50 * time.Millisecond)
+
+		dialer := &net.Dialer{}
+		conn, err := dialer.DialContext(t.Context(), "tcp", conf.Serve.Address())
+		require.NoError(t, err)
+		defer conn.Close()
+
+		_, err = io.WriteString(
+			conn,
+			"POST / HTTP/1.1\r\nHost: "+conf.Serve.Address()+"\r\nContent-Length: 1\r\n\r\n",
+		)
+		require.NoError(t, err)
+
+		// WHEN
+		var bodyReadErr error
+		select {
+		case bodyReadErr = <-bodyReadResult:
+		case <-time.After(2 * time.Second):
+			require.FailNow(t, "request body read did not complete")
+		}
+
+		// THEN
+		require.Error(t, bodyReadErr)
+
+		var netErr net.Error
+		require.ErrorAs(t, bodyReadErr, &netErr)
+		assert.True(t, netErr.Timeout())
+	})
+}
+
+func TestProxyServiceUsesUpdatedUpstreamScheme(t *testing.T) {
+	// GIVEN
+	upstreamProtocols := make(chan string, 2)
+	upstreamSrv := httptest.NewUnstartedServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		upstreamProtocols <- req.Proto
+
+		rw.WriteHeader(http.StatusOK)
+	}))
+	defer upstreamSrv.Close()
+
+	upstreamSrv.Config.Protocols = new(http.Protocols)
+	upstreamSrv.Config.Protocols.SetHTTP1(true)
+	upstreamSrv.Config.Protocols.SetUnencryptedHTTP2(true)
+	upstreamSrv.Start()
+
+	upstreamURL, err := url.Parse(upstreamSrv.URL)
+	require.NoError(t, err)
+
+	var (
+		schemeMu sync.RWMutex
+		scheme   = "http"
+	)
+
+	target := mocks2.NewUpstreamTargetMock(t)
+	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
+		schemeMu.RLock()
+		defer schemeMu.RUnlock()
+
+		*targetURL = url.URL{
+			Scheme: scheme,
+			Host:   upstreamURL.Host,
+			Path:   "/bar",
+		}
+	}).Twice()
+	target.EXPECT().ForwardHostHeader().Return(true).Twice()
+
+	exec := mocks2.NewExecutorMock(t)
+	exec.EXPECT().Execute(mock.Anything).Run(func(ctx pipeline.ExecutionContext) {
+		ctx.PrepareUpstreamView(target)
+	}).Return(nil).Twice()
+
+	port, err := testsupport.GetFreePort()
+	require.NoError(t, err)
+
+	conf := &config.Configuration{
+		Serve: config.ServeConfig{
+			Host: "127.0.0.1",
+			Port: port,
+		},
+	}
+
+	factory, err := listener.NewFactory(
+		conf.Serve.Address(),
+		conf.Serve.TLS,
+		0,
+		nil,
+	)
+	require.NoError(t, err)
+
+	lstnr, err := factory.Create(t.Context())
+	require.NoError(t, err)
+
+	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+	defer proxy.Shutdown(t.Context())
+
+	go func() {
+		_ = proxy.Serve(lstnr)
+	}()
+
+	time.Sleep(50 * time.Millisecond)
+
+	client := &http.Client{Transport: &http.Transport{}}
+
+	doRequest := func() *http.Response {
+		req, err := http.NewRequestWithContext(
+			t.Context(),
+			http.MethodGet,
+			fmt.Sprintf("http://%s/foo", conf.Serve.Address()),
+			nil,
+		)
+		require.NoError(t, err)
+
+		resp, err := client.Do(req) //nolint:bodyclose
+		require.NoError(t, err)
+		require.NotNil(t, resp)
+
+		return resp
+	}
+
+	// WHEN
+	resp := doRequest()
+
+	// THEN
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NoError(t, resp.Body.Close())
+	assert.Equal(t, "HTTP/1.1", <-upstreamProtocols)
+
+	// WHEN
+	schemeMu.Lock()
+	scheme = "h2c"
+	schemeMu.Unlock()
+
+	resp = doRequest()
+
+	// THEN
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NoError(t, resp.Body.Close())
+	assert.Equal(t, "HTTP/2.0", <-upstreamProtocols)
 }
 
 func TestWebSocketSupport(t *testing.T) {
@@ -1194,6 +2739,7 @@ func TestWebSocketSupport(t *testing.T) {
 	require.NoError(t, err)
 
 	upstreamSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		assert.Equal(t, "HTTP/1.1", req.Proto)
 		assert.Equal(t, "/bar", req.URL.Path)
 
 		upgrader := websocket.Upgrader{
@@ -1214,6 +2760,12 @@ func TestWebSocketSupport(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, []byte("ping 1"), message)
 
+		// The HTTP response write policy ends at a successful hijack, while the
+		// upstream connection write policy is only active during an actual write.
+		// A quiet tunnel must therefore remain usable after both configured
+		// write-idle windows have elapsed.
+		time.Sleep(150 * time.Millisecond)
+
 		err = con.WriteMessage(websocket.TextMessage, []byte("ping 2"))
 		assert.NoError(t, err)
 
@@ -1226,47 +2778,48 @@ func TestWebSocketSupport(t *testing.T) {
 	upstreamURL, err := url.Parse(upstreamSrv.URL)
 	require.NoError(t, err)
 
-	exec := mocks2.NewExecutorMock(t)
-	target := mocks2.NewUpstreamTargetMock(t)
-	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
-		*targetURL = url.URL{
+	target := testUpstreamTarget{
+		targetURL: url.URL{
 			Scheme: upstreamURL.Scheme,
 			Host:   upstreamURL.Host,
 			Path:   "/bar",
-		}
+		},
+		forwardHostHeader: true,
+	}
+	exec := testExecutor(func(ctx pipeline.ExecutionContext) error {
+		assert.Equal(t, "/foo", ctx.Request().URL.Path)
+		assert.Equal(t, http.MethodGet, ctx.Request().Method)
+
+		ctx.PrepareUpstreamView(target)
+
+		return nil
 	})
-	target.EXPECT().ForwardHostHeader().Return(true)
-
-	exec.EXPECT().Execute(
-		mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
-			ctx.PrepareUpstreamView(target)
-
-			pathMatched := ctx.Request().URL.Path == "/foo"
-			methodMatched := ctx.Request().Method == http.MethodGet
-
-			return pathMatched && methodMatched
-		}),
-	).Return(nil)
 
 	conf := &config.Configuration{
 		Serve: config.ServeConfig{
-			Timeout: config.Timeout{
-				Read:  1 * time.Second,
-				Write: 1 * time.Second,
-				Idle:  1 * time.Second,
-			},
 			Host: "127.0.0.1",
 			Port: port,
+			Upstream: config.UpstreamConfig{
+				Connections: config.UpstreamConnections{
+					WriteIdleTimeout: 50 * time.Millisecond,
+				},
+			},
+			Responses: config.IngressResponses{
+				WriteIdleTimeout: 50 * time.Millisecond,
+				WriteMinRate:     500,
+			},
 		},
 	}
 
-	proxy := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+	traceLogger := zerolog.New(io.Discard).Level(zerolog.TraceLevel)
+	proxy := newService(conf, mocks.NewCacheMock(t), traceLogger, exec)
 
 	defer proxy.Shutdown(t.Context())
 
 	factory, err := listener.NewFactory(
 		conf.Serve.Address(),
 		conf.Serve.TLS,
+		0,
 		nil,
 	)
 	require.NoError(t, err)
@@ -1307,6 +2860,334 @@ func TestWebSocketSupport(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestWebSocketTunnelHoldsRequestAdmissionSlot(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	upstreamReady := make(chan error, 1)
+	upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		if websocket.IsWebSocketUpgrade(req) {
+			conn, err := (&websocket.Upgrader{CheckOrigin: func(*http.Request) bool { return true }}).Upgrade(rw, req, nil)
+			if err != nil {
+				upstreamReady <- err
+
+				return
+			}
+			upstreamReady <- nil
+			defer conn.Close()
+
+			for {
+				if _, _, err = conn.ReadMessage(); err != nil {
+					return
+				}
+			}
+		}
+
+		rw.WriteHeader(http.StatusNoContent)
+	}))
+	defer upstream.Close()
+
+	upstreamURL, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+
+	serveConfig := config.ServeConfig{}
+	serveConfig.Requests.MaxInFlight = 1
+	proxy, addr := startProxyService(t, serveConfig, upstreamURL)
+
+	wsConn, resp, err := websocket.DefaultDialer.Dial("ws://"+addr+"/tunnel", nil)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	select {
+	case err = <-upstreamReady:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "upstream websocket did not become ready")
+	}
+
+	require.Eventually(t, func() bool {
+		return tunnelRegistrySize(proxy.tunnels) == 2
+	}, time.Second, 10*time.Millisecond)
+
+	client := &http.Client{Transport: new(http.Transport)}
+	defer client.CloseIdleConnections()
+
+	response, err := client.Get("http://" + addr + "/ordinary") //nolint:noctx,bodyclose
+	require.NoError(t, err)
+	require.NotNil(t, response)
+	assert.Equal(t, http.StatusServiceUnavailable, response.StatusCode)
+	require.NoError(t, response.Body.Close())
+
+	// WHEN
+	require.NoError(t, wsConn.Close())
+
+	// THEN
+	require.Eventually(t, func() bool {
+		return tunnelRegistrySize(proxy.tunnels) == 0
+	}, time.Second, 10*time.Millisecond)
+
+	require.Eventually(t, func() bool {
+		response, err = client.Get("http://" + addr + "/ordinary") //nolint:noctx,bodyclose
+		if err != nil {
+			return false
+		}
+		defer response.Body.Close()
+
+		return response.StatusCode == http.StatusNoContent
+	}, time.Second, 10*time.Millisecond)
+}
+
+func TestWebSocketTunnelTracksBothEnds(t *testing.T) {
+	t.Parallel()
+
+	port, err := testsupport.GetFreePort()
+	require.NoError(t, err)
+
+	releaseUpstream := make(chan struct{})
+	upstreamReady := make(chan struct{})
+	upstreamDone := make(chan struct{})
+	var releaseOnce sync.Once
+	release := func() {
+		releaseOnce.Do(func() {
+			close(releaseUpstream)
+		})
+	}
+
+	upstreamSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		upgrader := websocket.Upgrader{
+			CheckOrigin: func(_ *http.Request) bool {
+				return true
+			},
+		}
+
+		conn, err := upgrader.Upgrade(rw, req, nil)
+		if !assert.NoError(t, err) {
+			return
+		}
+		defer func() {
+			_ = conn.Close()
+			close(upstreamDone)
+		}()
+
+		close(upstreamReady)
+		<-releaseUpstream
+	}))
+	defer upstreamSrv.Close()
+	defer release()
+
+	upstreamURL, err := url.Parse(upstreamSrv.URL)
+	require.NoError(t, err)
+
+	target := testUpstreamTarget{
+		targetURL: url.URL{
+			Scheme: upstreamURL.Scheme,
+			Host:   upstreamURL.Host,
+		},
+		forwardHostHeader: true,
+	}
+	exec := testExecutor(func(ctx pipeline.ExecutionContext) error {
+		ctx.PrepareUpstreamView(target)
+
+		return nil
+	})
+
+	conf := &config.Configuration{
+		Serve: config.ServeConfig{
+			Host: "127.0.0.1",
+			Port: port,
+		},
+	}
+	proxy := newService(conf, mocks.NewCacheMock(t), zerolog.New(io.Discard), exec)
+	shutdown := false
+	defer func() {
+		if !shutdown {
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+			_ = proxy.Shutdown(ctx)
+		}
+	}()
+
+	factory, err := listener.NewFactory(
+		conf.Serve.Address(),
+		conf.Serve.TLS,
+		0,
+		nil,
+	)
+	require.NoError(t, err)
+
+	lstnr, err := factory.Create(t.Context())
+	require.NoError(t, err)
+
+	go func() {
+		_ = proxy.Serve(lstnr)
+	}()
+
+	wsURL := url.URL{Scheme: "ws", Host: conf.Serve.Address(), Path: "/tunnel"}
+	conn, resp, err := websocket.DefaultDialer.Dial(wsURL.String(), nil)
+	require.NoError(t, err)
+	defer conn.Close()
+	defer resp.Body.Close()
+
+	select {
+	case <-upstreamReady:
+	case <-time.After(time.Second):
+		require.Fail(t, "upstream websocket did not become ready")
+	}
+
+	require.Eventually(t, func() bool {
+		return tunnelRegistrySize(proxy.tunnels) == 2
+	}, time.Second, 10*time.Millisecond)
+
+	// WHEN
+	release()
+
+	// THEN
+	select {
+	case <-upstreamDone:
+	case <-time.After(time.Second):
+		require.Fail(t, "upstream websocket did not close")
+	}
+
+	// Go's ReverseProxy preserves a half-closed upgraded connection: EOF from
+	// the backend is propagated with CloseWrite to the client while the
+	// client-to-backend copy loop remains alive. The registry therefore keeps
+	// owning both tunnel ends until the client side closes as well.
+	require.NoError(t, conn.Close())
+
+	require.Eventually(t, func() bool {
+		return tunnelRegistrySize(proxy.tunnels) == 0
+	}, time.Second, 10*time.Millisecond)
+
+	require.NoError(t, proxy.Shutdown(t.Context()))
+	shutdown = true
+}
+
+func TestWebSocketForceCloseSendsGoingAway(t *testing.T) {
+	t.Parallel()
+
+	port, err := testsupport.GetFreePort()
+	require.NoError(t, err)
+
+	upstreamReady := make(chan error, 1)
+	upstreamClosed := make(chan error, 1)
+	upstreamSrv := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		upgrader := websocket.Upgrader{
+			CheckOrigin: func(_ *http.Request) bool {
+				return true
+			},
+		}
+
+		conn, err := upgrader.Upgrade(rw, req, nil)
+		if err != nil {
+			upstreamReady <- err
+
+			return
+		}
+		defer conn.Close()
+
+		conn.SetCloseHandler(func(int, string) error { return nil })
+		upstreamReady <- nil
+
+		_, _, err = conn.ReadMessage()
+		upstreamClosed <- err
+	}))
+	defer upstreamSrv.Close()
+
+	upstreamURL, err := url.Parse(upstreamSrv.URL)
+	require.NoError(t, err)
+
+	target := testUpstreamTarget{
+		targetURL: url.URL{
+			Scheme: upstreamURL.Scheme,
+			Host:   upstreamURL.Host,
+		},
+		forwardHostHeader: true,
+	}
+	exec := testExecutor(func(ctx pipeline.ExecutionContext) error {
+		ctx.PrepareUpstreamView(target)
+
+		return nil
+	})
+
+	conf := &config.Configuration{
+		Serve: config.ServeConfig{
+			Host: "127.0.0.1",
+			Port: port,
+		},
+	}
+	proxy := newService(conf, mocks.NewCacheMock(t), zerolog.New(io.Discard), exec)
+	shutdown := false
+	defer func() {
+		if !shutdown {
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+			_ = proxy.Shutdown(ctx)
+		}
+	}()
+
+	factory, err := listener.NewFactory(
+		conf.Serve.Address(),
+		conf.Serve.TLS,
+		0,
+		nil,
+	)
+	require.NoError(t, err)
+
+	lstnr, err := factory.Create(t.Context())
+	require.NoError(t, err)
+
+	go func() {
+		_ = proxy.Serve(lstnr)
+	}()
+
+	wsURL := url.URL{Scheme: "ws", Host: conf.Serve.Address(), Path: "/tunnel"}
+	conn, resp, err := websocket.DefaultDialer.Dial(wsURL.String(), nil)
+	require.NoError(t, err)
+	defer conn.Close()
+	defer resp.Body.Close()
+	conn.SetCloseHandler(func(int, string) error { return nil })
+
+	select {
+	case err := <-upstreamReady:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.Fail(t, "upstream websocket did not become ready")
+	}
+
+	require.Eventually(t, func() bool {
+		return tunnelRegistrySize(proxy.tunnels) == 2
+	}, time.Second, 10*time.Millisecond)
+
+	// WHEN
+	shutdownCtx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+	defer cancel()
+
+	err = proxy.tunnels.shutdown(shutdownCtx)
+	require.ErrorIs(t, err, errTunnelDrain)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	// THEN
+	_, _, err = conn.ReadMessage()
+	require.Error(t, err)
+	var downstreamCloseErr *websocket.CloseError
+	require.ErrorAs(t, err, &downstreamCloseErr)
+	assert.Equal(t, websocket.CloseGoingAway, downstreamCloseErr.Code)
+
+	select {
+	case err := <-upstreamClosed:
+		require.Error(t, err)
+		var upstreamCloseErr *websocket.CloseError
+		require.ErrorAs(t, err, &upstreamCloseErr)
+		assert.Equal(t, websocket.CloseGoingAway, upstreamCloseErr.Code)
+	case <-time.After(time.Second):
+		require.Fail(t, "upstream websocket did not receive close frame")
+	}
+
+	assert.Equal(t, 0, tunnelRegistrySize(proxy.tunnels))
+	require.NoError(t, proxy.Shutdown(t.Context()))
+	shutdown = true
+}
+
 func TestServerSentEventsSupport(t *testing.T) {
 	t.Parallel()
 
@@ -1328,7 +3209,13 @@ func TestServerSentEventsSupport(t *testing.T) {
 
 			assert.NoError(t, rc.Flush())
 
-			time.Sleep(50 * time.Millisecond)
+			if i == 1 {
+				// A stream may be legitimately silent for longer than the response
+				// write-idle timeout when no write is in flight.
+				time.Sleep(150 * time.Millisecond)
+			} else {
+				time.Sleep(20 * time.Millisecond)
+			}
 		}
 	}))
 	defer upstreamSrv.Close()
@@ -1336,38 +3223,31 @@ func TestServerSentEventsSupport(t *testing.T) {
 	upstreamURL, err := url.Parse(upstreamSrv.URL)
 	require.NoError(t, err)
 
-	exec := mocks2.NewExecutorMock(t)
-
-	target := mocks2.NewUpstreamTargetMock(t)
-	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
-		*targetURL = url.URL{
+	target := testUpstreamTarget{
+		targetURL: url.URL{
 			Scheme: upstreamURL.Scheme,
 			Host:   upstreamURL.Host,
 			Path:   "/bar",
-		}
+		},
+		forwardHostHeader: true,
+	}
+	exec := testExecutor(func(ctx pipeline.ExecutionContext) error {
+		assert.Equal(t, "/foo", ctx.Request().URL.Path)
+		assert.Equal(t, http.MethodGet, ctx.Request().Method)
+
+		ctx.PrepareUpstreamView(target)
+
+		return nil
 	})
-	target.EXPECT().ForwardHostHeader().Return(true)
-
-	exec.EXPECT().Execute(
-		mock.MatchedBy(func(ctx pipeline.ExecutionContext) bool {
-			ctx.PrepareUpstreamView(target)
-
-			pathMatched := ctx.Request().URL.Path == "/foo"
-			methodMatched := ctx.Request().Method == http.MethodGet
-
-			return pathMatched && methodMatched
-		}),
-	).Return(nil)
 
 	conf := &config.Configuration{
 		Serve: config.ServeConfig{
-			Timeout: config.Timeout{
-				Read:  40 * time.Millisecond,
-				Write: 50 * time.Millisecond,
-				Idle:  1 * time.Second,
-			},
 			Host: "127.0.0.1",
 			Port: port,
+			Responses: config.IngressResponses{
+				WriteIdleTimeout: 50 * time.Millisecond,
+				WriteMinRate:     0,
+			},
 		},
 	}
 
@@ -1378,6 +3258,7 @@ func TestServerSentEventsSupport(t *testing.T) {
 	factory, err := listener.NewFactory(
 		conf.Serve.Address(),
 		conf.Serve.TLS,
+		0,
 		nil,
 	)
 	require.NoError(t, err)
@@ -1416,6 +3297,202 @@ func TestServerSentEventsSupport(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, i, val)
 	}
+}
 
-	time.Sleep(60 * time.Millisecond)
+func TestServerSentEventsDrainOnShutdown(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	releaseUpstream := make(chan struct{})
+	var releaseOnce sync.Once
+	release := func() { releaseOnce.Do(func() { close(releaseUpstream) }) }
+	t.Cleanup(release)
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		rw.Header().Set("Content-Type", "text/event-stream")
+		rw.WriteHeader(http.StatusOK)
+		rc := http.NewResponseController(rw)
+
+		if _, err := io.WriteString(rw, "data: ready\n\n"); !assert.NoError(t, err) {
+			return
+		}
+		if !assert.NoError(t, rc.Flush()) {
+			return
+		}
+
+		<-releaseUpstream
+
+		if _, err := io.WriteString(rw, "data: done\n\n"); !assert.NoError(t, err) {
+			return
+		}
+		assert.NoError(t, rc.Flush())
+	}))
+	defer upstream.Close()
+
+	upstreamURL, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+
+	proxy, addr := startProxyService(t, config.ServeConfig{}, upstreamURL)
+	shutdownStarted := make(chan struct{})
+	var shutdownStartedOnce sync.Once
+	proxy.RegisterOnShutdown(func() {
+		shutdownStartedOnce.Do(func() { close(shutdownStarted) })
+	})
+
+	client := &http.Client{Transport: new(http.Transport)}
+	defer client.CloseIdleConnections()
+
+	resp, err := client.Get("http://" + addr + "/events") //nolint:noctx,bodyclose
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	reader := bufio.NewReader(resp.Body)
+	assertServerSentEvent(t, reader, "data: ready")
+
+	shutdownCtx, cancel := context.WithTimeout(t.Context(), time.Second)
+	defer cancel()
+	shutdownDone := make(chan error, 1)
+	go func() { shutdownDone <- proxy.Shutdown(shutdownCtx) }()
+
+	select {
+	case <-shutdownStarted:
+	case <-time.After(time.Second):
+		require.FailNow(t, "shutdown did not start")
+	}
+
+	select {
+	case err = <-shutdownDone:
+		require.Failf(t, "shutdown returned before SSE stream drained", "error: %v", err)
+	default:
+	}
+
+	// WHEN
+	release()
+
+	// THEN
+	assertServerSentEvent(t, reader, "data: done")
+
+	select {
+	case err = <-shutdownDone:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "shutdown did not complete after SSE stream drained")
+	}
+}
+
+func TestServerSentEventsSurviveShutdownTimeout(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	releaseUpstream := make(chan struct{})
+	var releaseOnce sync.Once
+	release := func() { releaseOnce.Do(func() { close(releaseUpstream) }) }
+	t.Cleanup(release)
+
+	upstream := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, _ *http.Request) {
+		rw.Header().Set("Content-Type", "text/event-stream")
+		rw.WriteHeader(http.StatusOK)
+		rc := http.NewResponseController(rw)
+
+		if _, err := io.WriteString(rw, "data: ready\n\n"); !assert.NoError(t, err) {
+			return
+		}
+		if !assert.NoError(t, rc.Flush()) {
+			return
+		}
+
+		<-releaseUpstream
+
+		if _, err := io.WriteString(rw, "data: done\n\n"); !assert.NoError(t, err) {
+			return
+		}
+		assert.NoError(t, rc.Flush())
+	}))
+	defer upstream.Close()
+
+	upstreamURL, err := url.Parse(upstream.URL)
+	require.NoError(t, err)
+
+	proxy, addr := startProxyService(t, config.ServeConfig{}, upstreamURL)
+	client := &http.Client{Transport: new(http.Transport)}
+	defer client.CloseIdleConnections()
+
+	resp, err := client.Get("http://" + addr + "/events") //nolint:noctx,bodyclose
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	reader := bufio.NewReader(resp.Body)
+	assertServerSentEvent(t, reader, "data: ready")
+
+	// WHEN
+	shutdownCtx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	err = proxy.Shutdown(shutdownCtx)
+	cancel()
+
+	// THEN
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	release()
+	assertServerSentEvent(t, reader, "data: done")
+}
+
+func startProxyService(
+	t *testing.T,
+	serveConfig config.ServeConfig,
+	upstreamURL *url.URL,
+) (*proxyService, string) {
+	t.Helper()
+
+	exec := testExecutor(func(ctx pipeline.ExecutionContext) error {
+		targetURL := *upstreamURL
+		targetURL.Path = ctx.Request().URL.Path
+		targetURL.RawQuery = ctx.Request().URL.RawQuery
+		ctx.PrepareUpstreamView(testUpstreamTarget{
+			targetURL:         targetURL,
+			forwardHostHeader: true,
+		})
+
+		return nil
+	})
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0") //nolint: noctx
+	require.NoError(t, err)
+
+	host, rawPort, err := net.SplitHostPort(ln.Addr().String())
+	require.NoError(t, err)
+	port, err := strconv.Atoi(rawPort)
+	require.NoError(t, err)
+
+	serveConfig.Host = host
+	serveConfig.Port = port
+	proxy := newService(
+		&config.Configuration{Serve: serveConfig},
+		mocks.NewCacheMock(t),
+		zerolog.Nop(),
+		exec,
+	)
+
+	go func() { _ = proxy.Serve(ln) }()
+
+	t.Cleanup(func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+		defer cancel()
+
+		_ = proxy.Shutdown(ctx)
+		_ = ln.Close()
+	})
+
+	return proxy, ln.Addr().String()
+}
+
+func assertServerSentEvent(t *testing.T, reader *bufio.Reader, expected string) {
+	t.Helper()
+
+	line, err := reader.ReadString('\n')
+	require.NoError(t, err)
+	assert.Equal(t, expected, strings.TrimSpace(line))
+
+	line, err = reader.ReadString('\n')
+	require.NoError(t, err)
+	assert.Empty(t, strings.TrimSpace(line))
 }

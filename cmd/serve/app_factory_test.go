@@ -18,6 +18,7 @@ package serve
 
 import (
 	"testing"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
@@ -39,4 +40,5 @@ func TestCreateApp(t *testing.T) {
 	app, err := createApp(cmd, fx.Supply(config.DecisionMode))
 	require.NoError(t, err)
 	require.NotNil(t, app)
+	require.Equal(t, 30*time.Second, app.StopTimeout())
 }

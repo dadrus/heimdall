@@ -24,50 +24,131 @@ import (
 )
 
 const (
-	defaultReadTimeout  = time.Second * 5
-	defaultWriteTimeout = time.Second * 10
-	defaultIdleTimeout  = time.Second * 120
+	defaultShutdownTimeout = 30 * time.Second
 
-	defaultMaxIdleConnections        = 100
-	defaultMaxIdleConnectionsPerHost = 100
+	defaultRequestHeaderMaxSize = 64 * bytesize.KB
+	defaultRequestBodyMaxSize   = 5 * bytesize.MB
+
+	defaultRequestReadTimeout             = 0
+	defaultRequestHeaderReadTimeout       = 5 * time.Second
+	defaultRequestBodyReadIdleTimeout     = 20 * time.Second
+	defaultRequestBodyReadMinRate         = 0
+	defaultResponseWriteTimeout           = 0
+	defaultResponseWriteIdleTimeout       = 30 * time.Second
+	defaultResponseWriteMinRate           = 0
+	defaultConnectionIdleTimeout          = 2 * time.Minute
+	defaultConnectionWriteIdleTimeout     = 30 * time.Second
+	defaultConnectionLivenessProbeAfter   = 30 * time.Second
+	defaultConnectionLivenessProbeTimeout = 15 * time.Second
+
+	defaultMaxConnections       = 1024
+	defaultMaxInFlightRequests  = 512
+	defaultMaxConcurrentStreams = 100
+
+	defaultUpstreamMaxConnectionsPerHost = 100
+	defaultUpstreamMaxIdleConnections    = 100
+	defaultUpstreamMaxIdlePerHost        = 100
+
+	defaultUpstreamDialTimeout                    = 5 * time.Second
+	defaultUpstreamIdleTimeout                    = 90 * time.Second
+	defaultUpstreamConnectionWriteIdleTimeout     = 30 * time.Second
+	defaultUpstreamConnectionLivenessProbeAfter   = 30 * time.Second
+	defaultUpstreamConnectionLivenessProbeTimeout = 15 * time.Second
+
+	defaultUpstreamResponseHeaderMaxSize     = bytesize.MB
+	defaultUpstreamResponseHeaderReadTimeout = 30 * time.Second
 
 	defaultServePort             = 4456
 	defaultManagementServicePort = 4457
 	defaultProfilingServicePort  = 10251
 
-	defaultBufferSize = 4 * bytesize.KB
-
 	loopbackIP = "127.0.0.1"
 )
 
+func DefaultIngressConnections() IngressConnections {
+	return IngressConnections{
+		Max:              defaultMaxConnections,
+		IdleTimeout:      defaultConnectionIdleTimeout,
+		WriteIdleTimeout: defaultConnectionWriteIdleTimeout,
+		Streams: MultiplexedStreams{
+			MaxConcurrent: defaultMaxConcurrentStreams,
+		},
+		Liveness: ConnectionLiveness{
+			ProbeAfter:   defaultConnectionLivenessProbeAfter,
+			ProbeTimeout: defaultConnectionLivenessProbeTimeout,
+		},
+	}
+}
+
+//nolint:funlen
 func defaultConfig() Configuration {
 	return Configuration{
+		Shutdown: ShutdownConfig{
+			Timeout: defaultShutdownTimeout,
+		},
 		Serve: ServeConfig{
 			Port: defaultServePort,
-			Timeout: Timeout{
-				Read:  defaultReadTimeout,
-				Write: defaultWriteTimeout,
-				Idle:  defaultIdleTimeout,
+			Requests: IngressRequests{
+				MaxInFlight: defaultMaxInFlightRequests,
+				ReadTimeout: defaultRequestReadTimeout,
+				Headers: IngressRequestHeaders{
+					MaxSize:     defaultRequestHeaderMaxSize,
+					ReadTimeout: defaultRequestHeaderReadTimeout,
+				},
+				Body: IngressRequestBody{
+					MaxSize:         defaultRequestBodyMaxSize,
+					ReadIdleTimeout: defaultRequestBodyReadIdleTimeout,
+					ReadMinRate:     defaultRequestBodyReadMinRate,
+				},
 			},
-			BufferLimit: BufferLimit{
-				Read:  defaultBufferSize,
-				Write: defaultBufferSize,
+			Responses: IngressResponses{
+				WriteTimeout:     defaultResponseWriteTimeout,
+				WriteIdleTimeout: defaultResponseWriteIdleTimeout,
+				WriteMinRate:     defaultResponseWriteMinRate,
 			},
-			ConnectionsLimit: ConnectionsLimit{
-				MaxIdle:        defaultMaxIdleConnections,
-				MaxIdlePerHost: defaultMaxIdleConnectionsPerHost,
+			Connections: DefaultIngressConnections(),
+			Upstream: UpstreamConfig{
+				Connections: UpstreamConnections{
+					MaxPerHost:       defaultUpstreamMaxConnectionsPerHost,
+					MaxIdle:          defaultUpstreamMaxIdleConnections,
+					MaxIdlePerHost:   defaultUpstreamMaxIdlePerHost,
+					DialTimeout:      defaultUpstreamDialTimeout,
+					IdleTimeout:      defaultUpstreamIdleTimeout,
+					WriteIdleTimeout: defaultUpstreamConnectionWriteIdleTimeout,
+					Liveness: ConnectionLiveness{
+						ProbeAfter:   defaultUpstreamConnectionLivenessProbeAfter,
+						ProbeTimeout: defaultUpstreamConnectionLivenessProbeTimeout,
+					},
+				},
+				Responses: UpstreamResponses{
+					Headers: UpstreamResponseHeaders{
+						MaxSize:     defaultUpstreamResponseHeaderMaxSize,
+						ReadTimeout: defaultUpstreamResponseHeaderReadTimeout,
+					},
+				},
 			},
 		},
 		Management: ManagementConfig{
 			Port: defaultManagementServicePort,
-			Timeout: Timeout{
-				Read:  defaultReadTimeout,
-				Write: defaultWriteTimeout,
-				Idle:  defaultIdleTimeout,
+			Requests: ManagementRequests{
+				MaxInFlight: defaultMaxInFlightRequests,
+				ReadTimeout: defaultRequestReadTimeout,
+				Headers: IngressRequestHeaders{
+					MaxSize:     defaultRequestHeaderMaxSize,
+					ReadTimeout: defaultRequestHeaderReadTimeout,
+				},
+				Body: ManagementRequestBody{
+					MaxSize: defaultRequestBodyMaxSize,
+				},
 			},
-			BufferLimit: BufferLimit{
-				Read:  defaultBufferSize,
-				Write: defaultBufferSize,
+			Responses: IngressResponses{
+				WriteTimeout:     defaultResponseWriteTimeout,
+				WriteIdleTimeout: defaultResponseWriteIdleTimeout,
+				WriteMinRate:     defaultResponseWriteMinRate,
+			},
+			Connections: ManagementConnections{
+				Max:         defaultMaxConnections,
+				IdleTimeout: defaultConnectionIdleTimeout,
 			},
 		},
 		Cache: CacheConfig{

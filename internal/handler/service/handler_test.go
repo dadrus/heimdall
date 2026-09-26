@@ -22,64 +22,56 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 
-	mocks2 "github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler/mocks"
-	mocks3 "github.com/dadrus/heimdall/internal/handler/requestcontext/mocks"
-	mocks4 "github.com/dadrus/heimdall/internal/pipeline/mocks"
+	mocks "github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler/mocks"
 )
+
+type requestCoordinatorFunc func(*http.Request, http.ResponseWriter) (struct{}, error)
+
+func (f requestCoordinatorFunc) Handle(req *http.Request, rw http.ResponseWriter) (struct{}, error) {
+	return f(req, rw)
+}
 
 func TestHandlerServeHTTP(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup func(*testing.T, *mocks4.ExecutorMock, *mocks3.ContextMock, *mocks2.ErrorHandlerMock)
+		err   error
+		setup func(*testing.T, *mocks.ErrorHandlerMock, http.ResponseWriter, *http.Request)
 	}{
 		"no error": {
-			setup: func(t *testing.T, exec *mocks4.ExecutorMock, ctx *mocks3.ContextMock, _ *mocks2.ErrorHandlerMock) {
+			setup: func(t *testing.T, _ *mocks.ErrorHandlerMock, _ http.ResponseWriter, _ *http.Request) {
 				t.Helper()
-
-				exec.EXPECT().Execute(ctx).Return(nil)
-				ctx.EXPECT().Finalize().Return(nil)
 			},
 		},
-		"with error from executor": {
-			setup: func(t *testing.T, exec *mocks4.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
+		"with error": {
+			err: assert.AnError,
+			setup: func(t *testing.T, eh *mocks.ErrorHandlerMock, rw http.ResponseWriter, req *http.Request) {
 				t.Helper()
 
-				exec.EXPECT().Execute(ctx).Return(assert.AnError)
-				eh.EXPECT().HandleError(mock.Anything, mock.Anything, assert.AnError)
-			},
-		},
-		"with error from finalizer": {
-			setup: func(t *testing.T, exec *mocks4.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
-				t.Helper()
-
-				exec.EXPECT().Execute(ctx).Return(nil)
-				ctx.EXPECT().Finalize().Return(assert.AnError)
-				eh.EXPECT().HandleError(mock.Anything, mock.Anything, assert.AnError)
+				eh.EXPECT().HandleError(rw, req, assert.AnError)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			rcf := mocks3.NewContextFactoryMock(t)
-			re := mocks4.NewExecutorMock(t)
-			rc := mocks3.NewContextMock(t)
-			eh := mocks2.NewErrorHandlerMock(t)
-
-			tc.setup(t, re, rc, eh)
-
-			proxy := NewHandler(rcf, re, eh)
-
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", nil)
 			rw := httptest.NewRecorder()
 
-			rcf.EXPECT().Create(rw, req).Return(rc)
-			rcf.EXPECT().Destroy(rc)
+			eh := mocks.NewErrorHandlerMock(t)
+			tc.setup(t, eh, rw, req)
+
+			coordinator := requestCoordinatorFunc(func(actualReq *http.Request, actualRW http.ResponseWriter) (struct{}, error) {
+				assert.Same(t, req, actualReq)
+				assert.Same(t, rw, actualRW)
+
+				return struct{}{}, tc.err
+			})
+
+			handler := NewHandler(coordinator, eh)
 
 			// WHEN -> THEN expectations are met
-			proxy.ServeHTTP(rw, req)
+			handler.ServeHTTP(rw, req)
 		})
 	}
 }

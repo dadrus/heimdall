@@ -17,6 +17,9 @@
 package grpcv3
 
 import (
+	"math"
+	"time"
+
 	"github.com/ccoveille/go-safecast/v2"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
@@ -33,8 +36,11 @@ import (
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/errorhandler"
 	loggermiddleware "github.com/dadrus/heimdall/internal/handler/middleware/grpc/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/otelmetrics"
+	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/requestlimit"
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/trustedproxy"
+	"github.com/dadrus/heimdall/internal/handler/requestcoordinator"
 	"github.com/dadrus/heimdall/internal/pipeline"
+	"github.com/dadrus/heimdall/internal/x"
 )
 
 func newService(
@@ -54,13 +60,30 @@ func newService(
 		otelmetrics.WithSubsystem("decision"),
 	)
 
+	unknownServiceHandler := grpc.StreamHandler(func(_ any, _ grpc.ServerStream) error {
+		return status.Error(codes.Unknown, "unknown service or method")
+	})
+	unknownServiceHandler = logHandler.UnknownServiceHandler(unknownServiceHandler)
+	unknownServiceHandler = metrics.UnknownServiceHandler(unknownServiceHandler)
+
 	srv := grpc.NewServer(
-		grpc.KeepaliveParams(keepalive.ServerParameters{Timeout: cfg.Timeout.Idle}),
-		grpc.ReadBufferSize(safecast.MustConvert[int](uint64(cfg.BufferLimit.Read))),
-		grpc.WriteBufferSize(safecast.MustConvert[int](uint64(cfg.BufferLimit.Write))),
-		grpc.UnknownServiceHandler(func(_ any, _ grpc.ServerStream) error {
-			return status.Error(codes.Unknown, "unknown service or method")
+		grpc.MaxHeaderListSize(safecast.MustConvert[uint32](cfg.Requests.Headers.MaxSize)),
+		grpc.MaxConcurrentStreams(safecast.MustConvert[uint32](cfg.Connections.Streams.MaxConcurrent)),
+		grpc.MaxRecvMsgSize(x.IfThenElse(
+			cfg.Requests.Body.MaxSize > 0,
+			safecast.MustConvert[int](cfg.Requests.Body.MaxSize),
+			math.MaxInt,
+		)),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			MaxConnectionIdle: cfg.Connections.IdleTimeout,
+			Timeout:           cfg.Connections.Liveness.ProbeTimeout,
+			Time: x.IfThenElse(
+				cfg.Connections.Liveness.ProbeAfter != 0,
+				cfg.Connections.Liveness.ProbeAfter,
+				time.Duration(math.MaxInt64),
+			),
 		}),
+		grpc.UnknownServiceHandler(unknownServiceHandler),
 		grpc.StatsHandler(otelgrpc.NewServerHandler()),
 		grpc.ChainUnaryInterceptor(
 			recovery.UnaryServerInterceptor(recoveryHandler),
@@ -68,7 +91,7 @@ func newService(
 			metrics.UnaryServerInterceptor(),
 			errorhandler.New(
 				errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
-				errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
+				errorhandler.WithPreconditionErrorCode(cfg.Respond.With.PreconditionError.Code),
 				errorhandler.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
 				errorhandler.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
 				errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
@@ -80,16 +103,18 @@ func newService(
 			// and will not contain all the details, typically required to enable
 			// error traceback
 			logHandler.UnaryServerInterceptor(),
+			requestlimit.New(cfg.Requests.MaxInFlight),
 			cachemiddleware.New(cch),
-		),
-		grpc.ChainStreamInterceptor(
-			recovery.StreamServerInterceptor(recoveryHandler),
-			metrics.StreamServerInterceptor(),
-			logHandler.StreamServerInterceptor(),
 		),
 	)
 
-	envoy_auth.RegisterAuthorizationServer(srv, &Handler{e: exec, cf: newContextFactory()})
+	coordinator := requestcoordinator.New(
+		exec,
+		newContextFactory(),
+		newCommitter(),
+	)
+
+	envoy_auth.RegisterAuthorizationServer(srv, &Handler{c: coordinator})
 
 	return srv
 }

@@ -33,12 +33,12 @@ import (
 	"github.com/dadrus/heimdall/internal/x/opentelemetry/tracecontext"
 )
 
-type ServerInterceptor interface {
+type ServerMiddleware interface {
 	UnaryServerInterceptor() grpc.UnaryServerInterceptor
-	StreamServerInterceptor() grpc.StreamServerInterceptor
+	UnknownServiceHandler(stream grpc.StreamHandler) grpc.StreamHandler
 }
 
-func New(logger zerolog.Logger, opts ...Option) ServerInterceptor {
+func New(logger zerolog.Logger, opts ...Option) ServerMiddleware {
 	conf := config{accessLogEnabled: true}
 	for _, opt := range opts {
 		opt(&conf)
@@ -102,8 +102,8 @@ func (li *logInterceptor) UnaryServerInterceptor() grpc.UnaryServerInterceptor {
 	}
 }
 
-func (li *logInterceptor) StreamServerInterceptor() grpc.StreamServerInterceptor {
-	return func(srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+func (li *logInterceptor) UnknownServiceHandler(handler grpc.StreamHandler) grpc.StreamHandler {
+	return func(srv any, stream grpc.ServerStream) error {
 		ctx := stream.Context()
 		traceCtx := tracecontext.Extract(ctx)
 
@@ -114,13 +114,13 @@ func (li *logInterceptor) StreamServerInterceptor() grpc.StreamServerInterceptor
 		start := time.Now()
 		requestMD, _ := metadata.FromIncomingContext(ctx)
 		peerAddr := peerFromCtx(ctx)
-		ctx = accesscontext.New(ctx)
+		fullMethod, _ := grpc.MethodFromServerStream(stream)
 
 		logEvt := logCommonData(
 			li.accessLogger.Info(),
 			start,
 			peerAddr,
-			info.FullMethod,
+			fullMethod,
 			traceCtx,
 			nil,
 			requestMD,
@@ -134,7 +134,7 @@ func (li *logInterceptor) StreamServerInterceptor() grpc.StreamServerInterceptor
 			li.accessLogger.Info(),
 			start,
 			peerAddr,
-			info.FullMethod,
+			fullMethod,
 			traceCtx,
 			nil,
 			requestMD,

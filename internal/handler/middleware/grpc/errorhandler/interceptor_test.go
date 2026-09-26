@@ -33,6 +33,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	grpcstatus "google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
 	"github.com/dadrus/heimdall/internal/handler/middleware/grpc/mocks"
@@ -200,11 +201,9 @@ func TestErrorInterceptor(t *testing.T) {
 		"generic error": {
 			interceptor: New(),
 			err: &pipeline.ResponseError{
-				ErrorResponse: pipeline.ErrorResponse{
-					Code:    http.StatusUnprocessableEntity,
-					Headers: map[string][]string{"X-Error-Reason": {"blocked"}},
-					Body:    `{"error":"denied"}`,
-				},
+				Code:    http.StatusUnprocessableEntity,
+				Headers: map[string][]string{"X-Error-Reason": {"blocked"}},
+				Body:    `{"error":"denied"}`,
 			},
 			expGRPCCode: codes.FailedPrecondition,
 			expHTTPCode: http.StatusUnprocessableEntity,
@@ -220,11 +219,9 @@ func TestErrorInterceptor(t *testing.T) {
 		"generic error with multiple header values": {
 			interceptor: New(),
 			err: &pipeline.ResponseError{
-				ErrorResponse: pipeline.ErrorResponse{
-					Code:    http.StatusTooManyRequests,
-					Headers: map[string][]string{"Set-Cookie": {"a=1", "b=2"}},
-					Body:    "rate limited",
-				},
+				Code:    http.StatusTooManyRequests,
+				Headers: map[string][]string{"Set-Cookie": {"a=1", "b=2"}},
+				Body:    "rate limited",
 			},
 			expGRPCCode: codes.FailedPrecondition,
 			expHTTPCode: http.StatusTooManyRequests,
@@ -332,4 +329,41 @@ func TestErrorInterceptor(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestErrorInterceptorPassesThroughGRPCStatusError(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	lis := bufconn.Listen(1024 * 1024)
+	handler := &mocks.MockHandler{}
+	handler.On("Check", mock.Anything, mock.Anything).
+		Return(nil, grpcstatus.Error(codes.ResourceExhausted, "service overloaded"))
+
+	srv := grpc.NewServer(grpc.UnaryInterceptor(New()))
+	envoy_auth.RegisterAuthorizationServer(srv, handler)
+
+	go func() {
+		_ = srv.Serve(lis)
+	}()
+
+	t.Cleanup(srv.Stop)
+
+	conn, err := grpc.NewClient(
+		"passthrough://bufnet",
+		grpc.WithContextDialer(func(context.Context, string) (net.Conn, error) { return lis.Dial() }),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, conn.Close()) })
+
+	client := envoy_auth.NewAuthorizationClient(conn)
+
+	// WHEN
+	resp, err := client.Check(t.Context(), &envoy_auth.CheckRequest{})
+
+	// THEN
+	assert.Nil(t, resp)
+	require.Error(t, err)
+	assert.Equal(t, codes.ResourceExhausted, grpcstatus.Code(err))
 }

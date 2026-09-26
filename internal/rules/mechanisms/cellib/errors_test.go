@@ -58,6 +58,7 @@ func TestErrors(t *testing.T) {
 		`Error.StepID == "foo"`,
 		`Error == Error`,
 		`type(communication_error) != type(Error)`,
+		`type(Error) == request_body_too_large`,
 	} {
 		t.Run(tc, func(t *testing.T) {
 			ast, iss := env.Compile(tc)
@@ -77,6 +78,7 @@ func TestErrors(t *testing.T) {
 				CausedBy(errorchain.New(pipeline.ErrAuthentication)).
 				CausedBy(errorchain.New(pipeline.ErrConfiguration)).
 				CausedBy(errorchain.New(pipeline.ErrInternal)).
+				CausedBy(errorchain.New(pipeline.ErrRequestBodyTooLarge)).
 				WithAspects(errorProvider{name: "test", id: "foo"})
 
 			out, _, err := prg.Eval(map[string]any{"Error": WrapError(causeErr)})

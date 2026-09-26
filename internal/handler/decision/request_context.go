@@ -19,9 +19,6 @@ package decision
 import (
 	"context"
 	"net/http"
-	"sync"
-
-	"github.com/rs/zerolog"
 
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	"github.com/dadrus/heimdall/internal/pipeline"
@@ -29,59 +26,17 @@ import (
 
 var _ pipeline.UpstreamRequest = (*requestContext)(nil)
 
-type contextFactory struct {
-	responseCode int
-	pool         *sync.Pool
-}
-
-func (cf *contextFactory) Create(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
-	rc := cf.pool.Get().(*requestContext) //nolint: forcetypeassert
-
-	rc.Init(rw, req, cf.responseCode)
-
-	return rc
-}
-
-func (cf *contextFactory) Destroy(ctx requestcontext.Context) {
-	rc := ctx.(*requestContext) //nolint: forcetypeassert
-
-	rc.Reset()
-
-	cf.pool.Put(rc)
-}
-
-func newContextFactory(
-	responseCode int,
-) requestcontext.ContextFactory {
-	return &contextFactory{
-		responseCode: responseCode,
-		pool: &sync.Pool{New: func() any {
-			return &requestContext{
-				NetHTTPRequestContext: requestcontext.New(),
-			}
-		}},
-	}
-}
-
 type requestContext struct {
 	*requestcontext.NetHTTPRequestContext
-
-	rw           http.ResponseWriter
-	responseCode int
 
 	upstreamViewPrepared bool
 }
 
-func (r *requestContext) Init(rw http.ResponseWriter, req *http.Request, code int) {
-	r.rw = rw
-	r.responseCode = code
-
+func (r *requestContext) Init(req *http.Request) {
 	r.NetHTTPRequestContext.Init(req)
 }
 
 func (r *requestContext) Reset() {
-	r.rw = nil
-	r.responseCode = 0
 	r.upstreamViewPrepared = false
 
 	r.NetHTTPRequestContext.Reset()
@@ -103,22 +58,4 @@ func (r *requestContext) UpstreamRequest() pipeline.UpstreamRequest {
 	}
 
 	return r
-}
-
-func (r *requestContext) Finalize() error {
-	if err := r.Error(); err != nil {
-		return err
-	}
-
-	zerolog.Ctx(r.Context()).Debug().Msg("Creating response")
-
-	for name, values := range r.UpstreamHeaders() {
-		for _, value := range values {
-			r.rw.Header().Add(name, value)
-		}
-	}
-
-	r.rw.WriteHeader(r.responseCode)
-
-	return nil
 }

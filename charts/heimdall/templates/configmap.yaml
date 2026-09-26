@@ -28,6 +28,11 @@ data:
       {{- toYaml . | nindent 6 }}
     {{- end }}
 
+    {{- with .Values.shutdown }}
+    shutdown:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
     {{- with .Values.serve }}
     serve:
       {{- toYaml . | nindent 6 }}

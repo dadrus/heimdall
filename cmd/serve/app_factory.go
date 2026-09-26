@@ -84,6 +84,7 @@ func createApp(cmd *cobra.Command, mainModule fx.Option) (*fx.App, error) {
 	}
 
 	app := fx.New(
+		fx.StopTimeout(cfg.Shutdown.Timeout),
 		fx.Supply(
 			cfg,
 			logger,

@@ -61,9 +61,50 @@ master_key:
   source: master_secrets
   selector: my_key
 
+shutdown:
+  timeout: 30s
+
 serve:
   host: 127.0.0.1
   port: 4469
+  requests:
+    max_in_flight: 512
+    read_timeout: 0s
+    headers:
+      max_size: 64KB
+      read_timeout: 5s
+    body:
+      max_size: 5MB
+      read_idle_timeout: 20s
+      read_min_rate: 0
+  responses:
+    write_timeout: 0s
+    write_idle_timeout: 30s
+    write_min_rate: 0
+  connections:
+    max: 1024
+    idle_timeout: 2m
+    write_idle_timeout: 30s
+    streams:
+      max_concurrent: 100
+    liveness:
+      probe_after: 30s
+      probe_timeout: 15s
+  upstream:
+    connections:
+      max_per_host: 100
+      max_idle: 100
+      max_idle_per_host: 100
+      dial_timeout: 5s
+      idle_timeout: 90s
+      write_idle_timeout: 30s
+      liveness:
+        probe_after: 30s
+        probe_timeout: 15s
+    responses:
+      headers:
+        max_size: 1MB
+        read_timeout: 30s
   respond:
     verbose: true
     with:
@@ -71,17 +112,8 @@ serve:
         code: 404
       authentication_error:
         code: 404
-  timeout:
-    read: 2s
-    write: 5s
-    idle: 2m
-  connections_limit:
-    max_per_host: 10
-    max_idle: 100
-    max_idle_per_host: 50
-  buffer_limit:
-    read: 10KB
-    write: 10KB
+      request_body_too_large:
+        code: 413
   cors:
     allowed_origins:
       - example.org
@@ -110,10 +142,21 @@ serve:
 management:
   host: 127.0.0.1
   port: 4457
-  timeout:
-    read: 2s
-    write: 5s
-    idle: 2m
+  requests:
+    max_in_flight: 512
+    read_timeout: 0s
+    headers:
+      max_size: 64KB
+      read_timeout: 5s
+    body:
+      max_size: 5MB
+  responses:
+    write_timeout: 0s
+    write_idle_timeout: 30s
+    write_min_rate: 0
+  connections:
+    max: 1024
+    idle_timeout: 2m
   cors:
     allowed_origins:
       - example.org
@@ -141,7 +184,8 @@ cache:
     - foo:1234
     - bar:1234
     credentials:
-      path: /path/to/credentials.yaml
+      source: redis_store
+      selector: redis_credentials
     tls:
       secret:
         source: redis_store
@@ -196,12 +240,11 @@ mechanisms:
       identity_info_endpoint:
         url: https://127.0.0.1:4433/sessions/whoami
         auth:
-          auth:
-            type: basic_auth
-            config:
-              credentials:
-                source: mechanism_secrets
-                selector: kratos_credentials
+          type: basic_auth
+          config:
+            credentials:
+              source: mechanism_secrets
+              selector: kratos_credentials
         retry:
           max_delay: 300ms
           give_up_after: 2s
@@ -260,7 +303,7 @@ mechanisms:
         disable_issuer_identifier_verification: true
         http_cache:
           enabled: true
-          cache_ttl: 1h
+          default_ttl: 1h
         resolved_endpoints:
           jwks_uri:
             auth:
@@ -455,9 +498,11 @@ providers:
           type: api_key
           config:
             name: api_key
-            value: super-secret
+            secret:
+              source: mechanism_secrets
+              selector: authz_system_api_key
             in: cookie
-        header:
+        headers:
           X-Customer-Header: Some Value
 
   cloud_blob:

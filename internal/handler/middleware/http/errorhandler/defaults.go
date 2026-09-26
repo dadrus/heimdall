@@ -28,6 +28,7 @@ func defaultOptions() *opts {
 	defaults.onPreconditionError = errorWriter(defaults, http.StatusBadRequest)
 	defaults.onNoRuleError = errorWriter(defaults, http.StatusNotFound)
 	defaults.onInternalError = errorWriter(defaults, http.StatusInternalServerError)
+	defaults.onRequestBodyTooLarge = errorWriter(defaults, http.StatusRequestEntityTooLarge)
 
 	return defaults
 }

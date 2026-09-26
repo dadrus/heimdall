@@ -17,7 +17,7 @@ In heimdall, configuration encompasses two distinct concepts:
 * Static startup configuration, which is the focus of this document, and
 * Configuration of rules and rule sets, detailed link:{{< relref "/docs/rules/rule_sets.adoc" >}}[here].
 
-The static configuration establishes core services and components, such as the link:{{< relref "/docs/services/main.adoc" >}}[main service] - the primary entry point heimdall listens to for access control decisions - along with observability features like link:{{< relref "/docs/operations/observability.adoc#_logging" >}}[logging], the link:{{< relref "/docs/concepts/mechanisms.adoc" >}}[mechanism catalogue], the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], and link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers]. These elements are designed to remain relatively stable over time.
+The static configuration establishes core services and components, such as the link:{{< relref "/docs/operations/services.adoc#_main_service" >}}[main service] - the primary entry point heimdall listens to for access control decisions - along with observability features like link:{{< relref "/docs/operations/observability.adoc#_logging" >}}[logging], the link:{{< relref "/docs/concepts/mechanisms.adoc" >}}[mechanism catalogue], the link:{{< relref "/docs/rules/default_rule.adoc" >}}[default rule], and link:{{< relref "/docs/rules/providers.adoc" >}}[rule providers]. These elements are designed to remain relatively stable over time.
 
 In contrast, the rule set configuration governs how heimdall processes requests for your system. This configuration is dynamic and supports seamless hot-reloading, allowing updates without disrupting requests or connections.
 
@@ -108,10 +108,9 @@ This example demonstrates the use of both simple and complex values in environme
 Every configuration property, which can be defined in a link:{{< relref "#_configuration_file" >}}[configuration file] can also be defined as environment variable.
 Following rules apply:
 
-* If not specified while starting heimdall, all variables start with `HEIMDALLCFG_` prefix.
+* Environment variables use the prefix configured through `--env-config-prefix`. Defaults to `HEIMDALLCFG_`.
 +
-CAUTION: If for whatever reason, your environment configuration contains variables starting with `HEIMDALLCFG_`, which do not define heimdall specific configuration, heimdall will refuse starting if such configuration variable clashes (has an unexpected type) with heimdall's configuration properties (even for environment variables, the configuration is type safe).
-You can overcome such situation, by ether renaming such variables, or, if this is not possible, make use of the `--env-config-prefix` flag with heimdall's `serve` command.
+Only environment variables with this prefix are used as heimdall configuration.
 
 * Properties in a hierarchy are separated by `_`
 +
@@ -133,7 +132,7 @@ HEIMDALLCFG_LOG_LEVEL=info
 
 * Array entries must be defined using `\_<IDX>[_]`, with `IDX` being the index of the array starting with `0` and `_` in brackets being only required, if the value of the configured element has a structure/hierarchy.
 +
-E.g. the `trusted_proxies` property of the link:{{< relref "/docs/services/main.adoc" >}}[main service] can be configured in a config file as
+E.g. the `trusted_proxies` property of the link:{{< relref "/docs/operations/services.adoc#_main_service" >}}[main service] can be configured in a config file as
 +
 [source,yaml]
 ----

@@ -39,9 +39,10 @@ func (a *adapter) Shutdown(ctx context.Context) error {
 
 	select {
 	case <-done:
+		return nil
 	case <-ctx.Done():
 		a.s.Stop()
-	}
 
-	return nil
+		return ctx.Err()
+	}
 }

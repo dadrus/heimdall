@@ -1,3 +1,19 @@
+// Copyright 2022 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package errorchain_test
 
 import (
@@ -81,6 +97,67 @@ func TestErrorChainNewWithCause(t *testing.T) {
 
 	var fooer Fooer
 	require.NotErrorAs(t, err, &fooer)
+}
+
+func TestList(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		errs            []error
+		expected        []error
+		expectedMessage string
+	}{
+		"no errors": {},
+		"single error": {
+			errs:     []error{errTest1},
+			expected: []error{errTest1},
+		},
+		"multiple independent errors": {
+			errs:            []error{errTest1, nil, errTest2},
+			expected:        []error{errTest1, errTest2},
+			expectedMessage: "[test error 1, test error 2]",
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// WHEN
+			err := errorchain.List(tc.errs...)
+
+			// THEN
+			if len(tc.expected) == 0 {
+				require.NoError(t, err)
+
+				return
+			}
+
+			require.Error(t, err)
+			for _, expected := range tc.expected {
+				require.ErrorIs(t, err, expected)
+			}
+			if len(tc.expectedMessage) != 0 {
+				require.ErrorContains(t, err, tc.expectedMessage)
+			}
+		})
+	}
+}
+
+func TestErrorChainNewWithIndependentCauses(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	causeErr := &testError{}
+
+	// WHEN
+	err := errorchain.NewWithMessage(errTest1, "operation failed").
+		CausedBy(errorchain.List(errTest2, causeErr))
+
+	// THEN
+	require.ErrorIs(t, err, errTest1)
+	require.ErrorIs(t, err, errTest2)
+	require.ErrorIs(t, err, causeErr)
+	require.ErrorContains(t, err, "operation failed")
+	require.ErrorContains(t, err, "[test error 2, test error 3]")
 }
 
 func TestErrorChainErrorAsFindsAspectFromTopLevel(t *testing.T) {

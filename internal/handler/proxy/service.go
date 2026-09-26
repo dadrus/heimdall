@@ -19,7 +19,6 @@ package proxy
 import (
 	"context"
 	"crypto/tls"
-	"net"
 	"net/http"
 	"strings"
 
@@ -31,18 +30,23 @@ import (
 
 	"github.com/dadrus/heimdall/internal/cache"
 	"github.com/dadrus/heimdall/internal/config"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/bodylimit"
 	cachemiddleware "github.com/dadrus/heimdall/internal/handler/middleware/http/cache"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/dump"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/ioprogress"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/logger"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/otelmetrics"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/passthrough"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/recovery"
+	"github.com/dadrus/heimdall/internal/handler/middleware/http/requestlimit"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/requestvalidation"
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/trustedproxy"
+	"github.com/dadrus/heimdall/internal/handler/requestcoordinator"
 	"github.com/dadrus/heimdall/internal/handler/service"
 	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x"
+	"github.com/dadrus/heimdall/internal/x/errorchain"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 	"github.com/dadrus/heimdall/internal/x/loggeradapter"
 )
@@ -52,53 +56,55 @@ import (
 // purposes.
 var tlsClientConfig *tls.Config // nolint: gochecknoglobals
 
-type deadlineResetter struct{}
+type proxyService struct {
+	*http.Server
 
-func (dr *deadlineResetter) handler(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		if val := req.Context().Value(dr); val != nil {
-			type DeadlinesResetter interface{ MonitorAndResetDeadlines(flag bool) }
-
-			monitor, ok := val.(DeadlinesResetter)
-
-			if ok {
-				monitor.MonitorAndResetDeadlines(true)
-
-				defer monitor.MonitorAndResetDeadlines(false)
-			}
-		}
-
-		next.ServeHTTP(rw, req)
-	})
+	rt      *profileRoundTripper
+	tunnels *tunnelRegistry
 }
 
-func (dr *deadlineResetter) contexter(ctx context.Context, con net.Conn) context.Context {
-	if tlsCon, ok := con.(*tls.Conn); ok {
-		return context.WithValue(ctx, dr, tlsCon.NetConn())
-	}
+func (s *proxyService) Shutdown(ctx context.Context) error {
+	defer s.rt.CloseIdleConnections()
 
-	return context.WithValue(ctx, dr, con)
+	return errorchain.List(
+		s.Server.Shutdown(ctx),
+		s.tunnels.shutdown(ctx),
+	)
 }
 
+//nolint:funlen
 func newService(
 	conf *config.Configuration,
 	cch cache.Cache,
 	log zerolog.Logger,
 	exec pipeline.Executor,
-) *http.Server {
-	der := &deadlineResetter{}
+) *proxyService {
 	cfg := conf.Serve
 	eh := errorhandler.New(
 		errorhandler.WithVerboseErrors(cfg.Respond.Verbose),
-		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.ArgumentError.Code),
+		errorhandler.WithPreconditionErrorCode(cfg.Respond.With.PreconditionError.Code),
 		errorhandler.WithAuthenticationErrorCode(cfg.Respond.With.AuthenticationError.Code),
 		errorhandler.WithAuthorizationErrorCode(cfg.Respond.With.AuthorizationError.Code),
 		errorhandler.WithCommunicationErrorCode(cfg.Respond.With.CommunicationError.Code),
 		errorhandler.WithNoRuleErrorCode(cfg.Respond.With.NoRuleError.Code),
 		errorhandler.WithInternalServerErrorCode(cfg.Respond.With.InternalError.Code),
+		errorhandler.WithRequestBodyTooLargeErrorCode(cfg.Respond.With.RequestBodyTooLarge.Code),
 	)
+	profileRT := newProfileRoundTripper(cfg, tlsClientConfig)
+	rt := newObservedRoundTripper(profileRT)
+	tunnels := newTunnelRegistry()
+	coordinator := requestcoordinator.New(exec, newContextFactory(), newCommitter(rt, tunnels))
 
 	hc := alice.New(
+		ioprogress.New(
+			log,
+			ioprogress.WithRequestReadTimeout(cfg.Requests.ReadTimeout),
+			ioprogress.WithRequestBodyReadIdleTimeout(cfg.Requests.Body.ReadIdleTimeout),
+			ioprogress.WithRequestBodyReadMinRate(cfg.Requests.Body.ReadMinRate),
+			ioprogress.WithResponseWriteTimeout(cfg.Responses.WriteTimeout),
+			ioprogress.WithResponseWriteIdleTimeout(cfg.Responses.WriteIdleTimeout),
+			ioprogress.WithResponseWriteMinRate(cfg.Responses.WriteMinRate),
+		),
 		trustedproxy.New(
 			log,
 			cfg.TrustedProxies...,
@@ -118,9 +124,13 @@ func newService(
 			logger.WithAccessStatusEnabled(true),
 			logger.WithAccessLogEnabled(conf.Log.AccessLogEnabled),
 		),
+		requestlimit.New(
+			cfg.Requests.MaxInFlight,
+			requestlimit.WithRejectHandler(rejectAdmissionOverload),
+		),
+		bodylimit.New(cfg.Requests.Body.MaxSize, eh),
 		requestvalidation.New(),
 		dump.New(),
-		der.handler,
 		x.IfThenElseExec(cfg.CORS != nil,
 			func() func(http.Handler) http.Handler {
 				return cors.New(
@@ -137,15 +147,31 @@ func newService(
 			func() func(http.Handler) http.Handler { return passthrough.New },
 		),
 		cachemiddleware.New(cch),
-	).Then(service.NewHandler(newContextFactory(cfg, tlsClientConfig), exec, eh))
+	).Then(service.NewHandler(coordinator, eh))
 
-	return &http.Server{
-		Handler:        hc,
-		ReadTimeout:    cfg.Timeout.Read,
-		WriteTimeout:   cfg.Timeout.Write,
-		IdleTimeout:    cfg.Timeout.Idle,
-		MaxHeaderBytes: safecast.MustConvert[int](uint64(cfg.BufferLimit.Read)),
-		ErrorLog:       loggeradapter.NewStdLogger(log),
-		ConnContext:    der.contexter,
+	protocols := new(http.Protocols)
+	protocols.SetHTTP1(true)
+	protocols.SetHTTP2(cfg.TLS != nil)
+	protocols.SetUnencryptedHTTP2(cfg.TLS == nil)
+
+	return &proxyService{
+		Server: &http.Server{
+			Handler:           hc,
+			ReadTimeout:       cfg.Requests.ReadTimeout,
+			ReadHeaderTimeout: cfg.Requests.Headers.ReadTimeout,
+			WriteTimeout:      cfg.Responses.WriteTimeout,
+			IdleTimeout:       cfg.Connections.IdleTimeout,
+			MaxHeaderBytes:    safecast.MustConvert[int](uint64(cfg.Requests.Headers.MaxSize)),
+			ErrorLog:          loggeradapter.NewStdLogger(log),
+			HTTP2: &http.HTTP2Config{
+				MaxConcurrentStreams: cfg.Connections.Streams.MaxConcurrent,
+				SendPingTimeout:      cfg.Connections.Liveness.ProbeAfter,
+				PingTimeout:          cfg.Connections.Liveness.ProbeTimeout,
+				WriteByteTimeout:     cfg.Connections.WriteIdleTimeout,
+			},
+			Protocols: protocols,
+		},
+		rt:      profileRT,
+		tunnels: tunnels,
 	}
 }

@@ -19,10 +19,14 @@ package decision
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/inhies/go-bytesize"
 	"github.com/rs/zerolog/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -36,6 +40,87 @@ import (
 	"github.com/dadrus/heimdall/internal/x/testsupport"
 )
 
+func TestNewService(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		tls              *config.TLS
+		http2            bool
+		unencryptedHTTP2 bool
+	}{
+		"cleartext enables http1 and h2c": {
+			unencryptedHTTP2: true,
+		},
+		"tls enables http1 and http2": {
+			tls:   &config.TLS{},
+			http2: true,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// GIVEN
+			conf := &config.Configuration{
+				Serve: config.ServeConfig{
+					TLS: tc.tls,
+					Requests: config.IngressRequests{
+						ReadTimeout: 10 * time.Second,
+						Headers: config.IngressRequestHeaders{
+							MaxSize:     42 * bytesize.KB,
+							ReadTimeout: 11 * time.Second,
+						},
+					},
+					Responses: config.IngressResponses{
+						WriteTimeout:     12 * time.Second,
+						WriteIdleTimeout: 19 * time.Second,
+					},
+					Connections: config.IngressConnections{
+						IdleTimeout:      13 * time.Second,
+						WriteIdleTimeout: 14 * time.Second,
+						Streams: config.MultiplexedStreams{
+							MaxConcurrent: 17,
+						},
+						Liveness: config.ConnectionLiveness{
+							ProbeAfter:   15 * time.Second,
+							ProbeTimeout: 16 * time.Second,
+						},
+					},
+				},
+			}
+
+			// WHEN
+			srv := newService(
+				conf,
+				mocks.NewCacheMock(t),
+				log.Logger,
+				mocks2.NewExecutorMock(t),
+			)
+
+			// THEN
+			assert.Equal(t, 10*time.Second, srv.ReadTimeout)
+			assert.Equal(t, 11*time.Second, srv.ReadHeaderTimeout)
+			assert.Equal(t, 12*time.Second, srv.WriteTimeout)
+			assert.Equal(t, 13*time.Second, srv.IdleTimeout)
+			assert.Equal(t, 42*bytesize.KB, bytesize.ByteSize(srv.MaxHeaderBytes))
+
+			require.NotNil(t, srv.HTTP2)
+			assert.Equal(t, 17, srv.HTTP2.MaxConcurrentStreams)
+			assert.Equal(t, 15*time.Second, srv.HTTP2.SendPingTimeout)
+			assert.Equal(t, 16*time.Second, srv.HTTP2.PingTimeout)
+			assert.Equal(t, 14*time.Second, srv.HTTP2.WriteByteTimeout)
+
+			require.NotNil(t, srv.Protocols)
+			assert.True(t, srv.Protocols.HTTP1())
+			assert.Equal(t, tc.http2, srv.Protocols.HTTP2())
+			assert.Equal(t, tc.unencryptedHTTP2, srv.Protocols.UnencryptedHTTP2())
+
+			assert.NotNil(t, srv.Handler)
+			assert.NotNil(t, srv.ErrorLog)
+		})
+	}
+}
+
+//nolint:gocyclo
 func TestHandleDecisionEndpointRequest(t *testing.T) {
 	t.Parallel()
 
@@ -539,6 +624,90 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
+		"request body exceeds limit with known content length": {
+			serviceConf: config.ServeConfig{
+				Requests: config.IngressRequests{
+					Body: config.IngressRequestBody{
+						MaxSize: 5 * bytesize.B,
+					},
+				},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/", host),
+					strings.NewReader("123456"),
+				)
+				require.NoError(t, err)
+
+				return req
+			},
+			configureMocks: func(t *testing.T, _ *mocks2.ExecutorMock) {
+				t.Helper()
+			},
+			assertResponse: func(t *testing.T, err error, response *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, response)
+
+				assert.Equal(t, http.StatusRequestEntityTooLarge, response.StatusCode)
+
+				data, err := io.ReadAll(response.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
+			},
+		},
+		"request body exceeds limit while being read by pipeline": {
+			serviceConf: config.ServeConfig{
+				Requests: config.IngressRequests{
+					Body: config.IngressRequestBody{
+						MaxSize: 5 * bytesize.B,
+					},
+				},
+			},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodPost,
+					fmt.Sprintf("http://%s/", host),
+					strings.NewReader("123456"),
+				)
+				require.NoError(t, err)
+
+				req.ContentLength = -1
+
+				return req
+			},
+			configureMocks: func(t *testing.T, exec *mocks2.ExecutorMock) {
+				t.Helper()
+
+				exec.EXPECT().
+					Execute(mock.Anything).
+					RunAndReturn(func(ctx pipeline.ExecutionContext) error {
+						_, err := ctx.Request().Body()
+
+						return err
+					})
+			},
+			assertResponse: func(t *testing.T, err error, response *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, response)
+
+				assert.Equal(t, http.StatusRequestEntityTooLarge, response.StatusCode)
+
+				data, err := io.ReadAll(response.Body)
+				require.NoError(t, err)
+				assert.Empty(t, data)
+			},
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
@@ -552,6 +721,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			factory, err := listener.NewFactory(
 				srvConf.Address(),
 				srvConf.TLS,
+				0,
 				nil,
 			)
 			require.NoError(t, err)
@@ -587,4 +757,233 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			tc.assertResponse(t, err, resp)
 		})
 	}
+
+	t.Run("applies request body read idle timeout", func(t *testing.T) {
+		// GIVEN
+		port, err := testsupport.GetFreePort()
+		require.NoError(t, err)
+
+		srvConf := config.ServeConfig{
+			Host: "127.0.0.1",
+			Port: port,
+			Requests: config.IngressRequests{
+				Body: config.IngressRequestBody{
+					ReadIdleTimeout: 100 * time.Millisecond,
+				},
+			},
+		}
+
+		factory, err := listener.NewFactory(
+			srvConf.Address(),
+			srvConf.TLS,
+			0,
+			nil,
+		)
+		require.NoError(t, err)
+
+		lstnr, err := factory.Create(t.Context())
+		require.NoError(t, err)
+
+		conf := &config.Configuration{Serve: srvConf}
+		exec := mocks2.NewExecutorMock(t)
+		bodyReadResult := make(chan error, 1)
+
+		exec.EXPECT().Execute(mock.Anything).
+			RunAndReturn(func(ctx pipeline.ExecutionContext) error {
+				_, err := ctx.Request().Body()
+				bodyReadResult <- err
+
+				return err
+			})
+
+		decision := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+		defer decision.Shutdown(t.Context())
+
+		go func() {
+			_ = decision.Serve(lstnr)
+		}()
+
+		time.Sleep(50 * time.Millisecond)
+
+		dialer := &net.Dialer{}
+		conn, err := dialer.DialContext(t.Context(), "tcp", srvConf.Address())
+		require.NoError(t, err)
+		defer conn.Close()
+
+		_, err = io.WriteString(
+			conn,
+			"POST / HTTP/1.1\r\nHost: "+srvConf.Address()+"\r\nContent-Length: 1\r\n\r\n",
+		)
+		require.NoError(t, err)
+
+		// WHEN
+		var bodyReadErr error
+		select {
+		case bodyReadErr = <-bodyReadResult:
+		case <-time.After(2 * time.Second):
+			require.FailNow(t, "request body read did not complete")
+		}
+
+		// THEN
+		require.Error(t, bodyReadErr)
+
+		var netErr net.Error
+		require.ErrorAs(t, bodyReadErr, &netErr)
+		assert.True(t, netErr.Timeout())
+	})
+
+	t.Run("rejects request if maximum number of requests is in flight", func(t *testing.T) {
+		// GIVEN
+		port, err := testsupport.GetFreePort()
+		require.NoError(t, err)
+
+		srvConf := config.ServeConfig{
+			Host: "127.0.0.1",
+			Port: port,
+		}
+
+		srvConf.Requests.MaxInFlight = 1
+
+		factory, err := listener.NewFactory(
+			srvConf.Address(),
+			srvConf.TLS,
+			0,
+			nil,
+		)
+		require.NoError(t, err)
+
+		lstnr, err := factory.Create(t.Context())
+		require.NoError(t, err)
+
+		conf := &config.Configuration{Serve: srvConf}
+		exec := mocks2.NewExecutorMock(t)
+
+		requestEntered := make(chan struct{}, 2)
+		releaseRequest := make(chan struct{})
+
+		var releaseOnce sync.Once
+		release := func() {
+			releaseOnce.Do(func() {
+				close(releaseRequest)
+			})
+		}
+		t.Cleanup(release)
+
+		exec.EXPECT().Execute(mock.Anything).
+			Run(func(_ pipeline.ExecutionContext) {
+				requestEntered <- struct{}{}
+
+				<-releaseRequest
+			}).
+			Return(pipeline.ErrNoRuleFound)
+
+		decision := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+		defer decision.Shutdown(t.Context())
+
+		go func() {
+			_ = decision.Serve(lstnr)
+		}()
+
+		time.Sleep(50 * time.Millisecond)
+
+		client := &http.Client{Transport: &http.Transport{}}
+
+		firstResponse := make(chan *http.Response, 1)
+		firstError := make(chan error, 1)
+
+		go func() {
+			req, err := http.NewRequestWithContext(
+				t.Context(),
+				http.MethodGet,
+				fmt.Sprintf("http://%s/", srvConf.Address()),
+				nil,
+			)
+			if err != nil {
+				firstError <- err
+
+				return
+			}
+
+			resp, err := client.Do(req) //nolint:bodyclose
+			firstResponse <- resp
+			firstError <- err
+		}()
+
+		select {
+		case <-requestEntered:
+		case <-time.After(time.Second):
+			release()
+			require.FailNow(t, "first request did not enter pipeline")
+		}
+
+		secondRequest, err := http.NewRequestWithContext(
+			t.Context(),
+			http.MethodGet,
+			fmt.Sprintf("http://%s/", srvConf.Address()),
+			nil,
+		)
+		require.NoError(t, err)
+
+		var (
+			secondResponse *http.Response
+			secondErr      error
+		)
+
+		secondDone := make(chan struct{})
+
+		// WHEN
+		go func() {
+			defer close(secondDone)
+
+			secondResponse, secondErr = client.Do(secondRequest) //nolint:bodyclose
+		}()
+
+		// THEN
+		select {
+		case <-requestEntered:
+			release()
+
+			require.FailNow(
+				t,
+				"second request entered pipeline while maximum number of requests was in flight",
+			)
+
+		case <-secondDone:
+			require.NoError(t, secondErr)
+			require.NotNil(t, secondResponse)
+			defer secondResponse.Body.Close()
+
+			assert.Equal(t, http.StatusServiceUnavailable, secondResponse.StatusCode)
+
+			data, err := io.ReadAll(secondResponse.Body)
+			require.NoError(t, err)
+			assert.Empty(t, data)
+
+		case <-time.After(time.Second):
+			release()
+
+			require.FailNow(t, "second request was not rejected immediately")
+		}
+
+		// WHEN
+		release()
+
+		// THEN
+		select {
+		case err := <-firstError:
+			require.NoError(t, err)
+		case <-time.After(time.Second):
+			require.FailNow(t, "first request did not complete")
+		}
+
+		select {
+		case resp := <-firstResponse:
+			require.NotNil(t, resp)
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+		case <-time.After(time.Second):
+			require.FailNow(t, "first response was not received")
+		}
+	})
 }

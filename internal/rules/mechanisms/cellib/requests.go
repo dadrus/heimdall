@@ -79,7 +79,12 @@ func (requestsLib) CompileOptions() []cel.EnvOption {
 					// nolint: forcetypeassert
 					req := lhs.Value().(*pipeline.Request)
 
-					return types.DefaultTypeAdapter.NativeToValue(req.Body())
+					body, err := req.Body()
+					if err != nil {
+						return types.WrapErr(err)
+					}
+
+					return types.DefaultTypeAdapter.NativeToValue(body)
 				}),
 			),
 		),

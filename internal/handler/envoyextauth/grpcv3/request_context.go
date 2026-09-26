@@ -22,13 +22,8 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 
-	envoy_core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
-	"github.com/rs/zerolog"
-	"google.golang.org/genproto/googleapis/rpc/status"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 
 	"github.com/dadrus/heimdall/internal/handler/requestcontext"
@@ -39,32 +34,6 @@ import (
 var _ pipeline.UpstreamRequest = (*RequestContext)(nil)
 
 var errRequestBodyIncomplete = errors.New("request body is not fully available")
-
-type contextFactory struct {
-	pool *sync.Pool
-}
-
-func (cf *contextFactory) Create(ctx context.Context, req *envoy_auth.CheckRequest) *RequestContext {
-	rc := cf.pool.Get().(*RequestContext) //nolint: forcetypeassert
-
-	rc.Init(ctx, req)
-
-	return rc
-}
-
-func (cf *contextFactory) Destroy(rc *RequestContext) {
-	rc.Reset()
-
-	cf.pool.Put(rc)
-}
-
-func newContextFactory() *contextFactory {
-	return &contextFactory{
-		pool: &sync.Pool{New: func() any {
-			return newRequestContext()
-		}},
-	}
-}
 
 type envoyBodySource struct {
 	body     []byte
@@ -82,8 +51,7 @@ func (s *envoyBodySource) ReadRawBody() ([]byte, error) {
 type RequestContext struct {
 	*requestcontext.RequestContext
 
-	bodySource envoyBodySource
-
+	bodySource           envoyBodySource
 	upstreamViewPrepared bool
 }
 
@@ -178,33 +146,4 @@ func (r *RequestContext) WithParent(ctx context.Context) pipeline.Context {
 	r.SetParent(ctx)
 
 	return r
-}
-
-func (r *RequestContext) Finalize() (*envoy_auth.CheckResponse, error) {
-	if err := r.Error(); err != nil {
-		return nil, err
-	}
-
-	zerolog.Ctx(r.Context()).Debug().Msg("Creating response")
-
-	upstreamHeaders := r.UpstreamHeaders()
-	headers := make([]*envoy_core.HeaderValueOption, 0, len(upstreamHeaders))
-
-	for name, values := range upstreamHeaders {
-		headers = append(headers, &envoy_core.HeaderValueOption{
-			Header: &envoy_core.HeaderValue{
-				Key:   name,
-				Value: strings.Join(values, ","),
-			},
-		})
-	}
-
-	return &envoy_auth.CheckResponse{
-		Status: &status.Status{Code: int32(codes.OK)},
-		HttpResponse: &envoy_auth.CheckResponse_OkResponse{
-			OkResponse: &envoy_auth.OkHttpResponse{
-				Headers: headers,
-			},
-		},
-	}, nil
 }

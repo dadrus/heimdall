@@ -24,15 +24,16 @@ import (
 )
 
 type ServeConfig struct {
-	Host             string           `koanf:"host"`
-	Port             int              `koanf:"port"`
-	Timeout          Timeout          `koanf:"timeout"`
-	BufferLimit      BufferLimit      `koanf:"buffer_limit"`
-	ConnectionsLimit ConnectionsLimit `koanf:"connections_limit"`
-	CORS             *CORS            `koanf:"cors,omitempty"`
-	TLS              *TLS             `koanf:"tls,omitempty"             validate:"enforced=notnil"`
-	TrustedProxies   []string         `koanf:"trusted_proxies,omitempty" validate:"enforced=secure_networks"`
-	Respond          RespondConfig    `koanf:"respond"`
+	Host           string             `koanf:"host"`
+	Port           int                `koanf:"port"`
+	Requests       IngressRequests    `koanf:"requests"`
+	Responses      IngressResponses   `koanf:"responses"`
+	Connections    IngressConnections `koanf:"connections"`
+	Upstream       UpstreamConfig     `koanf:"upstream"`
+	CORS           *CORS              `koanf:"cors,omitempty"`
+	TLS            *TLS               `koanf:"tls,omitempty"             validate:"enforced=notnil"`
+	TrustedProxies []string           `koanf:"trusted_proxies,omitempty" validate:"enforced=secure_networks"`
+	Respond        RespondConfig      `koanf:"respond"`
 }
 
 func (c ServeConfig) Address() string { return fmt.Sprintf("%s:%d", c.Host, c.Port) }
@@ -42,16 +43,70 @@ type BufferLimit struct {
 	Write bytesize.ByteSize `koanf:"write" mapstructure:"write"`
 }
 
-type Timeout struct {
-	Read  time.Duration `koanf:"read,string"  mapstructure:"read"`
-	Write time.Duration `koanf:"write,string" mapstructure:"write"`
-	Idle  time.Duration `koanf:"idle,string"  mapstructure:"idle"`
+type IngressRequests struct {
+	MaxInFlight int64                 `koanf:"max_in_flight"       validate:"gte=0"`
+	ReadTimeout time.Duration         `koanf:"read_timeout,string" validate:"gte=0"`
+	Headers     IngressRequestHeaders `koanf:"headers"`
+	Body        IngressRequestBody    `koanf:"body"`
 }
 
-type ConnectionsLimit struct {
-	MaxPerHost     int `koanf:"max_per_host"`
-	MaxIdle        int `koanf:"max_idle"`
-	MaxIdlePerHost int `koanf:"max_idle_per_host"`
+type IngressRequestHeaders struct {
+	MaxSize     bytesize.ByteSize `koanf:"max_size"            validate:"gt=0,max_bytes=2047MB"`
+	ReadTimeout time.Duration     `koanf:"read_timeout,string" validate:"gte=0"`
+}
+
+type IngressRequestBody struct {
+	MaxSize         bytesize.ByteSize `koanf:"max_size"                 validate:"max_bytes=7EB"`
+	ReadIdleTimeout time.Duration     `koanf:"read_idle_timeout,string" validate:"gte=0,required_with=ReadMinRate"`
+	ReadMinRate     int64             `koanf:"read_min_rate"            validate:"gte=0"`
+}
+
+type IngressResponses struct {
+	WriteTimeout     time.Duration `koanf:"write_timeout,string"      validate:"gte=0"`
+	WriteIdleTimeout time.Duration `koanf:"write_idle_timeout,string" validate:"gte=0,required_with=WriteMinRate"`
+	WriteMinRate     int64         `koanf:"write_min_rate"            validate:"gte=0"`
+}
+
+type IngressConnections struct {
+	Max              int                `koanf:"max"                       validate:"gte=0"`
+	IdleTimeout      time.Duration      `koanf:"idle_timeout,string"       validate:"gte=0"`
+	WriteIdleTimeout time.Duration      `koanf:"write_idle_timeout,string" validate:"gte=0"`
+	Streams          MultiplexedStreams `koanf:"streams"`
+	Liveness         ConnectionLiveness `koanf:"liveness"`
+}
+
+type MultiplexedStreams struct {
+	MaxConcurrent int `koanf:"max_concurrent" validate:"gt=0,lte=4294967295"`
+}
+
+type ConnectionLiveness struct {
+	ProbeAfter   time.Duration `koanf:"probe_after,string"   validate:"gte=0"`
+	ProbeTimeout time.Duration `koanf:"probe_timeout,string" validate:"gt=0"`
+}
+
+type UpstreamConfig struct {
+	Connections UpstreamConnections `koanf:"connections"`
+	Responses   UpstreamResponses   `koanf:"responses"`
+}
+
+type UpstreamConnections struct {
+	MaxPerHost     int `koanf:"max_per_host"      validate:"gte=0"`
+	MaxIdle        int `koanf:"max_idle"          validate:"gt=0"`
+	MaxIdlePerHost int `koanf:"max_idle_per_host" validate:"gt=0,ltefield=MaxIdle"`
+
+	DialTimeout      time.Duration      `koanf:"dial_timeout,string"       validate:"gte=0"`
+	IdleTimeout      time.Duration      `koanf:"idle_timeout,string"       validate:"gte=0"`
+	WriteIdleTimeout time.Duration      `koanf:"write_idle_timeout,string" validate:"gte=0"`
+	Liveness         ConnectionLiveness `koanf:"liveness"`
+}
+
+type UpstreamResponses struct {
+	Headers UpstreamResponseHeaders `koanf:"headers"`
+}
+
+type UpstreamResponseHeaders struct {
+	MaxSize     bytesize.ByteSize `koanf:"max_size"            validate:"gt=0,max_bytes=7EB"`
+	ReadTimeout time.Duration     `koanf:"read_timeout,string" validate:"gte=0"`
 }
 
 type CORS struct {
@@ -71,11 +126,12 @@ type RespondConfig struct {
 	Verbose bool `koanf:"verbose"`
 	With    struct {
 		Accepted            ResponseOverride `koanf:"accepted"`
-		ArgumentError       ResponseOverride `koanf:"argument_error"`
+		PreconditionError   ResponseOverride `koanf:"precondition_error"`
 		AuthenticationError ResponseOverride `koanf:"authentication_error"`
 		AuthorizationError  ResponseOverride `koanf:"authorization_error"`
 		CommunicationError  ResponseOverride `koanf:"communication_error"`
 		InternalError       ResponseOverride `koanf:"internal_error"`
+		RequestBodyTooLarge ResponseOverride `koanf:"request_body_too_large"`
 		NoRuleError         ResponseOverride `koanf:"no_rule_error"`
 	} `koanf:"with"`
 }

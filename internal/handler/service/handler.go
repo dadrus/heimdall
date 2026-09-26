@@ -20,33 +20,26 @@ import (
 	"net/http"
 
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
-	"github.com/dadrus/heimdall/internal/handler/requestcontext"
-	"github.com/dadrus/heimdall/internal/pipeline"
 )
 
+type requestCoordinator interface {
+	Handle(req *http.Request, rw http.ResponseWriter) (struct{}, error)
+}
+
 type handler struct {
-	e  pipeline.Executor
-	f  requestcontext.ContextFactory
+	c  requestCoordinator
 	eh errorhandler.ErrorHandler
 }
 
-func NewHandler(rcf requestcontext.ContextFactory, re pipeline.Executor, eh errorhandler.ErrorHandler) http.Handler {
-	return &handler{f: rcf, eh: eh, e: re}
+func NewHandler(coordinator requestCoordinator, eh errorhandler.ErrorHandler) http.Handler {
+	return &handler{
+		c:  coordinator,
+		eh: eh,
+	}
 }
 
 func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	rc := h.f.Create(rw, req)
-
-	defer h.f.Destroy(rc)
-
-	err := h.e.Execute(rc)
-	if err != nil {
-		h.eh.HandleError(rw, req, err)
-
-		return
-	}
-
-	if err = rc.Finalize(); err != nil {
+	if _, err := h.c.Handle(req, rw); err != nil {
 		h.eh.HandleError(rw, req, err)
 	}
 }

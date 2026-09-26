@@ -40,7 +40,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Body().Return("foobar=foo")
+				fnt.EXPECT().Body().Return("foobar=foo", nil)
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
@@ -58,7 +58,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Body().Return(map[string]any{"foo": "bar"})
+				fnt.EXPECT().Body().Return(map[string]any{"foo": "bar"}, nil)
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
@@ -76,7 +76,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Body().Return(map[string]any{"foo": []any{"bar"}})
+				fnt.EXPECT().Body().Return(map[string]any{"foo": []any{"bar"}}, nil)
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
@@ -94,7 +94,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Body().Return(map[string]any{"foobar": []any{"foo", "bar"}})
+				fnt.EXPECT().Body().Return(map[string]any{"foobar": []any{"foo", "bar"}}, nil)
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
@@ -112,7 +112,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Body().Return(map[string]any{"foobar": []string{"foo", "bar"}})
+				fnt.EXPECT().Body().Return(map[string]any{"foobar": []string{"foo", "bar"}}, nil)
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
@@ -130,7 +130,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Body().Return(map[string]any{"foobar": []any{1}})
+				fnt.EXPECT().Body().Return(map[string]any{"foobar": []any{1}}, nil)
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
@@ -148,7 +148,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Body().Return(map[string]any{"foobar": map[string]any{"foo": "bar"}})
+				fnt.EXPECT().Body().Return(map[string]any{"foobar": map[string]any{"foo": "bar"}}, nil)
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
@@ -166,7 +166,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Body().Return(map[string]any{"foobar": "foo"})
+				fnt.EXPECT().Body().Return(map[string]any{"foobar": "foo"}, nil)
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},
@@ -185,7 +185,7 @@ func TestExtractBodyParameter(t *testing.T) {
 				t.Helper()
 
 				fnt := mocks.NewRequestFunctionsMock(t)
-				fnt.EXPECT().Body().Return(map[string]any{"foobar": []string{"foo"}})
+				fnt.EXPECT().Body().Return(map[string]any{"foobar": []string{"foo"}}, nil)
 
 				ctx.EXPECT().Request().Return(&pipeline.Request{RequestFunctions: fnt})
 			},

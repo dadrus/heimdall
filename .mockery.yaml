@@ -34,13 +34,16 @@ packages:
   github.com/dadrus/heimdall/internal/handler/fxlcm:
     interfaces:
       Server: {}
+  github.com/dadrus/heimdall/internal/handler/proxy:
+    config:
+      dir: "{{ .InterfaceDir }}"
+      filename: "mock_{{ snakecase .InterfaceName | lower }}_test.go"
+      pkgname: "{{ .SrcPackageName }}"
+    interfaces:
+      tunnelTracker: {}
   github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler:
     interfaces:
       ErrorHandler: {}
-  github.com/dadrus/heimdall/internal/handler/requestcontext:
-    interfaces:
-      Context: {}
-      ContextFactory: {}
   github.com/dadrus/heimdall/internal/pipeline:
     interfaces:
       Context: {}
@@ -72,6 +75,7 @@ packages:
     interfaces:
       Provider: {}
       DependenciesResolver: {}
+      ChangeObserver: {}
   github.com/dadrus/heimdall/internal/secrets:
     interfaces:
       handleBinding:
@@ -105,6 +109,9 @@ packages:
   github.com/dadrus/heimdall/internal/rules/endpoint:
     interfaces:
       AuthenticationStrategy: {}
+  github.com/dadrus/heimdall/internal/rules/mechanisms/authenticators/extractors:
+    interfaces:
+      AuthDataExtractStrategy: {}
   github.com/dadrus/heimdall/internal/rules/mechanisms:
     interfaces:
       Mechanism: {}

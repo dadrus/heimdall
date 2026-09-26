@@ -25,12 +25,18 @@ import (
 	"crypto/x509/pkix"
 	"io"
 	"net/http"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/go-jose/go-jose/v4"
 	"github.com/goccy/go-json"
+	"github.com/inhies/go-bytesize"
 	"github.com/rs/zerolog/log"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/dadrus/heimdall/internal/config"
@@ -112,6 +118,12 @@ func (suite *ServiceTestSuite) SetupTest() {
 			Host: "127.0.0.1",
 			Port: port,
 			CORS: &config.CORS{},
+			Requests: config.ManagementRequests{
+				MaxInFlight: 1,
+				Body: config.ManagementRequestBody{
+					MaxSize: 5 * bytesize.B,
+				},
+			},
 		},
 		Metrics: config.MetricsConfig{Enabled: true},
 	}
@@ -119,6 +131,7 @@ func (suite *ServiceTestSuite) SetupTest() {
 	factory, err := listener.NewFactory(
 		conf.Management.Address(),
 		conf.Management.TLS,
+		0,
 		nil,
 	)
 	suite.Require().NoError(err)
@@ -271,4 +284,185 @@ func (suite *ServiceTestSuite) TestHealthRequest() {
 	suite.Require().NoError(err)
 
 	suite.JSONEq(`{ "status": "ok"}`, string(rawResp))
+}
+
+func (suite *ServiceTestSuite) TestRequestBodyLimit() {
+	// GIVEN
+	client := &http.Client{Transport: &http.Transport{}}
+
+	req, err := http.NewRequestWithContext(
+		suite.T().Context(),
+		http.MethodGet,
+		suite.addr+"/.well-known/jwks",
+		strings.NewReader("123456"),
+	)
+	suite.Require().NoError(err)
+
+	// WHEN
+	resp, err := client.Do(req)
+
+	// THEN
+	suite.Require().NoError(err)
+
+	defer resp.Body.Close()
+
+	suite.Equal(http.StatusRequestEntityTooLarge, resp.StatusCode)
+
+	rawResp, err := io.ReadAll(resp.Body)
+	suite.Require().NoError(err)
+	suite.Empty(rawResp)
+}
+
+func (suite *ServiceTestSuite) TestRequestLimit() {
+	// GIVEN
+	requestEntered := make(chan struct{})
+	releaseRequest := make(chan struct{})
+
+	var releaseOnce sync.Once
+	release := func() {
+		releaseOnce.Do(func() {
+			close(releaseRequest)
+		})
+	}
+	suite.T().Cleanup(release)
+
+	suite.khr.EXPECT().Keys().Once().
+		Run(func(_ mock.Arguments) {
+			close(requestEntered)
+
+			<-releaseRequest
+		}).
+		Return([]jose.JSONWebKey{})
+
+	client := &http.Client{Transport: &http.Transport{}}
+
+	firstResponse := make(chan *http.Response, 1)
+	firstError := make(chan error, 1)
+
+	go func() {
+		req, err := http.NewRequestWithContext(
+			suite.T().Context(),
+			http.MethodGet,
+			suite.addr+"/.well-known/jwks",
+			nil,
+		)
+		if err != nil {
+			firstError <- err
+
+			return
+		}
+
+		resp, err := client.Do(req) //nolint:bodyclose
+
+		firstResponse <- resp
+		firstError <- err
+	}()
+
+	select {
+	case <-requestEntered:
+	case <-time.After(time.Second):
+		suite.FailNow("first request did not enter management handler")
+	}
+
+	secondRequest, err := http.NewRequestWithContext(
+		suite.T().Context(),
+		http.MethodGet,
+		suite.addr+"/.well-known/health",
+		nil,
+	)
+	suite.Require().NoError(err)
+
+	// WHEN
+	secondResponse, err := client.Do(secondRequest)
+
+	// THEN
+	suite.Require().NoError(err)
+	suite.Require().NotNil(secondResponse)
+
+	defer secondResponse.Body.Close()
+
+	suite.Equal(http.StatusServiceUnavailable, secondResponse.StatusCode)
+
+	data, err := io.ReadAll(secondResponse.Body)
+	suite.Require().NoError(err)
+	suite.Empty(data)
+
+	// WHEN
+	release()
+
+	// THEN
+	select {
+	case err := <-firstError:
+		suite.Require().NoError(err)
+	case <-time.After(time.Second):
+		suite.FailNow("first request did not complete")
+	}
+
+	select {
+	case resp := <-firstResponse:
+		suite.Require().NotNil(resp)
+		defer resp.Body.Close()
+
+		suite.Equal(http.StatusOK, resp.StatusCode)
+	case <-time.After(time.Second):
+		suite.FailNow("first response was not received")
+	}
+}
+
+func TestNewService(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		tls   *config.TLS
+		http2 bool
+	}{
+		"cleartext enables http1 only": {},
+		"tls enables http1 and http2": {
+			tls:   &config.TLS{},
+			http2: true,
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			t.Parallel()
+
+			// GIVEN
+			conf := &config.Configuration{}
+
+			conf.Management.TLS = tc.tls
+			conf.Management.Requests.ReadTimeout = 10 * time.Second
+			conf.Management.Requests.Headers.MaxSize = 42 * bytesize.KB
+			conf.Management.Requests.Headers.ReadTimeout = 11 * time.Second
+			conf.Management.Responses.WriteTimeout = 12 * time.Second
+			conf.Management.Responses.WriteIdleTimeout = 14 * time.Second
+			conf.Management.Connections.IdleTimeout = 13 * time.Second
+
+			// WHEN
+			srv := newService(
+				conf,
+				log.Logger,
+				nil,
+			)
+
+			// THEN
+			assert.Equal(t, 10*time.Second, srv.ReadTimeout)
+			assert.Equal(t, 11*time.Second, srv.ReadHeaderTimeout)
+			assert.Equal(t, 12*time.Second, srv.WriteTimeout)
+			assert.Equal(t, 13*time.Second, srv.IdleTimeout)
+			assert.Equal(t, int(42*bytesize.KB), srv.MaxHeaderBytes)
+
+			require.NotNil(t, srv.HTTP2)
+			assert.Equal(t, 100, srv.HTTP2.MaxConcurrentStreams)
+			assert.Equal(t, 30*time.Second, srv.HTTP2.SendPingTimeout)
+			assert.Equal(t, 15*time.Second, srv.HTTP2.PingTimeout)
+			assert.Equal(t, 30*time.Second, srv.HTTP2.WriteByteTimeout)
+
+			require.NotNil(t, srv.Protocols)
+			assert.True(t, srv.Protocols.HTTP1())
+			assert.Equal(t, tc.http2, srv.Protocols.HTTP2())
+			assert.False(t, srv.Protocols.UnencryptedHTTP2())
+
+			assert.NotNil(t, srv.Handler)
+			assert.NotNil(t, srv.ErrorLog)
+		})
+	}
 }

@@ -18,28 +18,46 @@ package testsupport
 
 import (
 	"os"
+	"sync"
 	"testing"
 
 	"github.com/undefinedlabs/go-mpatch"
 )
 
 type PatchedOSExit struct {
-	Called bool
-	Code   int
+	mutex  sync.RWMutex
+	called bool
+	code   int
 
 	patchFunc *mpatch.Patch
+}
+
+func (p *PatchedOSExit) Called() bool {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return p.called
+}
+
+func (p *PatchedOSExit) Code() int {
+	p.mutex.RLock()
+	defer p.mutex.RUnlock()
+
+	return p.code
 }
 
 func PatchOSExit(t *testing.T, mockOSExitImpl func(int)) (*PatchedOSExit, error) {
 	t.Helper()
 
-	patchedExit := &PatchedOSExit{Called: false}
+	patchedExit := new(PatchedOSExit)
 
 	var err error
 
 	patchedExit.patchFunc, err = mpatch.PatchMethod(os.Exit, func(code int) {
-		patchedExit.Called = true
-		patchedExit.Code = code
+		patchedExit.mutex.Lock()
+		patchedExit.called = true
+		patchedExit.code = code
+		patchedExit.mutex.Unlock()
 
 		mockOSExitImpl(code)
 	})

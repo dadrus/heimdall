@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,14 +14,35 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package requestcontext
+package proxy
 
 import (
-	"github.com/dadrus/heimdall/internal/pipeline"
+	"net/http/httputil"
+	"sync"
 )
 
-type Context interface {
-	pipeline.ExecutionContext
+const copyBufferSize = 32 * 1024
 
-	Finalize() error
+var _ httputil.BufferPool = (*bufferPool)(nil)
+
+type bufferPool struct {
+	pool sync.Pool
+}
+
+func newBufferPool() *bufferPool {
+	return &bufferPool{
+		pool: sync.Pool{
+			New: func() any {
+				return make([]byte, copyBufferSize)
+			},
+		},
+	}
+}
+
+func (p *bufferPool) Get() []byte {
+	return p.pool.Get().([]byte) //nolint:forcetypeassert
+}
+
+func (p *bufferPool) Put(buf []byte) {
+	p.pool.Put(buf)
 }

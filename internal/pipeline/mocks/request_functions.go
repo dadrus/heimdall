@@ -36,7 +36,7 @@ func (_m *RequestFunctionsMock) EXPECT() *RequestFunctionsMock_Expecter {
 }
 
 // Body provides a mock function for the type RequestFunctionsMock
-func (_mock *RequestFunctionsMock) Body() any {
+func (_mock *RequestFunctionsMock) Body() (any, error) {
 	ret := _mock.Called()
 
 	if len(ret) == 0 {
@@ -44,6 +44,10 @@ func (_mock *RequestFunctionsMock) Body() any {
 	}
 
 	var r0 any
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func() (any, error)); ok {
+		return returnFunc()
+	}
 	if returnFunc, ok := ret.Get(0).(func() any); ok {
 		r0 = returnFunc()
 	} else {
@@ -51,7 +55,12 @@ func (_mock *RequestFunctionsMock) Body() any {
 			r0 = ret.Get(0).(any)
 		}
 	}
-	return r0
+	if returnFunc, ok := ret.Get(1).(func() error); ok {
+		r1 = returnFunc()
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // RequestFunctionsMock_Body_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Body'
@@ -71,12 +80,12 @@ func (_c *RequestFunctionsMock_Body_Call) Run(run func()) *RequestFunctionsMock_
 	return _c
 }
 
-func (_c *RequestFunctionsMock_Body_Call) Return(anyMoqParam any) *RequestFunctionsMock_Body_Call {
-	_c.Call.Return(anyMoqParam)
+func (_c *RequestFunctionsMock_Body_Call) Return(anyMoqParam any, err error) *RequestFunctionsMock_Body_Call {
+	_c.Call.Return(anyMoqParam, err)
 	return _c
 }
 
-func (_c *RequestFunctionsMock_Body_Call) RunAndReturn(run func() any) *RequestFunctionsMock_Body_Call {
+func (_c *RequestFunctionsMock_Body_Call) RunAndReturn(run func() (any, error)) *RequestFunctionsMock_Body_Call {
 	_c.Call.Return(run)
 	return _c
 }

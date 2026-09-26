@@ -31,6 +31,7 @@ var (
 	ErrInternal             = errors.New("internal error")
 	ErrNoRuleFound          = errors.New("no rule found")
 	ErrMalformedRequest     = errors.New("malformed request")
+	ErrRequestBodyTooLarge  = errors.New("request body too large")
 )
 
 type RedirectError struct {

@@ -21,6 +21,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/rs/zerolog"
 
@@ -28,10 +29,17 @@ import (
 	"github.com/dadrus/heimdall/internal/x/errorchain"
 )
 
+var errServiceStop = errors.New("failed to stop service")
+
 type Server interface {
 	Serve(l net.Listener) error
 	Shutdown(ctx context.Context) error
 }
+
+const (
+	cleanupTailFraction = 10
+	maxCleanupTail      = time.Second
+)
 
 type tlsAwareListener interface {
 	TLSEnabled() bool
@@ -68,7 +76,7 @@ func (m *LifecycleManager) Start(ctx context.Context) error {
 				Msg("TLS is disabled.")
 		}
 
-		if err = m.Server.Serve(ln); err != nil {
+		if err := m.Server.Serve(ln); err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
 				m.Logger.Fatal().Err(err).Str("_service", m.ServiceName).Msg("Could not start service")
 			} else {
@@ -83,10 +91,34 @@ func (m *LifecycleManager) Start(ctx context.Context) error {
 func (m *LifecycleManager) Stop(ctx context.Context) error {
 	m.Logger.Info().Str("_service", m.ServiceName).Msg("Tearing down service")
 
-	err := m.Server.Shutdown(ctx)
-	if err != nil {
-		m.Logger.Warn().Err(err).Str("_service", m.ServiceName).Msg("Graceful shutdown failed")
+	graceCtx, cancel := gracefulShutdownContext(ctx)
+	defer cancel()
+
+	err := m.Server.Shutdown(graceCtx)
+	if err == nil {
+		return nil
 	}
 
-	return err
+	m.Logger.Warn().Err(err).
+		Str("_service", m.ServiceName).
+		Msg("Service shutdown failed")
+
+	return errorchain.NewWithMessagef(errServiceStop, "%s service", m.ServiceName).
+		CausedBy(err)
+}
+
+func gracefulShutdownContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	deadline, ok := ctx.Deadline()
+	if !ok {
+		return context.WithCancel(ctx)
+	}
+
+	remaining := time.Until(deadline)
+	if remaining <= 0 {
+		return context.WithCancel(ctx)
+	}
+
+	tail := min(remaining/cleanupTailFraction, maxCleanupTail)
+
+	return context.WithDeadline(ctx, deadline.Add(-tail))
 }

@@ -1,4 +1,4 @@
-// Copyright 2023 Dimitrij Drus <dadrus@gmx.de>
+// Copyright 2026 Dimitrij Drus <dadrus@gmx.de>
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,11 +14,8 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
-package requestcontext
+package proxy
 
-import "net/http"
-
-type ContextFactory interface {
-	Create(rw http.ResponseWriter, req *http.Request) Context
-	Destroy(ctx Context)
+type closeWriter interface {
+	CloseWrite() error
 }

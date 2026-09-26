@@ -1,3 +1,19 @@
+// Copyright 2025 Dimitrij Drus <dadrus@gmx.de>
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+// SPDX-License-Identifier: Apache-2.0
+
 package validation
 
 import (
@@ -5,6 +21,8 @@ import (
 	"net/url"
 	"reflect"
 	"strings"
+
+	"github.com/inhies/go-bytesize"
 
 	"github.com/dadrus/heimdall/internal/headerpolicy"
 )
@@ -87,3 +105,24 @@ func (mutableUpstreamHeaderValidator) Validate(_ string, field reflect.Value) bo
 
 	return headerpolicy.Classify(field.String()) == headerpolicy.Ordinary
 }
+
+type maxBytes struct{}
+
+func (maxBytes) Validate(param string, field reflect.Value) bool {
+	size, ok := field.Interface().(bytesize.ByteSize)
+	if !ok {
+		return false
+	}
+
+	maxSize, err := bytesize.Parse(param)
+	if err != nil {
+		return false
+	}
+
+	return size <= maxSize
+}
+
+func (maxBytes) Tag() string                      { return "max_bytes" }
+func (maxBytes) AlwaysValidate() bool             { return false }
+func (maxBytes) MessageTemplate() string          { return "{0} {1}" }
+func (maxBytes) ErrorMessage(param string) string { return "must not exceed " + param }

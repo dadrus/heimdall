@@ -24,40 +24,30 @@ import (
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 
-	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
 
+type requestCoordinator interface {
+	Handle(ri requestInput, ct commitTarget) (*envoy_auth.CheckResponse, error)
+}
+
 type Handler struct {
-	e  pipeline.Executor
-	cf *contextFactory
+	c requestCoordinator
 }
 
 func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
 	if !httpx.IsValidAuthority(req.GetAttributes().GetRequest().GetHttp().GetHost()) {
-		return badRequest(), nil
-	}
-
-	reqCtx := h.cf.Create(ctx, req)
-	defer h.cf.Destroy(reqCtx)
-
-	err := h.e.Execute(reqCtx)
-	if err != nil {
-		return nil, err
-	}
-
-	return reqCtx.Finalize() //nolint:contextcheck
-}
-
-func badRequest() *envoy_auth.CheckResponse {
-	return &envoy_auth.CheckResponse{
-		Status: &status.Status{Code: int32(codes.OK)},
-		HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
-			DeniedResponse: &envoy_auth.DeniedHttpResponse{
-				Status: &envoy_type.HttpStatus{
-					Code: envoy_type.StatusCode_BadRequest,
+		return &envoy_auth.CheckResponse{
+			Status: &status.Status{Code: int32(codes.OK)},
+			HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
+				DeniedResponse: &envoy_auth.DeniedHttpResponse{
+					Status: &envoy_type.HttpStatus{
+						Code: envoy_type.StatusCode_BadRequest,
+					},
 				},
 			},
-		},
+		}, nil
 	}
+
+	return h.c.Handle(requestInput{ctx: ctx, req: req}, commitTarget{})
 }

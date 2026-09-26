@@ -283,6 +283,31 @@ func TestHandlerHandle(t *testing.T) {
 			},
 			expBody: "<p>authorization error: &lt;script&gt;alert(1)&lt;/script&gt;</p>",
 		},
+		"request body too large error default": {
+			handler:   New(),
+			err:       errorchain.New(pipeline.ErrRequestBodyTooLarge),
+			expCode:   http.StatusRequestEntityTooLarge,
+			expHeader: http.Header{},
+		},
+		"request body too large error overridden": {
+			handler: New(
+				WithRequestBodyTooLargeErrorCode(http.StatusContinue),
+			),
+			err:       errorchain.New(pipeline.ErrRequestBodyTooLarge),
+			expCode:   http.StatusContinue,
+			expHeader: http.Header{},
+		},
+		"request body too large error verbose expecting application/json": {
+			handler: New(WithVerboseErrors(true)),
+			err:     errorchain.New(pipeline.ErrRequestBodyTooLarge),
+			expCode: http.StatusRequestEntityTooLarge,
+			accept:  "application/json",
+			expHeader: http.Header{
+				"Content-Type":           {"application/json"},
+				"X-Content-Type-Options": {"nosniff"},
+			},
+			expBody: `{"code":"requestBodyTooLarge","message":"request body too large"}`,
+		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN

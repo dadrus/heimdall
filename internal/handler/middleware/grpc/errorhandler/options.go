@@ -16,7 +16,9 @@
 
 package errorhandler
 
-import "google.golang.org/grpc/codes"
+import (
+	"google.golang.org/grpc/codes"
+)
 
 type opts struct {
 	verboseErrors       bool

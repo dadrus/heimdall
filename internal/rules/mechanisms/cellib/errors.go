@@ -172,5 +172,8 @@ func (errorsLib) CompileOptions() []cel.EnvOption {
 			ErrorType{types: []error{pipeline.ErrInternal, pipeline.ErrConfiguration}}),
 		cel.Constant("precondition_error", cel.DynType,
 			ErrorType{types: []error{pipeline.ErrArgument}}),
+		cel.Constant("request_body_too_large", cel.DynType,
+			ErrorType{types: []error{pipeline.ErrRequestBodyTooLarge}},
+		),
 	}
 }

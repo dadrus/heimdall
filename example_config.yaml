@@ -26,8 +26,49 @@ secret_management:
       path: /path/to/secrets.yaml
       watch: true
 
+shutdown:
+  timeout: 30s
+
 serve:
   port: 4468
+  requests:
+    max_in_flight: 512
+    read_timeout: 0s
+    headers:
+      max_size: 64KB
+      read_timeout: 5s
+    body:
+      max_size: 5MB
+      read_idle_timeout: 20s
+      read_min_rate: 0
+  responses:
+    write_timeout: 0s
+    write_idle_timeout: 30s
+    write_min_rate: 0
+  connections:
+    max: 1024
+    idle_timeout: 2m
+    write_idle_timeout: 30s
+    streams:
+      max_concurrent: 100
+    liveness:
+      probe_after: 30s
+      probe_timeout: 15s
+  upstream:
+    connections:
+      max_per_host: 100
+      max_idle: 100
+      max_idle_per_host: 100
+      dial_timeout: 5s
+      idle_timeout: 90s
+      write_idle_timeout: 30s
+      liveness:
+        probe_after: 30s
+        probe_timeout: 15s
+    responses:
+      headers:
+        max_size: 1MB
+        read_timeout: 30s
   tls:
     secret:
       source: tls_keys
@@ -48,6 +89,26 @@ serve:
         code: 404
       authentication_error:
         code: 404
+      request_body_too_large:
+        code: 413
+
+management:
+  port: 4457
+  requests:
+    max_in_flight: 512
+    read_timeout: 0s
+    headers:
+      max_size: 64KB
+      read_timeout: 5s
+    body:
+      max_size: 5MB
+  responses:
+    write_timeout: 0s
+    write_idle_timeout: 30s
+    write_min_rate: 0
+  connections:
+    max: 1024
+    idle_timeout: 2m
 
 log:
   level: debug

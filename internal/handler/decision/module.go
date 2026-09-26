@@ -45,7 +45,7 @@ func newLifecycleManager(
 	logger := app.Logger()
 	cfg := conf.Serve
 
-	lf, err := listener.NewFactory(cfg.Address(), cfg.TLS, app.SecretResolver())
+	lf, err := listener.NewFactory(cfg.Address(), cfg.TLS, cfg.Connections.Max, app.SecretResolver())
 	if err != nil {
 		return nil, err
 	}
