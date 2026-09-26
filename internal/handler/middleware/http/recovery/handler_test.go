@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/justinas/alice"
@@ -30,6 +31,14 @@ import (
 
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler/mocks"
 )
+
+type recordingErrorHandler struct {
+	called atomic.Bool
+}
+
+func (h *recordingErrorHandler) HandleError(_ http.ResponseWriter, _ *http.Request, _ error) {
+	h.called.Store(true)
+}
 
 func TestHandlerExecution(t *testing.T) {
 	t.Parallel()
@@ -85,4 +94,43 @@ func TestHandlerExecution(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestHandlerPropagatesHTTPAbortHandler(t *testing.T) {
+	t.Parallel()
+
+	// GIVEN
+	eh := new(recordingErrorHandler)
+	srv := httptest.NewServer(
+		alice.New(New(eh)).
+			ThenFunc(func(rw http.ResponseWriter, req *http.Request) {
+				if req.URL.Path == "/abort" {
+					panic(http.ErrAbortHandler)
+				}
+
+				rw.WriteHeader(http.StatusNoContent)
+			}))
+	defer srv.Close()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL+"/abort", nil)
+	require.NoError(t, err)
+
+	// WHEN
+	resp, err := srv.Client().Do(req) //nolint:bodyclose
+
+	// THEN
+	require.False(t, eh.called.Load(), "error handler must not be invoked for http.ErrAbortHandler")
+	require.Error(t, err)
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+
+	req, err = http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/ok", nil)
+	require.NoError(t, err)
+
+	resp, err = srv.Client().Do(req) //nolint:bodyclose
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusNoContent, resp.StatusCode)
 }
