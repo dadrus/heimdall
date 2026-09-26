@@ -1,9 +1,9 @@
 openapi: 3.1.0
 
 info:
-  title: Heimdall
+  title: heimdall
   version: dev
-  description: The API of heimdall
+  description: API reference for heimdall.
   license:
     name: Apache 2.0
     identifier: Apache-2.0
@@ -16,44 +16,43 @@ servers:
 tags:
   - name: Well-Known
     description: |
-      Operations/resources which fall under the `.well-known` (see [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615))
-      category, like health endpoints, etc. 
-      
-      This functionality is only available on heimdall's **management port**.
+      Operations and resources under the `.well-known` URI space defined by
+      [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615), including the health and JWKS endpoints.
 
-  - name: Main
+      These endpoints are available only on heimdall's **management port**.
+
+  - name: Main Service
     description: |
-      This is the main service exposed by heimdall and available on the **main port**.
+      Main service exposed by heimdall on the **main port**.
 
   - name: Profiling
     description: |
-      Provides runtime profiling information, like CPU profile, memory usage, program counter, etc.
-      
-      This information is only available on heimdall's **profiling port**.
+      Provides runtime profiling information, including CPU, memory, goroutine, and execution trace profiles.
+
+      This information is available only on heimdall's **profiling port**.
 
   - name: Metrics
     description: |
-      Provides available Prometheus style metrics like:
-      
-      * Process information, like CPU, memory, file descriptor usage and start time
-      * Go runtime information, including details about GC, number of goroutines and OS threats
-      * Information about the metrics endpoint itself, including the number of internal errors encountered while gathering the metrics, number of current inflight and overall scrapes done.
-      * Information about the decision and proxy requests handled, including the total amount and duration of http requests by status code, method and path, as well as information about requests in progress.
-      * Information about expiry for configured certificates.
-      
-      This information is only available on heimdall's **metrics port**.
+      Provides Prometheus-style metrics, including:
+
+      * Process information such as CPU, memory, file descriptor usage, and start time.
+      * Go runtime information, including garbage collection, goroutines, and OS threads.
+      * Metrics endpoint information, including collection errors and scrape counts.
+      * Decision and proxy request metrics, including HTTP request counts, durations, and in-progress requests.
+      * Expiry information for configured certificates.
+
+      These metrics are available only on heimdall's **metrics port**.
 
   - name: Kubernetes Admission Controller
     description: |
-      Implements a [validating admission controller](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)
-      as well as a [conversion controller](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#webhook-conversion) 
-      for integration purposes with the Kubernetes API server. 
-      
-      The former allows direct feedback for `RuleSet` resources upon deployment of these into a Kubernetes cluster without the need
-      to look into the logs, if a `RuleSet` could not be loaded for any reasons. The second allows conversion of `RuleSet` resources
-      on CRD schema version changes.
-      
-      This functionality is only available in Kubernetes environments only.
+      Provides a [validating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)
+      and a [conversion webhook](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#webhook-conversion)
+      for integration with the Kubernetes API server.
+
+      The validation webhook reports invalid `RuleSet` resources directly during admission, without requiring operators
+      to inspect heimdall's logs. The conversion webhook converts `RuleSet` resources between supported CRD versions.
+
+      This functionality is available only in Kubernetes environments.
 x-tagGroups:
   - name: Management
     tags:
@@ -75,38 +74,37 @@ components:
   schemas:
     ETag:
       description: |
-        The ETag (or entity tag) HTTP response header is an identifier for a specific version of a resource. 
-        It lets caches be more efficient and save bandwidth, as a web server does not need to resend a full response
-        if the content was not changed. Example: `ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"`.
+        The `ETag` response header identifies a specific version of a resource. Clients can use it for conditional
+        requests, allowing the server to avoid resending unchanged content.
+        Example: `ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"`.
       type: string
 
     If-None-Match:
       description: |
-        Carries the `ETag` value from the previous response. Enables the client to check whether there is a change
-        to the server side resource. Example: `If-None-Match: "33a64df551425fcc55e4d42a148795d9f25f89d4"`.
+        Carries an `ETag` value previously returned by the server. Clients use it to request the resource only if
+        it has changed. Example: `If-None-Match: "33a64df551425fcc55e4d42a148795d9f25f89d4"`.
       type: string
 
     HealthStatus:
       title: Health status
-      description: Simple information about the health status of a heimdall instance
+      description: Health status of a heimdall instance.
       type: object
       properties:
         status:
-          description: The health status
+          description: Current health status.
           type: string
 
     JWKS:
       title: JSON Web Key Set
-      description: JSON Web Key Set to validate JSON Web Token.
+      description: JSON Web Key Set (JWKS) containing public keys used to verify JSON Web Tokens (JWTs).
       type: object
       required:
         - keys
       properties:
         keys:
           description: |
-            The value of the 'keys' parameter is an array of JWK values. By default, the order of the JWK values
-            within the array does not imply an order of preference among them, although applications of JWK Sets
-            can choose to assign a meaning to the order for their purposes, if desired.
+            Array of JSON Web Keys (JWKs). The order does not imply preference unless an application defines
+            its own ordering semantics.
           type: array
           items:
             type: object
@@ -115,70 +113,74 @@ components:
             properties:
               crv:
                 description: |
-                  The name of the curve, if the entry represents an EC key (see 
-                  [RFC 7518](https://www.rfc-editor.org/rfc/rfc7518) for more details)
+                  Name of the elliptic curve for an EC key. See
+                  [RFC 7518](https://www.rfc-editor.org/rfc/rfc7518) for details.
                 type: string
               x:
-                description: X parameter of the elliptic curve, if the entry represents an EC key
+                description: X coordinate of the elliptic-curve public key, if this is an EC key.
                 type: string
               y:
-                description: Y parameter of the elliptic curve, if the entry represents an EC key
+                description: Y coordinate of the elliptic-curve public key, if this is an EC key.
                 type: string
               n:
                 description: |
-                  Modulus parameter of an RSA public key, if the entry represents an RSA public key (see 
-                  [RFC 7518](https://www.rfc-editor.org/rfc/rfc7518) for more details)
+                  Modulus of the RSA public key, if this is an RSA key. See
+                  [RFC 7518](https://www.rfc-editor.org/rfc/rfc7518) for details.
                 type: string
               e:
-                description: Exponent parameter of an RSA public key, if the entry represents an RSA public key
+                description: Exponent of the RSA public key, if this is an RSA key.
                 type: string
               kty:
-                description: Identifies the cryptographic algorithm family used with the key, such as 'RSA' or 'EC'
+                description: Cryptographic algorithm family of the key, such as `RSA` or `EC`.
                 type: string
               use:
-                description: Identifies the intended use of the public key, such as 'sig', or 'enc'
+                description: Intended use of the public key, such as `sig` for signing or `enc` for encryption.
                 type: string
               key_ops:
-                description: Identifies the operation(s) for which the key is intended to be used
+                description: Operations for which the key is intended to be used.
                 type: string
               alg:
-                description: Identifies the algorithm intended for use with the key
+                description: Algorithm intended for use with the key.
                 type: string
               kid:
-                description: The identifier of the key
+                description: Identifier of the key.
                 type: string
               x5u:
                 description: |
-                  X.509 URL parameter is a URI [RFC3986](https://www.rfc-editor.org/rfc/rfc3986) that refers to a
-                  resource for an X.509 public key certificate or certificate chain 
-                  [RFC5280](https://www.rfc-editor.org/rfc/rfc5280).
+                  URI that refers to an X.509 public key certificate or certificate chain. See
+                  [RFC 3986](https://www.rfc-editor.org/rfc/rfc3986) and
+                  [RFC 5280](https://www.rfc-editor.org/rfc/rfc5280).
                 type: string
                 format: uri
               x5c:
                 description: |
-                  Stands for an X.509 certificate chain. This parameter contains a chain of one or more PKIX 
-                  certificates [RFC5280](https://www.rfc-editor.org/rfc/rfc5280). The certificate chain is 
-                  represented as a JSON array of certificate value strings. Each string in the array is base64-encoded
+                  X.509 certificate chain represented as a JSON array of base64-encoded certificate strings. See
+                  [RFC 5280](https://www.rfc-editor.org/rfc/rfc5280).
                 type: array
                 items:
                   type: string
               x5t:
                 description: |
-                  Stands for X.509 certificate SHA-1 thumbprint. This parameter is a base64url-encoded SHA-1 thumbprint
-                  (a.k.a. digest) of the DER encoding of an X.509 certificate 
-                  [RFC5280](https://www.rfc-editor.org/rfc/rfc5280)
+                  Base64url-encoded SHA-1 thumbprint of the DER-encoded X.509 certificate. See
+                  [RFC 5280](https://www.rfc-editor.org/rfc/rfc5280).
                 type: string
               x5t#S256:
-                description: Stands for X.509 certificate SHA-256 thumbprint. This parameter is a base64url-encoded
-                  SHA-256 thumbprint (a.k.a. digest) of the DER encoding of an X.509 certificate
-                  [RFC5280](https://www.rfc-editor.org/rfc/rfc5280)
+                description: |
+                  Base64url-encoded SHA-256 thumbprint of the DER-encoded X.509 certificate. See
+                  [RFC 5280](https://www.rfc-editor.org/rfc/rfc5280).
                 type: string
 
   responses:
     NotModified:
-      description: Not Modified. Returned if the resource has not been changed for the given `ETag` value
+      description: Not Modified. Returned when `If-None-Match` matches the current `ETag` value.
+    ContentTooLarge:
+      description: Content Too Large. Returned when the request body exceeds the configured maximum size.
+    RequestHeaderFieldsTooLarge:
+      description: Request Header Fields Too Large. Returned when the request headers exceed the configured maximum size.
+    ServiceUnavailable:
+      description: Service Unavailable. Returned when heimdall's request admission capacity is exhausted.
     InternalServerError:
-      description: Internal Server Error. Returned if the service run in a bad condition and cannot serve the request.
+      description: Internal Server Error. Returned when an internal error prevents the request from being served.
 
 security: []
 
@@ -188,18 +190,17 @@ paths:
       - url: https://metrics.heimdall.local
         description: Metrics Service
     get:
-      summary: Get available Prometheus style metrics
+      summary: Get Prometheus-style metrics
       description: |
-        Lists the available metrics. Please note that the `/metrics` path is configurable and may differ 
-        depending on the setup
+        Returns the available metrics.
       tags:
         - Metrics
       operationId: metrics_get
       responses:
         '200':
-          description: List of available metrics
+          description: Available metrics.
           content:
-            text/html:
+            text/plain:
               schema:
                 type: string
 
@@ -215,7 +216,7 @@ paths:
       operationId: pprof_list
       responses:
         '200':
-          description: List of available profiles
+          description: Available profiles.
           content:
             text/html:
               schema:
@@ -226,53 +227,51 @@ paths:
       - url: https://profiling.heimdall.local
         description: Profiling Service
     get:
-      summary: Get profiling samples for a specific profile.
-      description: Exposes requested profiling information.
+      summary: Get profiling samples for a specific profile
+      description: Returns profiling information for the requested profile.
       tags:
         - Profiling
       operationId: pprof_get
       parameters:
         - name: profile_name
           description: |
-            Defines the profiling information to retrieve. Following profiles are available:
-            
+            Defines which profile to retrieve. The following profiles are available:
+
             * `allocs` - A sampling of all past memory allocations.
             * `block` - Stack traces that led to blocking on synchronization primitives.
-            * `cmdline` - The command line invocation of the current program, with arguments separated by NUL bytes.
+            * `cmdline` - The command-line invocation of the current program, with arguments separated by NUL bytes.
             * `goroutine` - Stack traces of all current goroutines.
             * `heap` - A sampling of memory allocations of live objects.
             * `mutex` - Stack traces of holders of contended mutexes.
-            * `profile` - CPU profile. Profiling lasts for duration specified in `seconds` parameter, or for 30 seconds if not specified
-            * `symbol` - Looks up the program counters listed in the request, responding with a table mapping program counters to function names.
+            * `profile` - CPU profile. Profiling lasts for the duration specified by `seconds`, or 30 seconds if omitted.
+            * `symbol` - Looks up program counters from the request and maps them to function names.
             * `threadcreate` - Stack traces that led to the creation of new OS threads.
-            * `trace` - Execution trace in binary form. Tracing lasts for duration specified in `seconds` parameter, or for 1 second if not specified.
+            * `trace` - Execution trace in binary form. Tracing lasts for the duration specified by `seconds`, or 1 second if omitted.
           in: path
           required: true
           schema:
             type: string
         - name: seconds
           description: |
-            Specifies the duration of sampling. Ignored, if the profile does not support sampling.
-            
-            If `profile` profile is used and this parameter is not specified, defaults to 30s.
-            
-            If `trace` profile is used and this parameter is not specified, defaults to 1s.
+            Sampling duration. Ignored if the selected profile does not support sampling.
+
+            For `profile`, the default is 30 seconds. For `trace`, the default is 1 second.
           in: query
           required: false
           schema:
             type: integer
         - name: gc
           description: |
-            Specifies for the `heap` profile whether the GC should be invoked before the sampling should be done.
-            Any value > 0 means GC should be invoked.
+            For the `heap` profile, specifies whether to run garbage collection before sampling.
+            Any value greater than `0` triggers garbage collection.
           in: query
           required: false
           schema:
             type: integer
         - name: debug
           description: |
-            Specifies whether the profile information should be rendered as text and not in the `profile.proto` format.
-            Any value > 0 means profile information should be rendered as text.
+            Controls whether the profile is rendered as text instead of in `profile.proto` format.
+            Any value greater than `0` enables text output.
           in: query
           required: false
           schema:
@@ -280,16 +279,16 @@ paths:
       responses:
         '200':
           description: |
-            The requested profiling information. If the `debug` query parameter was set to a value > 0 the 
-            MIME type of the response is `text/html`, otherwise it is `application/octet-stream`
+            Requested profiling information. If `debug` is greater than `0`, the response MIME type is `text/html`;
+            otherwise, it is `application/octet-stream`.
           headers:
             X-Content-Type-Options:
-              description: Set to `nosniff` value.
+              description: Set to `nosniff`.
               schema:
                 type: string
             Content-Disposition:
               description: |
-                Set to `attachment; filename="<used profile name>"`
+                Set to `attachment; filename="<profile name>"`.
               schema:
                 type: string
           content:
@@ -300,9 +299,9 @@ paths:
               schema:
                 type: string
         '400':
-          description: Bad Request. Returned if the `seconds` parameter would exceed the server's write timeout.
+          description: Bad Request. Returned when the requested sampling duration exceeds the server's write timeout.
         '404':
-          description: Not Found. Returned if requested profile is not supported/known.
+          description: Not Found. Returned when the requested profile is unknown or unsupported.
 
   /.well-known/health:
     servers:
@@ -310,22 +309,26 @@ paths:
         description: Management Server
     get:
       description: |
-        Offers functionality to see the health status of a heimdall instance.
+        Returns the health status of a heimdall instance.
       tags:
         - Well-Known
       operationId: well_known_health
       summary: Get health status
       responses:
         '200':
-          description: Health status of a heimdall instance
+          description: Current health status of a heimdall instance.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/HealthStatus'
               example:
                 status: ok
+        '431':
+          $ref: '#/components/responses/RequestHeaderFieldsTooLarge'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /.well-known/jwks:
     servers:
@@ -333,19 +336,16 @@ paths:
         description: Management Server
     get:
       description: |
-        Exposes the keys for the verification purposes of the issued JWTs in the format of JWKS as described
-        in [RFC7517](https://www.rfc-editor.org/rfc/rfc7517). This key set contains the key material configured
-        for signing JWTs and makes use of [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
-        for caching purposes.
+        Returns the keys used to verify JWTs issued by heimdall as a JSON Web Key Set (JWKS), as defined by
+        [RFC 7517](https://www.rfc-editor.org/rfc/rfc7517). The endpoint uses
+        [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag) for caching.
 
-        The contents served by this endpoint directly depend on the configuration for heimdall's key store. So, if
-        nothing has been configured, the response will contain the JWKS with a single JWK for the key material heimdall
-        generated on start up. Otherwise, the response will contain the JWKS with as many JWK entries, as
-        specified via the aforesaid key store. If certificates have been configured together with the keys, 
-        the corresponding `x5c` entries will be present as well.
+        The returned key set depends on heimdall's key store configuration. If no key is configured, heimdall
+        returns a single JWK for the key generated at startup. Otherwise, the response contains one JWK for each
+        configured key. If a key includes certificates, the corresponding `x5c` certificate chain is included as well.
       tags:
         - Well-Known
-      summary: Get JWT verification keys (aka JWKS endpoint)
+      summary: Get JWT verification keys (JWKS)
       operationId: well_known_jwks
       parameters:
         - name: If-None-Match
@@ -355,7 +355,7 @@ paths:
             $ref: '#/components/schemas/If-None-Match'
       responses:
         '200':
-          description: JWKS with keys ans certificates
+          description: JWKS containing verification keys and, when configured, certificate chains.
           headers:
             ETag:
               schema:
@@ -386,8 +386,12 @@ paths:
                     y: elcChdCImsIaRT7xVLslehBpVaWKlNnCSTPhJLYXwcB1dS24bpUkwAiVijejZ0J0
         '304':
           $ref: '#/components/responses/NotModified'
+        '431':
+          $ref: '#/components/responses/RequestHeaderFieldsTooLarge'
         '500':
           $ref: '#/components/responses/InternalServerError'
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
 
   /validate:
     servers:
@@ -396,16 +400,17 @@ paths:
     post:
       summary: Validate `RuleSet` resources
       description: |
-        Validates RuleSets enveloped into the [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview) object as defined by the 
-        [Kubernetes Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers)
-        specification.
+        Validates `RuleSet` resources contained in a Kubernetes
+        [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
+        request, as defined by the
+        [Kubernetes admission webhook specification](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/).
       tags:
         - Kubernetes Admission Controller
       operationId: admission_controller_validate_ruleset
       parameters:
         - name: timeout
           description: |
-            How long the validation is allowed to take. Adheres to the following pattern: `^[0-9]+(ns|us|ms|s|m|h)$`
+            Maximum time allowed for validation. The value must match `^[0-9]+(ns|us|ms|s|m|h)$`.
           in: query
           required: false
           schema:
@@ -413,8 +418,9 @@ paths:
           example: 5s
       requestBody:
         description: |
-          The [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
-          request object as specified by Kubernetes API enveloping a `RuleSet` to be validated.
+          A Kubernetes
+          [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
+          request containing the `RuleSet` to validate.
         required: true
         content:
           application/json:
@@ -568,8 +574,9 @@ paths:
       responses:
         '200':
           description: |
-            The [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
-            response object as specified by Kubernetes API.
+            A Kubernetes
+            [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
+            response containing the validation result.
           content:
             application/json:
               example: {
@@ -596,16 +603,16 @@ paths:
     post:
       summary: Convert `RuleSet` resources
       description: |
-        Converts `RuleSet` resources deployed to the Kubernetes cluster between supported schema versions. The corresponding
-        object is enveloped into the [ConversionReview](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#conversionreview-request-0) object as defined by the 
-        [Kubernetes Conversion Controller](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers) specification.
+        Converts `RuleSet` resources between supported CRD schema versions. The resources are supplied in a Kubernetes
+        [ConversionReview](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#conversionreview-request-0)
+        request, as defined by the Kubernetes webhook conversion specification.
       tags:
         - Kubernetes Admission Controller
       operationId: admission_controller_convert_ruleset
       parameters:
         - name: timeout
           description: |
-            How long the conversion is allowed to take. Adheres to the following pattern: `^[0-9]+(ns|us|ms|s|m|h)$`
+            Maximum time allowed for conversion. The value must match `^[0-9]+(ns|us|ms|s|m|h)$`.
           in: query
           required: false
           schema:
@@ -613,8 +620,9 @@ paths:
           example: 5s
       requestBody:
         description: |
-          The [ConversionReview](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#conversionreview-request-0)
-          request object as specified by Kubernetes API enveloping a `RuleSet` to be validated.
+          A Kubernetes
+          [ConversionReview](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#conversionreview-request-0)
+          request containing the `RuleSet` resources to convert.
         required: true
         content:
           application/json:
@@ -731,8 +739,9 @@ paths:
       responses:
         '200':
           description: |
-            The [ConversionReview](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#conversionreview-response-success-0)
-            response object as specified by Kubernetes API.
+            A Kubernetes
+            [ConversionReview](https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definition-versioning/#conversionreview-response-success-0)
+            response containing the converted `RuleSet` resources.
           content:
             application/json:
               example: {
@@ -855,75 +864,96 @@ paths:
         description: Main Service
     get:
       summary: Main endpoint
-      description: This endpoint accepts any subpaths, headers, cookies, etc. Also, all methods can be used as well.
+      description: |
+        Handles requests on the main service. Any request path can be evaluated, and all HTTP methods are supported.
+        Headers and cookies are available to matching rules and rule mechanisms.
       tags:
         - Main Service
       operationId: get_proxy
       parameters:
         - name: path_and_query_params
           in: path
-          description: The path and query parameter to match a rule and to work on.
+          description: Request path and query string used for rule matching and request processing.
           schema:
             type: string
         - name: X-Forwarded-Method
           in: header
-          description: The HTTP method to use to for the url to verify access to. If not present defaults to the method used for sending the request to heimdall.
+          description: |
+            For requests from trusted proxies, overrides the HTTP method used for rule matching. If omitted, heimdall
+            uses the method of the incoming request.
           schema:
             type: string
         - name: X-Forwarded-Proto
           in: header
-          description: HTTP scheme to use to build the url to verify access to. If not present defaults to the scheme used to operate heimdall.
+          description: |
+            For requests from trusted proxies, overrides the URL scheme used for rule matching. If omitted, heimdall
+            derives the scheme from the incoming connection.
           schema:
             type: string
         - name: X-Forwarded-Host
           in: header
-          description: Host to use to build the url to verify access to.
+          description: |
+            For requests from trusted proxies, overrides the host used for rule matching. If omitted, heimdall uses
+            the host of the incoming request.
           schema:
             type: string
         - name: X-Forwarded-Uri
           in: header
-          description: The Uri to use to build the url to verify access to.
+          description: |
+            For requests from trusted proxies, overrides the path and query string used for rule matching. If omitted,
+            heimdall uses the URI of the incoming request.
           schema:
             type: string
         - name: X-Forwarded-For
           in: header
-          description: A list with IPs of the clients (from heimdall perspective), the request has been passed through.
+          description: |
+            For requests from trusted proxies, provides the client IP chain in `X-Forwarded-For` format. heimdall uses
+            it when no client addresses are available from the `Forwarded` header.
           schema:
             type: string
         - name: Forwarded
           in: header
-          description: A list with IPs of the clients (from heimdall perspective), the request has been passed through.
+          description: |
+            For requests from trusted proxies, provides client address information using the standard `Forwarded`
+            header. heimdall reads `for=` parameters and prefers them over `X-Forwarded-For`.
           schema:
             type: string
         - name: <Application Specific>
           in: header
-          description: Placeholder for other headers, the defined rules make use of.
+          description: Placeholder for application-specific headers referenced by configured rules.
           schema:
             type: string
         - name: <Application Specific>
           in: cookie
-          description: Placeholder for cookies, the defined rules make use of.
+          description: Placeholder for application-specific cookies referenced by configured rules.
           schema:
             type: string
       responses:
         '200':
           description: |
-            If the request has been accepted. If heimdall is operated in proxy mode, it will be forwarded to the upstream service. In that case the
-            response comes from the upstream service. Otherwise, if operated in decision mode, the response comes from heimdall.
+            Returned when heimdall accepts the request. In proxy mode, heimdall forwards the request and returns the
+            upstream response. In decision mode, heimdall returns the decision response.
         '400':
           description: |
-            Bad Request. Returned if the evaluated request path contains URL-encoded variants of dot segments, e.g. `%2e`, `%2f`, and `%5c`, or 
-            combinations of URL-encoded and plain dot-segments.
+            Bad Request. Returned when the evaluated request path contains `.` or `..` dot segments, including
+            dot-segment sequences that combine plain or URL-encoded dots with encoded slash or backslash separators.
         '401':
-          description: Unauthorized. Returned if a matching rule could not verify the authentication status of the subject related to the request.
+          description: Unauthorized. Returned when heimdall cannot authenticate the subject for the matched rule.
         '403':
-          description: Forbidden. Returned if a matching rule could not verify the authorization status of the subject related to the request.
+          description: Forbidden. Returned when heimdall cannot authorize the subject for the matched rule.
         '404':
-          description: Not Found. Returned if there was no rule found, which could be used to verify the request.
+          description: Not Found. Returned when no rule matches the request.
         '405':
-          description: Method not allowed. Returned if the patched rule doesn't allow the usage of a particular HTTP method.
+          description: Method Not Allowed. Returned when the matched rule does not allow the requested HTTP method.
+        '413':
+          $ref: '#/components/responses/ContentTooLarge'
+        '431':
+          $ref: '#/components/responses/RequestHeaderFieldsTooLarge'
         '500':
           $ref: '#/components/responses/InternalServerError'
         '502':
           description: |
-            Bad Gateway. Returned if the communication with any of the systems failed due to DNS, timeout etc. errors.
+            Bad Gateway. Returned when communication with a dependent system fails, for example because of DNS,
+            connection, or timeout errors.
+        '503':
+          $ref: '#/components/responses/ServiceUnavailable'
