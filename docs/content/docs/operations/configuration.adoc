@@ -110,7 +110,7 @@ Following rules apply:
 
 * Environment variables use the prefix configured through `--env-config-prefix`. Defaults to `HEIMDALLCFG_`.
 +
-Only environment variables with this prefix are used as heimdall configuration and are subject to the same schema validation as the configuration file.
+Only environment variables with this prefix are used as heimdall configuration.
 
 * Properties in a hierarchy are separated by `_`
 +

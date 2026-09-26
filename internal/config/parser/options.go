@@ -25,8 +25,6 @@ import (
 
 type ConfigSyntaxValidator func(cfgSrc io.Reader) error
 
-type ConfigValidator func(cfg map[string]any) error
-
 type ConfigSemanticsValidator func(cfg any) error
 
 type opts struct {
@@ -35,7 +33,6 @@ type opts struct {
 	configLookupDirs      []string
 	decodeHooks           []mapstructure.DecodeHookFunc
 	validateSyntax        ConfigSyntaxValidator
-	validateConfig        ConfigValidator
 	validateSemantics     ConfigSemanticsValidator
 	envPrefix             string
 }
@@ -81,14 +78,6 @@ func WithConfigSyntaxValidator(validator ConfigSyntaxValidator) Option {
 	return func(o *opts) {
 		if validator != nil {
 			o.validateSyntax = validator
-		}
-	}
-}
-
-func WithConfigValidator(validator ConfigValidator) Option {
-	return func(o *opts) {
-		if validator != nil {
-			o.validateConfig = validator
 		}
 	}
 }

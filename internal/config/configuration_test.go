@@ -22,7 +22,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 
-	"github.com/dadrus/heimdall/internal/pipeline"
 	"github.com/dadrus/heimdall/internal/validation"
 )
 
@@ -72,67 +71,4 @@ func TestNewConfigurationWithConfigFile(t *testing.T) {
 	require.NoError(t, err)
 
 	require.NotEqual(t, string(rawExp), string(rawConf))
-}
-
-func TestNewConfigurationWithEnvironmentPrefix(t *testing.T) {
-	tests := []struct {
-		name                string
-		prefix              EnvVarPrefix
-		envName             string
-		envValue            string
-		expectedError       string
-		expectedMaxInFlight int64
-	}{
-		{
-			name:          "rejects unknown property with default prefix",
-			prefix:        "HEIMDALLCFG_",
-			envName:       "HEIMDALLCFG_FOO",
-			envValue:      "bar",
-			expectedError: "'foo' not allowed",
-		},
-		{
-			name:          "rejects unknown property with custom prefix",
-			prefix:        "IRGENDWAS_",
-			envName:       "IRGENDWAS_FOO",
-			envValue:      "bar",
-			expectedError: "'foo' not allowed",
-		},
-		{
-			name:                "ignores property outside configured prefix",
-			prefix:              "IRGENDWAS_",
-			envName:             "HEIMDALLCFG_SERVE_REQUESTS_MAX__IN__FLIGHT",
-			envValue:            "123",
-			expectedMaxInFlight: defaultConfig().Serve.Requests.MaxInFlight,
-		},
-		{
-			name:                "applies property within configured prefix",
-			prefix:              "IRGENDWAS_",
-			envName:             "IRGENDWAS_SERVE_REQUESTS_MAX__IN__FLIGHT",
-			envValue:            "123",
-			expectedMaxInFlight: 123,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Setenv(tc.envName, tc.envValue)
-
-			validator, err := validation.NewValidator(
-				validation.WithTagValidator(EnforcementSettings{}),
-			)
-			require.NoError(t, err)
-
-			config, err := NewConfiguration(tc.prefix, "", validator)
-			if len(tc.expectedError) != 0 {
-				require.Error(t, err)
-				require.ErrorIs(t, err, pipeline.ErrConfiguration)
-				require.ErrorContains(t, err, tc.expectedError)
-
-				return
-			}
-
-			require.NoError(t, err)
-			require.Equal(t, tc.expectedMaxInFlight, config.Serve.Requests.MaxInFlight)
-		})
-	}
 }
