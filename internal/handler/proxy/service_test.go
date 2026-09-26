@@ -671,6 +671,7 @@ func TestProxyServiceAbortsCommittedResponseOnUpstreamBodyFailure(t *testing.T) 
 	require.ErrorIs(t, readErr, io.ErrUnexpectedEOF)
 }
 
+//nolint:gocyclo
 func TestProxyService(t *testing.T) {
 	t.Parallel()
 
