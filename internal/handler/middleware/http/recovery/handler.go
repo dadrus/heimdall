@@ -34,6 +34,10 @@ func New(eh errorhandler.ErrorHandler) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
 			defer func() { //nolint:contextcheck
 				if rec := recover(); rec != nil {
+					if rec == http.ErrAbortHandler { //nolint: err113,errorlint
+						panic(rec)
+					}
+
 					zerolog.Ctx(req.Context()).Error().Msg(fmt.Sprintf("%v\n%s", rec, stringx.ToString(debug.Stack())))
 
 					err, ok := rec.(error)
