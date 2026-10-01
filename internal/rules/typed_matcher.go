@@ -34,7 +34,7 @@ type (
 	}
 
 	globMatcher struct {
-		compiled glob.Glob
+		compiled *glob.Pattern
 	}
 
 	regexpMatcher struct {
