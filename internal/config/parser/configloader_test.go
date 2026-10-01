@@ -113,3 +113,108 @@ nested_2:
 	assert.True(t, config.Nested2[1].SomeBool)                        // set by env
 	assert.Empty(t, config.Nested2[1].Nested.Value)
 }
+
+func TestConfigLoaderValidatesOverrides(t *testing.T) {
+	type TestConfig struct {
+		SomeString  string `koanf:"some_string"`
+		SomeInt     int    `koanf:"someint"`
+		DefaultOnly string `koanf:"default_only"`
+	}
+
+	defaultConfig := TestConfig{
+		SomeString:  "default value",
+		SomeInt:     666,
+		DefaultOnly: "default only",
+	}
+
+	tests := []struct {
+		name              string
+		yaml              string
+		envPrefix         string
+		env               map[string]string
+		validationErr     error
+		expectedOverrides map[string]any
+		expectedConfig    TestConfig
+	}{
+		{
+			name: "validates merged yaml and env overrides before defaults",
+			yaml: `
+some_string: "from yaml"
+someint: 10
+`,
+			envPrefix: "CONFIGLOADERTEST_",
+			env: map[string]string{
+				"CONFIGLOADERTEST_SOMEINT": "42",
+			},
+			expectedOverrides: map[string]any{
+				"some_string": "from yaml",
+				"someint":     42,
+			},
+			expectedConfig: TestConfig{
+				SomeString:  "from yaml",
+				SomeInt:     42,
+				DefaultOnly: "default only",
+			},
+		},
+		{
+			name:      "ignores environment outside configured prefix",
+			envPrefix: "CUSTOM_",
+			env: map[string]string{
+				"CONFIGLOADERTEST_SOMEINT": "42",
+			},
+			expectedOverrides: map[string]any{},
+			expectedConfig:    defaultConfig,
+		},
+		{
+			name:      "returns config validation error",
+			envPrefix: "CONFIGLOADERTEST_",
+			env: map[string]string{
+				"CONFIGLOADERTEST_SOMEINT": "42",
+			},
+			validationErr: assert.AnError,
+			expectedOverrides: map[string]any{
+				"someint": 42,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			config := defaultConfig
+
+			for key, value := range tc.env {
+				t.Setenv(key, value)
+			}
+
+			options := []Option{
+				WithEnvPrefix(tc.envPrefix),
+				WithConfigValidator(func(cfg map[string]any) error {
+					assert.Equal(t, tc.expectedOverrides, cfg)
+
+					return tc.validationErr
+				}),
+			}
+
+			if len(tc.yaml) != 0 {
+				tempFile, err := os.CreateTemp(t.TempDir(), "config-test-*")
+				require.NoError(t, err)
+
+				_, err = tempFile.WriteString(tc.yaml)
+				require.NoError(t, err)
+				require.NoError(t, tempFile.Close())
+
+				options = append(options, WithConfigFile(tempFile.Name()))
+			}
+
+			err := New(options...).Load(&config)
+			if tc.validationErr != nil {
+				require.ErrorIs(t, err, tc.validationErr)
+
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedConfig, config)
+		})
+	}
+}

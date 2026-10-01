@@ -44,6 +44,10 @@ func ValidateConfigSchema(src io.Reader) error {
 			"failed to parse config").CausedBy(err)
 	}
 
+	return validateConfigSchema(conf)
+}
+
+func validateConfigSchema(conf map[string]any) error {
 	compiledSchema, err := compileSchema("config.schema.json", stringx.ToString(schema.ConfigSchema))
 	if err != nil {
 		return errorchain.NewWithMessage(pipeline.ErrConfiguration,
