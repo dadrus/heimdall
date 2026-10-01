@@ -133,27 +133,44 @@ func (r *requestContext) prepareHeaderSanitization() {
 }
 
 func (r *requestContext) prepareForwardedHeaders() {
+	// set headers, which might be relevant for the upstream, if these are present in the original request
+	// and have not been dropped
+	forwarded := r.req.Header.Values("Forwarded")
 	forwardedHost := r.req.Header.Get("X-Forwarded-Host")
 	forwardedProto := r.req.Header.Get("X-Forwarded-Proto")
 	proto := x.IfThenElse(r.req.TLS != nil, "https", "http")
 	clientIP := httpx.IPFromHostPort(r.req.RemoteAddr)
-	clientIPs := r.Request().ClientIPAddresses
 
-	r.UpstreamHeaders().Set("X-Forwarded-For", strings.Join(clientIPs, ", "))
-	r.UpstreamHeaders().Set("X-Forwarded-Proto", x.IfThenElse(len(forwardedProto) == 0, proto, forwardedProto))
-	r.UpstreamHeaders().Set("X-Forwarded-Host", x.IfThenElse(len(forwardedHost) == 0, r.req.Host, forwardedHost))
+	hasForwardedRepresentation := len(forwarded) != 0
+	hasXForwardedRepresentation := len(r.req.Header.Get("X-Forwarded-For")) != 0 ||
+		len(forwardedProto) != 0 || len(forwardedHost) != 0
 
-	if strings.Contains(clientIP, ":") {
-		// IPv6 must be quoted
-		clientIP = "\"[" + clientIP + "]\""
+	if hasXForwardedRepresentation || !hasForwardedRepresentation {
+		clientIPs := r.Request().ClientIPAddresses
+		if len(clientIPs) == 0 {
+			clientIPs = []string{clientIP}
+		}
+
+		r.UpstreamHeaders().Set("X-Forwarded-For",
+			strings.Join(clientIPs, ", "))
+		r.UpstreamHeaders().Set("X-Forwarded-Proto",
+			x.IfThenElse(len(forwardedProto) == 0, proto, forwardedProto))
+		r.UpstreamHeaders().Set("X-Forwarded-Host",
+			x.IfThenElse(len(forwardedHost) == 0, r.req.Host, forwardedHost))
 	}
 
-	current := strings.Join(r.req.Header.Values("Forwarded"), ", ")
-	entry := "for=" + clientIP + ";host=\"" + r.req.Host + "\";proto=" + proto
+	if hasForwardedRepresentation || !hasXForwardedRepresentation {
+		if strings.Contains(clientIP, ":") {
+			// IPv6 must be quoted
+			clientIP = "\"[" + clientIP + "]\""
+		}
 
-	r.UpstreamHeaders().Set("Forwarded", x.IfThenElseExec(len(current) == 0,
-		func() string { return entry },
-		func() string { return current + ", " + entry }))
+		current := strings.Join(forwarded, ", ")
+		entry := "for=" + clientIP + ";host=\"" + r.req.Host + "\";proto=" + proto
+		r.UpstreamHeaders().Set("Forwarded", x.IfThenElseExec(len(current) == 0,
+			func() string { return entry },
+			func() string { return current + ", " + entry }))
+	}
 }
 
 func (r *requestContext) removeHeader(name string) {
