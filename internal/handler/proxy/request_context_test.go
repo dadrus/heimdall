@@ -47,6 +47,7 @@ func TestRequestContextFinalize(t *testing.T) {
 	for uc, tc := range map[string]struct {
 		upstreamCalled bool
 		useIPv6        bool
+		useHTTP        bool
 		headers        http.Header
 		setup          func(*testing.T, requestcontext.Context, *url.URL) rule.Backend
 		assertRequest  func(*testing.T, *http.Request)
@@ -154,7 +155,7 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
 			},
 		},
-		"only X-Forwarded-Method, Forwarded, and X-Forwarded-* headers are present": {
+		"Forwarded family is preserved without synthesizing X-Forwarded headers": {
 			upstreamCalled: true,
 			headers: http.Header{
 				"X-Forwarded-Method": []string{http.MethodPost},
@@ -175,13 +176,13 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodPost, req.Method)
 
-				require.Len(t, req.Header, 6)
+				require.Len(t, req.Header, 3)
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
 				assert.Equal(t, "proto=http;for=127.0.0.3, proto=http;for=192.168.12.127, for=192.0.2.1;host=\"foo.bar\";proto=https", req.Header.Get("Forwarded"))
-				assert.Equal(t, "127.0.0.3, 192.168.12.127, 192.0.2.1", req.Header.Get("X-Forwarded-For"))
-				assert.Equal(t, "foo.bar", req.Header.Get("X-Forwarded-Host"))
-				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
+				assert.Empty(t, req.Header.Get("X-Forwarded-For"))
+				assert.Empty(t, req.Header.Get("X-Forwarded-Host"))
+				assert.Empty(t, req.Header.Get("X-Forwarded-Proto"))
 			},
 		},
 		"only custom headers and results from rule execution are present (custom header are not dropped)": {
@@ -320,10 +321,10 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
 
-				require.Len(t, req.Header, 6)
+				require.Len(t, req.Header, 5)
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
-				assert.Equal(t, "for=192.0.2.1;host=\"foo.bar\";proto=https", req.Header.Get("Forwarded"))
+				assert.Empty(t, req.Header.Get("Forwarded"))
 				assert.Equal(t, "http", req.Header.Get("X-Forwarded-Proto"))
 				assert.Equal(t, "foo.bar", req.Header.Get("X-Forwarded-Host"))
 				assert.Equal(t, "192.0.2.1", req.Header.Get("X-Forwarded-For"))
@@ -349,10 +350,10 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Contains(t, req.Host, "foo.bar")
 				assert.Equal(t, http.MethodGet, req.Method)
 
-				require.Len(t, req.Header, 6)
+				require.Len(t, req.Header, 5)
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
-				assert.Equal(t, "for=192.0.2.1;host=\"foo.bar\";proto=https", req.Header.Get("Forwarded"))
+				assert.Empty(t, req.Header.Get("Forwarded"))
 				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
 				assert.Equal(t, "bar.foo", req.Header.Get("X-Forwarded-Host"))
 				assert.Equal(t, "192.0.2.1", req.Header.Get("X-Forwarded-For"))
@@ -378,20 +379,86 @@ func TestRequestContextFinalize(t *testing.T) {
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
 
+				require.Len(t, req.Header, 5)
+				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
+				assert.NotEmpty(t, req.Header.Get("Content-Length"))
+				assert.Empty(t, req.Header.Get("Forwarded"))
+				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
+				assert.Equal(t, "foo.bar", req.Header.Get("X-Forwarded-Host"))
+				assert.Equal(t, "172.2.34.1, 192.0.2.1", req.Header.Get("X-Forwarded-For"))
+			},
+		},
+		"X-Forwarded family is preserved without creating Forwarded header": {
+			upstreamCalled: true,
+			useHTTP:        true,
+			headers: http.Header{
+				"X-Forwarded-For":   []string{"172.2.34.1"},
+				"X-Forwarded-Host":  []string{"bar.foo"},
+				"X-Forwarded-Proto": []string{"https"},
+			},
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+				t.Helper()
+
+				backend := mocks2.NewBackendMock(t)
+				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().ForwardHostHeader().Return(false)
+
+				return backend
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Contains(t, req.Host, "127.0.0.1")
+				assert.Equal(t, http.MethodGet, req.Method)
+
+				require.Len(t, req.Header, 5)
+				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
+				assert.NotEmpty(t, req.Header.Get("Content-Length"))
+				assert.Empty(t, req.Header.Get("Forwarded"))
+				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
+				assert.Equal(t, "bar.foo", req.Header.Get("X-Forwarded-Host"))
+				assert.Equal(t, "172.2.34.1, 192.0.2.1", req.Header.Get("X-Forwarded-For"))
+			},
+		},
+		"X-Forwarded-Method alone leads to creation of Forwarded and X-Forwarded-X header families": {
+			upstreamCalled: true,
+			headers: http.Header{
+				"X-Forwarded-Method": []string{http.MethodPost},
+			},
+			setup: func(t *testing.T, _ requestcontext.Context, upstreamURL *url.URL) rule.Backend {
+				t.Helper()
+
+				backend := mocks2.NewBackendMock(t)
+				backend.EXPECT().URL().Return(upstreamURL)
+				backend.EXPECT().ForwardHostHeader().Return(false)
+
+				return backend
+			},
+			assertRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				assert.Contains(t, req.Host, "127.0.0.1")
+				assert.Equal(t, http.MethodPost, req.Method)
+
 				require.Len(t, req.Header, 6)
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
 				assert.Equal(t, "for=192.0.2.1;host=\"foo.bar\";proto=https", req.Header.Get("Forwarded"))
 				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
 				assert.Equal(t, "foo.bar", req.Header.Get("X-Forwarded-Host"))
-				assert.Equal(t, "172.2.34.1, 192.0.2.1", req.Header.Get("X-Forwarded-For"))
+				assert.Equal(t, "192.0.2.1", req.Header.Get("X-Forwarded-For"))
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			upstreamCalled := false
-			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", bytes.NewBufferString("Ping"))
+			requestURL := "https://foo.bar/test"
+			if tc.useHTTP {
+				requestURL = "http://foo.bar/test"
+			}
+
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, requestURL, bytes.NewBufferString("Ping"))
 			req.Header = tc.headers
 
 			if tc.useIPv6 {

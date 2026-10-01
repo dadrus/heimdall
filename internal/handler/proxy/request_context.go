@@ -181,34 +181,41 @@ func (r *requestContext) rewriteRequest(targetURL *url.URL, passHostHeader bool)
 func (r *requestContext) rewriteForwardedHeader(in, out *http.Request) {
 	// set headers, which might be relevant for the upstream, if these are present in the original request
 	// and have not been dropped
+	forwarded := in.Header.Values("Forwarded")
 	forwardedHost := in.Header.Get("X-Forwarded-Host")
 	forwardedProto := in.Header.Get("X-Forwarded-Proto")
 	proto := x.IfThenElse(in.TLS != nil, "https", "http")
 	clientIP := httpx.IPFromHostPort(in.RemoteAddr)
 
-	clientIPs := r.Request().ClientIPAddresses
-	if len(clientIPs) == 0 {
-		clientIPs = []string{clientIP}
+	hasForwardedRepresentation := len(forwarded) != 0
+	hasXForwardedRepresentation := len(in.Header.Get("X-Forwarded-For")) != 0 ||
+		len(forwardedProto) != 0 || len(forwardedHost) != 0
+
+	if hasXForwardedRepresentation || !hasForwardedRepresentation {
+		clientIPs := r.Request().ClientIPAddresses
+		if len(clientIPs) == 0 {
+			clientIPs = []string{clientIP}
+		}
+
+		out.Header.Set("X-Forwarded-For", strings.Join(clientIPs, ", "))
+		out.Header.Set("X-Forwarded-Proto",
+			x.IfThenElse(len(forwardedProto) == 0, proto, forwardedProto))
+		out.Header.Set("X-Forwarded-Host",
+			x.IfThenElse(len(forwardedHost) == 0, in.Host, forwardedHost))
 	}
 
-	out.Header.Set("X-Forwarded-For", strings.Join(clientIPs, ", "))
+	if hasForwardedRepresentation || !hasXForwardedRepresentation {
+		if strings.Contains(clientIP, ":") {
+			// IPv6 must be quoted
+			clientIP = "\"[" + clientIP + "]\""
+		}
 
-	out.Header.Set("X-Forwarded-Proto",
-		x.IfThenElse(len(forwardedProto) == 0, proto, forwardedProto))
-
-	out.Header.Set("X-Forwarded-Host",
-		x.IfThenElse(len(forwardedHost) == 0, in.Host, forwardedHost))
-
-	if strings.Contains(clientIP, ":") {
-		// IPv6 must be quoted
-		clientIP = "\"[" + clientIP + "]\""
+		current := strings.Join(forwarded, ", ")
+		entry := "for=" + clientIP + ";host=\"" + in.Host + "\";proto=" + proto
+		out.Header.Set("Forwarded", x.IfThenElseExec(len(current) == 0,
+			func() string { return entry },
+			func() string { return current + ", " + entry }))
 	}
-
-	current := strings.Join(in.Header.Values("Forwarded"), ", ")
-	entry := "for=" + clientIP + ";host=\"" + in.Host + "\";proto=" + proto
-	out.Header.Set("Forwarded", x.IfThenElseExec(len(current) == 0,
-		func() string { return entry },
-		func() string { return current + ", " + entry }))
 }
 
 func (r *requestContext) addUpstreamCookies(req *http.Request) {
