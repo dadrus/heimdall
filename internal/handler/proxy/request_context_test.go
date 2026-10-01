@@ -332,7 +332,7 @@ func TestRequestContextPreparedHeaders(t *testing.T) {
 		updateContext    func(t *testing.T, ctx *requestContext)
 		assert           func(t *testing.T, headers http.Header)
 	}{
-		"prepared headers reflect proxy sanitization and forwarding": {
+		"sanitized headers add both forwarding representations when neither is present": {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
@@ -362,6 +362,60 @@ func TestRequestContextPreparedHeaders(t *testing.T) {
 					headers.Get("Forwarded"),
 				)
 				assert.Equal(t, "192.0.2.1", headers.Get("X-Forwarded-For"))
+				assert.Equal(t, "foo.bar", headers.Get("X-Forwarded-Host"))
+				assert.Equal(t, "https", headers.Get("X-Forwarded-Proto"))
+			},
+		},
+		"Forwarded representation is preserved without adding X-Forwarded representation": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("Forwarded", "proto=http;for=127.0.0.3")
+			},
+			assert: func(t *testing.T, headers http.Header) {
+				t.Helper()
+
+				assert.Equal(
+					t,
+					"proto=http;for=127.0.0.3, for=192.0.2.1;host=\"foo.bar\";proto=https",
+					headers.Get("Forwarded"),
+				)
+				assert.Empty(t, headers.Get("X-Forwarded-For"))
+				assert.Empty(t, headers.Get("X-Forwarded-Host"))
+				assert.Empty(t, headers.Get("X-Forwarded-Proto"))
+			},
+		},
+		"X-Forwarded representation is preserved without adding Forwarded representation": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-For", "127.0.0.3")
+			},
+			assert: func(t *testing.T, headers http.Header) {
+				t.Helper()
+
+				assert.Empty(t, headers.Get("Forwarded"))
+				assert.Equal(t, "127.0.0.3, 192.0.2.1", headers.Get("X-Forwarded-For"))
+				assert.Equal(t, "foo.bar", headers.Get("X-Forwarded-Host"))
+				assert.Equal(t, "https", headers.Get("X-Forwarded-Proto"))
+			},
+		},
+		"both forwarding representations are preserved": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("Forwarded", "proto=http;for=127.0.0.3")
+				req.Header.Set("X-Forwarded-For", "127.0.0.3")
+			},
+			assert: func(t *testing.T, headers http.Header) {
+				t.Helper()
+
+				assert.Equal(
+					t,
+					"proto=http;for=127.0.0.3, for=192.0.2.1;host=\"foo.bar\";proto=https",
+					headers.Get("Forwarded"),
+				)
+				assert.Equal(t, "127.0.0.3, 192.0.2.1", headers.Get("X-Forwarded-For"))
 				assert.Equal(t, "foo.bar", headers.Get("X-Forwarded-Host"))
 				assert.Equal(t, "https", headers.Get("X-Forwarded-Proto"))
 			},

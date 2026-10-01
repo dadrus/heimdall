@@ -177,7 +177,7 @@ func TestCommitterCommit(t *testing.T) {
 				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
 			},
 		},
-		"only X-Forwarded-Method, Forwarded, and X-Forwarded-* headers are present": {
+		"Forwarded representation is preserved without adding X-Forwarded representation": {
 			headers: http.Header{
 				"X-Forwarded-Method": []string{http.MethodPost},
 				"Forwarded":          []string{"proto=http;for=127.0.0.3, proto=http;for=192.168.12.127"},
@@ -201,13 +201,13 @@ func TestCommitterCommit(t *testing.T) {
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodPost, req.Method)
 
-				require.Len(t, req.Header, 6)
+				require.Len(t, req.Header, 3)
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
 				assert.Equal(t, "proto=http;for=127.0.0.3, proto=http;for=192.168.12.127, for=192.0.2.1;host=\"foo.bar\";proto=https", req.Header.Get("Forwarded"))
-				assert.Equal(t, "127.0.0.3, 192.168.12.127, 192.0.2.1", req.Header.Get("X-Forwarded-For"))
-				assert.Equal(t, "foo.bar", req.Header.Get("X-Forwarded-Host"))
-				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
+				assert.Empty(t, req.Header.Get("X-Forwarded-For"))
+				assert.Empty(t, req.Header.Get("X-Forwarded-Host"))
+				assert.Empty(t, req.Header.Get("X-Forwarded-Proto"))
 			},
 		},
 		"only custom headers and results from rule execution are present (custom header are not dropped, but proxy owned)": {
@@ -334,7 +334,7 @@ func TestCommitterCommit(t *testing.T) {
 				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
 			},
 		},
-		"only X-Forwarded-Proto header is present, host not set": {
+		"X-Forwarded representation is preserved when only X-Forwarded-Proto is present": {
 			headers: http.Header{
 				"X-Forwarded-Proto": []string{"http"},
 			},
@@ -357,16 +357,16 @@ func TestCommitterCommit(t *testing.T) {
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
 
-				require.Len(t, req.Header, 6)
+				require.Len(t, req.Header, 5)
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
-				assert.Equal(t, "for=192.0.2.1;host=\"foo.bar\";proto=https", req.Header.Get("Forwarded"))
+				assert.Empty(t, req.Header.Get("Forwarded"))
 				assert.Equal(t, "http", req.Header.Get("X-Forwarded-Proto"))
 				assert.Equal(t, "foo.bar", req.Header.Get("X-Forwarded-Host"))
 				assert.Equal(t, "192.0.2.1", req.Header.Get("X-Forwarded-For"))
 			},
 		},
-		"only X-Forwarded-Host header is present, host forwarded": {
+		"X-Forwarded representation is preserved when only X-Forwarded-Host is present": {
 			headers: http.Header{
 				"X-Forwarded-Host": []string{"bar.foo"},
 			},
@@ -389,16 +389,16 @@ func TestCommitterCommit(t *testing.T) {
 				assert.Equal(t, "foo.bar", req.Host)
 				assert.Equal(t, http.MethodGet, req.Method)
 
-				require.Len(t, req.Header, 6)
+				require.Len(t, req.Header, 5)
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
-				assert.Equal(t, "for=192.0.2.1;host=\"foo.bar\";proto=https", req.Header.Get("Forwarded"))
+				assert.Empty(t, req.Header.Get("Forwarded"))
 				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
 				assert.Equal(t, "bar.foo", req.Header.Get("X-Forwarded-Host"))
 				assert.Equal(t, "192.0.2.1", req.Header.Get("X-Forwarded-For"))
 			},
 		},
-		"only X-Forwarded-For header is present, host not forwarded": {
+		"X-Forwarded representation is preserved when only X-Forwarded-For is present": {
 			headers: http.Header{
 				"X-Forwarded-For": []string{"172.2.34.1"},
 			},
@@ -421,10 +421,10 @@ func TestCommitterCommit(t *testing.T) {
 				assert.Contains(t, req.Host, "127.0.0.1")
 				assert.Equal(t, http.MethodGet, req.Method)
 
-				require.Len(t, req.Header, 6)
+				require.Len(t, req.Header, 5)
 				assert.NotEmpty(t, req.Header.Get("Accept-Encoding"))
 				assert.NotEmpty(t, req.Header.Get("Content-Length"))
-				assert.Equal(t, "for=192.0.2.1;host=\"foo.bar\";proto=https", req.Header.Get("Forwarded"))
+				assert.Empty(t, req.Header.Get("Forwarded"))
 				assert.Equal(t, "https", req.Header.Get("X-Forwarded-Proto"))
 				assert.Equal(t, "foo.bar", req.Header.Get("X-Forwarded-Host"))
 				assert.Equal(t, "172.2.34.1, 192.0.2.1", req.Header.Get("X-Forwarded-For"))

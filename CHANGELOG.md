@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.17.23](https://github.com/dadrus/heimdall/compare/v0.17.22...v0.17.23) (2026-10-01)
+
+
+### Bug Fixes
+
+* Post-commit proxy response aborts propagated correctly ([#3548](https://github.com/dadrus/heimdall/issues/3548)) ([1de56be](https://github.com/dadrus/heimdall/commit/1de56beee70e2ee1d0b9a4f3cc353eaef850989d))
+* Preserving the incoming forwarding header family ([#3554](https://github.com/dadrus/heimdall/issues/3554)) ([7b2f63d](https://github.com/dadrus/heimdall/commit/7b2f63dfa3368f365179802ab55541b2ef3c67c6))
+
+
+### Dependencies
+
+* update golang to v1.27.1 ([#3510](https://github.com/dadrus/heimdall/issues/3510)) ([e2fac41](https://github.com/dadrus/heimdall/commit/e2fac41c9a6b8fe30b985233f073dcb1012587a9))
+* update google.golang.org/genproto/googleapis/rpc digest to 8a89bd6 ([#3551](https://github.com/dadrus/heimdall/issues/3551)) ([2609663](https://github.com/dadrus/heimdall/commit/2609663823f0b3ff613904285a6875ae1887146d))
+* update kubernetes monorepo to v0.37.1 ([#3541](https://github.com/dadrus/heimdall/issues/3541)) ([53836a2](https://github.com/dadrus/heimdall/commit/53836a2b90c46ec3b71974bb94512fd716d4441d))
+* update module github.com/go-jose/go-jose/v4 to v4.1.5 ([#3512](https://github.com/dadrus/heimdall/issues/3512)) ([65804fa](https://github.com/dadrus/heimdall/commit/65804fa5f1d6db08f2ec3165b39752147f4f115d))
+* update module github.com/go-playground/locales to v0.14.2 ([#3550](https://github.com/dadrus/heimdall/issues/3550)) ([1dcce77](https://github.com/dadrus/heimdall/commit/1dcce77ac67addc2940cfcbb21ca50fbd1f71f19))
+* update module github.com/go-playground/universal-translator to v0.18.2 ([#3540](https://github.com/dadrus/heimdall/issues/3540)) ([63e24d7](https://github.com/dadrus/heimdall/commit/63e24d753417f6e1f5805bf73bfb140b46a15693))
+* update module github.com/go-playground/validator/v10 to v10.30.5 ([#3539](https://github.com/dadrus/heimdall/issues/3539)) ([cfe8957](https://github.com/dadrus/heimdall/commit/cfe89575d951a0e8297d1bdd3d8468571a0a0289))
+* update module github.com/goccy/go-json to v0.11.2 ([#3549](https://github.com/dadrus/heimdall/issues/3549)) ([947d959](https://github.com/dadrus/heimdall/commit/947d959184f8d0edaf98d85290a703048bbf9a66))
+* update module github.com/knadh/koanf/v2 to v2.3.7 ([#3544](https://github.com/dadrus/heimdall/issues/3544)) ([af04e72](https://github.com/dadrus/heimdall/commit/af04e72876da8dc1a82052769673648c063464de))
+* update module github.com/redis/rueidis to v1.0.78 ([#3525](https://github.com/dadrus/heimdall/issues/3525)) ([452e8cd](https://github.com/dadrus/heimdall/commit/452e8cdc66b1ec736297e2410a05f38e4af493d1))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.78 ([#3525](https://github.com/dadrus/heimdall/issues/3525)) ([452e8cd](https://github.com/dadrus/heimdall/commit/452e8cdc66b1ec736297e2410a05f38e4af493d1))
+* update module google.golang.org/grpc to v1.84.0 ([#3534](https://github.com/dadrus/heimdall/issues/3534)) ([4d6e621](https://github.com/dadrus/heimdall/commit/4d6e621b9decd6059dbe9a6a05cd5d489135b67f))
+
 ## [0.17.22](https://github.com/dadrus/heimdall/compare/v0.17.21...v0.17.22) (2026-08-28)
 
 

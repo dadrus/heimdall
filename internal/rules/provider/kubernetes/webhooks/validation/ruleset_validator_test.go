@@ -84,7 +84,7 @@ func TestRulesetValidatorHandle(t *testing.T) {
 				assert.Equal(t, metav1.StatusReasonBadRequest, resp.Result.Reason)
 				require.NotNil(t, resp.Result.Details)
 				assert.Len(t, resp.Result.Details.Causes, 1)
-				assert.Contains(t, resp.Result.Details.Causes[0].Message, "looking for beginning of value")
+				assert.NotEmpty(t, resp.Result.Details.Causes[0].Message)
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, resp.Result.Details.Causes[0].Type)
 				assert.Equal(t, "Object", resp.Result.Details.Causes[0].Field)
 			},
