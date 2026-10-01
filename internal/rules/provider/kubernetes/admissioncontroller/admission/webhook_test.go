@@ -84,7 +84,7 @@ func TestNewWebhookServeHTTP(t *testing.T) {
         "uid": "28703aca-bb5a-4355-8542-4b37b1146553"
       },
       "spec": {
-        "something": "something",
+        "something": "something"
       }
     },
     "oldObject": null,
