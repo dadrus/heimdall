@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.17.24](https://github.com/dadrus/heimdall/compare/v0.17.23...v0.17.24) (2026-10-05)
+
+
+### Dependencies
+
+* update module github.com/tidwall/gjson to v1.20.0 ([#3563](https://github.com/dadrus/heimdall/issues/3563)) ([783c3bf](https://github.com/dadrus/heimdall/commit/783c3bff54986249b753533ff33db510db59b76e))
+* update opentelemetry-go monorepo to v1.47.0 ([#3561](https://github.com/dadrus/heimdall/issues/3561)) ([31d15eb](https://github.com/dadrus/heimdall/commit/31d15ebb77fc491a22e10cfed2ca3e248b7b3370))
+* update opentelemetry-go-contrib monorepo to v0.72.0 ([#3562](https://github.com/dadrus/heimdall/issues/3562)) ([9b9e8b5](https://github.com/dadrus/heimdall/commit/9b9e8b52c836a9d414904c291511fe2d9e7e7708))
+
 ## [0.17.23](https://github.com/dadrus/heimdall/compare/v0.17.22...v0.17.23) (2026-10-01)
 
 
