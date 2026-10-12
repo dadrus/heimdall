@@ -73,7 +73,7 @@ resource "kubernetes_job_v1" "secret_sync" {
         restart_policy                  = "Never"
         container {
           name              = "sync"
-          image             = "curlimages/curl:8.16.0"
+          image             = "curlimages/curl:8.22.0"
           image_pull_policy = "IfNotPresent"
           command = ["/bin/sh", "-ec", <<-SCRIPT
             # Do not enable shell tracing or print the rendered Secret.

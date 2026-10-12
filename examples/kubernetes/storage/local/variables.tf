@@ -37,5 +37,5 @@ variable "s3_region" {
 variable "aws_cli_image" {
   description = "Pinned official AWS CLI image used by the short-lived bucket Jobs."
   type        = string
-  default     = "amazon/aws-cli:2.36.31"
+  default     = "amazon/aws-cli:2.37.12"
 }
