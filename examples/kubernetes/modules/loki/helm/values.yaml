@@ -29,19 +29,13 @@ loki:
   limits_config:
     allow_structured_metadata: true
 
-deploymentMode: SingleBinary
+deploymentMode: Monolithic
 singleBinary:
   replicas: 1
   persistence:
     enabled: false
-  # Loki needs writable local scratch space even when using RustFS for S3.
-  # Keep it ephemeral for the local kind example.
-  extraVolumes:
-    - name: loki-scratch
+    dataVolumeParameters:
       emptyDir: {}
-  extraVolumeMounts:
-    - name: loki-scratch
-      mountPath: /var/loki
   extraArgs:
     - -config.expand-env=true
   extraEnvFrom:
