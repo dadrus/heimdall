@@ -1,5 +1,5 @@
 variable "pyroscope_version" {
   type        = string
-  default     = "1.16.0"
+  default     = "2.4.0"
   description = "Helm chart version for Pyroscope"
 }
