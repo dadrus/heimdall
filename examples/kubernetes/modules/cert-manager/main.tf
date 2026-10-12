@@ -1,6 +1,6 @@
 resource "helm_release" "cert_manager" {
   name       = "cert-manager"
-  repository = "https://charts.jetstack.io"
+  repository = "oci://quay.io/jetstack/charts"
   chart      = "cert-manager"
   namespace  = var.namespace
   version    = var.certmanager_version
@@ -21,7 +21,7 @@ resource "helm_release" "trust_manager" {
   depends_on = [helm_release.cert_manager]
 
   name       = "trust-manager"
-  repository = "https://charts.jetstack.io"
+  repository = "oci://quay.io/jetstack/charts"
   chart      = "trust-manager"
   namespace  = var.namespace
   version    = var.trustmanager_version
