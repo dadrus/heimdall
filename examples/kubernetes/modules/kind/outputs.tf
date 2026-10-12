@@ -1,7 +1,3 @@
-output "kubeconfig" {
-  value = kind_cluster.default.kubeconfig
-}
-
 output "kubeconfig_path" {
   value = kind_cluster.default.kubeconfig_path
 }

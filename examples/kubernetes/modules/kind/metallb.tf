@@ -1,4 +1,4 @@
-resource "kubernetes_namespace" "metallb" {
+resource "kubernetes_namespace_v1" "metallb" {
   depends_on = [null_resource.configure_nodes]
 
   metadata {
@@ -17,7 +17,7 @@ resource "helm_release" "metallb" {
   name       = "metallb"
   repository = "https://metallb.github.io/metallb"
   chart      = "metallb"
-  namespace  = kubernetes_namespace.metallb.metadata[0].name
+  namespace  = kubernetes_namespace_v1.metallb.metadata[0].name
   version    = var.metallb_version
 
   wait       = true

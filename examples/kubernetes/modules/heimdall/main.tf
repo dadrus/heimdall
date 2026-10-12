@@ -7,7 +7,7 @@ locals {
   )
 }
 
-resource "kubernetes_namespace" "heimdall" {
+resource "kubernetes_namespace_v1" "heimdall" {
   metadata {
     name = var.namespace
   }
@@ -22,7 +22,7 @@ locals {
 }
 
 resource "kubectl_manifest" "certificates" {
-  depends_on = [kubernetes_namespace.heimdall]
+  depends_on = [kubernetes_namespace_v1.heimdall]
 
   for_each  = local.certs_dict
   yaml_body = each.value
@@ -31,14 +31,12 @@ resource "kubectl_manifest" "certificates" {
 resource "helm_release" "heimdall" {
   depends_on = [kubectl_manifest.certificates]
 
-  name             = "heimdall"
-  repository       = "../../charts"
-  chart            = "heimdall"
-  version          = var.heimdall_version
-  namespace        = var.namespace
-  create_namespace = true
-  upgrade_install  = true
-  take_ownership   = true
+  name            = "heimdall"
+  chart           = abspath("${path.module}/../../../../charts/heimdall")
+  version         = var.heimdall_version
+  namespace       = var.namespace
+  upgrade_install = true
+  take_ownership  = true
 
   values = [
     templatefile("${path.module}/configs/heimdall.yaml", {
@@ -58,6 +56,9 @@ resource "helm_release" "heimdall" {
       otel_tracing_protocol = var.observability.tracing_protocol
       otel_tracing_endpoint = var.observability.tracing_endpoint
       profiling_enabled     = var.observability.profiling_enabled
+      image_repository      = var.image_repository
+      image_tag             = var.image_tag
+      image_pull_policy     = var.image_pull_policy
     }),
   ]
 

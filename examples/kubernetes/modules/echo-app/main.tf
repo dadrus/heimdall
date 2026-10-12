@@ -1,20 +1,21 @@
-resource "kubernetes_namespace" "echo_app" {
+resource "kubernetes_namespace_v1" "echo_app" {
   metadata {
     name = var.namespace
 
-    labels = {
-      "istio-injection": "enabled"
-    }
+    labels = var.ingress_controller == "istio" ? {
+      "istio-injection" = "enabled"
+    } : {}
   }
 }
 
 resource "kubectl_manifest" "deployment" {
-  depends_on = [kubernetes_namespace.echo_app]
+  depends_on = [kubernetes_namespace_v1.echo_app]
 
   for_each = fileset(path.module, "./manifests/*.yaml")
 
   yaml_body = templatefile("${path.module}/${each.value}", {
-    namespace = var.namespace
+    namespace      = var.namespace
+    cluster_domain = var.cluster_domain
   })
 }
 

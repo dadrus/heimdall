@@ -19,7 +19,7 @@ locals {
 resource "kind_cluster" "default" {
   name            = var.cluster_name
   node_image      = var.node_image
-  kubeconfig_path = pathexpand("/tmp/config")
+  kubeconfig_path = pathexpand(var.kubeconfig_path)
   wait_for_ready  = true
 
   kind_config {

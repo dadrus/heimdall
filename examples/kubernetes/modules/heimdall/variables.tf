@@ -34,3 +34,19 @@ variable "observability" {
     profiling_enabled = false
   }
 }
+
+# Default to the existing published dev image outside the kind development root.
+variable "image_repository" {
+  type    = string
+  default = "ghcr.io/dadrus/heimdall"
+}
+
+variable "image_tag" {
+  type    = string
+  default = "dev"
+}
+
+variable "image_pull_policy" {
+  type    = string
+  default = "IfNotPresent"
+}

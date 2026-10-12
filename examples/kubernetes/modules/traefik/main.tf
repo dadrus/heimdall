@@ -13,8 +13,6 @@ resource "helm_release" "traefik" {
   version    = var.traefik_version
   namespace  = var.namespace
 
-  create_namespace = true
-
   values = [
     templatefile("${path.module}/helm/values.yaml", {
       global_integration_enabled = var.global_integration_enabled

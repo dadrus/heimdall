@@ -1,5 +1,5 @@
 logging {
-  level = "debug"
+  level = "info"
   format = "json" // "logfmt"
 
   write_to = [loki.write.default.receiver]
@@ -574,8 +574,9 @@ prometheus.relabel "normalize" {
 //////////////////////////////////////////////////
 
 otelcol.receiver.otlp "default" {
-  grpc {}
-  http {}
+  // Heimdall connects through the Alloy Service, not inside Alloy's Pod.
+  grpc { endpoint = "0.0.0.0:4317" }
+  http { endpoint = "0.0.0.0:4318" }
 
   output {
     metrics = [otelcol.processor.k8sattributes.default.input]

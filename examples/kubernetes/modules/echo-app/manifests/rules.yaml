@@ -13,7 +13,7 @@ spec:
           paths:
             - path: /pub/**
       forward_to: # only required for proxy operation mode
-        host: echo-app.quickstarts.svc.cluster.local:8080
+        host: echo-app.${namespace}.svc.${cluster_domain}:8080
       execute:
         - authorizer: allow_all_requests
     - id: anonymous-access
@@ -22,7 +22,7 @@ spec:
           paths:
             - path: /anon/**
       forward_to: # only required for proxy operation mode
-        host: echo-app.quickstarts.svc.cluster.local:8080
+        host: echo-app.${namespace}.svc.${cluster_domain}:8080
       execute:
         - authorizer: allow_all_requests
         - finalizer: create_jwt
@@ -32,6 +32,6 @@ spec:
           paths:
             - path: /redir/**
       forward_to: # only required for proxy operation mode
-        host: echo-app.quickstarts.svc.cluster.local:8080
+        host: echo-app.${namespace}.svc.${cluster_domain}:8080
       execute:
         - authenticator: deny_authenticator

@@ -15,8 +15,14 @@ resource "null_resource" "emissary_crds" {
     kubeconfig_path = var.kubeconfig_path
   }
 
+  # The CRD bundle also creates the emissary-apiext conversion webhook. Helm
+  # reads Emissary CRDs during install, so it must wait for that webhook.
   provisioner "local-exec" {
-    command = "kubectl --kubeconfig=${self.triggers.kubeconfig_path} apply -f https://app.getambassador.io/yaml/emissary/${self.triggers.app_version}/emissary-crds.yaml"
+    command = <<-EOT
+      set -e
+      kubectl --kubeconfig="${self.triggers.kubeconfig_path}" apply -f "https://app.getambassador.io/yaml/emissary/${self.triggers.app_version}/emissary-crds.yaml"
+      kubectl --kubeconfig="${self.triggers.kubeconfig_path}" -n emissary-system rollout status deployment/emissary-apiext --timeout=180s
+    EOT
   }
 
   provisioner "local-exec" {
@@ -35,12 +41,10 @@ resource "helm_release" "emissary" {
   version    = var.emissary_version
   namespace  = var.namespace
 
-  create_namespace = true
-  upgrade_install  = true
+  upgrade_install = true
 
   wait = true
 }
-
 
 resource "kubectl_manifest" "listener" {
   depends_on = [helm_release.emissary]

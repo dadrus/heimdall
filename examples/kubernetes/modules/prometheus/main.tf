@@ -5,8 +5,7 @@ resource "helm_release" "prometheus" {
   version    = var.prometheus_version
   namespace  = var.namespace
 
-  upgrade_install  = true
-  create_namespace = true
+  upgrade_install = true
 
   values = [
     file("${path.module}/helm/values.yaml")

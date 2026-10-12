@@ -5,8 +5,6 @@ resource "helm_release" "contour" {
   version    = var.contour_version
   namespace  = var.namespace
 
-  create_namespace = true
-
   values = [
     file("${path.module}/helm/values.yaml")
   ]

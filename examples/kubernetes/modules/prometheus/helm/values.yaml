@@ -1,13 +1,15 @@
 kube-state-metrics:
   enabled: true
 alertmanager:
-  enabled: true
+  enabled: false
 prometheus-node-exporter:
   enabled: false
 prometheus-pushgateway:
   enabled: false
 
 server:
+  persistentVolume:
+    enabled: false
   service:
     servicePort: 9090
   extraFlags:

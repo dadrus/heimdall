@@ -1,10 +1,10 @@
-resource "kubernetes_namespace" "istio_system" {
+resource "kubernetes_namespace_v1" "istio_system" {
   metadata {
     name = "istio-system"
   }
 }
 
-resource "kubernetes_namespace" "istio_gateway" {
+resource "kubernetes_namespace_v1" "istio_gateway" {
   metadata {
     name = "istio-gw"
   }
@@ -12,7 +12,7 @@ resource "kubernetes_namespace" "istio_gateway" {
 
 resource "kubectl_manifest" "tls_certificate" {
   yaml_body = templatefile("${path.module}/manifests/certificate.yaml", {
-    namespace = kubernetes_namespace.istio_gateway.metadata[0].name
+    namespace = kubernetes_namespace_v1.istio_gateway.metadata[0].name
   })
 }
 
@@ -21,11 +21,11 @@ resource "helm_release" "certmanager_istio_csr" {
   repository = "https://charts.jetstack.io"
   chart      = "cert-manager-istio-csr"
   version    = var.certmanager_istio_csr_version
-  namespace  = kubernetes_namespace.istio_system.metadata[0].name
+  namespace  = kubernetes_namespace_v1.istio_system.metadata[0].name
 
   values = [
     templatefile("${path.module}/helm/csr-values.yaml", {
-      namespace = kubernetes_namespace.istio_system
+      namespace = kubernetes_namespace_v1.istio_system.metadata[0].name
     })
   ]
 
@@ -40,9 +40,7 @@ resource "helm_release" "istio_base" {
   repository = "https://istio-release.storage.googleapis.com/charts"
   chart      = "base"
   version    = var.istio_version
-  namespace  = kubernetes_namespace.istio_system.metadata[0].name
-
-  create_namespace = true
+  namespace  = kubernetes_namespace_v1.istio_system.metadata[0].name
 
   set = [{
     name  = "defaultRevision"
@@ -60,13 +58,11 @@ resource "helm_release" "istio_discovery" {
   repository = "https://istio-release.storage.googleapis.com/charts"
   chart      = "istiod"
   version    = var.istio_version
-  namespace  = kubernetes_namespace.istio_system.metadata[0].name
-
-  create_namespace = true
+  namespace  = kubernetes_namespace_v1.istio_system.metadata[0].name
 
   values = [
     templatefile("${path.module}/helm/values.yaml", {
-      namespace = kubernetes_namespace.istio_system.metadata[0].name
+      namespace = kubernetes_namespace_v1.istio_system.metadata[0].name
     })
   ]
 
@@ -78,7 +74,7 @@ resource "kubectl_manifest" "destination_rule" {
   depends_on = [helm_release.istio_discovery]
 
   yaml_body = templatefile("${path.module}/manifests/destination-rule.yaml", {
-    namespace = kubernetes_namespace.istio_system.metadata[0].name
+    namespace = kubernetes_namespace_v1.istio_system.metadata[0].name
   })
 }
 
@@ -86,13 +82,13 @@ resource "helm_release" "ingress_gateway" {
   depends_on = [helm_release.istio_discovery]
   count      = var.gateway_api_enabled ? 0 : 1
 
-  name       = "istio-gateway"
+  # The chart derives its pod label from the release name: istio: ingressgateway.
+  # Keep it aligned with our Istio Gateway and Heimdall AuthorizationPolicy selectors.
+  name       = "istio-ingressgateway"
   repository = "https://istio-release.storage.googleapis.com/charts"
   chart      = "gateway"
   version    = var.istio_version
-  namespace  = kubernetes_namespace.istio_gateway.metadata[0].name
-
-  create_namespace = true
+  namespace  = kubernetes_namespace_v1.istio_gateway.metadata[0].name
 
   upgrade_install = true
   wait            = true
@@ -100,9 +96,10 @@ resource "helm_release" "ingress_gateway" {
 
 resource "kubectl_manifest" "ingress_gateway" {
   depends_on = [helm_release.ingress_gateway]
+  count      = var.gateway_api_enabled ? 0 : 1
 
   yaml_body = templatefile("${path.module}/manifests/ingress-gateway.yaml", {
-    namespace = kubernetes_namespace.istio_gateway.metadata[0].name
+    namespace = kubernetes_namespace_v1.istio_gateway.metadata[0].name
   })
 }
 
@@ -121,7 +118,7 @@ resource "kubectl_manifest" "gateway_api_resources" {
   ] : [])
 
   yaml_body = templatefile(each.value, {
-    namespace = kubernetes_namespace.istio_gateway.metadata[0].name
+    namespace = kubernetes_namespace_v1.istio_gateway.metadata[0].name
   })
 }
 

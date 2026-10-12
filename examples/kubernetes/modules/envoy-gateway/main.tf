@@ -1,11 +1,10 @@
 resource "helm_release" "envoy_gateway" {
-  name             = "envoygw"
-  repository       = "oci://docker.io/envoyproxy"
-  chart            = "gateway-helm"
-  version          = var.envoygw_version
-  namespace        = var.namespace
-  verify           = false
-  create_namespace = true
+  name       = "envoygw"
+  repository = "oci://docker.io/envoyproxy"
+  chart      = "gateway-helm"
+  version    = var.envoygw_version
+  namespace  = var.namespace
+  verify     = false
 
   values = [
     file("${path.module}/helm/values.yaml")

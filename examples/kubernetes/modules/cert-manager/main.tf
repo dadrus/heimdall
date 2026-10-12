@@ -26,8 +26,7 @@ resource "helm_release" "trust_manager" {
   namespace  = var.namespace
   version    = var.trustmanager_version
 
-  upgrade_install  = true
-  create_namespace = false
+  upgrade_install = true
 
   values = [
     templatefile("${path.module}/helm/trust-manager.yaml", {

@@ -5,8 +5,6 @@ resource "helm_release" "nginx" {
   version    = var.nginx_version
   namespace  = var.namespace
 
-  create_namespace = true
-
   values = [
     templatefile("${path.module}/helm/values.yaml", {
       global_integration_enabled = var.global_integration_enabled

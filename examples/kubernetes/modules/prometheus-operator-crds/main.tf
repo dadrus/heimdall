@@ -5,8 +5,7 @@ resource "helm_release" "prometheus_operator_crds" {
   version    = var.prometheus_operator_crd_version
   namespace  = var.namespace
 
-  upgrade_install  = true
-  create_namespace = true
+  upgrade_install = true
 
   values = [
     file("${path.module}/helm/values.yaml")

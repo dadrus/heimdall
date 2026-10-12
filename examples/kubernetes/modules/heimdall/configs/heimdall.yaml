@@ -72,6 +72,6 @@ default_rule:
 providers:
   kubernetes:
     tls:
-      min_version: TLS1.2
+      #min_version: TLS1.2
       secret:
         source: tls_keys

@@ -58,4 +58,6 @@ env:
 %{ endif }
 
 image:
-  tag: dev
+  repository: ${image_repository}
+  tag: ${image_tag}
+  pullPolicy: ${image_pull_policy}

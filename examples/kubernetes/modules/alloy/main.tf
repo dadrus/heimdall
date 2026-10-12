@@ -1,4 +1,4 @@
-resource "kubernetes_config_map" "alloy_config" {
+resource "kubernetes_config_map_v1" "alloy_config" {
   metadata {
     name      = "alloy-config"
     namespace = var.namespace
@@ -16,6 +16,7 @@ resource "kubernetes_config_map" "alloy_config" {
 }
 
 resource "helm_release" "alloy" {
+  depends_on = [kubernetes_config_map_v1.alloy_config]
   name       = "alloy"
   repository = "https://grafana.github.io/helm-charts"
   chart      = "alloy"
