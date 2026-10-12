@@ -1,66 +1,66 @@
 # Kubernetes Quickstarts
 
-This directory contains working examples described in the getting started, as well as in the integration guides of the documentation. The demonstration of the decision operation mode is done via integration with the different Ingress Controller, respectively Gateway API implementations.
+These examples let you try Heimdall in **decision mode** with different
+Kubernetes ingress controllers and Gateway API implementations. An echo
+application is protected by Heimdall, which decides whether requests may
+reach it.
 
-**Note:** The main branch may have breaking changes (see pending release PRs for details under https://github.com/dadrus/heimdall/pulls) which would make the usage of the referenced heimdall images impossible (even though the configuration files and rules reflect the latest changes). In such situations you'll have to use the `dev` image, build a heimdall image by yourself and update the setups to use it (under modules/heimdall), or switch to a tagged (released) version.
+> **Local demo only:** The cluster uses development certificates, demo
+> credentials and convenient local administrator access. Do not expose its
+> dashboards or reuse these settings in production.
 
-# Prerequisites
+## Prerequisites
 
-To be able to install and play with quickstarts, you need
+- [Docker](https://www.docker.com/)
+- [kind](https://kind.sigs.k8s.io/)
+- [kubectl](https://kubernetes.io/docs/reference/kubectl/)
+- [OpenTofu](https://opentofu.org/docs/intro/install/) **1.12.6**
+- [just](https://github.com/casey/just)
+- [curl](https://curl.se/)
 
-* [Just](https://github.com/casey/just), which is used as a wrapper to call terraform
-* [Terraform](https://developer.hashicorp.com/terraform/install), which is used to create/update the setup
-* [kubectl](https://kubernetes.io/docs/reference/kubectl/), which used in some places by provided terraform modules, and which you will need to inspect the cluster
-* [kind](https://kind.sigs.k8s.io/), used to create a local kubernetes cluster using docker
-* [Docker](https://www.docker.com/) to be able running containers
-* [curl](https://curl.se/) to play around with the exposed APIs of the setup
+## Install the demo
 
-# Install the demo
+Choose the corresponding `just install-<setup-type>-demo` recipe:
 
-Depending on the Ingress Controller/Gateway API you want to install the demo for, execute
+- `install-nginx-demo` – NGINX, annotation on the Ingress resource
+- `install-nginx-global-demo` – NGINX, global integration
+- `install-contour-demo` – Contour, global integration
+- `install-haproxy-demo` – HAProxy, annotation on the Ingress resource
+- `install-haproxy-global-demo` – HAProxy, global integration
+- `install-emissary-demo` – Emissary, global integration
+- `install-envoygw-demo` – Envoy Gateway, Gateway API
+- `install-traefik-ingress-demo` – Traefik, Kubernetes Ingress
+- `install-traefik-ingress-route-demo` – Traefik, IngressRoute middleware
+- `install-traefik-gw-demo` – Traefik, Gateway API
+- `install-istio-ingress-gw-demo` – Istio, classic ingress gateway
+- `install-istio-gw-demo` – Istio, Gateway API
 
-```bash
-   just <options> install-<setup-type>-demo
-```
-
-with `<options>` currently supporting the following options:
-
-* `OBS` - to enable the observability stack. Use `OBS=true`
-
-and `<setup-type>` being one of the following options:
-
-* `ngnix` - integration with heimdall happens using annotations on Ingress Resource level.
-* `ngnix-global` - heimdall is integrated globally.
-* `contour` - heimdall is integrated globally.
-* `haproxy` - integration with heimdall happens using annotations on Ingress Resource level.
-* `haproxy-global` - heimdall is integrated globally.
-* `emissary` - heimdall is integrated globally.
-* `envoygw` - heimdall is integrated on a gateway level.
-* `traefik-ingress` - heimdall is integrated globally. Standard k8s Ingress Resource is used four routing.
-* `traefik-ingress-route` - heimdall is integrated as Middleware resource, which is then referenced in a Traefik's IngressRoute resource of the upstream service.
-* `traefik-gw` - heimdall is integrated globally.
-* `istio-ingress-gw` - heimdall is integrated globally. Routing happens using Istio's VirtualService resource.
-* `istio-gw` - heimdall is integrated on a gateway level.
-
-That command line will install and set up a kind based k8s cluster locally including all required services and configuring the used ingress controller, gateway api, respectively a vendor specific router implementation to forward incoming requests to heimdall as external authentication/authorization middleware. Depending on the response from heimdall the router implementation will either forward the request to the upstream service (in that case a simple echo service), or directly respond with an error from heimdall to the client.
-
-E.g., to setup a cluster with traefic using the Gateway API with observability stack enabled, run:
+For example, to use Contour:
 
 ```bash
-> just OBS=true install-traefik-gw-demo
+just install-contour-demo
 ```
 
-**NOTE:** Sometimes the receipt may fail due to some (not yet analyzed) dependency issues. If that happens, simply run the receipt again.
+The command creates a local kind cluster and installs the selected ingress
+controller, Heimdall and an echo application.
 
-Depending on your internet connection, it may take some minutes. So, maybe it's time to grab some coffee :)
+To install the same demo with **observability** (Prometheus, Loki, Tempo,
+Alloy, Grafana and Pyroscope), use:
 
-# Interact with the cluster
-
-If you want to interact with the cluster, you'll need to set `KUBECONFIG` environment variable to `/tmp/config` which is created by the applied terraform modules for the cluster.
+```bash
+OBS=true just install-contour-demo
+```
 
 # Play with the demo
 
-Check which IP is used for the router implementation and set a variable to that value. You can easily achieve this by querying the LB IP address of the used router with e.g. 
+Export the kubeconfig in your current shell session so that `kubectl` uses
+the local cluster:
+
+```bash
+export KUBECONFIG="$(just kubeconfig)"
+```
+
+Check which IP is used for the router implementation and set a variable to that value. You can easily achieve this by querying the LB IP address of the used router with e.g.
 
 ```bash
 export SERVICE_IP=$(kubectl get svc --all-namespaces -o jsonpath="{.items[?(@.spec.type=='LoadBalancer')].status.loadBalancer.ingress[0].ip}")
@@ -81,15 +81,33 @@ and check the responses.
 
 Please note: Since nginx does not support 302 response codes from an external auth service, the call to `https://echo-app.local/redir/foo` will result in a 500 error code returned by nginx.
 
-If the observability stack has been installed, you most probably want to use it as well. For that purposes, you need to 
+## Dashboards
 
-1. establish a port forwarding to grafana: `kubectl port-forward -n monitoring svc/grafana-service 3000:3000`,
-2. open your browser and navigate to `localhost:3000`,
-3. and login into grafana (user: admin, pass: admin)
-4. navigate e.g., to heimdall metrics dashboard: Dashboards -> Heimdall -> Heimdall Metrics
-
-# Delete the demo
+The local cluster includes Headlamp and the RustFS development console.
+Each recipe below opens a port-forward bound to `127.0.0.1` (keep its
+terminal open while browsing):
 
 ```bash
-just delete-cluster
+just headlamp-dashboard       # Headlamp: http://127.0.0.1:8080
+just storage-dashboard        # RustFS:   http://127.0.0.1:9001
 ```
+
+If you installed with `OBS=true`, you can also open Grafana:
+
+```bash
+just observability-dashboard  # Grafana:  http://127.0.0.1:3000
+```
+
+Sign in using **admin / admin** (local demo only) and open
+**Dashboards → Heimdall → Heimdall Metrics**. The existing Heimdall
+metrics dashboard and the Prometheus, Loki, Tempo and Pyroscope data sources
+are provisioned automatically.
+
+## Delete the demo
+
+```bash
+just delete-local-cluster
+```
+
+This removes both the demo deployment and the local kind cluster. To remove the deployment but keep
+the kind cluster and its storage, use `just delete-demo` instead.
