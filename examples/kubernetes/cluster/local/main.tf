@@ -1,5 +1,3 @@
-# The local kind cluster and all of its permanent base components have one state.
-# The application deployment is managed by a separate OpenTofu root.
 module "kind" {
   source = "../../modules/kind"
 
@@ -37,4 +35,21 @@ module "headlamp" {
 
   # Only the local kind cluster: no login prompt; never expose this over Ingress.
   local_admin_auto_login = true
+}
+
+resource "helm_release" "metrics_server" {
+  depends_on = [module.kind]
+
+  name       = "metrics-server"
+  namespace  = "kube-system" # pre-existing namespace; Helm must not own it
+  repository = "https://kubernetes-sigs.github.io/metrics-server/"
+  chart      = "metrics-server"
+  version    = "3.14.0" # metrics-server v0.9.0, compatible with Kubernetes v1.35
+  wait       = true
+  timeout    = 600
+
+  values = [yamlencode({
+    # because of the self-signed kubelet serving certificates used by kind
+    args = ["--kubelet-insecure-tls"]
+  })]
 }
