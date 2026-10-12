@@ -1,15 +1,28 @@
 variable "namespace" {
-  type = string
+  type    = string
+  default = "monitoring"
 }
 
 variable "s3_endpoint" {
   type = string
 }
 
-variable "access_key" {
-  type = string
+variable "rustfs_namespace" {
+  type    = string
+  default = "object-storage"
 }
 
-variable "secret_key" {
-  type = string
+variable "rustfs_secret_name" {
+  type    = string
+  default = "rustfs-secret"
+}
+
+variable "loki_bucket_name" {
+  type    = string
+  default = "loki"
+}
+
+variable "tempo_bucket_name" {
+  type    = string
+  default = "tempo"
 }
