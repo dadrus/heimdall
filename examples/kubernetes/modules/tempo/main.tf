@@ -1,6 +1,6 @@
 resource "helm_release" "tempo" {
   name       = "tempo"
-  repository = "https://grafana.github.io/helm-charts"
+  repository = "https://grafana-community.github.io/helm-charts"
   chart      = "tempo"
   version    = var.tempo_version
   namespace  = var.namespace
