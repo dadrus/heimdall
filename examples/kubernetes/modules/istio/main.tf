@@ -37,7 +37,7 @@ resource "helm_release" "istio_base" {
   depends_on = [helm_release.certmanager_istio_csr]
 
   name       = "istio-base"
-  repository = "https://istio-release.storage.googleapis.com/charts"
+  repository = "https://blob.istio.io/istio-release/charts"
   chart      = "base"
   version    = var.istio_version
   namespace  = kubernetes_namespace_v1.istio_system.metadata[0].name
@@ -55,7 +55,7 @@ resource "helm_release" "istio_discovery" {
   depends_on = [helm_release.istio_base]
 
   name       = "istio-discovery"
-  repository = "https://istio-release.storage.googleapis.com/charts"
+  repository = "https://blob.istio.io/istio-release/charts"
   chart      = "istiod"
   version    = var.istio_version
   namespace  = kubernetes_namespace_v1.istio_system.metadata[0].name
@@ -85,7 +85,7 @@ resource "helm_release" "ingress_gateway" {
   # The chart derives its pod label from the release name: istio: ingressgateway.
   # Keep it aligned with our Istio Gateway and Heimdall AuthorizationPolicy selectors.
   name       = "istio-ingressgateway"
-  repository = "https://istio-release.storage.googleapis.com/charts"
+  repository = "https://blob.istio.io/istio-release/charts"
   chart      = "gateway"
   version    = var.istio_version
   namespace  = kubernetes_namespace_v1.istio_gateway.metadata[0].name
