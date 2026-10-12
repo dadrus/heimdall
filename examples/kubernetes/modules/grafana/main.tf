@@ -6,7 +6,13 @@ resource "helm_release" "grafana_operator" {
   namespace  = var.namespace
   verify     = false
 
+  take_ownership = true
+
   set = [
+    {
+      name  = "crds.immutable"
+      value = "false"
+    },
     {
       name  = "serviceMonitor.enabled"
       value = "true"
