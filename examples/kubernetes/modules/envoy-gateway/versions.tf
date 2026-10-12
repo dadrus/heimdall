@@ -1,5 +1,5 @@
 variable "envoygw_version" {
-  type = string
-  description = "Helm chart version for Envoy Gateway"
-  default = "v1.6.0"
+  type        = string
+  description = "Pinned version of Envoy Gateway and its CRD Helm chart."
+  default     = "v1.9.2"
 }

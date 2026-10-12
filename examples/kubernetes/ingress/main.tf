@@ -29,7 +29,8 @@ module "envoy_gateway" {
   source = "../modules/envoy-gateway"
   count  = var.ingress_controller == "envoy-gateway" ? 1 : 0
 
-  namespace = var.namespace
+  namespace       = var.namespace
+  kubeconfig_path = var.kubeconfig_path
 }
 
 module "haproxy" {

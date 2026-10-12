@@ -1,3 +1,8 @@
+# Gateway API CRDs live in cluster/local; Envoy-specific CRDs are applied
+# separately before this Helm release. Do not install either set again.
+crds:
+  enabled: false
+
 config:
   envoyGateway:
     logging:
