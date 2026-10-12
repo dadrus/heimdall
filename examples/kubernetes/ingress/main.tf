@@ -19,8 +19,7 @@ module "emissary" {
   source = "../modules/emissary"
   count  = var.ingress_controller == "emissary" ? 1 : 0
 
-  namespace       = var.namespace
-  kubeconfig_path = var.kubeconfig_path
+  namespace = var.namespace
 }
 
 module "envoy_gateway" {

@@ -1,5 +1,5 @@
 variable "emissary_version" {
-  type = string
-  description = "Helm chart version for Emissary"
-  default = "8.12.2"
+  type        = string
+  description = "Version of both Emissary OCI Helm charts and the controller image"
+  default     = "4.1.0"
 }
