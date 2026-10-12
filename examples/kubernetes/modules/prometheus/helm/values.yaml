@@ -12,6 +12,8 @@ server:
     enabled: false
   service:
     servicePort: 9090
+  # Alloy discovers the operator PodMonitors/ServiceMonitors and remote-writes here.
+  # Keep the receiver enabled; standalone Prometheus does not process those CRDs.
   extraFlags:
     - web.enable-remote-write-receiver
     - web.enable-lifecycle
