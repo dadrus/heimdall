@@ -20,6 +20,13 @@ resource "helm_release" "metallb" {
   namespace  = kubernetes_namespace_v1.metallb.metadata[0].name
   version    = var.metallb_version
 
+  # This example uses Layer 2 only; MetalLB 0.16 defaults to FRR-K8s for BGP.
+  values = [yamlencode({
+    frrk8s = {
+      enabled = false
+    }
+  })]
+
   wait       = true
 }
 

@@ -12,6 +12,6 @@ variable "image_registry_proxy" {
 
 variable "metallb_version" {
   type        = string
-  default     = "0.15.3"
+  default     = "0.16.1"
   description = "Helm chart version for MetalLB"
 }
