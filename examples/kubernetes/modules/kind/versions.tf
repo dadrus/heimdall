@@ -6,7 +6,7 @@ variable "node_image" {
 
 variable "image_registry_proxy" {
   type        = string
-  default     = "ghcr.io/rpardini/docker-registry-proxy:0.6.5@sha256:b70b2ef2371171a630e3fcbf2217e04057c1dbe114fa46d332ebde67349869e9"
+  default     = "ghcr.io/rpardini/docker-registry-proxy:0.7.0@sha256:413c340ea5f827345434e0f0656eff97f266ae7f9cde089f5dc2d6af42ea3f77"
   description = "Image for the mirror/cache registry proxy"
 }
 
