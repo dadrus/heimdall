@@ -1,6 +1,7 @@
 services:
   heimdall-init:
-    image: finalgene/openssh
+    image: alpine/openssl:3.5.9
+    entrypoint: ["/bin/sh"]
     command: /tmp/generate_keys.sh
     volumes:
       - ./generate_keys.sh:/tmp/generate_keys.sh:ro
@@ -10,24 +11,24 @@ services:
     image: ghcr.io/dadrus/heimdall:dev
     depends_on:
       heimdall-init:
-        condition: service_started
+        condition: service_completed_successfully
     volumes:
     - ./heimdall-config.yaml:/etc/heimdall/config.yaml:ro
     - ./upstream-rules.yaml:/etc/heimdall/rules.yaml:ro
     - heimdall-keys:/etc/heimdall/keys:ro
 
   upstream:
-    image: containous/whoami:latest
+    image: traefik/whoami:v1.12.0
     command: --port=8081
 
   idp:
-    image: nginx:1.29.6
+    image: nginx:1.31.6
     volumes:
     - ./idp.nginx:/etc/nginx/nginx.conf:ro
     - ./jwks.json:/var/www/nginx/jwks.json:ro
 
   opa:
-    image: openpolicyagent/opa:1.14.1
+    image: openpolicyagent/opa:1.21.2
     command: run --server --addr=0.0.0.0:8181 /etc/opa/policies
     volumes:
     - ./policy.rego:/etc/opa/policies/policy.rego:ro

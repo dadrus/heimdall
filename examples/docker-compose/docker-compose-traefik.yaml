@@ -1,6 +1,6 @@
 services:
   proxy:
-    image: traefik:3.6.11
+    image: traefik:3.7.14
     ports:
     - "9090:9090"
     command: >
