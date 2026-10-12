@@ -35,6 +35,11 @@ Choose the corresponding `just install-<setup-type>-demo` recipe:
 - `install-istio-ingress-gw-demo` – Istio, classic ingress gateway
 - `install-istio-gw-demo` – Istio, Gateway API
 
+> **NGINX Ingress maintenance:** The Kubernetes `ingress-nginx` project was
+> retired in March 2026. It remains here only as a local integration
+> example and no longer receives security fixes. Prefer a maintained
+> controller for new deployments.
+
 For example, to use Contour:
 
 ```bash
