@@ -44,10 +44,8 @@ func TestAudienceUnmarshalJSON(t *testing.T) {
 
 				require.NoError(t, err)
 
-				assert.Len(t, audience, 3)
-				assert.Contains(t, audience, "foo")
-				assert.Contains(t, audience, "bar")
-				assert.Contains(t, audience, "baz")
+				assert.Len(t, audience, 1)
+				assert.Contains(t, audience, "foo bar baz")
 			},
 		},
 		"audience encoded as json array": {

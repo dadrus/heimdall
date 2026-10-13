@@ -17,8 +17,6 @@
 package oauth2
 
 import (
-	"strings"
-
 	"github.com/goccy/go-json"
 
 	"github.com/dadrus/heimdall/internal/heimdall"
@@ -30,21 +28,27 @@ type Audience []string
 
 // UnmarshalJSON reads an audience from its JSON representation.
 func (s *Audience) UnmarshalJSON(b []byte) error {
-	var v interface{}
+	var v any
 	if err := json.Unmarshal(b, &v); err != nil {
-		return errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to unmarshal audience").CausedBy(err)
+		return errorchain.NewWithMessage(
+			heimdall.ErrConfiguration,
+			"failed to unmarshal audience",
+		).CausedBy(err)
 	}
 
 	switch value := v.(type) {
 	case string:
-		*s = strings.Split(value, " ")
-	case []interface{}:
+		*s = []string{value}
+	case []any:
 		array := make([]string, len(value))
 
 		for idx, val := range value {
 			s, ok := val.(string)
 			if !ok {
-				return errorchain.NewWithMessage(heimdall.ErrConfiguration, "failed to parse audience array")
+				return errorchain.NewWithMessage(
+					heimdall.ErrConfiguration,
+					"failed to parse audience array",
+				)
 			}
 
 			array[idx] = s
