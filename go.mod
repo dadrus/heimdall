@@ -42,7 +42,7 @@ require (
 	github.com/knadh/koanf/providers/structs v1.0.1
 	github.com/knadh/koanf/v2 v2.3.8
 	github.com/pquerna/cachecontrol v0.2.0
-	github.com/prometheus/client_golang v1.24.1
+	github.com/prometheus/client_golang v1.25.0
 	github.com/redis/rueidis v1.0.78
 	github.com/redis/rueidis/rueidisotel v1.0.78
 	github.com/rs/cors v1.11.1
