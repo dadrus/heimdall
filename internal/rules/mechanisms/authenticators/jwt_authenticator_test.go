@@ -985,8 +985,18 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 	}})
 	require.NoError(t, err)
 
-	jwksWithRSAKey, err := json.Marshal(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
-		keyRSAEntry.JWK(),
+	jwkWithoutAlgorithm := keyAndCertEntry.JWK()
+	jwkWithoutAlgorithm.Algorithm = ""
+	jwksWithoutAlgorithm, err := json.Marshal(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
+		jwkWithoutAlgorithm,
+	}})
+	require.NoError(t, err)
+	require.NotContains(t, string(jwksWithoutAlgorithm), `"alg"`)
+
+	jwkWithMismatchingAlgorithm := keyAndCertEntry.JWK()
+	jwkWithMismatchingAlgorithm.Algorithm = string(jose.ES256)
+	jwksWithMismatchingAlgorithms, err := json.Marshal(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{
+		keyRSAEntry.JWK(), jwkWithMismatchingAlgorithm,
 	}})
 	require.NoError(t, err)
 
@@ -2448,6 +2458,114 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				assert.Equal(t, subjectID, sub.Attributes["sub"])
 			},
 		},
+		"successful validation of token without kid, JWK without algorithm": {
+			authenticator: &jwtAuthenticator{
+				r: oauth2.ResolverAdapterFunc(
+					func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+						return oauth2.ServerMetadata{
+							JWKSEndpoint: &endpoint.Endpoint{
+								URL:     jwksSrv.URL,
+								Headers: map[string]string{"Accept": "application/json"},
+							},
+						}, nil
+					},
+				),
+				a: oauth2.Expectation{
+					AllowedAlgorithms: []string{"ES384"},
+					TrustedIssuers:    []string{issuer},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+				},
+				sf: &SubjectInfo{IDFrom: "sub"},
+			},
+			configureMocks: func(
+				t *testing.T,
+				ctx *heimdallmocks.RequestContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().
+					GetAuthData(ctx).
+					Return(jwtWithoutKIDSignedWithKeyAndCertJWK, nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkJWKSRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+				}
+
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithoutAlgorithm
+				jwksResponseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, sub *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
+
+				require.NoError(t, err)
+
+				require.NotNil(t, sub)
+				assert.Equal(t, subjectID, sub.ID)
+			},
+		},
+		"validation fails as JWT algorithm is not allowed, JWK without algorithm": {
+			authenticator: &jwtAuthenticator{
+				id: "auth3",
+				r: oauth2.ResolverAdapterFunc(
+					func(_ context.Context, _ map[string]any) (oauth2.ServerMetadata, error) {
+						return oauth2.ServerMetadata{
+							JWKSEndpoint: &endpoint.Endpoint{
+								URL:     jwksSrv.URL,
+								Headers: map[string]string{"Accept": "application/json"},
+							},
+						}, nil
+					},
+				),
+				a:   oauth2.Expectation{AllowedAlgorithms: []string{"ES256"}},
+				ttl: &disabledTTL,
+			},
+			configureMocks: func(
+				t *testing.T,
+				ctx *heimdallmocks.RequestContextMock,
+				_ *mocks.CacheMock,
+				ads *mocks2.AuthDataExtractStrategyMock,
+				_ *jwtAuthenticator,
+			) {
+				t.Helper()
+
+				ads.EXPECT().GetAuthData(ctx).Return(jwtSignedWithKeyAndCertJWK, nil)
+			},
+			instructServer: func(t *testing.T) {
+				t.Helper()
+
+				checkJWKSRequest = func(req *http.Request) {
+					assert.Equal(t, "application/json", req.Header.Get("Accept"))
+				}
+
+				jwksResponseCode = http.StatusOK
+				jwksResponseContent = jwksWithoutAlgorithm
+				jwksResponseContentType = "application/json"
+			},
+			assert: func(t *testing.T, err error, _ *subject.Subject) {
+				t.Helper()
+
+				assert.True(t, jwksEndpointCalled)
+				assert.False(t, metadataEndpointCalled)
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrAuthentication)
+				require.ErrorContains(t, err, "ES384 algorithm is not allowed")
+
+				var identifier HandlerIdentifier
+				require.ErrorAs(t, err, &identifier)
+				assert.Equal(t, "auth3", identifier.ID())
+			},
+		},
 		"validation of token without kid fails because of jwks response unmarshalling error": {
 			authenticator: &jwtAuthenticator{
 				id: "auth3",
@@ -2514,6 +2632,12 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 						}, nil
 					},
 				),
+				a: oauth2.Expectation{
+					AllowedAlgorithms: []string{"ES384"},
+					TrustedIssuers:    []string{issuer},
+					ScopesMatcher:     oauth2.ExactScopeStrategyMatcher{},
+				},
+				sf: &SubjectInfo{IDFrom: "sub"},
 			},
 			configureMocks: func(
 				t *testing.T,
@@ -2536,7 +2660,7 @@ func TestJwtAuthenticatorExecute(t *testing.T) {
 				}
 
 				jwksResponseCode = http.StatusOK
-				jwksResponseContent = jwksWithRSAKey
+				jwksResponseContent = jwksWithMismatchingAlgorithms
 				jwksResponseContentType = "application/json"
 			},
 			assert: func(t *testing.T, err error, _ *subject.Subject) {

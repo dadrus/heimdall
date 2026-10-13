@@ -584,47 +584,48 @@ func (a *jwtAuthenticator) readJWKS(resp *http.Response) (*jose.JSONWebKeySet, e
 }
 
 func (a *jwtAuthenticator) verifyTokenWithKey(
-	token *jwt.JSONWebToken, key *jose.JSONWebKey, assertions *oauth2.Expectation,
+	token *jwt.JSONWebToken,
+	key *jose.JSONWebKey,
+	assertions *oauth2.Expectation,
 ) (json.RawMessage, error) {
 	header := token.Headers[0]
 
-	if len(header.Algorithm) != 0 && key.Algorithm != header.Algorithm {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication,
-				"algorithm in the JWT header does not match the algorithm referenced in the key").
+	if len(key.Algorithm) != 0 && key.Algorithm != header.Algorithm {
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"algorithm in the JWT header does not match the algorithm referenced in the key").
 			WithErrorContext(a)
 	}
 
-	if err := assertions.AssertAlgorithm(key.Algorithm); err != nil {
-		return nil, errorchain.
-			NewWithMessagef(heimdall.ErrAuthentication, "%s algorithm is not allowed", key.Algorithm).
+	if err := assertions.AssertAlgorithm(header.Algorithm); err != nil {
+		return nil, errorchain.NewWithMessagef(heimdall.ErrAuthentication,
+			"%s algorithm is not allowed", header.Algorithm).
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
 	var (
-		mapClaims map[string]interface{}
+		mapClaims map[string]any
 		claims    oauth2.Claims
 	)
 
 	if err := token.Claims(key, &mapClaims, &claims); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "failed to verify JWT signature").
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"failed to verify JWT signature").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
 	if err := claims.Validate(*assertions); err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrAuthentication, "access token does not satisfy assertion conditions").
+		return nil, errorchain.NewWithMessage(heimdall.ErrAuthentication,
+			"access token does not satisfy assertion conditions").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
 
 	rawPayload, err := json.Marshal(mapClaims)
 	if err != nil {
-		return nil, errorchain.
-			NewWithMessage(heimdall.ErrInternal, "failed to marshal jwt payload").
+		return nil, errorchain.NewWithMessage(heimdall.ErrInternal,
+			"failed to marshal jwt payload").
 			WithErrorContext(a).
 			CausedBy(err)
 	}
