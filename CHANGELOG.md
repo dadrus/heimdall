@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.17.24](https://github.com/dadrus/heimdall/compare/v0.17.23...v0.17.24) (2026-10-13)
+
+
+### Dependencies
+
+* update golang to v1.27.2 ([#3574](https://github.com/dadrus/heimdall/issues/3574)) ([3b1051d](https://github.com/dadrus/heimdall/commit/3b1051dfc9e0f81eec25c76b788ac81c4b9313d2))
+* update google.golang.org/genproto/googleapis/rpc digest to 4341edf ([#3566](https://github.com/dadrus/heimdall/issues/3566)) ([60b83ce](https://github.com/dadrus/heimdall/commit/60b83cea579bd60eb2c998e45b86f3bec44ab1b2))
+* update module github.com/gobwas/glob to v1 ([#3502](https://github.com/dadrus/heimdall/issues/3502)) ([d5c7228](https://github.com/dadrus/heimdall/commit/d5c72282610b88b8674a16aa1d8e02ce7ee46c9b))
+* update module github.com/knadh/koanf/providers/env/v2 to v2.0.2 ([#3564](https://github.com/dadrus/heimdall/issues/3564)) ([8bd64ef](https://github.com/dadrus/heimdall/commit/8bd64ef8081e307035c8702d97e99754cf40ec40))
+* update module github.com/knadh/koanf/v2 to v2.3.8 ([#3575](https://github.com/dadrus/heimdall/issues/3575)) ([bdd6e58](https://github.com/dadrus/heimdall/commit/bdd6e580c974f1e82f838c6b999b27bd34b9cee9))
+* update module github.com/prometheus/client_golang to v1.25.0 ([#3581](https://github.com/dadrus/heimdall/issues/3581)) ([fee1e25](https://github.com/dadrus/heimdall/commit/fee1e251a4763c20e7110efb29550fc75a90b565))
+* update module github.com/tidwall/gjson to v1.20.0 ([#3563](https://github.com/dadrus/heimdall/issues/3563)) ([783c3bf](https://github.com/dadrus/heimdall/commit/783c3bff54986249b753533ff33db510db59b76e))
+* update opentelemetry-go monorepo to v1.47.0 ([#3561](https://github.com/dadrus/heimdall/issues/3561)) ([31d15eb](https://github.com/dadrus/heimdall/commit/31d15ebb77fc491a22e10cfed2ca3e248b7b3370))
+* update opentelemetry-go-contrib monorepo to v0.72.0 ([#3562](https://github.com/dadrus/heimdall/issues/3562)) ([9b9e8b5](https://github.com/dadrus/heimdall/commit/9b9e8b52c836a9d414904c291511fe2d9e7e7708))
+
 ## [0.17.23](https://github.com/dadrus/heimdall/compare/v0.17.22...v0.17.23) (2026-10-01)
 
 
