@@ -7,6 +7,7 @@ module "deployment" {
   global_integration_enabled = var.global_integration_enabled
   gateway_api_enabled        = var.gateway_api_enabled
   cluster_domain             = var.cluster_domain
+  rule_provider              = var.rule_provider
   heimdall_image_repository  = var.heimdall_image_repository
   heimdall_image_tag         = var.heimdall_image_tag
   heimdall_image_pull_policy = var.heimdall_image_pull_policy
@@ -15,6 +16,15 @@ module "deployment" {
   rustfs_s3_endpoint      = var.rustfs_s3_endpoint
   rustfs_namespace        = var.rustfs_namespace
   rustfs_secret_name      = var.rustfs_secret_name
+  # A blob deployment needs its bucket before Heimdall starts to poll.
+  # This output is linked to successful completion of the bucket Job.
+  rules_bucket_name            = var.rule_provider == "cloud_blob" ? module.storage.buckets["rules"] : var.rustfs_bucket_names.rules
+  s3_region                    = var.rustfs_s3_region
+  blob_s3_secret_name          = var.rule_provider == "cloud_blob" ? var.blob_credentials_secret_name : ""
+  blob_sync_rustfs_credentials = var.rule_provider == "cloud_blob"
+  blob_use_path_style          = true
+  blob_disable_https           = startswith(var.rustfs_s3_endpoint, "http://")
+
   # Depend on completed AP 3 bucket jobs only when the consumers need them.
   # Do not block/replan every shared deployment module on bucket toggles.
   loki_bucket_name  = var.observability_enabled ? module.storage.buckets["loki"] : var.rustfs_bucket_names.loki
@@ -27,7 +37,7 @@ module "storage" {
   source = "../../storage/local"
 
   buckets = merge(
-    var.rules_bucket_enabled ? { rules = var.rustfs_bucket_names.rules } : {},
+    (var.rule_provider == "cloud_blob" || var.rules_bucket_enabled) ? { rules = var.rustfs_bucket_names.rules } : {},
     (var.observability_enabled || var.observability_buckets_enabled) ? {
       loki  = var.rustfs_bucket_names.loki
       tempo = var.rustfs_bucket_names.tempo
@@ -37,4 +47,5 @@ module "storage" {
   rustfs_namespace   = var.rustfs_namespace
   rustfs_secret_name = var.rustfs_secret_name
   s3_endpoint        = var.rustfs_s3_endpoint
+  s3_region          = var.rustfs_s3_region
 }

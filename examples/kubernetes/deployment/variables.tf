@@ -38,7 +38,6 @@ variable "cluster_domain" {
   default = "cluster.local"
 }
 
-# Published image remains the default for reusable/cloud deployment roots.
 variable "heimdall_image_repository" {
   type    = string
   default = "ghcr.io/dadrus/heimdall"
@@ -54,7 +53,6 @@ variable "heimdall_image_pull_policy" {
   default = "IfNotPresent"
 }
 
-# AP 5 is optional. Only the local deployment enables RustFS-backed monitoring.
 variable "observability_enabled" {
   type    = bool
   default = false
@@ -83,4 +81,54 @@ variable "loki_bucket_name" {
 variable "tempo_bucket_name" {
   type    = string
   default = "tempo"
+}
+
+variable "rule_provider" {
+  type    = string
+  default = "kubernetes"
+
+  validation {
+    condition     = contains(["kubernetes", "http_endpoint", "cloud_blob"], var.rule_provider)
+    error_message = "rule_provider must be 'kubernetes', 'http_endpoint' or 'cloud_blob'."
+  }
+}
+
+variable "rules_object_prefix" {
+  type    = string
+  default = "echo-app/"
+}
+
+variable "blob_sync_rustfs_credentials" {
+  type    = bool
+  default = false
+}
+
+variable "blob_s3_secret_name" {
+  type    = string
+  default = ""
+}
+
+variable "blob_use_path_style" {
+  type    = bool
+  default = false
+}
+
+variable "blob_disable_https" {
+  type    = bool
+  default = false
+}
+
+variable "rules_bucket_name" {
+  type    = string
+  default = "rules"
+}
+
+variable "s3_region" {
+  type    = string
+  default = "us-east-1"
+}
+
+variable "rules_server_namespace" {
+  type    = string
+  default = "rules-server"
 }

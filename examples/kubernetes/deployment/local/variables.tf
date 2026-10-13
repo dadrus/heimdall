@@ -75,6 +75,16 @@ variable "rustfs_bucket_names" {
   default = { rules = "rules", loki = "loki", tempo = "tempo" }
 }
 
+variable "blob_credentials_secret_name" {
+  type    = string
+  default = "heimdall-rustfs-s3"
+}
+
+variable "rustfs_s3_region" {
+  type    = string
+  default = "us-east-1"
+}
+
 variable "rustfs_s3_endpoint" {
   type        = string
   default     = ""
@@ -90,4 +100,14 @@ variable "rustfs_secret_name" {
   type        = string
   description = "Existing secret from the RustFS chart, named <release>-secret by default."
   default     = "rustfs-secret"
+}
+
+variable "rule_provider" {
+  type    = string
+  default = "kubernetes"
+
+  validation {
+    condition     = contains(["kubernetes", "http_endpoint", "cloud_blob"], var.rule_provider)
+    error_message = "rule_provider must be 'kubernetes', 'http_endpoint' or 'cloud_blob'."
+  }
 }

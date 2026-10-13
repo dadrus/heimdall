@@ -19,29 +19,8 @@ resource "kubectl_manifest" "deployment" {
   })
 }
 
-# All rule providers will publish this one service-owned rule set.
-# For the Kubernetes provider, only the CRD-specific envelope is generated.
 locals {
   echo_app_rules = yamldecode(file("${path.module}/rules/echo-app.yaml"))
-}
-
-resource "kubectl_manifest" "rules" {
-  depends_on = [kubernetes_namespace_v1.echo_app]
-
-  yaml_body = yamlencode({
-    apiVersion = "heimdall.dadrus.github.com/v${local.echo_app_rules.version}"
-    kind       = "RuleSet"
-    metadata = {
-      name      = local.echo_app_rules.name
-      namespace = var.namespace
-      labels = {
-        "app.kubernetes.io/name" = "echo-app"
-      }
-    }
-    spec = {
-      rules = local.echo_app_rules.rules
-    }
-  })
 }
 
 locals {
@@ -56,7 +35,7 @@ locals {
 }
 
 resource "kubectl_manifest" "ingress" {
-  depends_on = [kubectl_manifest.deployment, kubectl_manifest.rules]
+  depends_on = [kubectl_manifest.deployment, kubectl_manifest.rules, kubernetes_config_map_v1.http_rules, kubernetes_manifest.blob_rules]
 
   for_each  = local.ingress_manifests
   yaml_body = each.value

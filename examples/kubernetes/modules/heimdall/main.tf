@@ -29,7 +29,7 @@ resource "kubectl_manifest" "certificates" {
 }
 
 resource "helm_release" "heimdall" {
-  depends_on = [kubectl_manifest.certificates]
+  depends_on = [kubectl_manifest.certificates, kubernetes_manifest.blob_secret_sync]
 
   name            = "heimdall"
   chart           = abspath("${path.module}/../../../../charts/heimdall")
@@ -40,11 +40,23 @@ resource "helm_release" "heimdall" {
 
   values = [
     templatefile("${path.module}/configs/heimdall.yaml", {
-      metrics_enabled   = var.observability.metrics_enabled
-      tracing_enabled   = var.observability.tracing_enabled
-      profiling_enabled = var.observability.profiling_enabled
-      log_level         = var.observability.log_level
-      log_format        = var.observability.log_format
+      metrics_enabled     = var.observability.metrics_enabled
+      tracing_enabled     = var.observability.tracing_enabled
+      profiling_enabled   = var.observability.profiling_enabled
+      log_level           = var.observability.log_level
+      log_format          = var.observability.log_format
+      rule_provider       = var.rule_provider
+      http_rules_endpoint = var.http_rules_endpoint
+      # Go CDK's S3 URL supports custom endpoints and explicit AWS SDK v2.
+      blob_rules_url = var.rule_provider == "cloud_blob" ? format(
+        "s3://%s?region=%s%s&use_path_style=%t&disable_https=%t&awssdk=v2",
+        var.blob_bucket_name,
+        urlencode(var.blob_s3_region),
+        var.blob_s3_endpoint != "" ? "&endpoint=${urlencode(var.blob_s3_endpoint)}" : "",
+        var.blob_use_path_style,
+        var.blob_disable_https
+      ) : ""
+      blob_rules_prefix   = var.blob_rules_prefix
     }),
     templatefile("${path.module}/helm/values.yaml", {
       otel_metrics_enabled  = var.observability.metrics_enabled
@@ -56,6 +68,9 @@ resource "helm_release" "heimdall" {
       otel_tracing_protocol = var.observability.tracing_protocol
       otel_tracing_endpoint = var.observability.tracing_endpoint
       profiling_enabled     = var.observability.profiling_enabled
+      http_rules_enabled    = var.rule_provider == "http_endpoint"
+      blob_rules_enabled    = var.rule_provider == "cloud_blob"
+      blob_s3_secret_name   = var.blob_s3_secret_name
       image_repository      = var.image_repository
       image_tag             = var.image_tag
       image_pull_policy     = var.image_pull_policy

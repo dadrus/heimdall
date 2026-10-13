@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rules-server
+  namespace: ${namespace}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: rules-server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: rules-server
+      annotations:
+        checksum/nginx-config: ${nginx_config_checksum}
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: nginx
+          image: "${image}"
+          command: ["nginx"]
+          args: ["-c", "/etc/rules-server/nginx.conf", "-g", "daemon off;"]
+          ports:
+            - name: https
+              containerPort: 8443
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/rules-server
+              readOnly: true
+            - name: tls
+              mountPath: /etc/rules-server-tls
+              readOnly: true
+            - name: rules
+              mountPath: /srv/rules
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            initialDelaySeconds: 2
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: https
+              scheme: HTTPS
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: ${nginx_configmap_name}
+        - name: tls
+          secret:
+            secretName: rules-server-tls
+        - name: rules
+          configMap:
+            name: ${rules_configmap_name}
+            optional: true
+        - name: tmp
+          emptyDir: {}

@@ -1,7 +1,7 @@
 set shell := ["bash", "-eu", "-o", "pipefail", "-c"]
 
-# Enable monitoring explicitly: OBS=true just install-contour-demo
 OBS := env_var_or_default("OBS", "false")
+RULE_PROVIDER := env_var_or_default("RULE_PROVIDER", "kubernetes")
 DASHBOARD_PORT := "8080"
 GRAFANA_PORT := "3000"
 STORAGE_PORT := "9001"
@@ -12,6 +12,11 @@ default:
 _validate_bool NAME VALUE:
   @if [[ "{{VALUE}}" != "true" && "{{VALUE}}" != "false" ]]; then \
     echo "ERROR: {{NAME}} must be 'true' or 'false'" >&2; exit 1; \
+  fi
+
+_validate_rule_provider:
+  @if [[ "{{RULE_PROVIDER}}" != "kubernetes" && "{{RULE_PROVIDER}}" != "http_endpoint" && "{{RULE_PROVIDER}}" != "cloud_blob" ]]; then \
+    echo "ERROR: RULE_PROVIDER must be 'kubernetes', 'http_endpoint' or 'cloud_blob'" >&2; exit 1; \
   fi
 
 validate:
@@ -32,7 +37,7 @@ create-local-cluster:
   tofu -chdir=cluster/local init
   tofu -chdir=cluster/local apply -auto-approve
 
-_install_demo CONTROLLER GATEWAY GLOBAL RULES_BUCKET="false" OBS_BUCKETS="false": (_validate_bool "OBS" OBS) (_validate_bool "GATEWAY" GATEWAY) (_validate_bool "GLOBAL" GLOBAL) (_validate_bool "RULES_BUCKET" RULES_BUCKET) (_validate_bool "OBS_BUCKETS" OBS_BUCKETS) create-local-cluster
+_install_demo CONTROLLER GATEWAY GLOBAL RULES_BUCKET="false" OBS_BUCKETS="false": (_validate_bool "OBS" OBS) (_validate_bool "GATEWAY" GATEWAY) (_validate_bool "GLOBAL" GLOBAL) (_validate_bool "RULES_BUCKET" RULES_BUCKET) (_validate_bool "OBS_BUCKETS" OBS_BUCKETS) _validate_rule_provider create-local-cluster
   #!/usr/bin/env bash
   set -euo pipefail
   kubeconfig="$(tofu -chdir=cluster/local output -raw kubeconfig_path)"
@@ -51,6 +56,7 @@ _install_demo CONTROLLER GATEWAY GLOBAL RULES_BUCKET="false" OBS_BUCKETS="false"
     -var="rules_bucket_enabled={{RULES_BUCKET}}" \
     -var="observability_buckets_enabled={{OBS_BUCKETS}}" \
     -var="observability_enabled={{OBS}}" \
+    -var="rule_provider={{RULE_PROVIDER}}" \
     -var="rustfs_s3_endpoint=$rustfs_endpoint" \
     -var="rustfs_namespace=$rustfs_namespace"
 

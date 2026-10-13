@@ -1,5 +1,3 @@
-# Shared application layer. The cluster and permanent services live in
-# cluster/local and are intentionally not managed by this state.
 module "cert_manager" {
   source = "../modules/cert-manager"
 
@@ -17,8 +15,6 @@ module "ingress_controller" {
   kubeconfig_path            = var.kubeconfig_path
   global_integration_enabled = var.global_integration_enabled
   gateway_api_enabled        = var.gateway_api_enabled
-  # Preserve Traefik's existing Prometheus/OTLP integration when OBS is on.
-  # The endpoint also orders Traefik's PodMonitor after the monitoring CRDs.
   observability = {
     log_level        = "info"
     metrics_enabled  = var.observability_enabled
@@ -31,8 +27,6 @@ module "ingress_controller" {
   }
 }
 
-# AP 5: an opt-in stack in the same deployment state. The monitoring
-# namespace and its S3 credentials are created only when requested.
 module "observability" {
   count  = var.observability_enabled ? 1 : 0
   source = "../observability"
@@ -45,17 +39,38 @@ module "observability" {
   tempo_bucket_name  = var.tempo_bucket_name
 }
 
+module "rules_server" {
+  count  = var.rule_provider == "http_endpoint" ? 1 : 0
+  source = "../modules/rules-server"
+
+  depends_on = [module.cert_manager]
+
+  namespace      = var.rules_server_namespace
+  cluster_domain = var.cluster_domain
+}
+
 module "heimdall" {
   source = "../modules/heimdall"
 
-  # The Heimdall chart renders its PodMonitor only after the monitoring CRD exists.
-  depends_on = [module.ingress_controller, module.observability]
+  depends_on = [module.ingress_controller, module.observability, module.rules_server]
 
-  namespace          = var.heimdall_namespace
-  ingress_controller = var.ingress_controller
-  image_repository   = var.heimdall_image_repository
-  image_tag          = var.heimdall_image_tag
-  image_pull_policy  = var.heimdall_image_pull_policy
+  namespace           = var.heimdall_namespace
+  ingress_controller  = var.ingress_controller
+  image_repository    = var.heimdall_image_repository
+  image_tag           = var.heimdall_image_tag
+  image_pull_policy   = var.heimdall_image_pull_policy
+  rule_provider       = var.rule_provider
+  http_rules_endpoint = var.rule_provider == "http_endpoint" ? module.rules_server[0].endpoint_url : ""
+  blob_bucket_name             = var.rules_bucket_name
+  blob_rules_prefix            = var.rules_object_prefix
+  blob_s3_secret_name          = var.blob_s3_secret_name
+  blob_sync_rustfs_credentials = var.blob_sync_rustfs_credentials
+  blob_use_path_style          = var.blob_use_path_style
+  blob_disable_https           = var.blob_disable_https
+  blob_s3_endpoint             = var.rustfs_s3_endpoint
+  blob_s3_region               = var.s3_region
+  rustfs_namespace             = var.rustfs_namespace
+  rustfs_secret_name           = var.rustfs_secret_name
   observability = {
     log_level         = "info"
     log_format        = var.observability_enabled ? "gelf" : "text"
@@ -76,9 +91,18 @@ module "demo_app" {
 
   depends_on = [module.heimdall]
 
-  namespace                   = var.demo_namespace
-  cluster_domain              = var.cluster_domain
-  ingress_controller          = var.ingress_controller
-  global_integration_enabled  = var.global_integration_enabled
-  gateway_api_enabled         = var.gateway_api_enabled
+  namespace                  = var.demo_namespace
+  cluster_domain             = var.cluster_domain
+  ingress_controller         = var.ingress_controller
+  global_integration_enabled = var.global_integration_enabled
+  gateway_api_enabled        = var.gateway_api_enabled
+  rule_provider              = var.rule_provider
+  http_rules_namespace       = var.rule_provider == "http_endpoint" ? module.rules_server[0].namespace : ""
+  http_rules_configmap_name  = var.rule_provider == "http_endpoint" ? module.rules_server[0].rules_configmap_name : "echo-app-rules"
+  blob_rules_bucket_name     = var.rules_bucket_name
+  blob_rules_prefix          = var.rules_object_prefix
+  blob_rules_s3_endpoint     = var.rustfs_s3_endpoint
+  blob_rules_s3_region       = var.s3_region
+  blob_rules_namespace       = var.rustfs_namespace
+  blob_rules_secret_name     = var.rustfs_secret_name
 }

@@ -12,6 +12,14 @@ deployment:
     - name: jwt-cert-volume
       secret:
         secretName: heimdall-jwt
+%{ if http_rules_enabled ~}
+    - name: rules-ca-bundle
+      configMap:
+        name: cacerts
+        items:
+          - key: ca.crt
+            path: ca-certificates.crt
+%{ endif ~}
   volumeMounts:
     - name: tls-cert-volume
       readOnly: true
@@ -19,6 +27,11 @@ deployment:
     - name: jwt-cert-volume
       readOnly: true
       mountPath: "/etc/heimdall/certs/jwt"
+%{ if http_rules_enabled ~}
+    - name: rules-ca-bundle
+      readOnly: true
+      mountPath: "/etc/ssl/certs"
+%{ endif ~}
 
   %{ if profiling_enabled }
   pod:
@@ -39,8 +52,19 @@ webhooks:
     annotations:
       cert-manager.io/inject-ca-from: heimdall/heimdall-tls
 
-%{ if otel_metrics_enabled || otel_tracing_enabled }
+%{ if otel_metrics_enabled || otel_tracing_enabled || (blob_rules_enabled && blob_s3_secret_name != "") }
 env:
+  %{ if blob_rules_enabled && blob_s3_secret_name != "" }
+  AWS_ACCESS_KEY_ID:
+    secretKeyRef:
+      name: ${blob_s3_secret_name}
+      key: AWS_ACCESS_KEY_ID
+  AWS_SECRET_ACCESS_KEY:
+    secretKeyRef:
+      name: ${blob_s3_secret_name}
+      key: AWS_SECRET_ACCESS_KEY
+  AWS_EC2_METADATA_DISABLED: "true"
+  %{ endif }
   %{ if otel_metrics_enabled }
   OTEL_METRICS_EXPORTER: "${otel_metrics_exporter}"
     %{ if otel_metrics_exporter == "prometheus" }

@@ -56,6 +56,16 @@ Alloy, Grafana and Pyroscope), use:
 OBS=true just install-contour-demo
 ```
 
+To use different rule providers to let heimdall load rules by, use `RULE_PROVIDER`.
+E.g.:
+
+```bash
+RULE_PROVIDER=http_endpoint just install-contour-demo
+```
+
+Possible values are `http_endpoint`, `cloud_blob` and `kubernetes`. The default is
+`RULE_PROVIDER=kubernetes` which means rules are loaded as kubernetes CR.
+
 # Play with the demo
 
 Export the kubeconfig in your current shell session so that `kubectl` uses

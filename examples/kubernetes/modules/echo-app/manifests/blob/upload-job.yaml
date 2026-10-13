@@ -1,0 +1,83 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ${job_name}
+  namespace: ${namespace}
+  labels:
+    app.kubernetes.io/name: echo-app-rule-publisher
+    app.kubernetes.io/managed-by: opentofu
+spec:
+  backoffLimit: 3
+  activeDeadlineSeconds: 300
+  template:
+    metadata: {}
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      containers:
+        - name: publish-rules
+          image: ${aws_cli_image}
+          imagePullPolicy: IfNotPresent
+          command:
+            - /bin/sh
+            - -ec
+            - |
+                # The RustFS Service DNS name does not support bucket subdomains.
+                printf '[default]\ns3 =\n  addressing_style = path\n' > "$AWS_CONFIG_FILE"
+                aws --no-cli-pager --endpoint-url "$S3_ENDPOINT" s3api put-object \
+                  --bucket "$RULES_BUCKET" \
+                  --key "$RULES_OBJECT_KEY" \
+                  --body /rules/echo-app.yaml \
+                  --content-type application/yaml >/dev/null
+                echo 'Published Echo-App rules to RustFS'
+          env:
+            - name: S3_ENDPOINT
+              value: ${jsonencode(s3_endpoint)}
+            - name: RULES_BUCKET
+              value: ${jsonencode(bucket_name)}
+            - name: RULES_OBJECT_KEY
+              value: ${jsonencode(object_key)}
+            - name: AWS_DEFAULT_REGION
+              value: ${jsonencode(s3_region)}
+            - name: AWS_CONFIG_FILE
+              value: /tmp/aws-config
+            - name: AWS_EC2_METADATA_DISABLED
+              value: "true"
+            - name: HOME
+              value: /tmp
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: ${secret_name}
+                  key: RUSTFS_ACCESS_KEY
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: ${secret_name}
+                  key: RUSTFS_SECRET_KEY
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1000
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: rules
+              mountPath: /rules
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      volumes:
+        - name: rules
+          configMap:
+            name: echo-app-blob-rules
+        - name: tmp
+          emptyDir: {}
