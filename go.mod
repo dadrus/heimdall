@@ -227,4 +227,4 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-replace github.com/aws/aws-sdk-go-v2/service/s3 v1.95.1 => github.com/aws/aws-sdk-go-v2/service/s3 v1.97.3
+replace golang.org/x/net v0.59.0 => golang.org/x/net v0.60.0

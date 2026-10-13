@@ -39,7 +39,7 @@ linters:
       lines: 80
     gomoddirectives:
       replace-allow-list:
-        - github.com/aws/aws-sdk-go-v2/service/s3
+        - golang.org/x/net
     mnd:
       ignored-functions:
         - ^make
