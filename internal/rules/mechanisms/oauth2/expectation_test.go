@@ -206,6 +206,15 @@ func TestExpectationAssertValidity(t *testing.T) {
 				require.Error(t, err)
 			},
 		},
+		"notBefore not set and notAfter at the Unix epoch": {
+			exp:   Expectation{},
+			times: []time.Time{{}, time.Unix(0, 0)},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+
+				require.ErrorContains(t, err, "expired")
+			},
+		},
 		"notBefore not set and notAfter in the past with default leeway": {
 			exp:   Expectation{},
 			times: []time.Time{{}, time.Now().Add(-1 * time.Minute)},

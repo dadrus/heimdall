@@ -90,7 +90,7 @@ func (e Expectation) AssertValidity(notBefore, notAfter time.Time) error {
 		return errorchain.NewWithMessage(ErrAssertion, "not yet valid")
 	}
 
-	if exp > 0 && now-leeway >= exp {
+	if !notAfter.IsZero() && now-leeway >= exp {
 		return errorchain.NewWithMessage(ErrAssertion, "expired")
 	}
 
