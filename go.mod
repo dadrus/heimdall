@@ -6,7 +6,7 @@ require (
 	cel.dev/cel-go v0.32.0
 	github.com/DmitriyVTitov/size v1.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/alicebob/miniredis/v2 v2.39.0
+	github.com/alicebob/miniredis/v2 v2.40.0
 	github.com/ccoveille/go-safecast/v2 v2.0.1
 	github.com/dadrus/httpsig v0.9.0
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
@@ -23,7 +23,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.2
 	github.com/go-playground/validator/v10 v10.30.5
 	github.com/go-viper/mapstructure/v2 v2.5.0
-	github.com/gobwas/glob v0.2.3
+	github.com/gobwas/glob v1.0.0
 	github.com/goccy/go-json v0.11.2
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
@@ -42,7 +42,7 @@ require (
 	github.com/knadh/koanf/providers/structs v1.0.1
 	github.com/knadh/koanf/v2 v2.3.8
 	github.com/pquerna/cachecontrol v0.2.0
-	github.com/prometheus/client_golang v1.24.1
+	github.com/prometheus/client_golang v1.25.0
 	github.com/redis/rueidis v1.0.78
 	github.com/redis/rueidis/rueidisotel v1.0.78
 	github.com/rs/cors v1.11.1
@@ -227,4 +227,4 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-replace github.com/aws/aws-sdk-go-v2/service/s3 v1.95.1 => github.com/aws/aws-sdk-go-v2/service/s3 v1.97.3
+replace golang.org/x/net v0.59.0 => golang.org/x/net v0.60.0
