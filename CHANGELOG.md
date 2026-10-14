@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.17.25](https://github.com/dadrus/heimdall/compare/v0.17.24...v0.17.25) (2026-10-13)
+
+
+### Bug Fixes
+
+* Adhering to RFC 7517 when validating JWTs using JWKs without alg claim ([#3585](https://github.com/dadrus/heimdall/issues/3585)) ([99bc73f](https://github.com/dadrus/heimdall/commit/99bc73f5913bf3e749aef02c429e1314e0e730ff))
+* Distinguishing missing and zero-valued JWT exp claims ([#3587](https://github.com/dadrus/heimdall/issues/3587)) ([e40190f](https://github.com/dadrus/heimdall/commit/e40190f43546c07a356e7ff4c3d8725d06ec9597))
+* RFC 7519-compliant parsing of JWT audience claims ([#3588](https://github.com/dadrus/heimdall/issues/3588)) ([29d2eac](https://github.com/dadrus/heimdall/commit/29d2eacb2691ce40da0c32ef9c2fa20d433fb5c2))
+
 ## [0.17.24](https://github.com/dadrus/heimdall/compare/v0.17.23...v0.17.24) (2026-10-13)
 
 
