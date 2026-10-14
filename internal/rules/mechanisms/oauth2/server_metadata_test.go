@@ -83,6 +83,16 @@ func TestServerMetadataVerifyIssuer(t *testing.T) {
 			matching:    true,
 		},
 		{
+			metadataURL: "https://example.com/.well-known/oauth-authorization-server/tenant/team",
+			issuer:      "https://example.com/tenant/team",
+			matching:    true,
+		},
+		{
+			metadataURL: "https://example.com/.well-known/oauth-authorization-server/tenant/team",
+			issuer:      "https://example.com/tenant",
+			matching:    false,
+		},
+		{
 			metadataURL: "https://example.com/.well-known/oauth-authorization-server",
 			issuer:      "https://example.com",
 			matching:    true,
