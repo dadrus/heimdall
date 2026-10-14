@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.17.26](https://github.com/dadrus/heimdall/compare/v0.17.25...v0.17.26) (2026-10-14)
+
+
+### Bug Fixes
+
+* RFC 8414-compliant validation of multi-segment issuer paths ([#3590](https://github.com/dadrus/heimdall/issues/3590)) ([9892bb5](https://github.com/dadrus/heimdall/commit/9892bb54b8d9cde8b18ba5fee00c53c44d8599b4))
+
 ## [0.17.25](https://github.com/dadrus/heimdall/compare/v0.17.24...v0.17.25) (2026-10-13)
 
 
