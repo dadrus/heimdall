@@ -3211,6 +3211,19 @@ func TestJwtAuthenticatorGetCacheTTL(t *testing.T) {
 				assert.Equal(t, expTTL, ttl)
 			},
 		},
+		"jwk contains certificate expiring within 10s leeway and ttl configured - certificate is not cached": {
+			authenticator: &jwtAuthenticator{ttl: &shortTTL},
+			jwk: &jose.JSONWebKey{
+				KeyID:        "1",
+				Key:          ee1PrivKey.PublicKey,
+				Certificates: []*x509.Certificate{{NotAfter: time.Now().Add(5 * time.Second)}},
+			},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Zero(t, ttl)
+			},
+		},
 		"jwk contains certificate and ttl configured to a time point before the certificate expires": {
 			authenticator: &jwtAuthenticator{ttl: &shortTTL},
 			jwk: &jose.JSONWebKey{
