@@ -462,6 +462,36 @@ func TestClientCredentialsToken(t *testing.T) {
 				assert.Equal(t, "foobar", token.AccessToken)
 			},
 		},
+		"configured cache ttl, token which expires within 5s leeway is not cached": {
+			cfg: &Config{
+				TokenURL:     srv.URL,
+				ClientID:     "bar",
+				ClientSecret: "foo",
+				TTL:          new(10 * time.Minute),
+			},
+			configureMocks: func(t *testing.T, cch *mocks.CacheMock) {
+				t.Helper()
+
+				cch.EXPECT().Get(mock.Anything, mock.Anything).Return(nil, errors.New("no cache entry"))
+			},
+			buildResponse: func(t *testing.T) (any, int) {
+				t.Helper()
+
+				return &TokenInfoResponse{
+					AccessToken: "foobar",
+					TokenType:   "Bearer",
+					ExpiresIn:   3,
+				}, http.StatusOK
+			},
+			assert: func(t *testing.T, err error, tokenEndpointCalled bool, token *TokenInfo) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.True(t, tokenEndpointCalled)
+				assert.Equal(t, "foobar", token.AccessToken)
+				assert.False(t, token.Expiry.IsZero())
+			},
+		},
 		"using request_body authentication strategy": {
 			cfg: &Config{
 				TokenURL:     srv.URL,

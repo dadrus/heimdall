@@ -164,7 +164,7 @@ func (c *Config) getCacheTTL(resp *TokenInfo) time.Duration {
 		return 0
 	case configuredTTL == 0 && tokenEndpointResponseTTL != 0:
 		return tokenEndpointResponseTTL
-	case configuredTTL != 0 && tokenEndpointResponseTTL == 0:
+	case configuredTTL != 0 && tokenEndpointResponseTTL == 0 && resp.Expiry.IsZero():
 		return configuredTTL
 	default:
 		return min(configuredTTL, tokenEndpointResponseTTL)
