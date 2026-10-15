@@ -2274,6 +2274,21 @@ func TestCacheTTLCalculation(t *testing.T) {
 				assert.Equal(t, positiveSmallTTL, ttl)
 			},
 		},
+		"positive ttl settings and exp in response which would result in negative ttl with 10s leeway": {
+			authenticator: &oauth2IntrospectionAuthenticator{ttl: &positiveBigTTL},
+			response: func() *oauth2.IntrospectionResponse {
+				expiry := oauth2.NumericDate(time.Now().Add(8 * time.Second).Unix())
+				resp := &oauth2.IntrospectionResponse{}
+				resp.Expiry = &expiry
+
+				return resp
+			},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Equal(t, zeroTTL, ttl)
+			},
+		},
 		"negative ttl settings and exp set to a value response, which would result in positive ttl with 10s leeway": {
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
 			response: func() *oauth2.IntrospectionResponse {
