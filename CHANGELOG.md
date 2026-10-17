@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.17.27](https://github.com/dadrus/heimdall/compare/v0.17.26...v0.17.27) (2026-10-17)
+
+
+### Bug Fixes
+
+* Preventing caching of client credentials tokens nearing expiration ([#3598](https://github.com/dadrus/heimdall/issues/3598)) ([75001fd](https://github.com/dadrus/heimdall/commit/75001fd9626e26bbc0456fc1a7c2ea34a1436fef))
+* Preventing JWK caching beyond certificate expiration ([#3599](https://github.com/dadrus/heimdall/issues/3599)) ([e70a9c2](https://github.com/dadrus/heimdall/commit/e70a9c22542e3ffd7c48e5e4ddca3dc1b6ec6188))
+
+
+### Dependencies
+
+* update module github.com/envoyproxy/go-control-plane/envoy to v1.40.0 ([#3597](https://github.com/dadrus/heimdall/issues/3597)) ([a36599d](https://github.com/dadrus/heimdall/commit/a36599dc17a484f837b9644b3bf091c289f3270d))
+* update module github.com/go-jose/go-jose/v4 to v4.1.6 ([#3596](https://github.com/dadrus/heimdall/issues/3596)) ([5fa8731](https://github.com/dadrus/heimdall/commit/5fa8731e24c8de22c0a52255880514f7fa6c139c))
+* update module github.com/knadh/koanf/v2 to v2.4.0 ([#3605](https://github.com/dadrus/heimdall/issues/3605)) ([d3543e5](https://github.com/dadrus/heimdall/commit/d3543e5d1cab4338bc1fbac663a4a312b52fce7a))
+* update module github.com/redis/rueidis to v1.0.79 ([#3602](https://github.com/dadrus/heimdall/issues/3602)) ([9fd3ec9](https://github.com/dadrus/heimdall/commit/9fd3ec93345bcbee28f75f6f2c9f2d20ba00a576))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.79 ([#3602](https://github.com/dadrus/heimdall/issues/3602)) ([9fd3ec9](https://github.com/dadrus/heimdall/commit/9fd3ec93345bcbee28f75f6f2c9f2d20ba00a576))
+* update module gocloud.dev to v0.47.0 ([#3603](https://github.com/dadrus/heimdall/issues/3603)) ([edb45c6](https://github.com/dadrus/heimdall/commit/edb45c633035ceddd9714419245e2291ee2d3de1))
+
 ## [0.17.26](https://github.com/dadrus/heimdall/compare/v0.17.25...v0.17.26) (2026-10-14)
 
 
