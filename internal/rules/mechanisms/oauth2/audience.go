@@ -17,8 +17,6 @@
 package oauth2
 
 import (
-	"strings"
-
 	"github.com/goccy/go-json"
 
 	"github.com/dadrus/heimdall/internal/pipeline"
@@ -37,7 +35,7 @@ func (s *Audience) UnmarshalJSON(b []byte) error {
 
 	switch value := v.(type) {
 	case string:
-		*s = strings.Split(value, " ")
+		*s = []string{value}
 	case []any:
 		array := make([]string, len(value))
 

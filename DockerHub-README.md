@@ -46,7 +46,7 @@ docker pull dadrus/heimdall:<version>
 For example:
 
 ```bash
-docker pull dadrus/heimdall:0.17.22
+docker pull dadrus/heimdall:0.17.27
 ```
 
 The `latest` tag references the most recently released version:
