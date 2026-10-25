@@ -1,6 +1,6 @@
 module github.com/dadrus/heimdall
 
-go 1.27.2
+go 1.27.3
 
 require (
 	cel.dev/cel-go v0.32.0
