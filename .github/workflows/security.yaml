@@ -29,7 +29,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Run Trivy vulnerability scanner in repo mode
-        uses: aquasecurity/trivy-action@6abccf398f78b4c337599c0656f933d91efb91a0 # master
+        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87 # master
         with:
           scan-type: 'fs'
           ignore-unfixed: true
