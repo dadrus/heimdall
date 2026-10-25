@@ -46,7 +46,7 @@ func (sm ServerMetadata) verify(usedMetadataURL string) error {
 	}
 
 	if strings.Contains(uriSuffix, "/") {
-		expectedIssuer = uriPrefix + strings.SplitN(uriSuffix, "/", 2)[1]
+		expectedIssuer = uriPrefix + strings.SplitN(uriSuffix, "/", 2)[1] //nolint:mnd
 	} else {
 		expectedIssuer = strings.TrimSuffix(uriPrefix, "/")
 	}
