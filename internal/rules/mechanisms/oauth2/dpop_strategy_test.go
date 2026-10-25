@@ -1323,8 +1323,7 @@ func TestDPoPStrategyAssert(t *testing.T) {
 				var target *InvalidDPoPProofError
 				require.ErrorAs(t, err, &target)
 				assert.Equal(t, "failed to parse proof", target.message)
-				require.ErrorContains(t, err, "invalid embedded jwk")
-				require.ErrorContains(t, err, "must be public key")
+				require.ErrorContains(t, err, "JWK contains private parameters")
 			},
 		},
 	} {

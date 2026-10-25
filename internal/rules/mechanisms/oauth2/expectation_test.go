@@ -192,12 +192,15 @@ func TestExpectationAssertValidity(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		exp    Expectation
-		times  []time.Time
+		times  [2]*NumericDate
 		assert func(t *testing.T, err error)
 	}{
 		"notBefore in the past and notAfter in the future with default leeway": {
-			exp:   Expectation{},
-			times: []time.Time{time.Now().Add(-1 * time.Minute), time.Now().Add(1 * time.Minute)},
+			exp: Expectation{},
+			times: [2]*NumericDate{
+				new(NumericDate(time.Now().Add(-1 * time.Minute).Unix())),
+				new(NumericDate(time.Now().Add(1 * time.Minute).Unix())),
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -205,8 +208,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore in the past and notAfter in the future with disabled leeway": {
-			exp:   Expectation{ValidityLeeway: 0},
-			times: []time.Time{time.Now().Add(-1 * time.Minute), time.Now().Add(1 * time.Minute)},
+			exp: Expectation{ValidityLeeway: 0},
+			times: [2]*NumericDate{
+				new(NumericDate(time.Now().Add(-1 * time.Minute).Unix())),
+				new(NumericDate(time.Now().Add(1 * time.Minute).Unix())),
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -214,8 +220,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore in the past and notAfter in the future with leeway making the assertion fail": {
-			exp:   Expectation{ValidityLeeway: -2 * time.Minute},
-			times: []time.Time{time.Now().Add(-1 * time.Minute), time.Now().Add(1 * time.Minute)},
+			exp: Expectation{ValidityLeeway: -2 * time.Minute},
+			times: [2]*NumericDate{
+				new(NumericDate(time.Now().Add(-1 * time.Minute).Unix())),
+				new(NumericDate(time.Now().Add(1 * time.Minute).Unix())),
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -223,8 +232,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore in the future and notAfter in the past": {
-			exp:   Expectation{},
-			times: []time.Time{time.Now().Add(1 * time.Minute), time.Now().Add(-1 * time.Minute)},
+			exp: Expectation{},
+			times: [2]*NumericDate{
+				new(NumericDate(time.Now().Add(1 * time.Minute).Unix())),
+				new(NumericDate(time.Now().Add(-1 * time.Minute).Unix())),
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -232,8 +244,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore not set and notAfter at the Unix epoch": {
-			exp:   Expectation{},
-			times: []time.Time{{}, time.Unix(0, 0)},
+			exp: Expectation{},
+			times: [2]*NumericDate{
+				nil,
+				new(NumericDate(0)),
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -241,8 +256,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore not set and notAfter in the past with default leeway": {
-			exp:   Expectation{},
-			times: []time.Time{{}, time.Now().Add(-1 * time.Minute)},
+			exp: Expectation{},
+			times: [2]*NumericDate{
+				nil,
+				new(NumericDate(time.Now().Add(-1 * time.Minute).Unix())),
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -250,8 +268,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore not set and notAfter in the past with disabled leeway": {
-			exp:   Expectation{ValidityLeeway: 0},
-			times: []time.Time{{}, time.Now().Add(-1 * time.Minute)},
+			exp: Expectation{ValidityLeeway: 0},
+			times: [2]*NumericDate{
+				nil,
+				new(NumericDate(time.Now().Add(-1 * time.Minute).Unix())),
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -259,8 +280,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore not set and notAfter now with default leeway": {
-			exp:   Expectation{},
-			times: []time.Time{{}, time.Now()},
+			exp: Expectation{},
+			times: [2]*NumericDate{
+				nil,
+				new(NumericDate(time.Now().Unix())),
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -268,8 +292,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore not set and notAfter now with disabled leeway": {
-			exp:   Expectation{ValidityLeeway: 0},
-			times: []time.Time{{}, time.Now()},
+			exp: Expectation{ValidityLeeway: 0},
+			times: [2]*NumericDate{
+				nil,
+				new(NumericDate(time.Now().Unix())),
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -277,8 +304,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore not set and notAfter in the future with default leeway": {
-			exp:   Expectation{},
-			times: []time.Time{{}, time.Now().Add(1 * time.Minute)},
+			exp: Expectation{},
+			times: [2]*NumericDate{
+				nil,
+				new(NumericDate(time.Now().Add(1 * time.Minute).Unix())),
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -286,8 +316,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore not set and notAfter in the future with disabled leeway": {
-			exp:   Expectation{ValidityLeeway: 0},
-			times: []time.Time{{}, time.Now().Add(1 * time.Minute)},
+			exp: Expectation{ValidityLeeway: 0},
+			times: [2]*NumericDate{
+				nil,
+				new(NumericDate(time.Now().Add(1 * time.Minute).Unix())),
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -296,7 +329,7 @@ func TestExpectationAssertValidity(t *testing.T) {
 		},
 		"both notBefore and notAfter not set": {
 			exp:   Expectation{},
-			times: []time.Time{{}, {}},
+			times: [2]*NumericDate{nil, nil},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -304,8 +337,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore in the past and notAfter not set with default leeway": {
-			exp:   Expectation{},
-			times: []time.Time{time.Now().Add(-1 * time.Minute), {}},
+			exp: Expectation{},
+			times: [2]*NumericDate{
+				new(NumericDate(time.Now().Add(-1 * time.Minute).Unix())),
+				nil,
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -313,8 +349,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore in the past and notAfter not set with disabled leeway": {
-			exp:   Expectation{ValidityLeeway: 0},
-			times: []time.Time{time.Now().Add(-1 * time.Minute), {}},
+			exp: Expectation{ValidityLeeway: 0},
+			times: [2]*NumericDate{
+				new(NumericDate(time.Now().Add(-1 * time.Minute).Unix())),
+				nil,
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -322,8 +361,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore now and notAfter not set with default leeway": {
-			exp:   Expectation{},
-			times: []time.Time{time.Now(), {}},
+			exp: Expectation{},
+			times: [2]*NumericDate{
+				new(NumericDate(time.Now().Unix())),
+				nil,
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -331,8 +373,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore now and notAfter not set with disabled leeway": {
-			exp:   Expectation{ValidityLeeway: 0},
-			times: []time.Time{time.Now(), {}},
+			exp: Expectation{ValidityLeeway: 0},
+			times: [2]*NumericDate{
+				new(NumericDate(time.Now().Unix())),
+				nil,
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -340,8 +385,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore in the future and notAfter not set with leeway making assertion success": {
-			exp:   Expectation{ValidityLeeway: 3 * time.Minute},
-			times: []time.Time{time.Now().Add(1 * time.Minute), {}},
+			exp: Expectation{ValidityLeeway: 3 * time.Minute},
+			times: [2]*NumericDate{
+				new(NumericDate(time.Now().Add(1 * time.Minute).Unix())),
+				nil,
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -349,8 +397,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore in the future and notAfter not set with default leeway": {
-			exp:   Expectation{},
-			times: []time.Time{time.Now().Add(1 * time.Minute), {}},
+			exp: Expectation{},
+			times: [2]*NumericDate{
+				new(NumericDate(time.Now().Add(1 * time.Minute).Unix())),
+				nil,
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -358,8 +409,11 @@ func TestExpectationAssertValidity(t *testing.T) {
 			},
 		},
 		"notBefore in the future and notAfter not set with disabled leeway": {
-			exp:   Expectation{ValidityLeeway: 0},
-			times: []time.Time{time.Now().Add(1 * time.Minute), {}},
+			exp: Expectation{ValidityLeeway: 0},
+			times: [2]*NumericDate{
+				new(NumericDate(time.Now().Add(1 * time.Minute).Unix())),
+				nil,
+			},
 			assert: func(t *testing.T, err error) {
 				t.Helper()
 
@@ -371,8 +425,8 @@ func TestExpectationAssertValidity(t *testing.T) {
 			token := &Token{
 				Type: TypeBearer,
 				Claims: Claims{
-					NotBefore: new(NumericDate(tc.times[0].Unix())),
-					Expiry:    new(NumericDate(tc.times[1].Unix())),
+					NotBefore: tc.times[0],
+					Expiry:    tc.times[1],
 				},
 			}
 

@@ -172,10 +172,8 @@ type InvalidDPoPProofError struct {
 
 func NewInvalidDPoPProofError(message string, algorithms ...jose.SignatureAlgorithm) *InvalidDPoPProofError {
 	return &InvalidDPoPProofError{
-		oauth2ChallengeError: oauth2ChallengeError{
-			message:   message,
-			tokenType: TypeDPoP,
-		},
+		message:    message,
+		tokenType:  TypeDPoP,
 		algorithms: algorithms,
 	}
 }

@@ -74,7 +74,7 @@ func (t *Token) Verify(
 	expectation Expectation,
 	key *jose.JSONWebKey,
 ) error {
-	if len(t.Header.Algorithm) != 0 && key.Algorithm != t.Header.Algorithm {
+	if len(key.Algorithm) != 0 && key.Algorithm != t.Header.Algorithm {
 		return NewInvalidTokenError(
 			t.Type,
 			"algorithm in the JWT header does not match the algorithm referenced in the key",

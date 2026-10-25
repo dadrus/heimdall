@@ -545,7 +545,7 @@ func (a *oauth2IntrospectionAuthenticator) getCacheTTL(introspectResp *oauth2.In
 		return 0
 	case configuredTTL == 0 && introspectionResponseTTL != 0:
 		return introspectionResponseTTL
-	case configuredTTL != 0 && introspectionResponseTTL == 0:
+	case configuredTTL != 0 && introspectionResponseTTL == 0 && introspectResp.Expiry == nil:
 		return configuredTTL
 	default:
 		return min(configuredTTL, introspectionResponseTTL)
