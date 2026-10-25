@@ -2964,6 +2964,19 @@ func TestCacheTTLCalculation(t *testing.T) {
 				assert.Equal(t, positiveSmallTTL, ttl)
 			},
 		},
+		"positive ttl settings and exp within 10s leeway is not cached": {
+			authenticator: &oauth2IntrospectionAuthenticator{ttl: &positiveBigTTL},
+			response: func() *oauth2.IntrospectionResponse {
+				expiry := oauth2.NumericDate(time.Now().Add(8 * time.Second).Unix())
+
+				return &oauth2.IntrospectionResponse{Expiry: &expiry}
+			},
+			assert: func(t *testing.T, ttl time.Duration) {
+				t.Helper()
+
+				assert.Zero(t, ttl)
+			},
+		},
 		"negative ttl settings and exp set to a value response, which would result in positive ttl with 10s leeway": {
 			authenticator: &oauth2IntrospectionAuthenticator{ttl: &negativeTTL},
 			response: func() *oauth2.IntrospectionResponse {

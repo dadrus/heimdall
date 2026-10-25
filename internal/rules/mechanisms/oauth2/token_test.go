@@ -173,6 +173,49 @@ func TestTokenVerify(t *testing.T) {
 				assert.Equal(t, Scopes{"read", "write"}, token.Claims.Scope)
 			},
 		},
+		"verifies token when JWK omits its algorithm": {
+			token: func(t *testing.T) *Token {
+				t.Helper()
+
+				raw := newTestJWT(t, key, Claims{Issuer: "issuer", Scope: Scopes{"read"}})
+				token, err := NewToken(TypeBearer, raw)
+				require.NoError(t, err)
+
+				return token
+			},
+			key: &jose.JSONWebKey{Key: key.Public()},
+			expectation: Expectation{
+				AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES256},
+				ScopesMatcher:     ExactScopeStrategyMatcher{"read"},
+			},
+			assert: func(t *testing.T, token *Token, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "issuer", token.Claims.Issuer)
+			},
+		},
+		"rejects disallowed algorithm when JWK omits its algorithm": {
+			token: func(t *testing.T) *Token {
+				t.Helper()
+
+				raw := newTestJWT(t, key, Claims{Issuer: "issuer"})
+				token, err := NewToken(TypeBearer, raw)
+				require.NoError(t, err)
+
+				return token
+			},
+			key: &jose.JSONWebKey{Key: key.Public()},
+			expectation: Expectation{
+				AllowedAlgorithms: []jose.SignatureAlgorithm{jose.ES384},
+			},
+			assert: func(t *testing.T, token *Token, err error) {
+				t.Helper()
+
+				require.ErrorContains(t, err, "algorithm")
+				assert.Empty(t, token.Claims)
+			},
+		},
 		"fails if jwt header algorithm does not match key algorithm": {
 			token: func(t *testing.T) *Token {
 				t.Helper()
