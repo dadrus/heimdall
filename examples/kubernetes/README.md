@@ -5,16 +5,12 @@ Kubernetes ingress controllers and Gateway API implementations. An echo
 application is protected by Heimdall, which decides whether requests may
 reach it.
 
-> **Local demo only:** The cluster uses development certificates, demo
-> credentials and convenient local administrator access. Do not expose its
-> dashboards or reuse these settings in production.
-
 ## Prerequisites
 
 - [Docker](https://www.docker.com/)
 - [kind](https://kind.sigs.k8s.io/)
 - [kubectl](https://kubernetes.io/docs/reference/kubectl/)
-- [OpenTofu](https://opentofu.org/docs/intro/install/) **1.12.6**
+- [OpenTofu](https://opentofu.org/docs/intro/install/)
 - [just](https://github.com/casey/just)
 - [curl](https://curl.se/)
 
