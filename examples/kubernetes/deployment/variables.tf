@@ -38,21 +38,6 @@ variable "cluster_domain" {
   default = "cluster.local"
 }
 
-variable "heimdall_image_repository" {
-  type    = string
-  default = "ghcr.io/dadrus/heimdall"
-}
-
-variable "heimdall_image_tag" {
-  type    = string
-  default = "dev"
-}
-
-variable "heimdall_image_pull_policy" {
-  type    = string
-  default = "IfNotPresent"
-}
-
 variable "observability_enabled" {
   type    = bool
   default = false
@@ -91,11 +76,6 @@ variable "rule_provider" {
     condition     = contains(["kubernetes", "http_endpoint", "cloud_blob"], var.rule_provider)
     error_message = "rule_provider must be 'kubernetes', 'http_endpoint' or 'cloud_blob'."
   }
-}
-
-variable "blob_sync_rustfs_credentials" {
-  type    = bool
-  default = false
 }
 
 variable "blob_s3_secret_name" {

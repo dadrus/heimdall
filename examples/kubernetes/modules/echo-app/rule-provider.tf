@@ -39,6 +39,13 @@ resource "kubectl_manifest" "blob_rules_config" {
     namespace  = var.blob_rules_namespace
     rules_yaml = indent(4, trimspace(file("${path.module}/rules/echo-app.yaml")))
   })
+
+  lifecycle {
+    precondition {
+      condition     = length(trimspace(var.blob_rules_namespace)) > 0
+      error_message = "blob_rules_namespace is required when rule_provider=cloud_blob."
+    }
+  }
 }
 
 locals {
@@ -83,6 +90,14 @@ resource "kubernetes_manifest" "blob_rules" {
     precondition {
       condition     = length(trimspace(var.blob_rules_bucket_name)) > 0
       error_message = "blob_rules_bucket_name is required when rule_provider=cloud_blob."
+    }
+    precondition {
+      condition     = length(trimspace(var.blob_rules_s3_region)) > 0
+      error_message = "blob_rules_s3_region is required when rule_provider=cloud_blob."
+    }
+    precondition {
+      condition     = length(trimspace(var.blob_rules_secret_name)) > 0
+      error_message = "blob_rules_secret_name is required for the current upload job when rule_provider=cloud_blob."
     }
   }
 }

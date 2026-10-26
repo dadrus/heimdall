@@ -7,12 +7,6 @@ locals {
   )
 }
 
-resource "kubernetes_namespace_v1" "heimdall" {
-  metadata {
-    name = var.namespace
-  }
-}
-
 locals {
   certs_split_doc = split("---", templatefile("${path.module}/manifests/certificate.yaml", {
     namespace = var.namespace
@@ -22,14 +16,12 @@ locals {
 }
 
 resource "kubectl_manifest" "certificates" {
-  depends_on = [kubernetes_namespace_v1.heimdall]
-
   for_each  = local.certs_dict
   yaml_body = each.value
 }
 
 resource "helm_release" "heimdall" {
-  depends_on = [kubectl_manifest.certificates, kubernetes_manifest.blob_secret_sync]
+  depends_on = [kubectl_manifest.certificates]
 
   name            = "heimdall"
   chart           = abspath("${path.module}/../../../../charts/heimdall")
@@ -63,9 +55,6 @@ resource "helm_release" "heimdall" {
       http_rules_enabled    = var.rule_provider == "http_endpoint"
       blob_rules_enabled    = var.rule_provider == "cloud_blob"
       blob_s3_secret_name   = var.blob_s3_secret_name
-      image_repository      = var.image_repository
-      image_tag             = var.image_tag
-      image_pull_policy     = var.image_pull_policy
     }),
   ]
 

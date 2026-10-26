@@ -82,6 +82,6 @@ env:
 %{ endif }
 
 image:
-  repository: ${image_repository}
-  tag: ${image_tag}
-  pullPolicy: ${image_pull_policy}
+  repository: ghcr.io/dadrus/heimdall
+  tag: dev
+  pullPolicy: IfNotPresent

@@ -35,22 +35,6 @@ variable "observability" {
   }
 }
 
-# Default to the existing published dev image outside the kind development root.
-variable "image_repository" {
-  type    = string
-  default = "ghcr.io/dadrus/heimdall"
-}
-
-variable "image_tag" {
-  type    = string
-  default = "dev"
-}
-
-variable "image_pull_policy" {
-  type    = string
-  default = "IfNotPresent"
-}
-
 variable "rule_provider" {
   type    = string
   default = "kubernetes"
@@ -61,15 +45,9 @@ variable "http_rules_endpoint" {
   default = ""
 }
 
-# Cloud blob inputs are provided by the deployment's S3-oriented contract.
 variable "blob_rules_prefix" {
   type    = string
   default = "echo-app/"
-}
-
-variable "blob_sync_rustfs_credentials" {
-  type    = bool
-  default = false
 }
 
 variable "blob_s3_secret_name" {
@@ -78,17 +56,7 @@ variable "blob_s3_secret_name" {
 }
 
 variable "blob_rules_url" {
-  description = "Complete Go CDK S3 bucket URL, prepared by the platform deployment."
+  description = "S3 bucket URL"
   type        = string
   default     = ""
-}
-
-variable "rustfs_namespace" {
-  type    = string
-  default = "object-storage"
-}
-
-variable "rustfs_secret_name" {
-  type    = string
-  default = "rustfs-secret"
 }

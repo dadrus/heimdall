@@ -1,6 +1,3 @@
-# Bucket management for the local kind demo. RustFS itself belongs to AP 1.
-# The Job runs inside Kubernetes, so no host-accessible S3 port is required.
-# Jobs (not stored objects) belong to the deployment OpenTofu state.
 resource "kubernetes_job_v1" "bucket" {
   for_each = var.buckets
 
@@ -27,7 +24,7 @@ resource "kubernetes_job_v1" "bucket" {
 
         container {
           name              = "create-bucket"
-          image             = var.aws_cli_image
+          image             = "amazon/aws-cli:2.37.12"
           image_pull_policy = "IfNotPresent"
           command = ["/bin/sh", "-ec", <<-SCRIPT
             # The Kubernetes DNS name is not wildcarded for bucket subdomains.

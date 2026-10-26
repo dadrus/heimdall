@@ -45,8 +45,6 @@ variable "rustfs_data_size" {
   default = "10Gi"
 }
 
-# Fixed demo credentials are intentionally simple for a non-public kind cluster.
-# Override these via TF_VAR_rustfs_* variables for a shared/non-local cluster.
 variable "rustfs_access_key" {
   type      = string
   sensitive = true

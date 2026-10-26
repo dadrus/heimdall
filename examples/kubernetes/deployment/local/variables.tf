@@ -33,24 +33,6 @@ variable "cluster_domain" {
   default = "cluster.local"
 }
 
-# Pull the published image by default; maintainers may load a local build with the same tag.
-variable "heimdall_image_repository" {
-  type    = string
-  default = "ghcr.io/dadrus/heimdall"
-}
-
-variable "heimdall_image_tag" {
-  type    = string
-  default = "dev"
-}
-
-variable "heimdall_image_pull_policy" {
-  type    = string
-  default = "IfNotPresent"
-}
-
-# AP 3 bucket flags remain useful for isolated storage tests; AP 5 will
-# also request observability buckets automatically when enabled.
 variable "observability_enabled" {
   type    = bool
   default = false

@@ -23,6 +23,12 @@ module "rustfs" {
   secret_key       = var.rustfs_secret_key
 }
 
+module "external_secrets" {
+  source = "../../modules/external-secrets"
+
+  depends_on = [module.kind]
+}
+
 module "headlamp" {
   source = "../../modules/headlamp"
 

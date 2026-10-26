@@ -35,12 +35,10 @@ module "observability" {
   count  = var.observability_enabled ? 1 : 0
   source = "../observability"
 
-  namespace          = "monitoring"
-  s3_endpoint        = var.rustfs_s3_endpoint
-  rustfs_namespace   = var.rustfs_namespace
-  rustfs_secret_name = var.rustfs_secret_name
-  loki_bucket_name   = var.loki_bucket_name
-  tempo_bucket_name  = var.tempo_bucket_name
+  namespace         = "monitoring"
+  s3_endpoint       = var.rustfs_s3_endpoint
+  loki_bucket_name  = var.loki_bucket_name
+  tempo_bucket_name = var.tempo_bucket_name
 }
 
 module "rules_server" {
@@ -60,17 +58,11 @@ module "heimdall" {
 
   namespace           = var.heimdall_namespace
   ingress_controller  = var.ingress_controller
-  image_repository    = var.heimdall_image_repository
-  image_tag           = var.heimdall_image_tag
-  image_pull_policy   = var.heimdall_image_pull_policy
   rule_provider       = var.rule_provider
   http_rules_endpoint = var.rule_provider == "http_endpoint" ? module.rules_server[0].endpoint_url : ""
   blob_rules_url               = var.blob_rules_url
   blob_rules_prefix            = local.echo_app_rules_prefix
   blob_s3_secret_name          = var.blob_s3_secret_name
-  blob_sync_rustfs_credentials = var.blob_sync_rustfs_credentials
-  rustfs_namespace             = var.rustfs_namespace
-  rustfs_secret_name           = var.rustfs_secret_name
   observability = {
     log_level         = "info"
     log_format        = var.observability_enabled ? "gelf" : "text"

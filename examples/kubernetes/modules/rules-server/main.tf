@@ -27,7 +27,6 @@ resource "kubectl_manifest" "deployment" {
 
   yaml_body = templatefile("${path.module}/manifests/deployment.yaml", {
     namespace             = kubernetes_namespace_v1.rules_server.metadata[0].name
-    image                 = var.image
     nginx_configmap_name  = kubernetes_config_map_v1.nginx.metadata[0].name
     rules_configmap_name  = "echo-app-rules"
     nginx_config_checksum = sha256(file("${path.module}/nginx.conf"))

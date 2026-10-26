@@ -30,8 +30,6 @@ variable "http_rules_namespace" {
   default = ""
 }
 
-# Local S3 publication uses the existing RustFS service and Secret, without
-# reading credentials into the OpenTofu state.
 variable "blob_rules_prefix" {
   type    = string
   default = "echo-app/"
@@ -54,15 +52,15 @@ variable "blob_rules_s3_endpoint" {
 
 variable "blob_rules_s3_region" {
   type    = string
-  default = "us-east-1"
+  default = ""
 }
 
 variable "blob_rules_namespace" {
   type    = string
-  default = "object-storage"
+  default = ""
 }
 
 variable "blob_rules_secret_name" {
   type    = string
-  default = "rustfs-secret"
+  default = ""
 }
