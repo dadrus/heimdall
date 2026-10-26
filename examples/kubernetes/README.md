@@ -1,9 +1,6 @@
 # Kubernetes Quickstarts
 
-These examples let you try Heimdall in **decision mode** with different
-Kubernetes ingress controllers and Gateway API implementations. An echo
-application is protected by Heimdall, which decides whether requests may
-reach it.
+These examples let you try Heimdall in **decision mode** with different Kubernetes ingress controllers and Gateway API implementations. An echo application is protected by Heimdall, which decides whether requests may reach it.
 
 ## Prerequisites
 
@@ -42,11 +39,9 @@ For example, to use Contour:
 just install-contour-demo
 ```
 
-The command creates a local kind cluster and installs the selected ingress
-controller, Heimdall and an echo application.
+The command creates a local kind cluster and installs the selected ingress controller, Heimdall and an echo application.
 
-To install the same demo with **observability** (Prometheus, Loki, Tempo,
-Alloy, Grafana and Pyroscope), use:
+To install the same demo with **observability** (Prometheus, Loki, Tempo, Alloy, Grafana and Pyroscope), use:
 
 ```bash
 OBS=true just install-contour-demo
@@ -59,8 +54,7 @@ E.g.:
 RULE_PROVIDER=http_endpoint just install-contour-demo
 ```
 
-Possible values are `http_endpoint`, `cloud_blob` and `kubernetes`. The default is
-`RULE_PROVIDER=kubernetes` which means rules are loaded as kubernetes CR.
+Possible values are `http_endpoint`, `cloud_blob` and `kubernetes`. The default is `RULE_PROVIDER=kubernetes` which means rules are loaded as kubernetes CR.
 
 # Play with the demo
 
@@ -77,8 +71,6 @@ Check which IP is used for the router implementation and set a variable to that 
 export SERVICE_IP=$(kubectl get svc --all-namespaces -o jsonpath="{.items[?(@.spec.type=='LoadBalancer')].status.loadBalancer.ingress[0].ip}")
 ```
 
-That IP is required for communication purposes with the demo service.
-
 Now, use
 
 ```bash
@@ -94,9 +86,7 @@ Please note: Since nginx does not support 302 response codes from an external au
 
 ## Dashboards
 
-The local cluster includes Headlamp and the RustFS development console.
-Each recipe below opens a port-forward bound to `127.0.0.1` (keep its
-terminal open while browsing):
+The local cluster includes Headlamp and the RustFS development console. Each recipe below opens a port-forward bound to `127.0.0.1` (keep its terminal open while browsing):
 
 ```bash
 just headlamp-dashboard       # Headlamp: http://127.0.0.1:8080
@@ -109,10 +99,7 @@ If you installed with `OBS=true`, you can also open Grafana:
 just observability-dashboard  # Grafana:  http://127.0.0.1:3000
 ```
 
-Sign in using **admin / admin** (local demo only) and open
-**Dashboards → Heimdall → Heimdall Metrics**. The existing Heimdall
-metrics dashboard and the Prometheus, Loki, Tempo and Pyroscope data sources
-are provisioned automatically.
+Sign in using **admin / admin** (local demo only) and open **Dashboards → Heimdall → Heimdall Metrics**. The existing Heimdall metrics dashboard and the Prometheus, Loki, Tempo and Pyroscope data sources are provisioned automatically.
 
 ## Delete the demo
 
@@ -120,5 +107,4 @@ are provisioned automatically.
 just delete-local-cluster
 ```
 
-This removes both the demo deployment and the local kind cluster. To remove the deployment but keep
-the kind cluster and its storage, use `just delete-demo` instead.
+This removes both the demo deployment and the local kind cluster. To remove the deployment but keep the kind cluster and its storage, use `just delete-demo` instead.
