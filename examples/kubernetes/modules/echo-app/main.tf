@@ -35,7 +35,7 @@ locals {
 }
 
 resource "kubectl_manifest" "ingress" {
-  depends_on = [kubectl_manifest.deployment, kubectl_manifest.rules, kubernetes_config_map_v1.http_rules, kubernetes_manifest.blob_rules]
+  depends_on = [kubectl_manifest.deployment, kubectl_manifest.kubernetes_rules, kubernetes_config_map_v1.http_rules, kubernetes_manifest.blob_rules]
 
   for_each  = local.ingress_manifests
   yaml_body = each.value
