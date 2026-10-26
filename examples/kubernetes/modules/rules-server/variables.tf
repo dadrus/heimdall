@@ -8,11 +8,6 @@ variable "cluster_domain" {
   default = "cluster.local"
 }
 
-variable "rules_configmap_name" {
-  type    = string
-  default = "echo-app-rules"
-}
-
 variable "image" {
   type    = string
   default = "nginx:1.31.6-alpine"

@@ -34,21 +34,6 @@ variable "rustfs_namespace" {
   default = "object-storage"
 }
 
-variable "rustfs_release_name" {
-  type    = string
-  default = "rustfs"
-}
-
-variable "rustfs_chart_repository" {
-  type    = string
-  default = "https://charts.rustfs.com"
-}
-
-variable "rustfs_chart_version" {
-  type    = string
-  default = "1.0.1"
-}
-
 variable "rustfs_storage_class" {
   type        = string
   default     = "standard"
@@ -77,19 +62,4 @@ variable "rustfs_secret_key" {
 variable "headlamp_namespace" {
   type    = string
   default = "headlamp"
-}
-
-variable "headlamp_release_name" {
-  type    = string
-  default = "headlamp"
-}
-
-variable "headlamp_chart_repository" {
-  type    = string
-  default = "https://kubernetes-sigs.github.io/headlamp/"
-}
-
-variable "headlamp_chart_version" {
-  type    = string
-  default = "0.45.0"
 }

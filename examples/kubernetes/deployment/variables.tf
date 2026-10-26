@@ -93,11 +93,6 @@ variable "rule_provider" {
   }
 }
 
-variable "rules_object_prefix" {
-  type    = string
-  default = "echo-app/"
-}
-
 variable "blob_sync_rustfs_credentials" {
   type    = bool
   default = false
@@ -108,14 +103,10 @@ variable "blob_s3_secret_name" {
   default = ""
 }
 
-variable "blob_use_path_style" {
-  type    = bool
-  default = false
-}
-
-variable "blob_disable_https" {
-  type    = bool
-  default = false
+variable "blob_rules_url" {
+  description = "Complete Go CDK S3 bucket URL, supplied by the platform root."
+  type        = string
+  default     = ""
 }
 
 variable "rules_bucket_name" {

@@ -77,29 +77,10 @@ variable "blob_s3_secret_name" {
   default = ""
 }
 
-variable "blob_use_path_style" {
-  type    = bool
-  default = false
-}
-
-variable "blob_disable_https" {
-  type    = bool
-  default = false
-}
-
-variable "blob_bucket_name" {
-  type    = string
-  default = ""
-}
-
-variable "blob_s3_endpoint" {
-  type    = string
-  default = ""
-}
-
-variable "blob_s3_region" {
-  type    = string
-  default = "us-east-1"
+variable "blob_rules_url" {
+  description = "Complete Go CDK S3 bucket URL, prepared by the platform deployment."
+  type        = string
+  default     = ""
 }
 
 variable "rustfs_namespace" {

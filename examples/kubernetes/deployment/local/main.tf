@@ -22,8 +22,13 @@ module "deployment" {
   s3_region                    = var.rustfs_s3_region
   blob_s3_secret_name          = var.rule_provider == "cloud_blob" ? var.blob_credentials_secret_name : ""
   blob_sync_rustfs_credentials = var.rule_provider == "cloud_blob"
-  blob_use_path_style          = true
-  blob_disable_https           = startswith(var.rustfs_s3_endpoint, "http://")
+  blob_rules_url = var.rule_provider == "cloud_blob" ? format(
+    "s3://%s?region=%s%s&use_path_style=true&disable_https=%t&awssdk=v2",
+    module.storage.buckets["rules"],
+    urlencode(var.rustfs_s3_region),
+    var.rustfs_s3_endpoint != "" ? "&endpoint=${urlencode(var.rustfs_s3_endpoint)}" : "",
+    startswith(var.rustfs_s3_endpoint, "http://")
+  ) : ""
 
   # Depend on completed AP 3 bucket jobs only when the consumers need them.
   # Do not block/replan every shared deployment module on bucket toggles.

@@ -47,15 +47,7 @@ resource "helm_release" "heimdall" {
       log_format          = var.observability.log_format
       rule_provider       = var.rule_provider
       http_rules_endpoint = var.http_rules_endpoint
-      # Go CDK's S3 URL supports custom endpoints and explicit AWS SDK v2.
-      blob_rules_url = var.rule_provider == "cloud_blob" ? format(
-        "s3://%s?region=%s%s&use_path_style=%t&disable_https=%t&awssdk=v2",
-        var.blob_bucket_name,
-        urlencode(var.blob_s3_region),
-        var.blob_s3_endpoint != "" ? "&endpoint=${urlencode(var.blob_s3_endpoint)}" : "",
-        var.blob_use_path_style,
-        var.blob_disable_https
-      ) : ""
+      blob_rules_url      = var.blob_rules_url
       blob_rules_prefix   = var.blob_rules_prefix
     }),
     templatefile("${path.module}/helm/values.yaml", {

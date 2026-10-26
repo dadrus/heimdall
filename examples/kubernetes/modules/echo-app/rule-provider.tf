@@ -23,7 +23,7 @@ resource "kubernetes_config_map_v1" "http_rules" {
   count = var.rule_provider == "http_endpoint" ? 1 : 0
 
   metadata {
-    name      = var.http_rules_configmap_name
+    name      = "echo-app-rules"
     namespace = var.http_rules_namespace
   }
 
@@ -55,7 +55,7 @@ resource "kubernetes_manifest" "blob_rules" {
   manifest = yamldecode(templatefile("${path.module}/manifests/blob/upload-job.yaml", {
     namespace    = var.blob_rules_namespace
     job_name     = "echo-app-publish-rules-${local.blob_rules_job_hash}"
-    aws_cli_image = var.blob_rules_aws_cli_image
+    aws_cli_image = "amazon/aws-cli:2.37.12"
     s3_endpoint  = var.blob_rules_s3_endpoint
     bucket_name  = var.blob_rules_bucket_name
     object_key   = "${var.blob_rules_prefix}echo-app.yaml"

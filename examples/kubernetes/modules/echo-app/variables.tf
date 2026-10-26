@@ -30,11 +30,6 @@ variable "http_rules_namespace" {
   default = ""
 }
 
-variable "http_rules_configmap_name" {
-  type    = string
-  default = "echo-app-rules"
-}
-
 # Local S3 publication uses the existing RustFS service and Secret, without
 # reading credentials into the OpenTofu state.
 variable "blob_rules_prefix" {
@@ -70,9 +65,4 @@ variable "blob_rules_namespace" {
 variable "blob_rules_secret_name" {
   type    = string
   default = "rustfs-secret"
-}
-
-variable "blob_rules_aws_cli_image" {
-  type    = string
-  default = "amazon/aws-cli:2.37.12"
 }

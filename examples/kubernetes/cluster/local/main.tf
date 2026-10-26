@@ -13,9 +13,9 @@ module "rustfs" {
   depends_on = [module.kind]
 
   namespace        = var.rustfs_namespace
-  release_name     = var.rustfs_release_name
-  chart_repository = var.rustfs_chart_repository
-  chart_version    = var.rustfs_chart_version
+  release_name     = "rustfs"
+  chart_repository = "https://charts.rustfs.com"
+  chart_version    = "1.0.1"
   storage_class    = var.rustfs_storage_class
   data_size        = var.rustfs_data_size
   cluster_domain   = var.cluster_domain
@@ -29,9 +29,9 @@ module "headlamp" {
   depends_on = [module.kind]
 
   namespace        = var.headlamp_namespace
-  release_name     = var.headlamp_release_name
-  chart_repository = var.headlamp_chart_repository
-  chart_version    = var.headlamp_chart_version
+  release_name     = "headlamp"
+  chart_repository = "https://kubernetes-sigs.github.io/headlamp/"
+  chart_version    = "0.45.0"
 
   # Only the local kind cluster: no login prompt; never expose this over Ingress.
   local_admin_auto_login = true
