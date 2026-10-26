@@ -1,5 +1,59 @@
 # Changelog
 
+## [0.17.27](https://github.com/dadrus/heimdall/compare/v0.17.26...v0.17.27) (2026-10-25)
+
+
+### Bug Fixes
+
+* Preventing caching of client credentials tokens nearing expiration ([#3598](https://github.com/dadrus/heimdall/issues/3598)) ([75001fd](https://github.com/dadrus/heimdall/commit/75001fd9626e26bbc0456fc1a7c2ea34a1436fef))
+* Preventing JWK caching beyond certificate expiration ([#3599](https://github.com/dadrus/heimdall/issues/3599)) ([e70a9c2](https://github.com/dadrus/heimdall/commit/e70a9c22542e3ffd7c48e5e4ddca3dc1b6ec6188))
+
+
+### Dependencies
+
+* update golang to v1.27.3 ([#3608](https://github.com/dadrus/heimdall/issues/3608)) ([5ce4fca](https://github.com/dadrus/heimdall/commit/5ce4fca621026b3685941b5fafcd0979c16cffd3))
+* update google.golang.org/genproto/googleapis/rpc digest to ce908d2 ([#3607](https://github.com/dadrus/heimdall/issues/3607)) ([02f20e5](https://github.com/dadrus/heimdall/commit/02f20e537d5fa71ec590600e46634c50ccdd8b48))
+* update module github.com/envoyproxy/go-control-plane/envoy to v1.40.0 ([#3597](https://github.com/dadrus/heimdall/issues/3597)) ([a36599d](https://github.com/dadrus/heimdall/commit/a36599dc17a484f837b9644b3bf091c289f3270d))
+* update module github.com/go-jose/go-jose/v4 to v4.1.6 ([#3596](https://github.com/dadrus/heimdall/issues/3596)) ([5fa8731](https://github.com/dadrus/heimdall/commit/5fa8731e24c8de22c0a52255880514f7fa6c139c))
+* update module github.com/knadh/koanf/v2 to v2.4.1 ([#3606](https://github.com/dadrus/heimdall/issues/3606)) ([3002153](https://github.com/dadrus/heimdall/commit/3002153f5b2ce2c4b740369df6b56c360e561317))
+* update module github.com/redis/rueidis to v1.0.79 ([#3602](https://github.com/dadrus/heimdall/issues/3602)) ([9fd3ec9](https://github.com/dadrus/heimdall/commit/9fd3ec93345bcbee28f75f6f2c9f2d20ba00a576))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.79 ([#3602](https://github.com/dadrus/heimdall/issues/3602)) ([9fd3ec9](https://github.com/dadrus/heimdall/commit/9fd3ec93345bcbee28f75f6f2c9f2d20ba00a576))
+* update module gocloud.dev to v0.47.0 ([#3603](https://github.com/dadrus/heimdall/issues/3603)) ([edb45c6](https://github.com/dadrus/heimdall/commit/edb45c633035ceddd9714419245e2291ee2d3de1))
+
+## [0.17.26](https://github.com/dadrus/heimdall/compare/v0.17.25...v0.17.26) (2026-10-14)
+
+
+### Bug Fixes
+
+* RFC 8414-compliant validation of multi-segment issuer paths ([#3590](https://github.com/dadrus/heimdall/issues/3590)) ([9892bb5](https://github.com/dadrus/heimdall/commit/9892bb54b8d9cde8b18ba5fee00c53c44d8599b4))
+
+## [0.17.25](https://github.com/dadrus/heimdall/compare/v0.17.24...v0.17.25) (2026-10-13)
+
+
+### Bug Fixes
+
+* Adhering to RFC 7517 when validating JWTs using JWKs without alg claim ([#3585](https://github.com/dadrus/heimdall/issues/3585)) ([99bc73f](https://github.com/dadrus/heimdall/commit/99bc73f5913bf3e749aef02c429e1314e0e730ff))
+* Distinguishing missing and zero-valued JWT exp claims ([#3587](https://github.com/dadrus/heimdall/issues/3587)) ([e40190f](https://github.com/dadrus/heimdall/commit/e40190f43546c07a356e7ff4c3d8725d06ec9597))
+* RFC 7519-compliant parsing of JWT audience claims ([#3588](https://github.com/dadrus/heimdall/issues/3588)) ([29d2eac](https://github.com/dadrus/heimdall/commit/29d2eacb2691ce40da0c32ef9c2fa20d433fb5c2))
+
+## [0.17.24](https://github.com/dadrus/heimdall/compare/v0.17.23...v0.17.24) (2026-10-13)
+
+This release includes updates to the Go standard library and several dependencies, addressing multiple high- and critical-severity security vulnerabilities. Upgrading to this version is therefore strongly recommended.
+
+The glob library has also been updated to version 1.0.0, which introduces changes to pattern matching behavior that may affect compatibility with existing rules. We recommend reviewing custom glob patterns for potential differences in matching behavior.
+
+### Dependencies
+
+* update golang to v1.27.2 ([#3574](https://github.com/dadrus/heimdall/issues/3574)) ([3b1051d](https://github.com/dadrus/heimdall/commit/3b1051dfc9e0f81eec25c76b788ac81c4b9313d2))
+* update google.golang.org/genproto/googleapis/rpc digest to 4341edf ([#3566](https://github.com/dadrus/heimdall/issues/3566)) ([60b83ce](https://github.com/dadrus/heimdall/commit/60b83cea579bd60eb2c998e45b86f3bec44ab1b2))
+* update module github.com/gobwas/glob to v1 ([#3502](https://github.com/dadrus/heimdall/issues/3502)) ([d5c7228](https://github.com/dadrus/heimdall/commit/d5c72282610b88b8674a16aa1d8e02ce7ee46c9b))
+* update module github.com/knadh/koanf/providers/env/v2 to v2.0.2 ([#3564](https://github.com/dadrus/heimdall/issues/3564)) ([8bd64ef](https://github.com/dadrus/heimdall/commit/8bd64ef8081e307035c8702d97e99754cf40ec40))
+* update module github.com/knadh/koanf/v2 to v2.3.8 ([#3575](https://github.com/dadrus/heimdall/issues/3575)) ([bdd6e58](https://github.com/dadrus/heimdall/commit/bdd6e580c974f1e82f838c6b999b27bd34b9cee9))
+* update module github.com/prometheus/client_golang to v1.25.0 ([#3581](https://github.com/dadrus/heimdall/issues/3581)) ([fee1e25](https://github.com/dadrus/heimdall/commit/fee1e251a4763c20e7110efb29550fc75a90b565))
+* update module github.com/tidwall/gjson to v1.20.0 ([#3563](https://github.com/dadrus/heimdall/issues/3563)) ([783c3bf](https://github.com/dadrus/heimdall/commit/783c3bff54986249b753533ff33db510db59b76e))
+* update opentelemetry-go monorepo to v1.47.0 ([#3561](https://github.com/dadrus/heimdall/issues/3561)) ([31d15eb](https://github.com/dadrus/heimdall/commit/31d15ebb77fc491a22e10cfed2ca3e248b7b3370))
+* update opentelemetry-go-contrib monorepo to v0.72.0 ([#3562](https://github.com/dadrus/heimdall/issues/3562)) ([9b9e8b5](https://github.com/dadrus/heimdall/commit/9b9e8b52c836a9d414904c291511fe2d9e7e7708))
+
 ## [0.17.23](https://github.com/dadrus/heimdall/compare/v0.17.22...v0.17.23) (2026-10-01)
 
 

@@ -96,7 +96,7 @@ func (e Expectation) AssertValidity(token *Token) error {
 		return NewInvalidTokenError(token.Type, "not yet valid")
 	}
 
-	if exp > 0 && now-leeway >= exp {
+	if token.Claims.Expiry != nil && now-leeway >= exp {
 		return NewInvalidTokenError(token.Type, "expired")
 	}
 
