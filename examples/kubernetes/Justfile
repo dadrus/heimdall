@@ -45,8 +45,10 @@ _install_demo CONTROLLER GATEWAY GLOBAL RULES_BUCKET="false" OBS_BUCKETS="false"
     echo "ERROR: kubeconfig not found after local cluster apply" >&2
     exit 1
   fi
+
   rustfs_endpoint="$(tofu -chdir=cluster/local output -raw rustfs_s3_endpoint)"
   rustfs_namespace="$(tofu -chdir=cluster/local output -raw rustfs_namespace)"
+
   tofu -chdir=deployment/local init
   tofu -chdir=deployment/local apply -auto-approve \
     -var="kubeconfig_path=$kubeconfig" \
@@ -78,7 +80,9 @@ install-istio-gw-demo: (_install_demo "istio" "true" "false")
 status:
   #!/usr/bin/env bash
   set -euo pipefail
+
   kubeconfig="$(tofu -chdir=cluster/local output -raw kubeconfig_path)"
+
   kubectl --kubeconfig "$kubeconfig" get nodes
   kubectl --kubeconfig "$kubeconfig" get pods -A
 
@@ -86,10 +90,12 @@ status:
 headlamp-dashboard:
   #!/usr/bin/env bash
   set -euo pipefail
+
   kubeconfig="$(tofu -chdir=cluster/local output -raw kubeconfig_path)"
   namespace="$(tofu -chdir=cluster/local output -raw headlamp_namespace)"
   service="$(tofu -chdir=cluster/local output -raw headlamp_service_name)"
   port="$(tofu -chdir=cluster/local output -raw headlamp_service_port)"
+
   exec kubectl --kubeconfig "$kubeconfig" -n "$namespace" \
     port-forward --address=127.0.0.1 "svc/$service" "{{DASHBOARD_PORT}}:$port"
 
@@ -97,7 +103,9 @@ headlamp-dashboard:
 observability-dashboard:
   #!/usr/bin/env bash
   set -euo pipefail
+
   kubeconfig="$(tofu -chdir=cluster/local output -raw kubeconfig_path)"
+
   exec kubectl --kubeconfig "$kubeconfig" -n monitoring \
     port-forward --address=127.0.0.1 svc/grafana-service "{{GRAFANA_PORT}}:3000"
 
@@ -105,10 +113,12 @@ observability-dashboard:
 storage-dashboard:
   #!/usr/bin/env bash
   set -euo pipefail
+
   kubeconfig="$(tofu -chdir=cluster/local output -raw kubeconfig_path)"
   namespace="$(tofu -chdir=cluster/local output -raw rustfs_namespace)"
   service="$(tofu -chdir=cluster/local output -raw rustfs_service_name)"
   port="$(tofu -chdir=cluster/local output -raw rustfs_console_port)"
+
   exec kubectl --kubeconfig "$kubeconfig" -n "$namespace" \
     port-forward --address=127.0.0.1 "svc/$service" "{{STORAGE_PORT}}:$port"
 
@@ -116,7 +126,9 @@ storage-dashboard:
 delete-demo:
   #!/usr/bin/env bash
   set -euo pipefail
+
   kubeconfig="$(tofu -chdir=cluster/local output -raw kubeconfig_path)"
+
   tofu -chdir=deployment/local init
   tofu -chdir=deployment/local destroy -auto-approve -var="kubeconfig_path=$kubeconfig"
 
