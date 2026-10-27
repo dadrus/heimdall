@@ -55,6 +55,7 @@ resource "helm_release" "heimdall" {
       http_rules_enabled    = var.rule_provider == "http_endpoint"
       blob_rules_enabled    = var.rule_provider == "cloud_blob"
       blob_s3_secret_name   = var.blob_s3_secret_name
+      namespace             = var.namespace
       s3_ca_config_map_name = var.s3_ca_config_map_name
     }),
   ]

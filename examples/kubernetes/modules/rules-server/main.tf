@@ -17,8 +17,7 @@ resource "kubernetes_config_map_v1" "nginx" {
 
 resource "kubectl_manifest" "certificate" {
   yaml_body = templatefile("${path.module}/manifests/certificate.yaml", {
-    namespace      = kubernetes_namespace_v1.rules_server.metadata[0].name
-    cluster_domain = var.cluster_domain
+    namespace = kubernetes_namespace_v1.rules_server.metadata[0].name
   })
 }
 

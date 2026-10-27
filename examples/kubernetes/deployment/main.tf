@@ -5,7 +5,7 @@ locals {
 module "ingress_controller" {
   source = "../ingress"
 
-  namespace                  = var.ingress_namespace
+  namespace                  = "ingress"
   ingress_controller         = var.ingress_controller
   kubeconfig_path            = var.kubeconfig_path
   global_integration_enabled = var.global_integration_enabled
@@ -39,8 +39,7 @@ module "rules_server" {
   count  = var.rule_provider == "http_endpoint" ? 1 : 0
   source = "../modules/rules-server"
 
-  namespace      = var.rules_server_namespace
-  cluster_domain = var.cluster_domain
+  namespace = "rules-server"
 }
 
 module "heimdall" {
@@ -48,7 +47,7 @@ module "heimdall" {
 
   depends_on = [module.ingress_controller, module.observability, module.rules_server]
 
-  namespace           = var.heimdall_namespace
+  namespace           = "heimdall"
   ingress_controller  = var.ingress_controller
   rule_provider       = var.rule_provider
   http_rules_endpoint = var.rule_provider == "http_endpoint" ? module.rules_server[0].endpoint_url : ""
@@ -76,13 +75,12 @@ module "demo_app" {
 
   depends_on = [module.heimdall]
 
-  namespace                  = var.demo_namespace
-  cluster_domain             = var.cluster_domain
+  namespace                  = "demo"
   ingress_controller         = var.ingress_controller
   global_integration_enabled = var.global_integration_enabled
   gateway_api_enabled        = var.gateway_api_enabled
   rule_provider              = var.rule_provider
-  http_rules_namespace       = var.rules_server_namespace
+  http_rules_namespace       = "rules-server"
   blob_rules_bucket_name     = var.rules_bucket_name
   blob_rules_prefix          = local.echo_app_rules_prefix
   blob_rules_s3_endpoint         = var.s3_endpoint

@@ -6,11 +6,9 @@ module "deployment" {
   depends_on = [kubectl_manifest.namespaces, kubernetes_manifest.rustfs_external_secret]
 
   kubeconfig_path            = var.kubeconfig_path
-  heimdall_namespace         = "heimdall"
   ingress_controller         = var.ingress_controller
   global_integration_enabled = var.global_integration_enabled
   gateway_api_enabled        = var.gateway_api_enabled
-  cluster_domain             = var.cluster_domain
   rule_provider              = var.rule_provider
 
   observability_enabled  = var.observability_enabled

@@ -14,8 +14,7 @@ resource "kubectl_manifest" "deployment" {
   for_each = fileset(path.module, "./manifests/*.yaml")
 
   yaml_body = templatefile("${path.module}/${each.value}", {
-    namespace      = var.namespace
-    cluster_domain = var.cluster_domain
+    namespace = var.namespace
   })
 }
 

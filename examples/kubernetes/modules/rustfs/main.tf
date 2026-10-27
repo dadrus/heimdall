@@ -11,7 +11,6 @@ resource "kubectl_manifest" "tls_certificate" {
     namespace      = var.namespace
     certificate    = "${var.release_name}-tls"
     service_name   = "${var.release_name}-svc"
-    cluster_domain = var.cluster_domain
   })
 }
 

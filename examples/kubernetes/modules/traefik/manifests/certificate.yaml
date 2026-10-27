@@ -5,10 +5,6 @@ metadata:
   namespace: ${namespace}
 spec:
   dnsNames:
-    - echo-app
-    - echo-app.default
-    - echo-app.default.svc
-    - echo-app.default.svc.cluster.local
     - echo-app.local
   secretName: traefik-tls
   issuerRef:

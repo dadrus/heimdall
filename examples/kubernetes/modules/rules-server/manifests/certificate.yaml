@@ -10,7 +10,7 @@ spec:
     kind: ClusterIssuer
   dnsNames:
     - rules-server.${namespace}.svc
-    - rules-server.${namespace}.svc.${cluster_domain}
+    - rules-server.${namespace}.svc.cluster.local
   usages:
     - server auth
     - digital signature

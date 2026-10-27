@@ -18,26 +18,6 @@ variable "gateway_api_enabled" {
   default = false
 }
 
-variable "ingress_namespace" {
-  type    = string
-  default = "ingress"
-}
-
-variable "heimdall_namespace" {
-  type    = string
-  default = "heimdall"
-}
-
-variable "demo_namespace" {
-  type    = string
-  default = "demo"
-}
-
-variable "cluster_domain" {
-  type    = string
-  default = "cluster.local"
-}
-
 variable "observability_enabled" {
   type    = bool
   default = false
@@ -111,9 +91,4 @@ variable "rules_bucket_name" {
 variable "s3_region" {
   type    = string
   default = "us-east-1"
-}
-
-variable "rules_server_namespace" {
-  type    = string
-  default = "rules-server"
 }

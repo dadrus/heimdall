@@ -16,10 +16,6 @@ variable "gateway_api_enabled" {
   description = "Whether to perform integration via k8s Gateway API"
 }
 
-variable "cluster_domain" {
-  type = string
-}
-
 variable "rule_provider" {
   type    = string
   default = "kubernetes"

@@ -22,10 +22,6 @@ variable "data_size" {
   type = string
 }
 
-variable "cluster_domain" {
-  type = string
-}
-
 variable "s3_port" {
   type    = number
   default = 9000

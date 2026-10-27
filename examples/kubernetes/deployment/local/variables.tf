@@ -28,11 +28,6 @@ variable "gateway_api_enabled" {
   default = false
 }
 
-variable "cluster_domain" {
-  type    = string
-  default = "cluster.local"
-}
-
 variable "observability_enabled" {
   type    = bool
   default = false

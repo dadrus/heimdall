@@ -5,10 +5,6 @@ metadata:
   namespace: ${namespace}
 spec:
   dnsNames:
-    - echo-app
-    - echo-app.${namespace}
-    - echo-app.${namespace}.svc
-    - echo-app.${namespace}.svc.${cluster_domain}
     - echo-app.local
   secretName: echo-app
   issuerRef:

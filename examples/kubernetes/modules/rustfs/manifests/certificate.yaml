@@ -9,7 +9,7 @@ spec:
     - ${service_name}
     - ${service_name}.${namespace}
     - ${service_name}.${namespace}.svc
-    - ${service_name}.${namespace}.svc.${cluster_domain}
+    - ${service_name}.${namespace}.svc.cluster.local
   issuerRef:
     name: root-ca-issuer
     kind: ClusterIssuer

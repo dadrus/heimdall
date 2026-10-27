@@ -27,7 +27,6 @@ module "rustfs" {
   chart_version    = "1.0.1"
   storage_class    = var.rustfs_storage_class
   data_size        = var.rustfs_data_size
-  cluster_domain   = var.cluster_domain
   access_key       = var.rustfs_access_key
   secret_key       = var.rustfs_secret_key
 }

@@ -1,4 +1,6 @@
 resource "kubectl_manifest" "certificate" {
+  count = var.gateway_api_enabled ? 1 : 0
+
   yaml_body = templatefile("${path.module}/manifests/certificate.yaml", {
     namespace = var.namespace
   })

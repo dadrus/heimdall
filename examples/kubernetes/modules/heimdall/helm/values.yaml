@@ -47,10 +47,10 @@ deployment:
 webhooks:
   validation:
     annotations:
-      cert-manager.io/inject-ca-from: heimdall/heimdall-tls
+      cert-manager.io/inject-ca-from: ${namespace}/heimdall-tls
   conversion:
     annotations:
-      cert-manager.io/inject-ca-from: heimdall/heimdall-tls
+      cert-manager.io/inject-ca-from: ${namespace}/heimdall-tls
 
 %{ if otel_metrics_enabled || otel_tracing_enabled || (blob_rules_enabled && blob_s3_secret_name != "") }
 env:

@@ -24,11 +24,6 @@ locals {
   kubeconfig_path = var.kubeconfig_path == null ? abspath("${path.root}/.kubeconfig") : abspath(pathexpand(var.kubeconfig_path))
 }
 
-variable "cluster_domain" {
-  type    = string
-  default = "cluster.local"
-}
-
 variable "rustfs_namespace" {
   type    = string
   default = "object-storage"
