@@ -4,7 +4,7 @@ locals {
 
   rustfs_secret_targets = merge(
     var.rule_provider == "cloud_blob" ? {
-      heimdall = { namespace = "heimdall", secret_name = var.blob_credentials_secret_name }
+      heimdall = { namespace = "heimdall", secret_name = var.blob_secret_name }
     } : {},
     var.observability_enabled ? {
       loki  = { namespace = "monitoring", secret_name = local.loki_s3_secret_name }
@@ -17,7 +17,7 @@ resource "kubectl_manifest" "rustfs_eso_reader_account" {
   count = length(local.rustfs_secret_targets) > 0 ? 1 : 0
 
   yaml_body = templatefile("${path.module}/manifests/eso-reader-serviceaccount.yaml", {
-    namespace = var.rustfs_namespace
+    namespace = var.storage_namespace
   })
 }
 
@@ -25,7 +25,7 @@ resource "kubectl_manifest" "rustfs_eso_reader_role" {
   count = length(local.rustfs_secret_targets) > 0 ? 1 : 0
 
   yaml_body = templatefile("${path.module}/manifests/eso-reader-role.yaml", {
-    namespace = var.rustfs_namespace
+    namespace = var.storage_namespace
   })
 }
 
@@ -34,7 +34,7 @@ resource "kubectl_manifest" "rustfs_eso_reader_binding" {
   depends_on = [kubectl_manifest.rustfs_eso_reader_account, kubectl_manifest.rustfs_eso_reader_role]
 
   yaml_body = templatefile("${path.module}/manifests/eso-reader-rolebinding.yaml", {
-    namespace = var.rustfs_namespace
+    namespace = var.storage_namespace
   })
 }
 
@@ -43,7 +43,7 @@ resource "kubernetes_manifest" "rustfs_secret_store" {
   depends_on = [kubectl_manifest.rustfs_eso_reader_binding]
 
   manifest = yamldecode(templatefile("${path.module}/manifests/eso-cluster-secret-store.yaml", {
-    rustfs_namespace = var.rustfs_namespace
+    rustfs_namespace = var.storage_namespace
   }))
 
   wait {

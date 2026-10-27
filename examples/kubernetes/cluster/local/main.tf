@@ -21,11 +21,11 @@ module "rustfs" {
 
   depends_on = [module.cert_manager]
 
-  namespace        = var.rustfs_namespace
+  namespace        = var.storage_namespace
   release_name     = "rustfs"
   chart_repository = "https://charts.rustfs.com"
   chart_version    = "1.0.1"
-  storage_class    = var.rustfs_storage_class
+  storage_class    = var.storage_class
   data_size        = var.rustfs_data_size
   access_key       = var.rustfs_access_key
   secret_key       = var.rustfs_secret_key

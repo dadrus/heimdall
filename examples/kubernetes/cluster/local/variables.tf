@@ -24,12 +24,12 @@ locals {
   kubeconfig_path = var.kubeconfig_path == null ? abspath("${path.root}/.kubeconfig") : abspath(pathexpand(var.kubeconfig_path))
 }
 
-variable "rustfs_namespace" {
+variable "storage_namespace" {
   type    = string
   default = "object-storage"
 }
 
-variable "rustfs_storage_class" {
+variable "storage_class" {
   type        = string
   default     = "standard"
   description = "kind's default local-storage StorageClass, not the upstream chart's k3s default."

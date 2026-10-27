@@ -34,12 +34,12 @@ variable "s3_ca_config_map_name" {
   description = "Optional CA bundle ConfigMap for S3 TLS in the target namespaces."
 }
 
-variable "rustfs_namespace" {
+variable "blob_rules_namespace" {
   type    = string
   default = "object-storage"
 }
 
-variable "rustfs_secret_name" {
+variable "blob_rules_secret_name" {
   type    = string
   default = "rustfs-secret"
 }
@@ -72,7 +72,7 @@ variable "rule_provider" {
   }
 }
 
-variable "blob_s3_secret_name" {
+variable "blob_secret_name" {
   type    = string
   default = ""
 }

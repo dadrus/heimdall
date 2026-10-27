@@ -47,7 +47,7 @@ _install_demo CONTROLLER GATEWAY GLOBAL RULES_BUCKET="false" OBS_BUCKETS="false"
   fi
 
   s3_endpoint="$(tofu -chdir=cluster/local output -raw s3_endpoint)"
-  rustfs_namespace="$(tofu -chdir=cluster/local output -raw rustfs_namespace)"
+  storage_namespace="$(tofu -chdir=cluster/local output -raw storage_namespace)"
 
   tofu -chdir=deployment/local init
   tofu -chdir=deployment/local apply -auto-approve \
@@ -60,7 +60,7 @@ _install_demo CONTROLLER GATEWAY GLOBAL RULES_BUCKET="false" OBS_BUCKETS="false"
     -var="observability_enabled={{OBS}}" \
     -var="rule_provider={{RULE_PROVIDER}}" \
     -var="s3_endpoint=$s3_endpoint" \
-    -var="rustfs_namespace=$rustfs_namespace"
+    -var="storage_namespace=$storage_namespace"
 
 # Quickstarts: choose your preferred ingress controller or Gateway API integration.
 install-nginx-demo: (_install_demo "nginx" "false" "false")
@@ -115,7 +115,7 @@ storage-dashboard:
   set -euo pipefail
 
   kubeconfig="$(tofu -chdir=cluster/local output -raw kubeconfig_path)"
-  namespace="$(tofu -chdir=cluster/local output -raw rustfs_namespace)"
+  namespace="$(tofu -chdir=cluster/local output -raw storage_namespace)"
   service="$(tofu -chdir=cluster/local output -raw rustfs_service_name)"
   port="$(tofu -chdir=cluster/local output -raw rustfs_console_port)"
 

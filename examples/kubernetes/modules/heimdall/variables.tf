@@ -56,7 +56,7 @@ variable "s3_ca_config_map_name" {
   description = "Optional CA ConfigMap to trust for the S3 rule source."
 }
 
-variable "blob_s3_secret_name" {
+variable "blob_secret_name" {
   type    = string
   default = ""
 }

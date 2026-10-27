@@ -53,7 +53,7 @@ module "heimdall" {
   http_rules_endpoint = var.rule_provider == "http_endpoint" ? module.rules_server[0].endpoint_url : ""
   blob_rules_url               = var.blob_rules_url
   blob_rules_prefix            = local.echo_app_rules_prefix
-  blob_s3_secret_name          = var.blob_s3_secret_name
+  blob_secret_name             = var.blob_secret_name
   s3_ca_config_map_name        = var.s3_ca_config_map_name
   observability = {
     log_level         = "info"
@@ -86,6 +86,6 @@ module "demo_app" {
   blob_rules_s3_endpoint         = var.s3_endpoint
   blob_rules_s3_ca_config_map_name = var.s3_ca_config_map_name
   blob_rules_s3_region       = var.s3_region
-  blob_rules_namespace       = var.rustfs_namespace
-  blob_rules_secret_name     = var.rustfs_secret_name
+  blob_rules_namespace       = var.blob_rules_namespace
+  blob_rules_secret_name     = var.blob_rules_secret_name
 }

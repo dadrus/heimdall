@@ -8,7 +8,7 @@ output "s3_endpoint" {
   value       = module.rustfs.s3_endpoint
 }
 
-output "rustfs_namespace" {
+output "storage_namespace" {
   value = module.rustfs.namespace
 }
 

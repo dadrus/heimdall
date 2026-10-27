@@ -52,16 +52,16 @@ webhooks:
     annotations:
       cert-manager.io/inject-ca-from: ${namespace}/heimdall-tls
 
-%{ if otel_metrics_enabled || otel_tracing_enabled || (blob_rules_enabled && blob_s3_secret_name != "") }
+%{ if otel_metrics_enabled || otel_tracing_enabled || (blob_rules_enabled && blob_secret_name != "") }
 env:
-  %{ if blob_rules_enabled && blob_s3_secret_name != "" }
+  %{ if blob_rules_enabled && blob_secret_name != "" }
   AWS_ACCESS_KEY_ID:
     secretKeyRef:
-      name: ${blob_s3_secret_name}
+      name: ${blob_secret_name}
       key: AWS_ACCESS_KEY_ID
   AWS_SECRET_ACCESS_KEY:
     secretKeyRef:
-      name: ${blob_s3_secret_name}
+      name: ${blob_secret_name}
       key: AWS_SECRET_ACCESS_KEY
   AWS_EC2_METADATA_DISABLED: "true"
   %{ endif }

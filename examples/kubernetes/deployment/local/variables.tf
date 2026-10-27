@@ -43,7 +43,7 @@ variable "observability_buckets_enabled" {
   default = false
 }
 
-variable "rustfs_bucket_names" {
+variable "bucket_names" {
   type = object({
     rules = string
     loki  = string
@@ -52,17 +52,17 @@ variable "rustfs_bucket_names" {
   default = { rules = "rules", loki = "loki", tempo = "tempo" }
 }
 
-variable "blob_credentials_secret_name" {
+variable "blob_secret_name" {
   type    = string
   default = "heimdall-s3-credentials"
 
   validation {
-    condition     = length(trimspace(var.blob_credentials_secret_name)) > 0
-    error_message = "blob_credentials_secret_name must not be empty."
+    condition     = length(trimspace(var.blob_secret_name)) > 0
+    error_message = "blob_secret_name must not be empty."
   }
 }
 
-variable "rustfs_s3_region" {
+variable "s3_region" {
   type    = string
   default = "us-east-1"
 }
@@ -78,7 +78,7 @@ variable "s3_endpoint" {
   }
 }
 
-variable "rustfs_namespace" {
+variable "storage_namespace" {
   type    = string
   default = "object-storage"
 }
