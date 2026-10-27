@@ -49,9 +49,21 @@ resource "kubectl_manifest" "blob_rules_config" {
 }
 
 locals {
+  blob_rules_job_vars = {
+    namespace             = var.blob_rules_namespace
+    job_name              = "echo-app-publish-rules-placeholder"
+    aws_cli_image         = "amazon/aws-cli:2.37.12"
+    s3_endpoint           = var.blob_rules_s3_endpoint
+    s3_ca_config_map_name = var.blob_rules_s3_ca_config_map_name
+    bucket_name           = var.blob_rules_bucket_name
+    object_key            = "${var.blob_rules_prefix}echo-app.yaml"
+    s3_region             = var.blob_rules_s3_region
+    secret_name           = var.blob_rules_secret_name
+  }
+
   blob_rules_job_hash = substr(sha256(join(":", [
     filesha256("${path.module}/rules/echo-app.yaml"),
-    filesha256("${path.module}/manifests/blob/upload-job.yaml"),
+    templatefile("${path.module}/manifests/blob/upload-job.yaml", local.blob_rules_job_vars),
   ])), 0, 12)
 }
 
@@ -59,17 +71,9 @@ resource "kubernetes_manifest" "blob_rules" {
   count      = var.rule_provider == "cloud_blob" ? 1 : 0
   depends_on = [kubectl_manifest.blob_rules_config]
 
-  manifest = yamldecode(templatefile("${path.module}/manifests/blob/upload-job.yaml", {
-    namespace    = var.blob_rules_namespace
-    job_name     = "echo-app-publish-rules-${local.blob_rules_job_hash}"
-    aws_cli_image = "amazon/aws-cli:2.37.12"
-    s3_endpoint             = var.blob_rules_s3_endpoint
-    s3_ca_config_map_name   = var.blob_rules_s3_ca_config_map_name
-    bucket_name             = var.blob_rules_bucket_name
-    object_key   = "${var.blob_rules_prefix}echo-app.yaml"
-    s3_region    = var.blob_rules_s3_region
-    secret_name  = var.blob_rules_secret_name
-  }))
+  manifest = yamldecode(templatefile("${path.module}/manifests/blob/upload-job.yaml", merge(local.blob_rules_job_vars, {
+    job_name = "echo-app-publish-rules-${local.blob_rules_job_hash}"
+  })))
 
   wait {
     condition {
