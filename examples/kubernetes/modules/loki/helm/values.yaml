@@ -1,5 +1,5 @@
 # Lightweight kind configuration: one instance, no bundled MinIO/caches.
-# S3 credentials are expanded inside Loki from the monitoring Secret at runtime.
+# S3 credentials are expanded inside Loki from its Kubernetes Secret at runtime.
 loki:
   auth_enabled: false
   commonConfig:
@@ -21,7 +21,6 @@ loki:
       admin: ${bucket_name}
     s3:
       endpoint: ${s3_endpoint}
-      region: us-east-1
       s3ForcePathStyle: true
       insecure: true  # local cluster uses HTTP to RustFS
       accessKeyId: $${AWS_ACCESS_KEY_ID}
@@ -40,7 +39,7 @@ singleBinary:
     - -config.expand-env=true
   extraEnvFrom:
     - secretRef:
-        name: heimdall-rustfs-s3
+        name: ${s3_secret_name}
 
 backend:
   replicas: 0

@@ -7,6 +7,14 @@ variable "s3_endpoint" {
   type = string
 }
 
+variable "loki_s3_secret_name" {
+  type = string
+}
+
+variable "tempo_s3_secret_name" {
+  type = string
+}
+
 variable "loki_bucket_name" {
   type    = string
   default = "loki"

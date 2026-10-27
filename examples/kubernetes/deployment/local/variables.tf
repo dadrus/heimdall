@@ -59,7 +59,12 @@ variable "rustfs_bucket_names" {
 
 variable "blob_credentials_secret_name" {
   type    = string
-  default = "heimdall-rustfs-s3"
+  default = "heimdall-s3-credentials"
+
+  validation {
+    condition     = length(trimspace(var.blob_credentials_secret_name)) > 0
+    error_message = "blob_credentials_secret_name must not be empty."
+  }
 }
 
 variable "rustfs_s3_region" {
@@ -67,10 +72,10 @@ variable "rustfs_s3_region" {
   default = "us-east-1"
 }
 
-variable "rustfs_s3_endpoint" {
+variable "s3_endpoint" {
   type        = string
   default     = ""
-  description = "In-cluster endpoint from cluster/local's rustfs_s3_endpoint output."
+  description = "In-cluster endpoint from cluster/local's s3_endpoint output."
 }
 
 variable "rustfs_namespace" {

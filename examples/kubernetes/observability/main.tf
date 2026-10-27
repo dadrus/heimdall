@@ -10,9 +10,10 @@ module "prometheus" {
 
 module "loki" {
   source = "../modules/loki"
-  namespace     = var.namespace
-  s3_endpoint   = var.s3_endpoint
-  bucket_name   = var.loki_bucket_name
+  namespace      = var.namespace
+  s3_endpoint    = var.s3_endpoint
+  bucket_name    = var.loki_bucket_name
+  s3_secret_name = var.loki_s3_secret_name
 }
 
 module "tempo" {
@@ -22,6 +23,7 @@ module "tempo" {
   prometheus_url = module.prometheus.prometheus_url
   s3_endpoint    = var.s3_endpoint
   bucket_name    = var.tempo_bucket_name
+  s3_secret_name = var.tempo_s3_secret_name
 }
 
 module "pyroscope" {

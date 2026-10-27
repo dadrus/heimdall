@@ -1,7 +1,15 @@
 locals {
+  loki_s3_secret_name  = "loki-s3-credentials"
+  tempo_s3_secret_name = "tempo-s3-credentials"
+
   rustfs_secret_targets = merge(
-    var.rule_provider == "cloud_blob" ? { heimdall = var.blob_credentials_secret_name } : {},
-    var.observability_enabled ? { monitoring = "heimdall-rustfs-s3" } : {}
+    var.rule_provider == "cloud_blob" ? {
+      heimdall = { namespace = "heimdall", secret_name = var.blob_credentials_secret_name }
+    } : {},
+    var.observability_enabled ? {
+      loki  = { namespace = "monitoring", secret_name = local.loki_s3_secret_name }
+      tempo = { namespace = "monitoring", secret_name = local.tempo_s3_secret_name }
+    } : {}
   )
 }
 
@@ -56,8 +64,8 @@ resource "kubernetes_manifest" "rustfs_external_secret" {
   depends_on = [kubectl_manifest.namespaces, kubernetes_manifest.rustfs_secret_store]
 
   manifest = yamldecode(templatefile("${path.module}/manifests/eso-external-secret.yaml", {
-    namespace          = each.key
-    secret_name        = each.value
+    namespace          = each.value.namespace
+    secret_name        = each.value.secret_name
     rustfs_secret_name = var.rustfs_secret_name
   }))
 

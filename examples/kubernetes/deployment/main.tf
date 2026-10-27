@@ -35,10 +35,12 @@ module "observability" {
   count  = var.observability_enabled ? 1 : 0
   source = "../observability"
 
-  namespace         = "monitoring"
-  s3_endpoint       = var.rustfs_s3_endpoint
-  loki_bucket_name  = var.loki_bucket_name
-  tempo_bucket_name = var.tempo_bucket_name
+  namespace             = "monitoring"
+  s3_endpoint           = var.s3_endpoint
+  loki_bucket_name      = var.loki_bucket_name
+  tempo_bucket_name     = var.tempo_bucket_name
+  loki_s3_secret_name   = var.loki_s3_secret_name
+  tempo_s3_secret_name  = var.tempo_s3_secret_name
 }
 
 module "rules_server" {
@@ -92,7 +94,7 @@ module "demo_app" {
   http_rules_namespace       = var.rules_server_namespace
   blob_rules_bucket_name     = var.rules_bucket_name
   blob_rules_prefix          = local.echo_app_rules_prefix
-  blob_rules_s3_endpoint     = var.rustfs_s3_endpoint
+  blob_rules_s3_endpoint     = var.s3_endpoint
   blob_rules_s3_region       = var.s3_region
   blob_rules_namespace       = var.rustfs_namespace
   blob_rules_secret_name     = var.rustfs_secret_name

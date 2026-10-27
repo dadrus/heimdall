@@ -46,7 +46,7 @@ _install_demo CONTROLLER GATEWAY GLOBAL RULES_BUCKET="false" OBS_BUCKETS="false"
     exit 1
   fi
 
-  rustfs_endpoint="$(tofu -chdir=cluster/local output -raw rustfs_s3_endpoint)"
+  s3_endpoint="$(tofu -chdir=cluster/local output -raw s3_endpoint)"
   rustfs_namespace="$(tofu -chdir=cluster/local output -raw rustfs_namespace)"
 
   tofu -chdir=deployment/local init
@@ -59,7 +59,7 @@ _install_demo CONTROLLER GATEWAY GLOBAL RULES_BUCKET="false" OBS_BUCKETS="false"
     -var="observability_buckets_enabled={{OBS_BUCKETS}}" \
     -var="observability_enabled={{OBS}}" \
     -var="rule_provider={{RULE_PROVIDER}}" \
-    -var="rustfs_s3_endpoint=$rustfs_endpoint" \
+    -var="s3_endpoint=$s3_endpoint" \
     -var="rustfs_namespace=$rustfs_namespace"
 
 # Quickstarts: choose your preferred ingress controller or Gateway API integration.

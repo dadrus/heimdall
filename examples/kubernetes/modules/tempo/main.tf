@@ -11,7 +11,8 @@ resource "helm_release" "tempo" {
     templatefile("${path.module}/helm/values.yaml", {
       prometheus_url = var.prometheus_url
       s3_endpoint    = var.s3_endpoint
-      bucket_name = var.bucket_name
+      bucket_name    = var.bucket_name
+      s3_secret_name = var.s3_secret_name
     })
   ]
 

@@ -43,7 +43,7 @@ variable "observability_enabled" {
   default = false
 }
 
-variable "rustfs_s3_endpoint" {
+variable "s3_endpoint" {
   type    = string
   default = ""
 }
@@ -56,6 +56,14 @@ variable "rustfs_namespace" {
 variable "rustfs_secret_name" {
   type    = string
   default = "rustfs-secret"
+}
+
+variable "loki_s3_secret_name" {
+  type = string
+}
+
+variable "tempo_s3_secret_name" {
+  type = string
 }
 
 variable "loki_bucket_name" {

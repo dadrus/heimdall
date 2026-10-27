@@ -3,7 +3,7 @@ output "kubeconfig_path" {
   value       = module.kind.kubeconfig_path
 }
 
-output "rustfs_s3_endpoint" {
+output "s3_endpoint" {
   description = "In-cluster S3-compatible endpoint; not reachable directly from the host."
   value       = module.rustfs.s3_endpoint
 }

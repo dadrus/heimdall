@@ -1,19 +1,19 @@
 tempo:
   retention: 24h
   # Tempo expands these references after reading environment variables
-  # from the monitoring Secret. Values/state contain placeholders only.
+  # from its Kubernetes Secret. Values/state contain placeholders only.
   extraArgs:
     "-config.expand-env": "true"
   extraEnv:
     - name: AWS_ACCESS_KEY_ID
       valueFrom:
         secretKeyRef:
-          name: heimdall-rustfs-s3
+          name: ${s3_secret_name}
           key: AWS_ACCESS_KEY_ID
     - name: AWS_SECRET_ACCESS_KEY
       valueFrom:
         secretKeyRef:
-          name: heimdall-rustfs-s3
+          name: ${s3_secret_name}
           key: AWS_SECRET_ACCESS_KEY
   storage:
     trace:
@@ -21,7 +21,6 @@ tempo:
       s3:
         bucket: ${bucket_name}
         endpoint: ${replace(replace(s3_endpoint, "http://", ""), "https://", "")}
-        region: us-east-1
         access_key: $${AWS_ACCESS_KEY_ID}
         secret_key: $${AWS_SECRET_ACCESS_KEY}
         insecure: ${startswith(s3_endpoint, "http://")}
