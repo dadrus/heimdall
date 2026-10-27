@@ -1,8 +1,8 @@
 resource "helm_release" "grafana_operator" {
   name       = "grafana"
-  repository = "oci://ghcr.io/grafana/helm-charts"
-  chart      = "grafana-operator"
-  version    = var.grafana_version
+  repository = local.chart.repository
+  chart      = local.chart.name
+  version    = local.chart.version
   namespace  = var.namespace
   verify     = false
 

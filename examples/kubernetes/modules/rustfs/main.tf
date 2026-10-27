@@ -19,9 +19,9 @@ resource "helm_release" "rustfs" {
 
   name       = var.release_name
   namespace  = kubernetes_namespace_v1.rustfs.metadata[0].name
-  repository = var.chart_repository
-  chart      = "rustfs"
-  version    = var.chart_version
+  repository = local.chart.repository
+  chart      = local.chart.name
+  version    = local.chart.version
 
   wait    = true
   timeout = 600
@@ -51,26 +51,12 @@ resource "helm_release" "rustfs" {
       endpoint = { port = var.s3_port }
       console  = { port = var.console_port }
     }
-    extraEnv = [{ name = "RUSTFS_TLS_PATH", value = "/opt/rustfs-tls" }]
-    extraVolumes = [{
-      name = "rustfs-tls"
-      secret = {
-        secretName  = "${var.release_name}-tls"
-        defaultMode = 288 # 0440; readable by the RustFS pod's fsGroup
-        items = [
-          { key = "tls.crt", path = "rustfs_cert.pem" },
-          { key = "tls.key", path = "rustfs_key.pem" },
-        ]
-      }
-    }]
-    extraVolumeMounts = [{
-      name      = "rustfs-tls"
-      mountPath = "/opt/rustfs-tls"
-      readOnly  = true
-    }]
-    # RustFS switches both API and console to HTTPS when RUSTFS_TLS_PATH is set.
-    livenessProbe = { httpGet = { path = "/health", port = "endpoint", scheme = "HTTPS" } }
-    readinessProbe = { httpGet = { path = "/health/ready", port = "endpoint", scheme = "HTTPS" } }
+    # The chart mounts the cert-manager Secret, configures RustFS HTTPS
+    # and selects TLS-compatible health probes without enabling mTLS.
+    tls = {
+      enabled        = true
+      existingSecret = "${var.release_name}-tls"
+    }
     ingress    = { enabled = false }
     gatewayApi = { enabled = false }
   })]

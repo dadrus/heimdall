@@ -1,8 +1,8 @@
 resource "helm_release" "prometheus" {
   name       = "prometheus"
-  repository = "https://prometheus-community.github.io/helm-charts"
-  chart      = "prometheus"
-  version    = var.prometheus_version
+  repository = local.chart.repository
+  chart      = local.chart.name
+  version    = local.chart.version
   namespace  = var.namespace
 
   upgrade_install = true

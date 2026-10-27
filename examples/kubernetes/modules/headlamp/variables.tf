@@ -6,14 +6,6 @@ variable "release_name" {
   type = string
 }
 
-variable "chart_repository" {
-  type = string
-}
-
-variable "chart_version" {
-  type = string
-}
-
 variable "service_port" {
   type    = number
   default = 80

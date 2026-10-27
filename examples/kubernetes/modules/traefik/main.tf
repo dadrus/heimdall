@@ -10,9 +10,9 @@ resource "helm_release" "traefik" {
   depends_on = [kubectl_manifest.certificate]
 
   name       = "traefik"
-  repository = "https://traefik.github.io/charts"
-  chart      = "traefik"
-  version    = var.traefik_version
+  repository = local.chart.repository
+  chart      = local.chart.name
+  version    = local.chart.version
   namespace  = var.namespace
 
   values = [

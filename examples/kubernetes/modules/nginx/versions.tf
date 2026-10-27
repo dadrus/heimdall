@@ -1,5 +1,7 @@
-variable "nginx_version" {
-  type = string
-  description = "Helm chart version for NGINX Ingress Controller"
-  default = "4.15.1"
+locals {
+  chart = {
+    repository = "https://kubernetes.github.io/ingress-nginx"
+    name       = "ingress-nginx"
+    version    = "4.15.1"
+  }
 }

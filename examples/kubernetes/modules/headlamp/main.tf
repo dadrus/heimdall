@@ -7,9 +7,9 @@ resource "kubernetes_namespace_v1" "headlamp" {
 resource "helm_release" "headlamp" {
   name       = var.release_name
   namespace  = kubernetes_namespace_v1.headlamp.metadata[0].name
-  repository = var.chart_repository
-  chart      = "headlamp"
-  version    = var.chart_version
+  repository = local.chart.repository
+  chart      = local.chart.name
+  version    = local.chart.version
 
   wait    = true
   timeout = 600

@@ -1,5 +1,7 @@
-variable "haproxy_version" {
-  type = string
-  description = "Helm chart version for HAProxy"
-  default = "0.16.1"
+locals {
+  chart = {
+    repository = "https://haproxy-ingress.github.io/charts"
+    name       = "haproxy-ingress"
+    version    = "0.16.1"
+  }
 }

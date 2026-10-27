@@ -8,9 +8,9 @@ resource "kubernetes_namespace_v1" "external_secrets" {
 resource "helm_release" "external_secrets" {
   name       = "external-secrets"
   namespace  = kubernetes_namespace_v1.external_secrets.metadata[0].name
-  repository = "https://charts.external-secrets.io"
-  chart      = "external-secrets"
-  version    = "2.14.0"
+  repository = local.chart.repository
+  chart      = local.chart.name
+  version    = local.chart.version
 
   wait    = true
   timeout = 600

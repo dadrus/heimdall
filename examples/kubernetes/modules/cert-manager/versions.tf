@@ -1,9 +1,12 @@
-variable "certmanager_version" {
-  type    = string
-  default = "v1.21.2"
-}
+locals {
+  chart_repository = "oci://quay.io/jetstack/charts"
 
-variable "trustmanager_version" {
-  type    = string
-  default = "v0.25.0"
+  cert_manager_chart = {
+    name    = "cert-manager"
+    version = "v1.21.2"
+  }
+  trust_manager_chart = {
+    name    = "trust-manager"
+    version = "v0.25.0"
+  }
 }

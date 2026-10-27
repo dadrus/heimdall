@@ -1,10 +1,10 @@
 resource "terraform_data" "envoy_gateway_crds" {
   input = {
-    version         = var.envoygw_version
+    version         = local.chart.version
     kubeconfig_path = var.kubeconfig_path
   }
 
-  triggers_replace = [var.envoygw_version, var.kubeconfig_path]
+  triggers_replace = [local.chart.version, var.kubeconfig_path]
 
   provisioner "local-exec" {
     interpreter = ["bash", "-c"]
@@ -61,9 +61,9 @@ resource "helm_release" "envoy_gateway" {
   depends_on = [terraform_data.envoy_gateway_crds]
 
   name       = "envoygw"
-  repository = "oci://docker.io/envoyproxy"
-  chart      = "gateway-helm"
-  version    = var.envoygw_version
+  repository = local.chart.repository
+  chart      = local.chart.name
+  version    = local.chart.version
   namespace  = var.namespace
   verify     = false
 

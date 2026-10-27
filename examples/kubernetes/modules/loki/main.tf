@@ -1,8 +1,8 @@
 resource "helm_release" "loki" {
   name       = "loki"
-  repository = "https://grafana-community.github.io/helm-charts"
-  chart      = "loki"
-  version    = var.loki_version
+  repository = local.chart.repository
+  chart      = local.chart.name
+  version    = local.chart.version
   namespace  = var.namespace
 
   upgrade_install = true

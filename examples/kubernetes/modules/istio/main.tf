@@ -18,9 +18,9 @@ resource "kubectl_manifest" "tls_certificate" {
 
 resource "helm_release" "certmanager_istio_csr" {
   name       = "cert-manager-istio-csr"
-  repository = "https://charts.jetstack.io"
-  chart      = "cert-manager-istio-csr"
-  version    = var.certmanager_istio_csr_version
+  repository = local.csr_chart.repository
+  chart      = local.csr_chart.name
+  version    = local.csr_chart.version
   namespace  = kubernetes_namespace_v1.istio_system.metadata[0].name
 
   values = [
@@ -37,9 +37,9 @@ resource "helm_release" "istio_base" {
   depends_on = [helm_release.certmanager_istio_csr]
 
   name       = "istio-base"
-  repository = "https://blob.istio.io/istio-release/charts"
-  chart      = "base"
-  version    = var.istio_version
+  repository = local.istio_repository
+  chart      = local.istio_chart_names.base
+  version    = local.istio_version
   namespace  = kubernetes_namespace_v1.istio_system.metadata[0].name
 
   set = [{
@@ -55,9 +55,9 @@ resource "helm_release" "istio_discovery" {
   depends_on = [helm_release.istio_base]
 
   name       = "istio-discovery"
-  repository = "https://blob.istio.io/istio-release/charts"
-  chart      = "istiod"
-  version    = var.istio_version
+  repository = local.istio_repository
+  chart      = local.istio_chart_names.discovery
+  version    = local.istio_version
   namespace  = kubernetes_namespace_v1.istio_system.metadata[0].name
 
   values = [
@@ -85,9 +85,9 @@ resource "helm_release" "ingress_gateway" {
   # The chart derives its pod label from the release name: istio: ingressgateway.
   # Keep it aligned with our Istio Gateway and Heimdall AuthorizationPolicy selectors.
   name       = "istio-ingressgateway"
-  repository = "https://blob.istio.io/istio-release/charts"
-  chart      = "gateway"
-  version    = var.istio_version
+  repository = local.istio_repository
+  chart      = local.istio_chart_names.gateway
+  version    = local.istio_version
   namespace  = kubernetes_namespace_v1.istio_gateway.metadata[0].name
 
   upgrade_install = true

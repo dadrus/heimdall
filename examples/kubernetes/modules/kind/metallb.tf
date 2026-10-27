@@ -15,10 +15,10 @@ resource "helm_release" "metallb" {
   depends_on = [null_resource.configure_nodes]
 
   name       = "metallb"
-  repository = "https://metallb.github.io/metallb"
-  chart      = "metallb"
+  repository = local.metallb_chart.repository
+  chart      = local.metallb_chart.name
   namespace  = kubernetes_namespace_v1.metallb.metadata[0].name
-  version    = var.metallb_version
+  version    = local.metallb_chart.version
 
   # This example uses Layer 2 only; MetalLB 0.16 defaults to FRR-K8s for BGP.
   values = [yamlencode({

@@ -1,5 +1,7 @@
-variable "envoygw_version" {
-  type        = string
-  description = "Pinned version of Envoy Gateway and its CRD Helm chart."
-  default     = "v1.9.2"
+locals {
+  chart = {
+    repository = "oci://docker.io/envoyproxy"
+    name       = "gateway-helm"
+    version    = "v1.9.2"
+  }
 }

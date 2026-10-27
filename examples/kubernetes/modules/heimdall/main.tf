@@ -24,8 +24,8 @@ resource "helm_release" "heimdall" {
   depends_on = [kubectl_manifest.certificates]
 
   name            = "heimdall"
-  chart           = abspath("${path.module}/../../../../charts/heimdall")
-  version         = var.heimdall_version
+  chart           = local.heimdall_chart_path
+  version         = local.heimdall_chart_version
   namespace       = var.namespace
   upgrade_install = true
   take_ownership  = true

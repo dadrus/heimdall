@@ -1,4 +1,4 @@
-# The RustFS 1.0.1 chart uses <release-name>-svc for its Service.
+# The upstream RustFS chart uses <release-name>-svc for its Service.
 locals {
   service_name = "${helm_release.rustfs.name}-svc"
 }

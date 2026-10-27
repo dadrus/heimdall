@@ -1,5 +1,7 @@
-variable "loki_version" {
-  type        = string
-  default     = "18.15.1"
-  description = "Helm chart version for Loki"
+locals {
+  chart = {
+    repository = "https://grafana-community.github.io/helm-charts"
+    name       = "loki"
+    version    = "18.15.1"
+  }
 }

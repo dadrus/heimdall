@@ -1,9 +1,9 @@
 resource "helm_release" "cert_manager" {
   name       = "cert-manager"
-  repository = "oci://quay.io/jetstack/charts"
-  chart      = "cert-manager"
+  repository = local.chart_repository
+  chart      = local.cert_manager_chart.name
   namespace  = var.namespace
-  version    = var.certmanager_version
+  version    = local.cert_manager_chart.version
 
   create_namespace = true
   upgrade_install = true
@@ -21,10 +21,10 @@ resource "helm_release" "trust_manager" {
   depends_on = [helm_release.cert_manager]
 
   name       = "trust-manager"
-  repository = "oci://quay.io/jetstack/charts"
-  chart      = "trust-manager"
+  repository = local.chart_repository
+  chart      = local.trust_manager_chart.name
   namespace  = var.namespace
-  version    = var.trustmanager_version
+  version    = local.trust_manager_chart.version
 
   upgrade_install = true
 

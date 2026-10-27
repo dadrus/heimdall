@@ -21,14 +21,12 @@ module "rustfs" {
 
   depends_on = [module.cert_manager]
 
-  namespace        = var.storage_namespace
-  release_name     = "rustfs"
-  chart_repository = "https://charts.rustfs.com"
-  chart_version    = "1.0.1"
-  storage_class    = var.storage_class
-  data_size        = var.rustfs_data_size
-  access_key       = var.rustfs_access_key
-  secret_key       = var.rustfs_secret_key
+  namespace     = var.storage_namespace
+  release_name  = "rustfs"
+  storage_class = var.storage_class
+  data_size     = var.rustfs_data_size
+  access_key    = var.rustfs_access_key
+  secret_key    = var.rustfs_secret_key
 }
 
 module "external_secrets" {
@@ -42,10 +40,8 @@ module "headlamp" {
 
   depends_on = [module.kind]
 
-  namespace        = var.headlamp_namespace
-  release_name     = "headlamp"
-  chart_repository = "https://kubernetes-sigs.github.io/headlamp/"
-  chart_version    = "0.45.0"
+  namespace    = var.headlamp_namespace
+  release_name = "headlamp"
 
   # Only the local kind cluster: no login prompt; never expose this over Ingress.
   local_admin_auto_login = true
@@ -56,9 +52,9 @@ resource "helm_release" "metrics_server" {
 
   name       = "metrics-server"
   namespace  = "kube-system" # pre-existing namespace; Helm must not own it
-  repository = "https://kubernetes-sigs.github.io/metrics-server/"
-  chart      = "metrics-server"
-  version    = "3.14.0" # metrics-server v0.9.0, compatible with Kubernetes v1.35
+  repository = local.metrics_server_chart.repository
+  chart      = local.metrics_server_chart.name
+  version    = local.metrics_server_chart.version
   wait       = true
   timeout    = 600
 

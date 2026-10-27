@@ -1,5 +1,7 @@
-variable "tempo_version" {
-  type        = string
-  default     = "3.1.0"
-  description = "Helm chart version for Tempo"
+locals {
+  chart = {
+    repository = "https://grafana-community.github.io/helm-charts"
+    name       = "tempo"
+    version    = "3.1.0"
+  }
 }
