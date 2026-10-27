@@ -4,9 +4,11 @@ variable "namespace" {
 }
 
 variable "admin_user" {
+  type        = string
   description = "The admin user for grafana"
 }
 
 variable "admin_password" {
+  type        = string
   description = "The password of the admin user"
 }

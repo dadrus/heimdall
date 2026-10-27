@@ -1,6 +1,6 @@
 variable "namespace" {
   type        = string
-  description = "Namespace to install emissary into"
+  description = "Namespace to install haproxy into"
 }
 
 variable "global_integration_enabled" {

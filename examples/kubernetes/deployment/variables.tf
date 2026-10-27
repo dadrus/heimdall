@@ -36,12 +36,12 @@ variable "s3_ca_config_map_name" {
 
 variable "blob_rules_namespace" {
   type    = string
-  default = "object-storage"
+  default = ""
 }
 
 variable "blob_rules_secret_name" {
   type    = string
-  default = "rustfs-secret"
+  default = ""
 }
 
 variable "loki_s3_secret_name" {

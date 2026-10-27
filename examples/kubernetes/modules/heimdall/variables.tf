@@ -22,7 +22,7 @@ variable "observability" {
   })
   default = {
     log_level         = "info"
-    log_format        = "gelf"
+    log_format        = "text"
     metrics_enabled   = false
     metrics_exporter  = "otlp"
     metrics_endpoint  = ""
@@ -46,8 +46,7 @@ variable "http_rules_endpoint" {
 }
 
 variable "blob_rules_prefix" {
-  type    = string
-  default = "echo-app/"
+  type = string
 }
 
 variable "s3_ca_config_map_name" {

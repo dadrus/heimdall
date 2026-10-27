@@ -41,7 +41,7 @@ module "alloy" {
   cluster_name         = "demo"
   loki_endpoint        = module.loki.loki_gateway_url
   prometheus_endpoint  = module.prometheus.prometheus_url
-  otel_traces_endpoint = module.tempo.otlp_grpc_receiver_endpoint
+  otlp_traces_endpoint = module.tempo.otlp_grpc_receiver_endpoint
   pyroscope_endpoint   = module.pyroscope.pyroscope_url
 }
 

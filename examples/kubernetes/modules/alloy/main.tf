@@ -9,7 +9,7 @@ resource "kubernetes_config_map_v1" "alloy_config" {
       cluster_name         = var.cluster_name
       loki_endpoint        = var.loki_endpoint
       prometheus_endpoint  = var.prometheus_endpoint
-      otel_traces_endpoint = var.otel_traces_endpoint
+      otlp_traces_endpoint = var.otlp_traces_endpoint
       pyroscope_endpoint   = var.pyroscope_endpoint
     })
   }

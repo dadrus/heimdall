@@ -4,6 +4,7 @@ variable "namespace" {
 }
 
 variable "s3_endpoint" {
+  type        = string
   description = "S3 compatible API URL"
 }
 
@@ -24,5 +25,6 @@ variable "s3_ca_config_map_name" {
 }
 
 variable "bucket_name" {
+  type        = string
   description = "Bucket name for loki chunks, ruler and admin"
 }

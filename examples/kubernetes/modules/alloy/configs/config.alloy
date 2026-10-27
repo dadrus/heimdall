@@ -100,7 +100,7 @@ prometheus.remote_write "default" {
 // write traces to Tempo
 otelcol.exporter.otlp "default" {
   client {
-    endpoint = "${otel_traces_endpoint}"
+    endpoint = "${otlp_traces_endpoint}"
     tls {
       insecure             = true
       insecure_skip_verify = true
