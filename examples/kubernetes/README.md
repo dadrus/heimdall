@@ -90,7 +90,7 @@ The local cluster includes Headlamp and the RustFS development console. Each rec
 
 ```bash
 just headlamp-dashboard       # Headlamp: http://127.0.0.1:8080
-just storage-dashboard        # RustFS:   http://127.0.0.1:9001
+just storage-dashboard        # RustFS:   https://127.0.0.1:9001
 ```
 
 If you installed with `OBS=true`, you can also open Grafana:
