@@ -22,7 +22,11 @@ loki:
     s3:
       endpoint: ${s3_endpoint}
       s3ForcePathStyle: true
-      insecure: true  # local cluster uses HTTP to RustFS
+      insecure: false
+%{ if s3_ca_config_map_name != "" ~}
+      http_config:
+        ca_file: /etc/s3-ca/ca.crt
+%{ endif ~}
       accessKeyId: $${AWS_ACCESS_KEY_ID}
       secretAccessKey: $${AWS_SECRET_ACCESS_KEY}
   limits_config:
@@ -40,6 +44,16 @@ singleBinary:
   extraEnvFrom:
     - secretRef:
         name: ${s3_secret_name}
+%{ if s3_ca_config_map_name != "" ~}
+  extraVolumes:
+    - name: s3-ca
+      configMap:
+        name: ${s3_ca_config_map_name}
+  extraVolumeMounts:
+    - name: s3-ca
+      mountPath: /etc/s3-ca
+      readOnly: true
+%{ endif ~}
 
 backend:
   replicas: 0

@@ -7,10 +7,19 @@ module "kind" {
   kubeconfig_path    = local.kubeconfig_path
 }
 
+module "cert_manager" {
+  source = "../../modules/cert-manager"
+
+  depends_on = [module.kind]
+
+  namespace       = "cert-manager"
+  metrics_enabled = false
+}
+
 module "rustfs" {
   source = "../../modules/rustfs"
 
-  depends_on = [module.kind]
+  depends_on = [module.cert_manager]
 
   namespace        = var.rustfs_namespace
   release_name     = "rustfs"

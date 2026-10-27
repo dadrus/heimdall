@@ -48,6 +48,12 @@ variable "s3_endpoint" {
   default = ""
 }
 
+variable "s3_ca_config_map_name" {
+  type        = string
+  default     = ""
+  description = "Optional CA bundle ConfigMap for S3 TLS in the target namespaces."
+}
+
 variable "rustfs_namespace" {
   type    = string
   default = "object-storage"

@@ -54,6 +54,10 @@ resource "kubernetes_job_v1" "bucket" {
             value = var.s3_region
           }
           env {
+            name  = "AWS_CA_BUNDLE"
+            value = "/etc/s3-ca/ca.crt"
+          }
+          env {
             name  = "AWS_CONFIG_FILE"
             value = "/tmp/aws-config"
           }
@@ -104,8 +108,21 @@ resource "kubernetes_job_v1" "bucket" {
           }
 
           volume_mount {
+            name       = "s3-ca"
+            mount_path = "/etc/s3-ca"
+            read_only  = true
+          }
+
+          volume_mount {
             name       = "tmp"
             mount_path = "/tmp"
+          }
+        }
+
+        volume {
+          name = "s3-ca"
+          config_map {
+            name = "cacerts"
           }
         }
 
@@ -124,8 +141,8 @@ resource "kubernetes_job_v1" "bucket" {
 
   lifecycle {
     precondition {
-      condition     = can(regex("^https?://[^/]+", var.s3_endpoint))
-      error_message = "s3_endpoint must be a nonempty URL reachable from inside Kubernetes."
+      condition     = can(regex("^https://[^/]+", var.s3_endpoint))
+      error_message = "s3_endpoint must be an HTTPS URL reachable from inside Kubernetes."
     }
   }
 }

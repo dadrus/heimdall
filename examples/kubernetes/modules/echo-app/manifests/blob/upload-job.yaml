@@ -37,6 +37,10 @@ spec:
               value: ${jsonencode(bucket_name)}
             - name: RULES_OBJECT_KEY
               value: ${jsonencode(object_key)}
+%{ if s3_ca_config_map_name != "" ~}
+            - name: AWS_CA_BUNDLE
+              value: /etc/s3-ca/ca.crt
+%{ endif ~}
             - name: AWS_DEFAULT_REGION
               value: ${jsonencode(s3_region)}
             - name: AWS_CONFIG_FILE
@@ -68,6 +72,11 @@ spec:
               readOnly: true
             - name: tmp
               mountPath: /tmp
+%{ if s3_ca_config_map_name != "" ~}
+            - name: s3-ca
+              mountPath: /etc/s3-ca
+              readOnly: true
+%{ endif ~}
           resources:
             requests:
               cpu: 50m
@@ -81,3 +90,8 @@ spec:
             name: echo-app-blob-rules
         - name: tmp
           emptyDir: {}
+%{ if s3_ca_config_map_name != "" ~}
+        - name: s3-ca
+          configMap:
+            name: ${s3_ca_config_map_name}
+%{ endif ~}

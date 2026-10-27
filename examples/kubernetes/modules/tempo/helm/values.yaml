@@ -20,10 +20,13 @@ tempo:
       backend: s3
       s3:
         bucket: ${bucket_name}
-        endpoint: ${replace(replace(s3_endpoint, "http://", ""), "https://", "")}
+        endpoint: ${replace(s3_endpoint, "https://", "")}
         access_key: $${AWS_ACCESS_KEY_ID}
         secret_key: $${AWS_SECRET_ACCESS_KEY}
-        insecure: ${startswith(s3_endpoint, "http://")}
+        insecure: false
+%{ if s3_ca_config_map_name != "" ~}
+        tls_ca_path: /etc/s3-ca/ca.crt
+%{ endif ~}
         forcepathstyle: true
 
   metricsGenerator:
@@ -44,3 +47,14 @@ tempo:
           endpoint: "0.0.0.0:4317"
         http:
           endpoint: "0.0.0.0:4318"
+
+%{ if s3_ca_config_map_name != "" ~}
+extraVolumes:
+  - name: s3-ca
+    configMap:
+      name: ${s3_ca_config_map_name}
+extraVolumeMounts:
+  - name: s3-ca
+    mountPath: /etc/s3-ca
+    readOnly: true
+%{ endif ~}

@@ -2,17 +2,8 @@ locals {
   echo_app_rules_prefix = "echo-app/"
 }
 
-module "cert_manager" {
-  source = "../modules/cert-manager"
-
-  namespace       = "cert-manager"
-  metrics_enabled = false
-}
-
 module "ingress_controller" {
   source = "../ingress"
-
-  depends_on = [module.cert_manager]
 
   namespace                  = var.ingress_namespace
   ingress_controller         = var.ingress_controller
@@ -37,6 +28,7 @@ module "observability" {
 
   namespace             = "monitoring"
   s3_endpoint           = var.s3_endpoint
+  s3_ca_config_map_name = var.s3_ca_config_map_name
   loki_bucket_name      = var.loki_bucket_name
   tempo_bucket_name     = var.tempo_bucket_name
   loki_s3_secret_name   = var.loki_s3_secret_name
@@ -46,8 +38,6 @@ module "observability" {
 module "rules_server" {
   count  = var.rule_provider == "http_endpoint" ? 1 : 0
   source = "../modules/rules-server"
-
-  depends_on = [module.cert_manager]
 
   namespace      = var.rules_server_namespace
   cluster_domain = var.cluster_domain
@@ -65,6 +55,7 @@ module "heimdall" {
   blob_rules_url               = var.blob_rules_url
   blob_rules_prefix            = local.echo_app_rules_prefix
   blob_s3_secret_name          = var.blob_s3_secret_name
+  s3_ca_config_map_name        = var.s3_ca_config_map_name
   observability = {
     log_level         = "info"
     log_format        = var.observability_enabled ? "gelf" : "text"
@@ -94,7 +85,8 @@ module "demo_app" {
   http_rules_namespace       = var.rules_server_namespace
   blob_rules_bucket_name     = var.rules_bucket_name
   blob_rules_prefix          = local.echo_app_rules_prefix
-  blob_rules_s3_endpoint     = var.s3_endpoint
+  blob_rules_s3_endpoint         = var.s3_endpoint
+  blob_rules_s3_ca_config_map_name = var.s3_ca_config_map_name
   blob_rules_s3_region       = var.s3_region
   blob_rules_namespace       = var.rustfs_namespace
   blob_rules_secret_name     = var.rustfs_secret_name

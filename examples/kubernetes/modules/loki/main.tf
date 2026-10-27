@@ -9,9 +9,10 @@ resource "helm_release" "loki" {
 
   values = [
     templatefile("${path.module}/helm/values.yaml", {
-      s3_endpoint    = var.s3_endpoint
-      bucket_name    = var.bucket_name
-      s3_secret_name = var.s3_secret_name
+      s3_endpoint           = var.s3_endpoint
+      bucket_name           = var.bucket_name
+      s3_secret_name        = var.s3_secret_name
+      s3_ca_config_map_name = var.s3_ca_config_map_name
     })
   ]
 

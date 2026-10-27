@@ -63,8 +63,9 @@ resource "kubernetes_manifest" "blob_rules" {
     namespace    = var.blob_rules_namespace
     job_name     = "echo-app-publish-rules-${local.blob_rules_job_hash}"
     aws_cli_image = "amazon/aws-cli:2.37.12"
-    s3_endpoint  = var.blob_rules_s3_endpoint
-    bucket_name  = var.blob_rules_bucket_name
+    s3_endpoint             = var.blob_rules_s3_endpoint
+    s3_ca_config_map_name   = var.blob_rules_s3_ca_config_map_name
+    bucket_name             = var.blob_rules_bucket_name
     object_key   = "${var.blob_rules_prefix}echo-app.yaml"
     s3_region    = var.blob_rules_s3_region
     secret_name  = var.blob_rules_secret_name
@@ -84,8 +85,8 @@ resource "kubernetes_manifest" "blob_rules" {
 
   lifecycle {
     precondition {
-      condition     = can(regex("^https?://[^/]+", var.blob_rules_s3_endpoint))
-      error_message = "blob_rules_s3_endpoint must be an in-cluster S3 URL."
+      condition     = can(regex("^https://[^/]+", var.blob_rules_s3_endpoint))
+      error_message = "blob_rules_s3_endpoint must be an HTTPS S3 URL."
     }
     precondition {
       condition     = length(trimspace(var.blob_rules_bucket_name)) > 0

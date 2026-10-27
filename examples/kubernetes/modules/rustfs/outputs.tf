@@ -4,7 +4,7 @@ locals {
 }
 
 output "s3_endpoint" {
-  value = "http://${local.service_name}.${kubernetes_namespace_v1.rustfs.metadata[0].name}.svc.${var.cluster_domain}:${var.s3_port}"
+  value = "https://${local.service_name}.${kubernetes_namespace_v1.rustfs.metadata[0].name}.svc.${var.cluster_domain}:${var.s3_port}"
 }
 
 output "namespace" {

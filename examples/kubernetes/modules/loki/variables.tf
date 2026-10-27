@@ -17,6 +17,12 @@ variable "s3_secret_name" {
   }
 }
 
+variable "s3_ca_config_map_name" {
+  type        = string
+  default     = ""
+  description = "Name of an optional ConfigMap containing ca.crt for S3 TLS validation."
+}
+
 variable "bucket_name" {
   description = "Bucket name for loki chunks, ruler and admin"
 }

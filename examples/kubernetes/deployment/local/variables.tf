@@ -75,7 +75,12 @@ variable "rustfs_s3_region" {
 variable "s3_endpoint" {
   type        = string
   default     = ""
-  description = "In-cluster endpoint from cluster/local's s3_endpoint output."
+  description = "In-cluster HTTPS endpoint from cluster/local's s3_endpoint output."
+
+  validation {
+    condition     = var.s3_endpoint == "" || startswith(var.s3_endpoint, "https://")
+    error_message = "s3_endpoint must be an HTTPS URL in the local demo."
+  }
 }
 
 variable "rustfs_namespace" {

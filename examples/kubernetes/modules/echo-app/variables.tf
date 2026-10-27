@@ -45,6 +45,12 @@ variable "blob_rules_bucket_name" {
   default = ""
 }
 
+variable "blob_rules_s3_ca_config_map_name" {
+  type        = string
+  default     = ""
+  description = "Optional ConfigMap containing ca.crt for the S3 upload Job."
+}
+
 variable "blob_rules_s3_endpoint" {
   type    = string
   default = ""

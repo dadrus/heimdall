@@ -14,6 +14,7 @@ module "loki" {
   s3_endpoint    = var.s3_endpoint
   bucket_name    = var.loki_bucket_name
   s3_secret_name = var.loki_s3_secret_name
+  s3_ca_config_map_name = var.s3_ca_config_map_name
 }
 
 module "tempo" {
@@ -24,6 +25,7 @@ module "tempo" {
   s3_endpoint    = var.s3_endpoint
   bucket_name    = var.tempo_bucket_name
   s3_secret_name = var.tempo_s3_secret_name
+  s3_ca_config_map_name = var.s3_ca_config_map_name
 }
 
 module "pyroscope" {

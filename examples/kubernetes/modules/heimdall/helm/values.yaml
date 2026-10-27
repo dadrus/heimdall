@@ -12,10 +12,10 @@ deployment:
     - name: jwt-cert-volume
       secret:
         secretName: heimdall-jwt
-%{ if http_rules_enabled ~}
+%{ if http_rules_enabled || (blob_rules_enabled && s3_ca_config_map_name != "") ~}
     - name: rules-ca-bundle
       configMap:
-        name: cacerts
+        name: ${http_rules_enabled ? "cacerts" : s3_ca_config_map_name}
         items:
           - key: ca.crt
             path: ca-certificates.crt
@@ -27,7 +27,7 @@ deployment:
     - name: jwt-cert-volume
       readOnly: true
       mountPath: "/etc/heimdall/certs/jwt"
-%{ if http_rules_enabled ~}
+%{ if http_rules_enabled || (blob_rules_enabled && s3_ca_config_map_name != "") ~}
     - name: rules-ca-bundle
       readOnly: true
       mountPath: "/etc/ssl/certs"

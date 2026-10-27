@@ -3,6 +3,12 @@ variable "namespace" {
   default = "monitoring"
 }
 
+variable "s3_ca_config_map_name" {
+  type        = string
+  default     = ""
+  description = "Optional trust-manager CA ConfigMap for S3 TLS."
+}
+
 variable "s3_endpoint" {
   type = string
 }
