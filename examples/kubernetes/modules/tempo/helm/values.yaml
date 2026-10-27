@@ -1,5 +1,11 @@
 tempo:
   retention: 24h
+%{ if s3_ca_config_map_name != "" ~}
+  extraVolumeMounts:
+    - name: s3-ca
+      mountPath: /etc/s3-ca
+      readOnly: true
+%{ endif ~}
   # Tempo expands these references after reading environment variables
   # from its Kubernetes Secret. Values/state contain placeholders only.
   extraArgs:
@@ -53,8 +59,4 @@ extraVolumes:
   - name: s3-ca
     configMap:
       name: ${s3_ca_config_map_name}
-extraVolumeMounts:
-  - name: s3-ca
-    mountPath: /etc/s3-ca
-    readOnly: true
 %{ endif ~}
