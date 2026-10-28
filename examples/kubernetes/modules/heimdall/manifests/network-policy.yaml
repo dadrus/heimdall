@@ -38,8 +38,6 @@ spec:
             cidr: ${jsonencode(cidr)}
 %{ endfor ~}
 %{ if kubernetes_rules ~}
-    # Both validating (Service 4458) and conversion (Service 4459)
-    # webhooks target the same Pod port 4458.
     - ports:
         - port: 4458
           protocol: TCP
