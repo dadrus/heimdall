@@ -1,5 +1,8 @@
-variable "emissary_version" {
-  type = string
-  description = "Helm chart version for Emissary"
-  default = "8.12.2"
+locals {
+  chart_repository = "oci://ghcr.io/emissary-ingress"
+  chart_version    = "4.1.0"
+  chart_names = {
+    crds       = "emissary-crds-chart"
+    controller = "emissary-ingress"
+  }
 }

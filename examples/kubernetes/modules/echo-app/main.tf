@@ -1,21 +1,25 @@
-resource "kubernetes_namespace" "echo_app" {
+resource "kubernetes_namespace_v1" "echo_app" {
   metadata {
     name = var.namespace
 
-    labels = {
-      "istio-injection": "enabled"
-    }
+    labels = var.ingress_controller == "istio" ? {
+      "istio-injection" = "enabled"
+    } : {}
   }
 }
 
 resource "kubectl_manifest" "deployment" {
-  depends_on = [kubernetes_namespace.echo_app]
+  depends_on = [kubernetes_namespace_v1.echo_app]
 
   for_each = fileset(path.module, "./manifests/*.yaml")
 
   yaml_body = templatefile("${path.module}/${each.value}", {
     namespace = var.namespace
   })
+}
+
+locals {
+  echo_app_rules = yamldecode(file("${path.module}/rules/echo-app.yaml"))
 }
 
 locals {
@@ -30,7 +34,7 @@ locals {
 }
 
 resource "kubectl_manifest" "ingress" {
-  depends_on = [kubectl_manifest.deployment]
+  depends_on = [kubectl_manifest.deployment, kubectl_manifest.kubernetes_rules, kubernetes_config_map_v1.http_rules, kubernetes_manifest.blob_rules]
 
   for_each  = local.ingress_manifests
   yaml_body = each.value

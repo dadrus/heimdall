@@ -1,6 +1,5 @@
 variable "ingress_controller" {
-  type    = string
-  default = "emissary"
+  type = string
 
   validation {
     condition     = contains(["contour", "emissary", "envoy-gateway", "haproxy", "istio", "nginx", "traefik"], var.ingress_controller)

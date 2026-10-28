@@ -18,9 +18,9 @@ variable "prometheus_endpoint" {
   description = "The endpoint of prometheus to write the metrics to"
 }
 
-variable "otel_traces_endpoint" {
+variable "otlp_traces_endpoint" {
   type        = string
-  description = "The endpoint of an OTEL endpoint to send traces to"
+  description = "OTLP endpoint to send traces to"
 }
 
 variable "pyroscope_endpoint" {

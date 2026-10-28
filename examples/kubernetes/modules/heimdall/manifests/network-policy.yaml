@@ -1,0 +1,63 @@
+# Restrict inbound Heimdall traffic. Enforcement depends on the cluster CNI.
+# Proxy selectors come from the active ingress module; external source CIDRs
+# (such as hostNetwork proxies) and control-plane CIDRs come from the platform.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: heimdall-ingress
+  namespace: ${namespace}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: heimdall
+      app.kubernetes.io/instance: heimdall
+  policyTypes:
+    - Ingress
+  ingress:
+    # Only the selected data-plane proxy can call the decision endpoint.
+    - ports:
+        - port: 4456
+          protocol: TCP
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ${jsonencode(ingress_proxy.namespace)}
+          podSelector:
+            matchLabels: ${jsonencode(ingress_proxy.labels)}
+%{ for cidr in ingress_proxy_cidrs ~}
+        - ipBlock:
+            cidr: ${jsonencode(cidr)}
+%{ endfor ~}
+    # Kubelet probes, typically originating from node addresses.
+    - ports:
+        - port: 4457
+          protocol: TCP
+      from:
+%{ for cidr in kubelet_cidrs ~}
+        - ipBlock:
+            cidr: ${jsonencode(cidr)}
+%{ endfor ~}
+%{ if kubernetes_rules ~}
+    - ports:
+        - port: 4458
+          protocol: TCP
+      from:
+%{ for cidr in api_server_cidrs ~}
+        - ipBlock:
+            cidr: ${jsonencode(cidr)}
+%{ endfor ~}
+%{ endif ~}
+%{ if scraper_peer != null ~}
+    # Metrics and profiling are scraped by Alloy.
+    - ports:
+        - port: 9464
+          protocol: TCP
+        - port: 10251
+          protocol: TCP
+      from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: ${jsonencode(scraper_peer.namespace)}
+          podSelector:
+            matchLabels: ${jsonencode(scraper_peer.labels)}
+%{ endif ~}

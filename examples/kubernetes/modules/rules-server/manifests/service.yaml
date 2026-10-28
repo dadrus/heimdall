@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: rules-server
+  namespace: ${namespace}
+spec:
+  selector:
+    app.kubernetes.io/name: rules-server
+  ports:
+    - name: https
+      port: 443
+      targetPort: https
+  type: ClusterIP

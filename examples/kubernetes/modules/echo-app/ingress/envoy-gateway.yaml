@@ -5,13 +5,7 @@ metadata:
   namespace: ${namespace}
 spec:
   dnsNames:
-    - echo-app
-    - echo-app.default
-    - echo-app.default.svc
-    - echo-app.default.svc.cluster.local
     - echo-app.local
-  ipAddresses:
-    - 172.18.255.200
   secretName: eg-tls
   issuerRef:
     name: root-ca-issuer

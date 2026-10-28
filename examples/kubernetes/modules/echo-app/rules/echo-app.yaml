@@ -1,0 +1,23 @@
+# The echo-app owns its rules; providers only determine how they are published.
+version: "1alpha4"
+name: echo-app-rules
+rules:
+  - id: public-access
+    match:
+      routes:
+        - path: /pub/**
+    execute:
+      - authorizer: allow_all_requests
+  - id: anonymous-access
+    match:
+      routes:
+        - path: /anon/**
+    execute:
+      - authorizer: allow_all_requests
+      - finalizer: create_jwt
+  - id: redirect
+    match:
+      routes:
+        - path: /redir/**
+    execute:
+      - authenticator: deny_authenticator

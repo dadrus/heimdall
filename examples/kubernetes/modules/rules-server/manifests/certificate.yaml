@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: rules-server-tls
+  namespace: ${namespace}
+spec:
+  secretName: rules-server-tls
+  issuerRef:
+    name: root-ca-issuer
+    kind: ClusterIssuer
+  dnsNames:
+    - rules-server.${namespace}.svc
+    - rules-server.${namespace}.svc.cluster.local
+  usages:
+    - server auth
+    - digital signature

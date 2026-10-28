@@ -1,5 +1,7 @@
-variable "traefik_version" {
-  type = string
-  description = "Helm chart version for Traefik"
-  default = "37.3.0"
+locals {
+  chart = {
+    repository = "https://traefik.github.io/charts"
+    name       = "traefik"
+    version    = "41.7.1"
+  }
 }

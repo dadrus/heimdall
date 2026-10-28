@@ -1,4 +1,6 @@
 resource "kubectl_manifest" "certificate" {
+  count = var.gateway_api_enabled ? 1 : 0
+
   yaml_body = templatefile("${path.module}/manifests/certificate.yaml", {
     namespace = var.namespace
   })
@@ -8,12 +10,10 @@ resource "helm_release" "traefik" {
   depends_on = [kubectl_manifest.certificate]
 
   name       = "traefik"
-  repository = "https://traefik.github.io/charts"
-  chart      = "traefik"
-  version    = var.traefik_version
+  repository = local.chart.repository
+  chart      = local.chart.name
+  version    = local.chart.version
   namespace  = var.namespace
-
-  create_namespace = true
 
   values = [
     templatefile("${path.module}/helm/values.yaml", {

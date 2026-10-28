@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: echo-app-blob-rules
+  namespace: ${namespace}
+data:
+  echo-app.yaml: |
+    ${rules_yaml}
