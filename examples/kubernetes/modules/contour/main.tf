@@ -1,11 +1,9 @@
 resource "helm_release" "contour" {
   name       = "contour"
-  repository = "https://projectcontour.github.io/helm-charts/"
-  chart      = "contour"
-  version    = var.contour_version
+  repository = local.chart.repository
+  chart      = local.chart.name
+  version    = local.chart.version
   namespace  = var.namespace
-
-  create_namespace = true
 
   values = [
     file("${path.module}/helm/values.yaml")

@@ -18,7 +18,7 @@ variable "worker_nodes" {
   default = 3
   validation {
     condition     = var.worker_nodes >= 1 && var.worker_nodes <= 20
-    error_message = "worker_nodes must be between 1 and 10"
+    error_message = "worker_nodes must be between 1 and 20"
   }
 }
 
@@ -31,4 +31,19 @@ variable "lb_namespace" {
   type        = string
   default     = "metallb-system"
   description = "Namespace to install the LB into"
+}
+
+variable "kubeconfig_path" {
+  type        = string
+  description = "Local kubeconfig file path, supplied by the cluster/local root."
+}
+
+variable "pod_subnet" {
+  type        = string
+  description = "Pod network for the Kind cluster; declared explicitly for consumers."
+
+  validation {
+    condition     = can(cidrhost(var.pod_subnet, 0)) && !endswith(var.pod_subnet, "/0")
+    error_message = "pod_subnet must be a restricted, valid CIDR."
+  }
 }

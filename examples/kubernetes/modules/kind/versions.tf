@@ -1,17 +1,10 @@
-variable "node_image" {
-  type        = string
-  default     = "kindest/node:v1.32.0@sha256:c48c62eac5da28cdadcf560d1d8616cfa6783b58f0d94cf63ad1bf49600cb027"
-  description = "Node image for kind nodes"
-}
+locals {
+  node_image           = "kindest/node:v1.32.0@sha256:c48c62eac5da28cdadcf560d1d8616cfa6783b58f0d94cf63ad1bf49600cb027"
+  image_registry_proxy = "ghcr.io/rpardini/docker-registry-proxy:0.8.0@sha256:fe958e7a4b7ef01a646d903347a0522b6a9065b44b451c5ef87eb4b6b0f3d770"
 
-variable "image_registry_proxy" {
-  type        = string
-  default     = "ghcr.io/rpardini/docker-registry-proxy:0.6.5@sha256:b70b2ef2371171a630e3fcbf2217e04057c1dbe114fa46d332ebde67349869e9"
-  description = "Image for the mirror/cache registry proxy"
-}
-
-variable "metallb_version" {
-  type        = string
-  default     = "0.15.2"
-  description = "Helm chart version for MetalLB"
+  metallb_chart = {
+    repository = "https://metallb.github.io/metallb"
+    name       = "metallb"
+    version    = "0.16.1"
+  }
 }

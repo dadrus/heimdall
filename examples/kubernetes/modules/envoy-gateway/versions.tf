@@ -1,5 +1,7 @@
-variable "envoygw_version" {
-  type = string
-  description = "Helm chart version for Envoy Gateway"
-  default = "v1.6.0"
+locals {
+  chart = {
+    repository = "oci://docker.io/envoyproxy"
+    name       = "gateway-helm"
+    version    = "v1.9.2"
+  }
 }

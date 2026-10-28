@@ -1,16 +1,38 @@
 tempo:
-#  extraArgs:
-#    log.format: json
   retention: 24h
+%{ if s3_ca_config_map_name != "" ~}
+  extraVolumeMounts:
+    - name: s3-ca
+      mountPath: /etc/s3-ca
+      readOnly: true
+%{ endif ~}
+  # Tempo expands these references after reading environment variables
+  # from its Kubernetes Secret. Values/state contain placeholders only.
+  extraArgs:
+    "-config.expand-env": "true"
+  extraEnv:
+    - name: AWS_ACCESS_KEY_ID
+      valueFrom:
+        secretKeyRef:
+          name: ${s3_secret_name}
+          key: AWS_ACCESS_KEY_ID
+    - name: AWS_SECRET_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: ${s3_secret_name}
+          key: AWS_SECRET_ACCESS_KEY
   storage:
     trace:
       backend: s3
       s3:
         bucket: ${bucket_name}
         endpoint: ${replace(s3_endpoint, "https://", "")}
-        access_key: ${s3_access_key}
-        secret_key: ${s3_secret_key}
-        tls_insecure_skip_verify: true
+        access_key: $${AWS_ACCESS_KEY_ID}
+        secret_key: $${AWS_SECRET_ACCESS_KEY}
+        insecure: false
+%{ if s3_ca_config_map_name != "" ~}
+        tls_ca_path: /etc/s3-ca/ca.crt
+%{ endif ~}
         forcepathstyle: true
 
   metricsGenerator:
@@ -23,7 +45,6 @@ tempo:
         processors:
           - service-graphs
           - span-metrics
-          - local-blocks
 
   receivers:
     otlp:
@@ -32,3 +53,10 @@ tempo:
           endpoint: "0.0.0.0:4317"
         http:
           endpoint: "0.0.0.0:4318"
+
+%{ if s3_ca_config_map_name != "" ~}
+extraVolumes:
+  - name: s3-ca
+    configMap:
+      name: ${s3_ca_config_map_name}
+%{ endif ~}

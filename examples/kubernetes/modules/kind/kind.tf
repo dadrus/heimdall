@@ -18,8 +18,8 @@ locals {
 
 resource "kind_cluster" "default" {
   name            = var.cluster_name
-  node_image      = var.node_image
-  kubeconfig_path = pathexpand("/tmp/config")
+  node_image      = local.node_image
+  kubeconfig_path = pathexpand(var.kubeconfig_path)
   wait_for_ready  = true
 
   kind_config {
@@ -27,7 +27,8 @@ resource "kind_cluster" "default" {
     api_version = "kind.x-k8s.io/v1alpha4"
 
     networking {
-      ip_family = "ipv4"
+      ip_family  = "ipv4"
+      pod_subnet = var.pod_subnet
     }
 
     dynamic "node" {

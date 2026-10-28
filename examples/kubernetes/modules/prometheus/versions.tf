@@ -1,5 +1,7 @@
-variable "prometheus_version" {
-  type        = string
-  default     = "27.45.0"
-  description = "Helm chart version for Prometheus"
+locals {
+  chart = {
+    repository = "https://prometheus-community.github.io/helm-charts"
+    name       = "prometheus"
+    version    = "29.36.1"
+  }
 }

@@ -1,12 +1,11 @@
 resource "helm_release" "pyroscope" {
   name       = "pyroscope"
-  repository = "https://grafana.github.io/helm-charts"
-  chart      = "pyroscope"
-  version    = var.pyroscope_version
+  repository = local.chart.repository
+  chart      = local.chart.name
+  version    = local.chart.version
   namespace  = var.namespace
 
-  upgrade_install  = true
-  create_namespace = true
+  upgrade_install = true
 
   values = [
     file("${path.module}/helm/values.yaml")

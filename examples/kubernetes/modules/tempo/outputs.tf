@@ -5,7 +5,3 @@ output "server_endpoint" {
 output "otlp_grpc_receiver_endpoint" {
   value = "tempo.${var.namespace}.svc.cluster.local:4317"
 }
-
-output "otlp_http_receiver_endpoint" {
-  value = "tempo.${var.namespace}.svc.cluster.local:4318"
-}
