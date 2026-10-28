@@ -4,29 +4,11 @@ variable "namespace" {
 }
 
 variable "admin_user" {
+  type        = string
   description = "The admin user for grafana"
 }
 
 variable "admin_password" {
+  type        = string
   description = "The password of the admin user"
-}
-
-variable "loki_url" {
-  type        = string
-  description = "The endpoint of loki"
-}
-
-variable "prometheus_url" {
-  type        = string
-  description = "The endpoint of prometheus"
-}
-
-variable "tempo_url" {
-  type        = string
-  description = "The endpoint of tempo"
-}
-
-variable "pyroscope_url" {
-  type        = string
-  description = "The endpoint of pyroscope"
 }

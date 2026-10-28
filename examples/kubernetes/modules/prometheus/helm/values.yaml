@@ -1,15 +1,19 @@
 kube-state-metrics:
   enabled: true
 alertmanager:
-  enabled: true
+  enabled: false
 prometheus-node-exporter:
   enabled: false
 prometheus-pushgateway:
   enabled: false
 
 server:
+  persistentVolume:
+    enabled: false
   service:
     servicePort: 9090
+  # Alloy discovers the operator PodMonitors/ServiceMonitors and remote-writes here.
+  # Keep the receiver enabled; standalone Prometheus does not process those CRDs.
   extraFlags:
     - web.enable-remote-write-receiver
     - web.enable-lifecycle

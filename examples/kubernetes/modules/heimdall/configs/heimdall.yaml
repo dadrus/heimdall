@@ -29,7 +29,9 @@ serve:
     secret:
       source: tls_keys
   trusted_proxies:
-    - 0.0.0.0/0
+%{ for cidr in trusted_proxy_cidrs ~}
+    - ${jsonencode(cidr)}
+%{ endfor ~}
 
 management:
   tls:
@@ -70,8 +72,24 @@ default_rule:
       error_handler: redirect
 
 providers:
+%{ if rule_provider == "kubernetes" ~}
   kubernetes:
     tls:
-      min_version: TLS1.2
       secret:
         source: tls_keys
+%{ endif ~}
+%{ if rule_provider == "http_endpoint" ~}
+  http_endpoint:
+    watch_interval: 5s
+    endpoints:
+      - url: "${http_rules_endpoint}"
+        http_cache:
+          enabled: false
+%{ endif ~}
+%{ if rule_provider == "cloud_blob" ~}
+  cloud_blob:
+    watch_interval: 5s
+    buckets:
+      - url: "${blob_rules_url}"
+        prefix: "${blob_rules_prefix}"
+%{ endif ~}

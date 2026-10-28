@@ -1,10 +1,10 @@
-logs:
-  general:
-    level: ${log_level}
-    format: json
-  access:
-    enabled: true
-    format: json
+log:
+  level: ${log_level}
+  format: json
+
+accessLog:
+  enabled: true
+  format: json
 
 tracing:
   otlp:
@@ -26,6 +26,7 @@ metrics:
   %{ else }
   prometheus: null
   otlp:
+    enabled: true
     http:
       enabled: ${otel_metrics_protocol == "http"}
       endpoint: ${otel_metrics_endpoint}
@@ -65,9 +66,11 @@ gateway:
 %{ if global_integration_enabled || gateway_api_enabled }
 ports:
   web:
-    middlewares:
-      - heimdall-heimdall@kubernetescrd
+    http:
+      middlewares:
+        - heimdall-heimdall@kubernetescrd
   websecure:
-    middlewares:
-      - heimdall-heimdall@kubernetescrd
+    http:
+      middlewares:
+        - heimdall-heimdall@kubernetescrd
 %{ endif }

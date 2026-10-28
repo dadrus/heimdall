@@ -42,3 +42,6 @@ docs/.hugo_build.lock
 terraform.tfstate
 terraform.tfstate.backup
 
+
+# Locally generated kind kubeconfig (contains cluster client credentials)
+/examples/kubernetes/cluster/local/.kubeconfig

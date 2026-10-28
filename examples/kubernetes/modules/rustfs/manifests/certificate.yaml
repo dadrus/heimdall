@@ -1,0 +1,16 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: ${certificate}
+  namespace: ${namespace}
+spec:
+  secretName: ${certificate}
+  dnsNames:
+    - ${service_name}
+    - ${service_name}.${namespace}
+    - ${service_name}.${namespace}.svc
+    - ${service_name}.${namespace}.svc.cluster.local
+  issuerRef:
+    name: root-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io

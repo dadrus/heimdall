@@ -7,3 +7,4 @@ spec:
   auth_service: "https://heimdall.heimdall.svc.cluster.local:4456"
   proto: grpc
   protocol_version: v3
+  failure_mode_allow: false

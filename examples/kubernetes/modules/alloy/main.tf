@@ -1,4 +1,4 @@
-resource "kubernetes_config_map" "alloy_config" {
+resource "kubernetes_config_map_v1" "alloy_config" {
   metadata {
     name      = "alloy-config"
     namespace = var.namespace
@@ -9,17 +9,18 @@ resource "kubernetes_config_map" "alloy_config" {
       cluster_name         = var.cluster_name
       loki_endpoint        = var.loki_endpoint
       prometheus_endpoint  = var.prometheus_endpoint
-      otel_traces_endpoint = var.otel_traces_endpoint
+      otlp_traces_endpoint = var.otlp_traces_endpoint
       pyroscope_endpoint   = var.pyroscope_endpoint
     })
   }
 }
 
 resource "helm_release" "alloy" {
+  depends_on = [kubernetes_config_map_v1.alloy_config]
   name       = "alloy"
-  repository = "https://grafana.github.io/helm-charts"
-  chart      = "alloy"
-  version    = var.alloy_version
+  repository = local.chart.repository
+  chart      = local.chart.name
+  version    = local.chart.version
   namespace  = var.namespace
 
   upgrade_install = true
