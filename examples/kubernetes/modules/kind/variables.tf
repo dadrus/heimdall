@@ -37,3 +37,13 @@ variable "kubeconfig_path" {
   type        = string
   description = "Local kubeconfig file path, supplied by the cluster/local root."
 }
+
+variable "pod_subnet" {
+  type        = string
+  description = "Pod network for the Kind cluster; declared explicitly for consumers."
+
+  validation {
+    condition     = can(cidrhost(var.pod_subnet, 0)) && !endswith(var.pod_subnet, "/0")
+    error_message = "pod_subnet must be a restricted, valid CIDR."
+  }
+}

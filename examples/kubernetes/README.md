@@ -2,12 +2,15 @@
 
 These examples let you try Heimdall in **decision mode** with different Kubernetes ingress controllers and Gateway API implementations. An echo application is protected by Heimdall, which decides whether requests may reach it.
 
+> **NOTE:** This local playground uses demo credentials and privileged dashboard access. It is not intended for production or publicly accessible clusters.
+
 ## Prerequisites
 
 - [Docker](https://www.docker.com/)
 - [kind](https://kind.sigs.k8s.io/)
 - [kubectl](https://kubernetes.io/docs/reference/kubectl/)
 - [OpenTofu](https://opentofu.org/docs/intro/install/)
+- [Helm](https://helm.sh/docs/intro/install/)
 - [just](https://github.com/casey/just)
 - [curl](https://curl.se/)
 
@@ -41,11 +44,13 @@ just install-contour-demo
 
 The command creates a local kind cluster and installs the selected ingress controller, Heimdall and an echo application.
 
-To install the same demo with **observability** (Prometheus, Loki, Tempo, Alloy, Grafana and Pyroscope), use:
+To install the same demo with observability stack (Prometheus, Loki, Tempo, Alloy, Grafana and Pyroscope), use:
 
 ```bash
 OBS=true just install-contour-demo
 ```
+
+Switching an existing deployment from `OBS=true` to `OBS=false` is currently unreliable. Use `just delete-local-cluster` before reinstalling without `OBS`.
 
 To use different rule providers to let heimdall load rules by, use `RULE_PROVIDER`.
 E.g.:
@@ -93,13 +98,15 @@ just headlamp-dashboard       # Headlamp: http://127.0.0.1:8080
 just storage-dashboard        # RustFS:   https://127.0.0.1:9001
 ```
 
+For the RustFS console, sign in with `heimdall-local-dev` as username and `heimdall-local-dev-only-change-me` as password.
+
 If you installed with `OBS=true`, you can also open Grafana:
 
 ```bash
 just observability-dashboard  # Grafana:  http://127.0.0.1:3000
 ```
 
-Sign in using **admin / admin** (local demo only) and open **Dashboards → Heimdall → Heimdall Metrics**. The existing Heimdall metrics dashboard and the Prometheus, Loki, Tempo and Pyroscope data sources are provisioned automatically.
+Sign in using `admin` for both username and password, and open **Dashboards → Heimdall → Heimdall Metrics**. The existing Heimdall metrics dashboard and the Prometheus, Loki, Tempo and Pyroscope data sources are provisioned automatically.
 
 ## Delete the demo
 
@@ -107,4 +114,4 @@ Sign in using **admin / admin** (local demo only) and open **Dashboards → Heim
 just delete-local-cluster
 ```
 
-This removes both the demo deployment and the local kind cluster. To remove the deployment but keep the kind cluster and its storage, use `just delete-demo` instead.
+This removes both the demo deployment and the local kind cluster. To remove the deployment but keep the kind cluster and its storage, use `just delete-demo` instead. The separate Docker registry proxy and its volumes are kept for reuse.

@@ -49,6 +49,10 @@ module "heimdall" {
 
   namespace           = "heimdall"
   ingress_controller  = var.ingress_controller
+  trusted_proxy_cidrs = var.trusted_proxy_cidrs
+  network_policy      = var.heimdall_network_policy
+  ingress_proxy      = module.ingress_controller.ingress_proxy
+  scraper_peer        = var.observability_enabled ? module.observability[0].scraper_peer : null
   rule_provider       = var.rule_provider
   http_rules_endpoint = var.rule_provider == "http_endpoint" ? module.rules_server[0].endpoint_url : ""
   blob_rules_url               = var.blob_rules_url

@@ -29,7 +29,9 @@ serve:
     secret:
       source: tls_keys
   trusted_proxies:
-    - 0.0.0.0/0
+%{ for cidr in trusted_proxy_cidrs ~}
+    - ${jsonencode(cidr)}
+%{ endfor ~}
 
 management:
   tls:

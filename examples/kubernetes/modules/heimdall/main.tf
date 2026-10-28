@@ -2,7 +2,7 @@ locals {
   use_envoy_grpc = contains(["contour", "emissary", "envoy-gateway", "istio"], var.ingress_controller)
 
   extra_args = concat(
-    ["--insecure-skip-secure-trusted-proxies-enforcement", "--insecure-skip-secure-default-rule-enforcement"],
+    ["--insecure-skip-secure-default-rule-enforcement"],
     local.use_envoy_grpc ? ["--envoy-grpc"] : []
   )
 }
@@ -21,7 +21,7 @@ resource "kubectl_manifest" "certificates" {
 }
 
 resource "helm_release" "heimdall" {
-  depends_on = [kubectl_manifest.certificates]
+  depends_on = [kubectl_manifest.certificates, kubectl_manifest.network_policy]
 
   name            = "heimdall"
   chart           = local.heimdall_chart_path
@@ -41,6 +41,7 @@ resource "helm_release" "heimdall" {
       http_rules_endpoint = var.http_rules_endpoint
       blob_rules_url      = var.blob_rules_url
       blob_rules_prefix   = var.blob_rules_prefix
+      trusted_proxy_cidrs = var.trusted_proxy_cidrs
     }),
     templatefile("${path.module}/helm/values.yaml", {
       otel_metrics_enabled  = var.observability.metrics_enabled

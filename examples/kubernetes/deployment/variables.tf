@@ -92,3 +92,17 @@ variable "s3_region" {
   type    = string
   default = "us-east-1"
 }
+
+variable "trusted_proxy_cidrs" {
+  type        = list(string)
+  description = "CIDRs of the ext-auth data-plane peers; provided by the platform root."
+}
+
+variable "heimdall_network_policy" {
+  type = object({
+    ingress_proxy_cidrs = list(string)
+    kubelet_cidrs       = list(string)
+    api_server_cidrs    = list(string)
+  })
+  description = "Network sources for Heimdall, supplied by the deployment platform; null disables NetworkPolicy."
+}

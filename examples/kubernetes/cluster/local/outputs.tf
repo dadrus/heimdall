@@ -31,3 +31,18 @@ output "headlamp_service_name" {
 output "headlamp_service_port" {
   value = module.headlamp.service_port
 }
+
+output "pod_cidrs" {
+  description = "The configured Pod CIDR(s) used as the Kind-only trusted-proxy network."
+  value       = [var.pod_subnet]
+}
+
+output "node_cidrs" {
+  description = "Kind node InternalIPs for kubelet and local API-server traffic."
+  value       = local.node_cidrs
+
+  precondition {
+    condition     = length(local.node_cidrs) > 0
+    error_message = "No Kind node InternalIPs found; refusing to create unbounded management/webhook access."
+  }
+}

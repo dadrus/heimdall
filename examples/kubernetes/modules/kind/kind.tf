@@ -27,7 +27,8 @@ resource "kind_cluster" "default" {
     api_version = "kind.x-k8s.io/v1alpha4"
 
     networking {
-      ip_family = "ipv4"
+      ip_family  = "ipv4"
+      pod_subnet = var.pod_subnet
     }
 
     dynamic "node" {

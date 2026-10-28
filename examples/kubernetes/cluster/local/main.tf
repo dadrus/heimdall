@@ -5,6 +5,7 @@ module "kind" {
   control_plane_nodes = var.control_plane_nodes
   worker_nodes       = var.worker_nodes
   kubeconfig_path    = local.kubeconfig_path
+  pod_subnet         = var.pod_subnet
 }
 
 module "cert_manager" {

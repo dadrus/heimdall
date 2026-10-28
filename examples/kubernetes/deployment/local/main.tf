@@ -5,8 +5,14 @@ module "deployment" {
   # Wait for ExternalSecrets to be Ready before deploying their consumers.
   depends_on = [kubectl_manifest.namespaces, kubernetes_manifest.rustfs_external_secret]
 
-  kubeconfig_path            = var.kubeconfig_path
-  ingress_controller         = var.ingress_controller
+  kubeconfig_path     = var.kubeconfig_path
+  ingress_controller  = var.ingress_controller
+  trusted_proxy_cidrs = var.trusted_proxy_cidrs
+  heimdall_network_policy = {
+    ingress_proxy_cidrs = [] # Proxy Pods are selected by their ingress modules.
+    kubelet_cidrs       = var.node_cidrs
+    api_server_cidrs    = var.node_cidrs # Kind's API server runs on a node.
+  }
   global_integration_enabled = var.global_integration_enabled
   gateway_api_enabled        = var.gateway_api_enabled
   rule_provider              = var.rule_provider
@@ -20,9 +26,9 @@ module "deployment" {
   tempo_s3_secret_name   = local.tempo_s3_secret_name
   # A blob deployment needs its bucket before Heimdall starts to poll.
   # This output is linked to successful completion of the bucket Job.
-  rules_bucket_name            = var.rule_provider == "cloud_blob" ? module.storage.buckets["rules"] : var.bucket_names.rules
-  s3_region                    = var.s3_region
-  blob_secret_name             = var.rule_provider == "cloud_blob" ? var.blob_secret_name : ""
+  rules_bucket_name = var.rule_provider == "cloud_blob" ? module.storage.buckets["rules"] : var.bucket_names.rules
+  s3_region         = var.s3_region
+  blob_secret_name  = var.rule_provider == "cloud_blob" ? var.blob_secret_name : ""
   blob_rules_url = var.rule_provider == "cloud_blob" ? format(
     "s3://%s?region=%s%s&use_path_style=true&awssdk=v2",
     module.storage.buckets["rules"],

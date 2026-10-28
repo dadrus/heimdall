@@ -56,3 +56,9 @@ variable "headlamp_namespace" {
   type    = string
   default = "headlamp"
 }
+
+variable "pod_subnet" {
+  type        = string
+  default     = "10.244.0.0/16"
+  description = "The local Kind Pod subnet; the Kind module uses this value by default."
+}

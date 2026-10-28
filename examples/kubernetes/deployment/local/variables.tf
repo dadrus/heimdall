@@ -98,3 +98,17 @@ variable "rule_provider" {
     error_message = "rule_provider must be 'kubernetes', 'http_endpoint' or 'cloud_blob'."
   }
 }
+
+variable "trusted_proxy_cidrs" {
+  type        = list(string)
+  description = "Pod CIDR(s) exported from cluster/local."
+}
+
+variable "node_cidrs" {
+  type        = list(string)
+  description = "Kind node InternalIP CIDRs exported from cluster/local."
+  validation {
+    condition     = length(var.node_cidrs) > 0
+    error_message = "At least one Kind node address is required."
+  }
+}
