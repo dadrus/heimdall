@@ -45,7 +45,7 @@ func extractURL(req *http.Request) url.URL {
 
 	host = strings.ToLower(host)
 	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
-		if forwardedURI, err := url.Parse(val); err == nil {
+		if forwardedURI, err := url.ParseRequestURI(val); err == nil {
 			rawPath = urlx.EscapedPath(forwardedURI)
 			query = forwardedURI.RawQuery
 			forceQuery = forwardedURI.ForceQuery
