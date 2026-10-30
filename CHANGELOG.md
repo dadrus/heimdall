@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.17.28](https://github.com/dadrus/heimdall/compare/v0.17.27...v0.17.28) (2026-10-30)
+
+
+### Bug Fixes
+
+* Parsing X-Forwarded-Uri header values as request URIs ([#3638](https://github.com/dadrus/heimdall/issues/3638)) ([b980711](https://github.com/dadrus/heimdall/commit/b980711b4b6975de86d7f71913bf84fa4925d988))
+
+
+### Documentation
+
+* Components used in docker compose examples updated to the most recent versions ([#3632](https://github.com/dadrus/heimdall/issues/3632)) ([438d3cc](https://github.com/dadrus/heimdall/commit/438d3ccecfb1ff5277b56331224d9895cff88a42))
+* Kubernetes quickstart examples modernized ([#3630](https://github.com/dadrus/heimdall/issues/3630)) ([1a29289](https://github.com/dadrus/heimdall/commit/1a292895fcb1eec5c4d04e8f6ce83262d4a233ae))
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to 2ffab32 ([#3620](https://github.com/dadrus/heimdall/issues/3620)) ([b490741](https://github.com/dadrus/heimdall/commit/b490741ce61bf361dc4496a6e2b7b6f55b697e40))
+* update kubernetes monorepo to v0.37.2 ([#3628](https://github.com/dadrus/heimdall/issues/3628)) ([caa7b70](https://github.com/dadrus/heimdall/commit/caa7b704daa1e4ec798ed5893d17213655f8258d))
+* update module cel.dev/cel-go to v0.33.1 ([#3625](https://github.com/dadrus/heimdall/issues/3625)) ([9681853](https://github.com/dadrus/heimdall/commit/9681853a3487fe0e54e373f79b1f962abbd90d44))
+* update module github.com/go-co-op/gocron/v2 to v2.23.0 ([#3618](https://github.com/dadrus/heimdall/issues/3618)) ([cbf25bb](https://github.com/dadrus/heimdall/commit/cbf25bb7dcf14c78625563ea811d2bc98cb02b86))
+* update module github.com/gobwas/glob to v1.1.0 ([#3636](https://github.com/dadrus/heimdall/issues/3636)) ([d530bb6](https://github.com/dadrus/heimdall/commit/d530bb696c7d2939dd716ab22fc5a1762873d1ce))
+* update module github.com/goccy/go-json to v0.12.0 ([#3635](https://github.com/dadrus/heimdall/issues/3635)) ([550ea61](https://github.com/dadrus/heimdall/commit/550ea618ed4d8ff87593d3cccf63bde8b70e647f))
+* update module google.golang.org/grpc to v1.85.0 ([#3623](https://github.com/dadrus/heimdall/issues/3623)) ([041d6a5](https://github.com/dadrus/heimdall/commit/041d6a52771c9e7caf48cae8eacf50daf096d87c))
+
 ## [0.17.27](https://github.com/dadrus/heimdall/compare/v0.17.26...v0.17.27) (2026-10-25)
 
 
