@@ -45,7 +45,10 @@ func extractURL(req *http.Request) url.URL {
 	host = strings.ToLower(host)
 
 	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
-		if forwardedURI, err := url.Parse(val); err == nil {
+		// X-Forwarded-Uri carries a request target (origin or absolute form), so parse it
+		// the way the request line is parsed: with url.Parse, a value starting with "//"
+		// would have its first path segment consumed as an authority.
+		if forwardedURI, err := url.ParseRequestURI(val); err == nil {
 			rawPath = urlx.EscapedPath(forwardedURI)
 			query = forwardedURI.RawQuery
 		}
