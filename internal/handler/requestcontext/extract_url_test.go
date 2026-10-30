@@ -120,6 +120,20 @@ func TestExtractURL(t *testing.T) {
 				assert.Equal(t, url.Values{"bar": []string{"foo"}}, extracted.Query())
 			},
 		},
+		"X-Forwarded-Uri with leading double slash is not read as an authority": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "//admin/settings?bar=foo")
+			},
+			assert: func(t *testing.T, extracted url.URL) {
+				t.Helper()
+
+				assert.Equal(t, "heimdall.test.local", extracted.Host)
+				assert.Equal(t, "/admin/settings", extracted.EscapedPath())
+				assert.Equal(t, url.Values{"bar": []string{"foo"}}, extracted.Query())
+			},
+		},
 		"X-Forwarded-Uri set with dot segments": {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
