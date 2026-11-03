@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.17.29](https://github.com/dadrus/heimdall/compare/v0.17.28...v0.17.29) (2026-11-03)
+
+
+### Dependencies
+
+* update module cel.dev/cel-go to v0.33.2 ([#3643](https://github.com/dadrus/heimdall/issues/3643)) ([44f2973](https://github.com/dadrus/heimdall/commit/44f2973dde5c21ab05c373ecf7e79bf9b2aa8881))
+* update module github.com/go-jose/go-jose/v4 to v4.1.7 ([#3640](https://github.com/dadrus/heimdall/issues/3640)) ([222bb0b](https://github.com/dadrus/heimdall/commit/222bb0b1781570d10e0ae9990fb2a2cd7a4e535c))
+* update module github.com/go-jose/go-jose/v4 to v4.1.8 ([#3645](https://github.com/dadrus/heimdall/issues/3645)) ([4dd4060](https://github.com/dadrus/heimdall/commit/4dd406057455ebeeff898319690e9434ee74dde5))
+* update module github.com/go-playground/validator/v10 to v10.30.6 ([#3646](https://github.com/dadrus/heimdall/issues/3646)) ([8841522](https://github.com/dadrus/heimdall/commit/8841522d37cd4fff1cf3fdf12dd70c5fd7a053f4))
+
 ## [0.17.28](https://github.com/dadrus/heimdall/compare/v0.17.27...v0.17.28) (2026-10-30)
 
 
