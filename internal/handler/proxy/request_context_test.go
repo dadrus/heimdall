@@ -477,7 +477,8 @@ func TestRequestContextFinalize(t *testing.T) {
 			targetURL, err := url.Parse(srv.URL)
 			require.NoError(t, err)
 
-			ctx := cf.Create(rw, req)
+			ctx, err := cf.Create(rw, req)
+			require.NoError(t, err)
 
 			defer cf.Destroy(ctx)
 

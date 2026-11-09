@@ -17,6 +17,7 @@
 package service
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
@@ -35,7 +36,18 @@ func NewHandler(rcf requestcontext.ContextFactory, re rule.Executor, eh errorhan
 }
 
 func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
-	rc := h.f.Create(rw, req)
+	rc, err := h.f.Create(rw, req)
+	if err != nil {
+		if errors.Is(err, requestcontext.ErrInvalidForwardedURI) {
+			rw.WriteHeader(http.StatusBadRequest)
+
+			return
+		}
+
+		h.eh.HandleError(rw, req, err)
+
+		return
+	}
 
 	defer h.f.Destroy(rc)
 

@@ -22,9 +22,11 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 
 	mocks2 "github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler/mocks"
+	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 	mocks3 "github.com/dadrus/heimdall/internal/handler/requestcontext/mocks"
 	"github.com/dadrus/heimdall/internal/rules/rule/mocks"
 )
@@ -33,11 +35,31 @@ func TestHandlerServeHTTP(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		setup func(*testing.T, *mocks.ExecutorMock, *mocks3.ContextMock, *mocks2.ErrorHandlerMock)
+		setup func(
+			*testing.T,
+			*mocks3.ContextFactoryMock,
+			*mocks.ExecutorMock,
+			*mocks3.ContextMock,
+			*mocks2.ErrorHandlerMock,
+			*httptest.ResponseRecorder,
+			*http.Request,
+		)
+		assert func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		"no error": {
-			setup: func(t *testing.T, exec *mocks.ExecutorMock, ctx *mocks3.ContextMock, _ *mocks2.ErrorHandlerMock) {
+			setup: func(
+				t *testing.T,
+				factory *mocks3.ContextFactoryMock,
+				exec *mocks.ExecutorMock,
+				ctx *mocks3.ContextMock,
+				_ *mocks2.ErrorHandlerMock,
+				rw *httptest.ResponseRecorder,
+				req *http.Request,
+			) {
 				t.Helper()
+
+				factory.EXPECT().Create(rw, req).Return(ctx, nil)
+				factory.EXPECT().Destroy(ctx)
 
 				upstream := mocks.NewBackendMock(t)
 
@@ -45,9 +67,58 @@ func TestHandlerServeHTTP(t *testing.T) {
 				ctx.EXPECT().Finalize(upstream).Return(nil)
 			},
 		},
-		"with error from executor": {
-			setup: func(t *testing.T, exec *mocks.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
+		"invalid request target": {
+			setup: func(
+				t *testing.T,
+				factory *mocks3.ContextFactoryMock,
+				_ *mocks.ExecutorMock,
+				_ *mocks3.ContextMock,
+				_ *mocks2.ErrorHandlerMock,
+				rw *httptest.ResponseRecorder,
+				req *http.Request,
+			) {
 				t.Helper()
+
+				factory.EXPECT().Create(rw, req).Return(nil, requestcontext.ErrInvalidForwardedURI)
+			},
+			assert: func(t *testing.T, rw *httptest.ResponseRecorder) {
+				t.Helper()
+
+				assert.Equal(t, http.StatusBadRequest, rw.Code)
+			},
+		},
+		"initialization fails unexpectedly": {
+			setup: func(
+				t *testing.T,
+				factory *mocks3.ContextFactoryMock,
+				_ *mocks.ExecutorMock,
+				_ *mocks3.ContextMock,
+				eh *mocks2.ErrorHandlerMock,
+				rw *httptest.ResponseRecorder,
+				req *http.Request,
+			) {
+				t.Helper()
+
+				err := errors.New("unexpected context error")
+
+				factory.EXPECT().Create(rw, req).Return(nil, err)
+				eh.EXPECT().HandleError(mock.Anything, mock.Anything, err)
+			},
+		},
+		"with error from executor": {
+			setup: func(
+				t *testing.T,
+				factory *mocks3.ContextFactoryMock,
+				exec *mocks.ExecutorMock,
+				ctx *mocks3.ContextMock,
+				eh *mocks2.ErrorHandlerMock,
+				rw *httptest.ResponseRecorder,
+				req *http.Request,
+			) {
+				t.Helper()
+
+				factory.EXPECT().Create(rw, req).Return(ctx, nil)
+				factory.EXPECT().Destroy(ctx)
 
 				err := errors.New("exec error")
 
@@ -56,8 +127,19 @@ func TestHandlerServeHTTP(t *testing.T) {
 			},
 		},
 		"with error from finalizer": {
-			setup: func(t *testing.T, exec *mocks.ExecutorMock, ctx *mocks3.ContextMock, eh *mocks2.ErrorHandlerMock) {
+			setup: func(
+				t *testing.T,
+				factory *mocks3.ContextFactoryMock,
+				exec *mocks.ExecutorMock,
+				ctx *mocks3.ContextMock,
+				eh *mocks2.ErrorHandlerMock,
+				rw *httptest.ResponseRecorder,
+				req *http.Request,
+			) {
 				t.Helper()
+
+				factory.EXPECT().Create(rw, req).Return(ctx, nil)
+				factory.EXPECT().Destroy(ctx)
 
 				err := errors.New("finalizer error")
 				upstream := mocks.NewBackendMock(t)
@@ -75,18 +157,18 @@ func TestHandlerServeHTTP(t *testing.T) {
 			rc := mocks3.NewContextMock(t)
 			eh := mocks2.NewErrorHandlerMock(t)
 
-			tc.setup(t, re, rc, eh)
-
-			proxy := NewHandler(rcf, re, eh)
-
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", nil)
 			rw := httptest.NewRecorder()
 
-			rcf.EXPECT().Create(rw, req).Return(rc)
-			rcf.EXPECT().Destroy(rc)
+			tc.setup(t, rcf, re, rc, eh, rw, req)
+
+			proxy := NewHandler(rcf, re, eh)
 
 			// WHEN -> THEN expectations are met
 			proxy.ServeHTTP(rw, req)
+			if tc.assert != nil {
+				tc.assert(t, rw)
+			}
 		})
 	}
 }
