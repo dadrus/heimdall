@@ -647,7 +647,7 @@ func TestDecodeAuthenticationStrategyHookFuncForHTTPMessageSignatures(t *testing
 auth:
   type: http_message_signatures
   config:
-    components: ["@method"]
+    components: ['"@method"']
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
@@ -663,7 +663,7 @@ auth:
   config:
     signer:
       name: foo
-    components: ["@method"]
+    components: ['"@method"']
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
@@ -680,7 +680,7 @@ auth:
     signer:
       secret:
         selector: bar
-    components: ["@method"]
+    components: ['"@method"']
 `),
 			assert: func(t *testing.T, err error, _ endpoint.AuthenticationStrategy) {
 				t.Helper()
@@ -711,7 +711,7 @@ auth:
 auth:
   type: http_message_signatures
   config:
-    components: ["@method"]
+    components: ['"@method"']
     signer:
       secret:
         source: foo
@@ -737,7 +737,7 @@ auth:
 auth:
   type: http_message_signatures
   config:
-    components: ["@method"]
+    components: ['"@method"']
     foo: bar
     signer:
       secret:
@@ -757,7 +757,7 @@ auth:
 auth:
   type: http_message_signatures
   config:
-    components: ["@method"]
+    components: ['"@method"']
     signer:
       secret:
         source: foo
