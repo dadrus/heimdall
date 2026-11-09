@@ -377,7 +377,9 @@ The label to use. Defaults to `sig`.
 
 * *`components`*: _string array_ (mandatory)
 +
-The components to be covered by the signature. While the RFC allows for signatures that do not cover any components, this is considered a security risk. When using the `"content-digest"` component, Heimdall will compute hash values of the request body using `sha-256` and `sha-512` algorithms. It will then add a `Content-Digest` header with these hash values to the request, and this header will be included in the signature calculation.
+The components to be covered by the signature. While the RFC allows for signatures that do not cover any components, this is considered a security risk. When using the `'"content-digest"'` component, Heimdall will compute hash values of the request body using `sha-256` and `sha-512` algorithms. It will then add a `Content-Digest` header with these hash values to the request, and this header will be included in the signature calculation.
++
+NOTE: Component identifiers are represented as serialized HTTP Structured Fields items, e.g. `'"content-digest"'` or `'"content-digest";key="sha-256"'`.
 
 * *`signer`*: _link:{{< relref "/docs/configuration/types.adoc#_signer" >}}[Signer]_ (mandatory)
 +
@@ -392,7 +394,7 @@ type: http_message_signatures
 config:
   ttl: 2m
   label: foo
-  components: ["@method", "content-digest", "@authority", "x-my-fancy-header"]
+  components: ['"@method"', '"content-digest"', '"@authority"', '"x-my-fancy-header"']
   signer:
     name: bar
     secret:
