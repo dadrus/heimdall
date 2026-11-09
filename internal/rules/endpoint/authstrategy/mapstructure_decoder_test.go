@@ -692,7 +692,7 @@ auth:
 auth:
   type: http_message_signatures
   config:
-    components: ["@method"]
+    components: ['"@method"']
     signer:
       key_store:
         path: ` + pemFile.Name() + `
@@ -718,7 +718,7 @@ auth:
 auth:
   type: http_message_signatures
   config:
-    components: ["@method"]
+    components: ['"@method"']
     signer:
       key_store:
         path: ` + pemFile.Name() + `
@@ -756,7 +756,7 @@ auth:
   config:
     ttl: 1m
     label: bar
-    components: ["@method"]
+    components: ['"@method"']
     signer:
       name: foobar
       key_id: key1

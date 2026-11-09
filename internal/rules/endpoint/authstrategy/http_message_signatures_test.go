@@ -57,8 +57,7 @@ func TestToHTTPSigKey(t *testing.T) {
 			key := toHTTPSigKey(kse)
 
 			assert.Equal(t, alg, key.Algorithm)
-			assert.Equal(t, kse.KeyID, key.KeyID)
-			assert.Equal(t, kse.PrivateKey, key.Key)
+			assert.Equal(t, kse.PrivateKey, key.Material)
 		})
 	}
 }
@@ -182,7 +181,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 		"successful configuration with default ttl": {
 			conf: &HTTPMessageSignatures{
 				Signer:     SignerConfig{KeyStore: KeyStore{Path: trustStorePath}, KeyID: "key1"},
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 			},
 			assert: func(t *testing.T, err error, conf *HTTPMessageSignatures) {
 				t.Helper()
@@ -201,7 +200,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 		"successful configuration with custom ttl": {
 			conf: &HTTPMessageSignatures{
 				Signer:     SignerConfig{KeyStore: KeyStore{Path: trustStorePath}, KeyID: "key1"},
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL: func() *time.Duration {
 					ttl := 1 * time.Hour
 
@@ -355,7 +354,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 		"fails": {
 			conf: &HTTPMessageSignatures{
 				Signer:     SignerConfig{KeyStore: KeyStore{Path: trustStorePath}},
-				Components: []string{"x-some-header"},
+				Components: []string{`"x-some-header"`},
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -369,7 +368,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 		"successful": {
 			conf: &HTTPMessageSignatures{
 				Signer:     SignerConfig{KeyStore: KeyStore{Path: trustStorePath}},
-				Components: []string{"@method", "content-digest"},
+				Components: []string{`"@method"`, `"content-digest"`},
 			},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
@@ -478,7 +477,7 @@ func TestHTTPMessageSignaturesOnChanged(t *testing.T) {
 
 	conf := &HTTPMessageSignatures{
 		Signer:     SignerConfig{KeyStore: KeyStore{Path: pemFile.Name()}, KeyID: "key1"},
-		Components: []string{"@method"},
+		Components: []string{`"@method"`},
 	}
 	err = conf.init()
 	require.NoError(t, err)

@@ -36,20 +36,16 @@ func BenchmarkHTTPMessageSignaturesApply(b *testing.B) {
 	}{
 		{
 			name:       "derived_component",
-			components: []string{"@method"},
+			components: []string{`"@method"`},
 		},
 		{
-			name: "header_components",
-			components: []string{
-				"@method",
-				"content-type",
-				"x-tenant-id",
-			},
+			name:             "header_components",
+			components:       []string{`"@method"`, `"content-type"`, `"x-tenant-id"`},
 			populatedHeaders: true,
 		},
 		{
 			name:       "content_digest",
-			components: []string{"@method", "content-digest"},
+			components: []string{`"@method"`, `"content-digest"`},
 			body:       benchmarkRequestBody,
 		},
 	} {
@@ -97,8 +93,7 @@ func newHTTPMessageSignaturesBenchmarkStrategy(
 	signer, err := httpsig.NewSigner(
 		httpsig.Key{
 			Algorithm: httpsig.EcdsaP384Sha384,
-			KeyID:     "benchmark",
-			Key:       privateKey,
+			Material:  privateKey,
 		},
 		httpsig.WithComponents(components...),
 	)
