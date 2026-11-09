@@ -43,12 +43,17 @@ type contextFactory struct {
 	pool         *sync.Pool
 }
 
-func (cf *contextFactory) Create(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
+func (cf *contextFactory) Create(rw http.ResponseWriter, req *http.Request) (requestcontext.Context, error) {
 	rc := cf.pool.Get().(*requestContext) //nolint: forcetypeassert
 
-	rc.Init(rw, req, cf.roundTripper)
+	if err := rc.Init(rw, req, cf.roundTripper); err != nil {
+		rc.Reset()
+		cf.pool.Put(rc)
 
-	return rc
+		return nil, err
+	}
+
+	return rc, nil
 }
 
 func (cf *contextFactory) Destroy(ctx requestcontext.Context) {
@@ -99,12 +104,12 @@ type requestContext struct {
 	rt  http.RoundTripper
 }
 
-func (r *requestContext) Init(rw http.ResponseWriter, req *http.Request, rt http.RoundTripper) {
+func (r *requestContext) Init(rw http.ResponseWriter, req *http.Request, rt http.RoundTripper) error {
 	r.rw = rw
 	r.rt = rt
 	r.req = req
 
-	r.RequestContext.Init(req)
+	return r.RequestContext.Init(req)
 }
 
 func (r *requestContext) Reset() {

@@ -17,6 +17,7 @@
 package requestcontext
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -25,7 +26,11 @@ import (
 	"github.com/dadrus/heimdall/internal/x/urlx"
 )
 
-func extractURL(req *http.Request) url.URL {
+// ErrInvalidForwardedURI indicates that an explicitly supplied request target
+// cannot be used as the resource for authorization.
+var ErrInvalidForwardedURI = errors.New("invalid X-Forwarded-Uri")
+
+func extractURL(req *http.Request) (url.URL, error) {
 	var (
 		rawPath string
 		path    string
@@ -45,20 +50,22 @@ func extractURL(req *http.Request) url.URL {
 	host = strings.ToLower(host)
 
 	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
-		// X-Forwarded-Uri carries a request target (origin or absolute form), so parse it
-		// the way the request line is parsed: with url.Parse, a value starting with "//"
-		// would have its first path segment consumed as an authority.
-		if forwardedURI, err := url.ParseRequestURI(val); err == nil {
-			rawPath = urlx.EscapedPath(forwardedURI)
-			query = forwardedURI.RawQuery
+		// ParseRequestURI retains a leading "//" as part of the path.
+		forwardedURI, err := url.ParseRequestURI(val)
+		if err != nil {
+			return url.URL{}, ErrInvalidForwardedURI
 		}
+
+		rawPath = urlx.EscapedPath(forwardedURI)
+		if len(rawPath) == 0 {
+			return url.URL{}, ErrInvalidForwardedURI
+		}
+
+		query = forwardedURI.RawQuery
 	}
 
 	if len(rawPath) == 0 {
 		rawPath = urlx.EscapedPath(req.URL)
-	}
-
-	if len(query) == 0 {
 		query = req.URL.RawQuery
 	}
 
@@ -71,5 +78,5 @@ func extractURL(req *http.Request) url.URL {
 		Path:     path,
 		RawPath:  rawPath,
 		RawQuery: query,
-	}
+	}, nil
 }

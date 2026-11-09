@@ -18,15 +18,19 @@ package grpcv3
 
 import (
 	"context"
+	"errors"
 
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	envoy_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 
+	"github.com/dadrus/heimdall/internal/accesscontext"
 	"github.com/dadrus/heimdall/internal/rules/rule"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
+
+var errInvalidAuthority = errors.New("invalid authority")
 
 type Handler struct {
 	e  rule.Executor
@@ -35,13 +39,21 @@ type Handler struct {
 
 func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
 	if !httpx.IsValidAuthority(req.GetAttributes().GetRequest().GetHttp().GetHost()) {
+		accesscontext.SetError(ctx, errInvalidAuthority)
+
 		return badRequest(), nil
 	}
 
-	reqCtx := h.cf.Create(ctx, req)
+	reqCtx, err := h.cf.Create(ctx, req)
+	if err != nil {
+		accesscontext.SetError(ctx, err)
+
+		return badRequest(), nil
+	}
+
 	defer h.cf.Destroy(reqCtx)
 
-	_, err := h.e.Execute(reqCtx)
+	_, err = h.e.Execute(reqCtx)
 	if err != nil {
 		return nil, err
 	}

@@ -39,7 +39,7 @@ func (_m *ContextFactoryMock) EXPECT() *ContextFactoryMock_Expecter {
 }
 
 // Create provides a mock function for the type ContextFactoryMock
-func (_mock *ContextFactoryMock) Create(rw http.ResponseWriter, req *http.Request) requestcontext.Context {
+func (_mock *ContextFactoryMock) Create(rw http.ResponseWriter, req *http.Request) (requestcontext.Context, error) {
 	ret := _mock.Called(rw, req)
 
 	if len(ret) == 0 {
@@ -47,14 +47,16 @@ func (_mock *ContextFactoryMock) Create(rw http.ResponseWriter, req *http.Reques
 	}
 
 	var r0 requestcontext.Context
-	if returnFunc, ok := ret.Get(0).(func(http.ResponseWriter, *http.Request) requestcontext.Context); ok {
-		r0 = returnFunc(rw, req)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(requestcontext.Context)
-		}
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(http.ResponseWriter, *http.Request) (requestcontext.Context, error)); ok {
+		return returnFunc(rw, req)
+	} else if ret.Get(0) != nil {
+		r0 = ret.Get(0).(requestcontext.Context)
 	}
-	return r0
+	if ret.Get(1) != nil {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
 }
 
 // ContextFactoryMock_Create_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Create'
@@ -87,12 +89,12 @@ func (_c *ContextFactoryMock_Create_Call) Run(run func(rw http.ResponseWriter, r
 	return _c
 }
 
-func (_c *ContextFactoryMock_Create_Call) Return(context requestcontext.Context) *ContextFactoryMock_Create_Call {
-	_c.Call.Return(context)
+func (_c *ContextFactoryMock_Create_Call) Return(context requestcontext.Context, err error) *ContextFactoryMock_Create_Call {
+	_c.Call.Return(context, err)
 	return _c
 }
 
-func (_c *ContextFactoryMock_Create_Call) RunAndReturn(run func(rw http.ResponseWriter, req *http.Request) requestcontext.Context) *ContextFactoryMock_Create_Call {
+func (_c *ContextFactoryMock_Create_Call) RunAndReturn(run func(rw http.ResponseWriter, req *http.Request) (requestcontext.Context, error)) *ContextFactoryMock_Create_Call {
 	_c.Call.Return(run)
 	return _c
 }

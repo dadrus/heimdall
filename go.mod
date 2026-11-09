@@ -227,4 +227,4 @@ require (
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
-replace golang.org/x/net v0.59.0 => golang.org/x/net v0.61.0
+replace golang.org/x/net v0.60.0 => golang.org/x/net v0.62.0

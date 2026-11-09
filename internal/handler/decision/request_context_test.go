@@ -150,7 +150,8 @@ func TestRequestContextFinalize(t *testing.T) {
 			require.NoError(t, err)
 
 			cf := newContextFactory(tc.code)
-			reqCtx := cf.Create(rw, req)
+			reqCtx, err := cf.Create(rw, req)
+			require.NoError(t, err)
 
 			defer cf.Destroy(reqCtx)
 

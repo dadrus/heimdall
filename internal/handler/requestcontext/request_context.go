@@ -62,11 +62,18 @@ func New() *RequestContext {
 	return rc
 }
 
-func (r *RequestContext) Init(req *http.Request) {
+func (r *RequestContext) Init(req *http.Request) error {
+	requestURL, err := extractURL(req)
+	if err != nil {
+		return err
+	}
+
 	r.req = req
 	r.hmdlReq.Method = extractMethod(req)
-	r.hmdlReq.URL.URL = extractURL(req)
+	r.hmdlReq.URL.URL = requestURL
 	r.hmdlReq.ClientIPAddresses = requestClientIPs(r.hmdlReq.ClientIPAddresses, req)
+
+	return nil
 }
 
 func (r *RequestContext) Reset() {

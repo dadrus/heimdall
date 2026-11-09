@@ -138,9 +138,10 @@ func TestRequestClientIPs(t *testing.T) {
 			rc := New()
 
 			// WHEN
-			rc.Init(req)
+			err := rc.Init(req)
 
 			// THEN
+			require.NoError(t, err)
 			tc.assert(t, rc.hmdlReq.ClientIPAddresses)
 		})
 	}
@@ -155,7 +156,7 @@ func TestRequestContextHeaders(t *testing.T) {
 	req.Header.Add("X-Foo-Bar", "bar")
 
 	ctx := New()
-	ctx.Init(req)
+	require.NoError(t, ctx.Init(req))
 
 	// WHEN
 	headers := ctx.Request().Headers()
@@ -176,7 +177,7 @@ func TestRequestContextHeader(t *testing.T) {
 	req.Host = "Bar.foo"
 
 	ctx := New()
-	ctx.Init(req)
+	require.NoError(t, ctx.Init(req))
 
 	// WHEN
 	xFooBarValue := ctx.Request().Header("X-Foo-Bar")
@@ -197,7 +198,7 @@ func TestRequestContextCookie(t *testing.T) {
 	req.Header.Set("Cookie", "foo=bar; bar=baz")
 
 	ctx := New()
-	ctx.Init(req)
+	require.NoError(t, ctx.Init(req))
 
 	// WHEN
 	value1 := ctx.Request().Cookie("bar")
@@ -293,7 +294,7 @@ func TestRequestContextBody(t *testing.T) {
 			req.Header.Set("Content-Type", tc.ct)
 
 			ctx := New()
-			ctx.Init(req)
+			require.NoError(t, ctx.Init(req))
 
 			// WHEN
 			data := ctx.Request().Body()
@@ -309,7 +310,13 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 
 	// GIVEN
 	ctx := New()
-	ctx.Init(httptest.NewRequestWithContext(t.Context(), http.MethodHead, "https://foo.bar/test", nil))
+	err := ctx.Init(httptest.NewRequestWithContext(
+		t.Context(),
+		http.MethodHead,
+		"https://foo.bar/test",
+		nil,
+	))
+	require.NoError(t, err)
 
 	ctx.Request().URL.Captures = map[string]string{"a": "b"}
 
@@ -332,7 +339,7 @@ func TestRequestContextReset(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	ctx := New()
-	ctx.Init(req)
+	require.NoError(t, ctx.Init(req))
 	ctx.Request().URL.Captures = map[string]string{"a": "b"}
 	ctx.SetPipelineError(errors.New("pipeline error"))
 	_ = ctx.Body()
