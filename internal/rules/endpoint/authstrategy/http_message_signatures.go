@@ -20,8 +20,10 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/base64"
 	"errors"
 	"net/http"
 	"sync/atomic"
@@ -71,7 +73,13 @@ func (s *HTTPMessageSignatures) Apply(req *http.Request) error {
 		)
 	}
 
-	header, err := signer.Sign(httpsig.MessageFromRequest(req))
+	nonce := make([]byte, 16)
+	_, _ = rand.Read(nonce)
+
+	header, err := signer.Sign(
+		httpsig.MessageFromRequest(req),
+		httpsig.WithParameter(httpsig.Nonce, base64.StdEncoding.EncodeToString(nonce)),
+	)
 	if err != nil {
 		return err
 	}
@@ -148,10 +156,12 @@ func (s *HTTPMessageSignatures) createSigner(secret secrets.Secret) (httpsig.Sig
 
 	signer, err := httpsig.NewSigner(
 		key,
+		httpsig.WithKeyID(aks.KeyID()),
 		httpsig.WithComponents(s.Components...),
 		httpsig.WithTag(s.Signer.Name),
 		httpsig.WithLabel(s.Label),
 		httpsig.WithTTL(*s.TTL),
+		httpsig.WithAlg(),
 	)
 	if err != nil {
 		return nil, errorchain.NewWithMessage(
@@ -219,8 +229,7 @@ func toHTTPSigKey(secret secrets.AsymmetricKeySecret) (httpsig.Key, error) {
 
 	return httpsig.Key{
 		Algorithm: httpSigAlg,
-		KeyID:     secret.KeyID(),
-		Key:       secret.PrivateKey(),
+		Material:  secret.PrivateKey(),
 	}, nil
 }
 

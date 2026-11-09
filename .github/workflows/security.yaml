@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
       - name: Checkout repository
@@ -29,7 +29,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Run Trivy vulnerability scanner in repo mode
-        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87 # master
+        uses: aquasecurity/trivy-action@38b337fff0a2f984d5be173c99e3f633438167ec # master
         with:
           scan-type: 'fs'
           ignore-unfixed: true
@@ -38,7 +38,7 @@ jobs:
           severity: 'CRITICAL,HIGH'
           skip-dirs: 'docs/content/docs,docs/build'
       - name: Upload Trivy scan results to GitHub Security tab
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           sarif_file: 'trivy-results.sarif'
 
@@ -50,7 +50,7 @@ jobs:
     timeout-minutes: 30
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@46b06cea07f9e64621fdf066ba77ac6915163d43 # v2.22.3
+        uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
       - name: Checkout repository
@@ -62,11 +62,11 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           languages: go
           queries: security-and-quality
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
         with:
           category: "/language:go"
