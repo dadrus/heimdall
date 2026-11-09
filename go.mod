@@ -51,7 +51,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.1.0
 	github.com/stretchr/testify v1.12.1
-	github.com/tidwall/gjson v1.20.1
+	github.com/tidwall/gjson v1.20.2
 	github.com/tonglil/opentelemetry-go-datadog-propagator v0.1.3
 	github.com/undefinedlabs/go-mpatch v1.0.7
 	github.com/wI2L/jsondiff v0.7.1
@@ -183,7 +183,7 @@ require (
 	github.com/spiffe/go-spiffe/v2 v2.8.1 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/tidwall/match v1.2.0 // indirect
-	github.com/tidwall/pretty v1.2.1 // indirect
+	github.com/tidwall/pretty v1.3.0 // indirect
 	github.com/tidwall/sjson v1.2.5 // indirect
 	github.com/tklauser/go-sysconf v0.4.0 // indirect
 	github.com/tklauser/numcpus v0.12.0 // indirect
