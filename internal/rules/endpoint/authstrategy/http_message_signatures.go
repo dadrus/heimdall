@@ -17,7 +17,9 @@
 package authstrategy
 
 import (
+	"crypto/rand"
 	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"sync"
@@ -83,7 +85,13 @@ func (s *HTTPMessageSignatures) Apply(req *http.Request) error {
 	s.mut.RLock()
 	defer s.mut.RUnlock()
 
-	header, err := s.signer.Sign(httpsig.MessageFromRequest(req))
+	nonce := make([]byte, 16)
+	_, _ = rand.Read(nonce)
+
+	header, err := s.signer.Sign(
+		httpsig.MessageFromRequest(req),
+		httpsig.WithParameter(httpsig.Nonce, base64.StdEncoding.EncodeToString(nonce)),
+	)
 	if err != nil {
 		return err
 	}
@@ -179,6 +187,8 @@ func (s *HTTPMessageSignatures) init() error {
 		httpsig.WithTag(s.Signer.Name),
 		httpsig.WithLabel(s.Label),
 		httpsig.WithTTL(*s.TTL),
+		httpsig.WithKeyID(kse.KeyID),
+		httpsig.WithAlg(),
 	)
 	if err != nil {
 		return errorchain.NewWithMessage(heimdall.ErrConfiguration,
@@ -209,8 +219,7 @@ func toHTTPSigKey(entry *keystore.Entry) httpsig.Key {
 
 	return httpsig.Key{
 		Algorithm: httpSigAlg,
-		KeyID:     entry.KeyID,
-		Key:       entry.PrivateKey,
+		Material:  entry.PrivateKey,
 	}
 }
 
