@@ -18,6 +18,7 @@ package grpcv3
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -41,12 +42,16 @@ type contextFactory struct {
 	pool *sync.Pool
 }
 
-func (cf *contextFactory) Create(ctx context.Context, req *envoy_auth.CheckRequest) *RequestContext {
+func (cf *contextFactory) Create(ctx context.Context, req *envoy_auth.CheckRequest) (*RequestContext, error) {
 	rc := cf.pool.Get().(*RequestContext) //nolint: forcetypeassert
 
-	rc.Init(ctx, req)
+	if err := rc.Init(ctx, req); err != nil {
+		cf.Destroy(rc)
 
-	return rc
+		return nil, err
+	}
+
+	return rc, nil
 }
 
 func (cf *contextFactory) Destroy(rc *RequestContext) {
@@ -62,6 +67,8 @@ func newContextFactory() *contextFactory {
 		}},
 	}
 }
+
+var errInvalidRequestURI = errors.New("invalid request URI")
 
 type RequestContext struct {
 	ctx             context.Context // nolint: containedctx
@@ -95,16 +102,21 @@ func newRequestContext() *RequestContext {
 	return rc
 }
 
-func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest) {
+func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest) error {
 	httpReq := req.GetAttributes().GetRequest().GetHttp()
 
 	parsed, err := url.ParseRequestURI(httpReq.GetPath())
 	if err != nil {
-		parsed = &url.URL{}
-	} else {
-		parsed.RawPath = urlx.NormalizePath(urlx.EscapedPath(parsed))
-		parsed.Path, _ = url.PathUnescape(parsed.RawPath)
+		return errInvalidRequestURI
 	}
+
+	rawPath := urlx.EscapedPath(parsed)
+	if len(rawPath) == 0 {
+		return errInvalidRequestURI
+	}
+
+	parsed.RawPath = urlx.NormalizePath(rawPath)
+	parsed.Path, _ = url.PathUnescape(parsed.RawPath)
 
 	r.ctx = ctx
 	r.reqHeaders = canonicalizeHeaders(httpReq.GetHeaders())
@@ -124,6 +136,8 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 		r.hmdlReq.ClientIPAddresses,
 		r.reqHeaders,
 	)
+
+	return nil
 }
 
 func requestClientIPs(ctx context.Context, ips []string, headers map[string]string) []string {

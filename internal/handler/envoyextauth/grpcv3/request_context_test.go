@@ -75,7 +75,8 @@ func TestNewRequestContext(t *testing.T) {
 	})
 
 	cf := newContextFactory()
-	ctx := cf.Create(grpcCtx, checkReq)
+	ctx, err := cf.Create(grpcCtx, checkReq)
+	require.NoError(t, err)
 
 	defer cf.Destroy(ctx)
 
@@ -163,7 +164,7 @@ func TestRequestContextURL(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := cf.Create(
+			ctx, err := cf.Create(
 				t.Context(),
 				&envoy_auth.CheckRequest{
 					Attributes: &envoy_auth.AttributeContext{
@@ -175,6 +176,7 @@ func TestRequestContextURL(t *testing.T) {
 					},
 				},
 			)
+			require.NoError(t, err)
 
 			defer cf.Destroy(ctx)
 
@@ -184,6 +186,59 @@ func TestRequestContextURL(t *testing.T) {
 			assert.Equal(t, tc.rawQuery, ctx.Request().URL.RawQuery)
 		})
 	}
+}
+
+func TestRequestContextInitInvalidURI(t *testing.T) {
+	t.Parallel()
+
+	for name, path := range map[string]string{
+		"invalid path parameter escape": "/admin/settings;x=%",
+		"invalid hex escape":            "/admin/%zz",
+		"pathless absolute URI":         "http://admin",
+		"empty path":                    "",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			req := &envoy_auth.CheckRequest{
+				Attributes: &envoy_auth.AttributeContext{
+					Request: &envoy_auth.AttributeContext_Request{
+						Http: &envoy_auth.AttributeContext_HttpRequest{Path: path},
+					},
+				},
+			}
+
+			rc := newRequestContext()
+			err := rc.Init(t.Context(), req)
+
+			require.ErrorIs(t, err, errInvalidRequestURI)
+		})
+	}
+}
+
+func TestContextFactoryRejectsInvalidURI(t *testing.T) {
+	t.Parallel()
+
+	cf := newContextFactory()
+	req := &envoy_auth.CheckRequest{
+		Attributes: &envoy_auth.AttributeContext{
+			Request: &envoy_auth.AttributeContext_Request{
+				Http: &envoy_auth.AttributeContext_HttpRequest{Path: "/admin/%zz"},
+			},
+		},
+	}
+
+	ctx, err := cf.Create(t.Context(), req)
+
+	require.ErrorIs(t, err, errInvalidRequestURI)
+	assert.Nil(t, ctx)
+
+	req.Attributes.Request.Http.Path = "/admin"
+	ctx, err = cf.Create(t.Context(), req)
+	require.NoError(t, err)
+	defer cf.Destroy(ctx)
+
+	assert.Equal(t, "/admin", ctx.Request().URL.Path)
 }
 
 func TestRequestContextFinalize(t *testing.T) {
@@ -360,7 +415,8 @@ func TestRequestContextFinalize(t *testing.T) {
 				},
 			}
 
-			ctx := cf.Create(t.Context(), checkReq)
+			ctx, err := cf.Create(t.Context(), checkReq)
+			require.NoError(t, err)
 
 			defer cf.Destroy(ctx)
 
@@ -458,7 +514,7 @@ func TestRequestContextBody(t *testing.T) {
 	} {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
-			ctx := cf.Create(
+			ctx, err := cf.Create(
 				t.Context(),
 				&envoy_auth.CheckRequest{
 					Attributes: &envoy_auth.AttributeContext{
@@ -472,6 +528,7 @@ func TestRequestContextBody(t *testing.T) {
 					},
 				},
 			)
+			require.NoError(t, err)
 
 			defer cf.Destroy(ctx)
 
@@ -489,7 +546,7 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 
 	// GIVEN
 	cf := newContextFactory()
-	ctx := cf.Create(
+	ctx, err := cf.Create(
 		t.Context(),
 		&envoy_auth.CheckRequest{
 			Attributes: &envoy_auth.AttributeContext{
@@ -503,6 +560,7 @@ func TestRequestContextRequestURLCaptures(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	defer cf.Destroy(ctx)
 
@@ -547,7 +605,7 @@ func TestRequestContextReset(t *testing.T) {
 
 	// GIVEN
 	ctx := newRequestContext()
-	ctx.Init(grpcCtx, checkReq)
+	require.NoError(t, ctx.Init(grpcCtx, checkReq))
 	ctx.Request().URL.Captures = map[string]string{"b": "a"}
 	ctx.SetPipelineError(errors.New("test error"))
 	_ = ctx.Body()
@@ -628,13 +686,14 @@ func TestRequestContextHeader(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := cf.Create(
+			ctx, err := cf.Create(
 				t.Context(),
 				&envoy_auth.CheckRequest{
 					Attributes: &envoy_auth.AttributeContext{
 						Request: &envoy_auth.AttributeContext_Request{
 							Http: &envoy_auth.AttributeContext_HttpRequest{
 								Host: "FoO.Bar",
+								Path: "/",
 								Headers: map[string]string{
 									"x-foo": "bar",
 								},
@@ -643,6 +702,7 @@ func TestRequestContextHeader(t *testing.T) {
 					},
 				},
 			)
+			require.NoError(t, err)
 
 			defer cf.Destroy(ctx)
 
