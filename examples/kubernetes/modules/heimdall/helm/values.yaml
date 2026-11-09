@@ -76,5 +76,5 @@ env:
 
 image:
   repository: ghcr.io/dadrus/heimdall
-  tag: 0.17.28
+  tag: 0.17.29
   pullPolicy: IfNotPresent
