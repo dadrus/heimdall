@@ -49,7 +49,8 @@ func TestRequestContextUpstreamRequest(t *testing.T) {
 			)
 
 			cf := newContextFactory()
-			reqCtx := cf.Create(req)
+			reqCtx, err := cf.Create(req)
+			require.NoError(t, err)
 
 			defer cf.Destroy(reqCtx)
 
@@ -79,7 +80,7 @@ func TestRequestContextReset(t *testing.T) {
 		NetHTTPRequestContext: requestcontext.New(),
 	}
 
-	ctx.Init(
+	err := ctx.Init(
 		httptest.NewRequestWithContext(
 			t.Context(),
 			http.MethodGet,
@@ -87,6 +88,7 @@ func TestRequestContextReset(t *testing.T) {
 			nil,
 		),
 	)
+	require.NoError(t, err)
 	ctx.PrepareUpstreamView(nil)
 
 	ctx.UpstreamRequest().AddHeader("X-Foo", "bar")
@@ -109,7 +111,8 @@ func TestRequestContextReset(t *testing.T) {
 	)
 	req.Header.Set("X-New", "bar")
 
-	ctx.Init(req)
+	err = ctx.Init(req)
+	require.NoError(t, err)
 	ctx.PrepareUpstreamView(nil)
 
 	assert.Equal(t, http.Header{
@@ -125,7 +128,7 @@ func TestRequestContextWithParent(t *testing.T) {
 	ctx := &requestContext{
 		NetHTTPRequestContext: requestcontext.New(),
 	}
-	ctx.Init(
+	err := ctx.Init(
 		httptest.NewRequestWithContext(
 			context.TODO(),
 			http.MethodGet,
@@ -133,6 +136,7 @@ func TestRequestContextWithParent(t *testing.T) {
 			nil,
 		),
 	)
+	require.NoError(t, err)
 
 	orig := ctx.Context()
 

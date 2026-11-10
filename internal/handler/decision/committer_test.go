@@ -161,7 +161,8 @@ func TestCommitterCommit(t *testing.T) {
 			}
 
 			cf := newContextFactory()
-			reqCtx := cf.Create(req)
+			reqCtx, err := cf.Create(req)
+			require.NoError(t, err)
 
 			defer cf.Destroy(reqCtx)
 
