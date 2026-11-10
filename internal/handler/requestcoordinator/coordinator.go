@@ -19,7 +19,7 @@ package requestcoordinator
 import "github.com/dadrus/heimdall/internal/pipeline"
 
 type ContextFactory[I any, C pipeline.ExecutionContext] interface {
-	Create(input I) C
+	Create(input I) (C, error)
 	Destroy(ctx C)
 }
 
@@ -56,7 +56,13 @@ func New[
 }
 
 func (c *Coordinator[I, T, C, O]) Handle(input I, target T) (O, error) {
-	ctx := c.factory.Create(input)
+	ctx, err := c.factory.Create(input)
+	if err != nil {
+		var zero O
+
+		return zero, err
+	}
+
 	defer c.factory.Destroy(ctx)
 
 	var zero O
