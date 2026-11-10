@@ -80,12 +80,9 @@
 
 ## [0.17.24](https://github.com/dadrus/heimdall/compare/v0.17.23...v0.17.24) (2026-10-13)
 
-<<<<<<< HEAD
 This release includes updates to the Go standard library and several dependencies, addressing multiple high- and critical-severity security vulnerabilities. Upgrading to this version is therefore strongly recommended.
 
 The glob library has also been updated to version 1.0.0, which introduces changes to pattern matching behavior that may affect compatibility with existing rules. We recommend reviewing custom glob patterns for potential differences in matching behavior.
-=======
->>>>>>> release
 
 ### Dependencies
 
