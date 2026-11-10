@@ -54,7 +54,7 @@ func TestContextFactoryCreate(t *testing.T) {
 				t.Helper()
 
 				require.ErrorIs(t, err, requestcontext.ErrInvalidForwardedURI)
-				// context is resetted on errors
+				// Context state is reset on initialization errors.
 				assert.Nil(t, rctx.Context())
 			},
 		},
@@ -62,15 +62,20 @@ func TestContextFactoryCreate(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
+			// GIVEN
 			seed := &requestContext{NetHTTPRequestContext: requestcontext.New()}
+			seed.SetParent(t.Context())
+
 			cf := newContextFactory()
 			cf.pool.New = func() any { return seed }
 
+			// WHEN
 			ctx, err := cf.Create(tc.req)
 			if err == nil {
 				defer cf.Destroy(ctx)
 			}
 
+			// THEN
 			tc.assert(t, seed, err)
 		})
 	}

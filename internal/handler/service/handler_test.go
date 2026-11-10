@@ -78,9 +78,10 @@ func TestHandlerServeHTTP(t *testing.T) {
 
 			handler := NewHandler(coordinator, eh)
 
-			// WHEN -> THEN expectations are met
+			// WHEN
 			handler.ServeHTTP(rw, req)
 
+			// THEN
 			if tc.status != 0 {
 				assert.Equal(t, tc.status, rw.Code)
 			}

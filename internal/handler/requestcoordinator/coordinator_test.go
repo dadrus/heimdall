@@ -195,6 +195,7 @@ func TestCoordinatorHandle(t *testing.T) {
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			// GIVEN
 			ctx := pipelinemocks.NewExecutionContextMock(t)
 			executor := pipelinemocks.NewExecutorMock(t)
 
@@ -207,8 +208,10 @@ func TestCoordinatorHandle(t *testing.T) {
 
 			coordinator := New(executor, factory, committer)
 
+			// WHEN
 			result, err := coordinator.Handle(input, target)
 
+			// THEN
 			tc.assert(t, result, err, committer, factory)
 
 			assert.Equal(t, 1, factory.createCalls)

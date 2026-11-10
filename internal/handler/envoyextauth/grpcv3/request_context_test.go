@@ -163,19 +163,22 @@ func TestRequestContextURL(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
+			// GIVEN
 			ctx := newRequestContext()
-			err := ctx.Init(
-				t.Context(),
-				&envoy_auth.CheckRequest{
-					Attributes: &envoy_auth.AttributeContext{
-						Request: &envoy_auth.AttributeContext_Request{
-							Http: &envoy_auth.AttributeContext_HttpRequest{
-								Path: tc.requestPath,
-							},
+			req := &envoy_auth.CheckRequest{
+				Attributes: &envoy_auth.AttributeContext{
+					Request: &envoy_auth.AttributeContext_Request{
+						Http: &envoy_auth.AttributeContext_HttpRequest{
+							Path: tc.requestPath,
 						},
 					},
 				},
-			)
+			}
+
+			// WHEN
+			err := ctx.Init(t.Context(), req)
+
+			// THEN
 			if tc.expectedErr != nil {
 				require.ErrorIs(t, err, tc.expectedErr)
 
