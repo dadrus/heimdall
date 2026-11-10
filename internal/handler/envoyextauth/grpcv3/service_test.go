@@ -209,6 +209,25 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Empty(t, deniedResponse.GetHeaders())
 			},
 		},
+		"invalid request URI is rejected without rule execution": {
+			setup: func(t *testing.T, _ *config.Configuration, req *envoy_auth.CheckRequest, _ *mocks3.ExecutorMock) {
+				t.Helper()
+
+				req.Attributes.Request.Http.Path = "/admin/%zz"
+			},
+			assert: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
+
+				deniedResponse := response.GetDeniedResponse()
+				require.NotNil(t, deniedResponse)
+				assert.Equal(t, typev3.StatusCode_BadRequest, deniedResponse.GetStatus().GetCode())
+				assert.Empty(t, deniedResponse.GetBody())
+				assert.Empty(t, deniedResponse.GetHeaders())
+			},
+		},
 		"request exceeds configured body limit": {
 			setup: func(t *testing.T, conf *config.Configuration, req *envoy_auth.CheckRequest, _ *mocks3.ExecutorMock) {
 				t.Helper()
