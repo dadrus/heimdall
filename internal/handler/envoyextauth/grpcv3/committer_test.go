@@ -122,10 +122,11 @@ func TestCommitterCommit(t *testing.T) {
 				},
 			}
 			ctr := newCommitter()
-			ctx := cf.Create(requestInput{
+			ctx, err := cf.Create(requestInput{
 				ctx: t.Context(),
 				req: checkReq,
 			})
+			require.NoError(t, err)
 
 			defer cf.Destroy(ctx)
 

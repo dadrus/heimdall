@@ -18,14 +18,18 @@ package grpcv3
 
 import (
 	"context"
+	"errors"
 
 	envoy_auth "github.com/envoyproxy/go-control-plane/envoy/service/auth/v3"
 	envoy_type "github.com/envoyproxy/go-control-plane/envoy/type/v3"
 	"google.golang.org/genproto/googleapis/rpc/status"
 	"google.golang.org/grpc/codes"
 
+	"github.com/dadrus/heimdall/internal/accesscontext"
 	"github.com/dadrus/heimdall/internal/x/httpx"
 )
+
+var errInvalidAuthority = errors.New("invalid authority")
 
 type requestCoordinator interface {
 	Handle(ri requestInput, ct commitTarget) (*envoy_auth.CheckResponse, error)
@@ -37,17 +41,30 @@ type Handler struct {
 
 func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*envoy_auth.CheckResponse, error) {
 	if !httpx.IsValidAuthority(req.GetAttributes().GetRequest().GetHttp().GetHost()) {
-		return &envoy_auth.CheckResponse{
-			Status: &status.Status{Code: int32(codes.OK)},
-			HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
-				DeniedResponse: &envoy_auth.DeniedHttpResponse{
-					Status: &envoy_type.HttpStatus{
-						Code: envoy_type.StatusCode_BadRequest,
-					},
-				},
-			},
-		}, nil
+		accesscontext.SetError(ctx, errInvalidAuthority)
+
+		return badRequest(), nil
 	}
 
-	return h.c.Handle(requestInput{ctx: ctx, req: req}, commitTarget{})
+	resp, err := h.c.Handle(requestInput{ctx: ctx, req: req}, commitTarget{})
+	if errors.Is(err, errInvalidRequestURI) {
+		accesscontext.SetError(ctx, err)
+
+		return badRequest(), nil
+	}
+
+	return resp, err
+}
+
+func badRequest() *envoy_auth.CheckResponse {
+	return &envoy_auth.CheckResponse{
+		Status: &status.Status{Code: int32(codes.OK)},
+		HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
+			DeniedResponse: &envoy_auth.DeniedHttpResponse{
+				Status: &envoy_type.HttpStatus{
+					Code: envoy_type.StatusCode_BadRequest,
+				},
+			},
+		},
+	}
 }

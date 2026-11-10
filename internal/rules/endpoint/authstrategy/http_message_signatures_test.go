@@ -170,7 +170,7 @@ func TestHTTPMessageSignaturesInit(t *testing.T) {
 
 			conf := &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: tc.signerName, Secret: secret},
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        tc.ttl,
 			}
 
@@ -197,7 +197,7 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 			first: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall"},
 				Label:      "sig",
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        new(time.Hour),
 			},
 			firstSecret: secrettypes.NewAsymmetricKeySecret(
@@ -209,7 +209,7 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 			second: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall"},
 				Label:      "sig",
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        new(time.Hour),
 			},
 			secondSecret: secrettypes.NewAsymmetricKeySecret(
@@ -224,7 +224,7 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 			first: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall"},
 				Label:      "foo",
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        new(time.Hour),
 			},
 			firstSecret: secrettypes.NewAsymmetricKeySecret(
@@ -236,7 +236,7 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 			second: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall"},
 				Label:      "bar",
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        new(time.Hour),
 			},
 			secondSecret: secrettypes.NewAsymmetricKeySecret(
@@ -249,7 +249,7 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 		"different ttl": {
 			first: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall"},
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        new(time.Hour),
 			},
 			firstSecret: secrettypes.NewAsymmetricKeySecret(
@@ -260,7 +260,7 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 			),
 			second: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall"},
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        new(2 * time.Hour),
 			},
 			secondSecret: secrettypes.NewAsymmetricKeySecret(
@@ -273,7 +273,7 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 		"different signer name": {
 			first: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "foo"},
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        new(time.Hour),
 			},
 			firstSecret: secrettypes.NewAsymmetricKeySecret(
@@ -297,7 +297,7 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 		"different key id": {
 			first: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall"},
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        new(time.Hour),
 			},
 			firstSecret: secrettypes.NewAsymmetricKeySecret(
@@ -308,7 +308,7 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 			),
 			second: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall"},
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        new(time.Hour),
 			},
 			secondSecret: secrettypes.NewAsymmetricKeySecret(
@@ -321,7 +321,7 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 		"different selector": {
 			first: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall"},
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        new(time.Hour),
 			},
 			firstSecret: secrettypes.NewAsymmetricKeySecret(
@@ -332,7 +332,7 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 			),
 			second: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "heimdall"},
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        new(time.Hour),
 			},
 			secondSecret: secrettypes.NewAsymmetricKeySecret(
@@ -369,7 +369,7 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 		"signer boundaries do not collide": {
 			first: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "a"},
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        new(time.Hour),
 			},
 			firstSecret: secrettypes.NewAsymmetricKeySecret(
@@ -380,7 +380,7 @@ func TestHTTPMessageSignaturesHash(t *testing.T) {
 			),
 			second: &HTTPMessageSignatures{
 				Signer:     SignerConfig{Name: "ab"},
-				Components: []string{"@method"},
+				Components: []string{`"@method"`},
 				TTL:        new(time.Hour),
 			},
 			secondSecret: secrettypes.NewAsymmetricKeySecret(
@@ -435,7 +435,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 		assert     func(t *testing.T, err error, req *http.Request)
 	}{
 		"fails if required component is missing": {
-			components: []string{"x-some-header"},
+			components: []string{`"x-some-header"`},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
 
@@ -448,7 +448,7 @@ func TestHTTPMessageSignaturesApply(t *testing.T) {
 			},
 		},
 		"successful": {
-			components: []string{"@method", "content-digest"},
+			components: []string{`"@method"`, `"content-digest"`},
 			assert: func(t *testing.T, err error, req *http.Request) {
 				t.Helper()
 
@@ -578,7 +578,7 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 	}{
 		"secret not suitable for signing": {
 			secret:     secrettypes.NewStringSecret("bar", "baz"),
-			components: []string{"@method"},
+			components: []string{`"@method"`},
 			assert: func(t *testing.T, err error, _ httpsig.Signer) {
 				t.Helper()
 
@@ -594,7 +594,7 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 				privateKey,
 				[]*x509.Certificate{leafCert, rootCA.Certificate},
 			),
-			components: []string{"@method"},
+			components: []string{`"@method"`},
 			assert: func(t *testing.T, err error, _ httpsig.Signer) {
 				t.Helper()
 
@@ -604,7 +604,7 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 		},
 		"unsupported algorithm": {
 			secret:     secrettypes.NewAsymmetricKeySecret("unsupported", "unsupported", unsupportedSigner{}, nil),
-			components: []string{"@method"},
+			components: []string{`"@method"`},
 			assert: func(t *testing.T, err error, _ httpsig.Signer) {
 				t.Helper()
 
@@ -630,7 +630,7 @@ func TestHTTPMessageSignaturesCreateSigner(t *testing.T) {
 				privateKey,
 				[]*x509.Certificate{leafCert, intermediateCert, rootCA.Certificate},
 			),
-			components: []string{"@method"},
+			components: []string{`"@method"`},
 			assert: func(t *testing.T, err error, sig httpsig.Signer) {
 				t.Helper()
 
@@ -760,8 +760,7 @@ func TestToHTTPSigKey(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tc.alg, key.Algorithm)
-			assert.Equal(t, tc.secret.KeyID(), key.KeyID)
-			assert.Equal(t, tc.secret.PrivateKey(), key.Key)
+			assert.Equal(t, tc.secret.PrivateKey(), key.Material)
 		})
 	}
 }

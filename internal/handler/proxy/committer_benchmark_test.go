@@ -48,7 +48,10 @@ func BenchmarkCommitterCommit(b *testing.B) {
 		"https://foo.bar/test",
 		nil,
 	)
-	ctx := cf.Create(req)
+	ctx, err := cf.Create(req)
+	if err != nil {
+		b.Fatal(err)
+	}
 	ctx.PrepareUpstreamView(benchmarkUpstreamTarget{
 		targetURL: url.URL{
 			Scheme: "https",
@@ -110,7 +113,10 @@ func BenchmarkCommitterCommitWithResponseBody(b *testing.B) {
 				"https://foo.bar/test",
 				nil,
 			)
-			ctx := cf.Create(req)
+			ctx, err := cf.Create(req)
+			if err != nil {
+				b.Fatal(err)
+			}
 
 			defer cf.Destroy(ctx)
 

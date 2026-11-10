@@ -40,6 +40,7 @@ type testOutput struct {
 
 type testContextFactory struct {
 	ctx *pipelinemocks.ExecutionContextMock
+	err error
 
 	createdWith  testInput
 	destroyedCtx *pipelinemocks.ExecutionContextMock
@@ -49,11 +50,11 @@ type testContextFactory struct {
 
 func (f *testContextFactory) Create(
 	input testInput,
-) *pipelinemocks.ExecutionContextMock {
+) (*pipelinemocks.ExecutionContextMock, error) {
 	f.createCalls++
 	f.createdWith = input
 
-	return f.ctx
+	return f.ctx, f.err
 }
 
 func (f *testContextFactory) Destroy(
@@ -84,6 +85,7 @@ func TestCoordinatorHandle(t *testing.T) {
 	t.Parallel()
 
 	var (
+		initErr      = errors.New("initialization failed")
 		executionErr = errors.New("execution failed")
 		contextErr   = errors.New("context contains an error")
 		commitErr    = errors.New("commit failed")
@@ -94,21 +96,38 @@ func TestCoordinatorHandle(t *testing.T) {
 	)
 
 	for uc, tc := range map[string]struct {
-		setup  func(t *testing.T, executor *pipelinemocks.ExecutorMock, ctx *pipelinemocks.ExecutionContextMock, committer *testCommitter)
-		assert func(t *testing.T, result testOutput, err error, committer *testCommitter)
+		factoryErr error
+		setup      func(t *testing.T, executor *pipelinemocks.ExecutorMock, ctx *pipelinemocks.ExecutionContextMock, committer *testCommitter)
+		assert     func(t *testing.T, result testOutput, err error, committer *testCommitter, factory *testContextFactory)
 	}{
+		"returns initialization error": {
+			factoryErr: initErr,
+			assert: func(t *testing.T, result testOutput, err error, committer *testCommitter, factory *testContextFactory) {
+				t.Helper()
+
+				require.ErrorIs(t, err, initErr)
+				assert.Empty(t, result)
+				assert.Zero(t, committer.calls)
+
+				assert.Zero(t, factory.destroyCalls)
+				assert.Nil(t, factory.destroyedCtx)
+			},
+		},
 		"returns execution error": {
 			setup: func(t *testing.T, executor *pipelinemocks.ExecutorMock, ctx *pipelinemocks.ExecutionContextMock, _ *testCommitter) {
 				t.Helper()
 
 				executor.EXPECT().Execute(ctx).Return(executionErr)
 			},
-			assert: func(t *testing.T, result testOutput, err error, committer *testCommitter) {
+			assert: func(t *testing.T, result testOutput, err error, committer *testCommitter, factory *testContextFactory) {
 				t.Helper()
 
 				require.ErrorIs(t, err, executionErr)
 				assert.Empty(t, result)
 				assert.Zero(t, committer.calls)
+
+				assert.Equal(t, 1, factory.destroyCalls)
+				assert.Same(t, factory.ctx, factory.destroyedCtx)
 			},
 		},
 		"returns context error": {
@@ -118,12 +137,15 @@ func TestCoordinatorHandle(t *testing.T) {
 				executor.EXPECT().Execute(ctx).Return(nil)
 				ctx.EXPECT().Error().Return(contextErr)
 			},
-			assert: func(t *testing.T, result testOutput, err error, committer *testCommitter) {
+			assert: func(t *testing.T, result testOutput, err error, committer *testCommitter, factory *testContextFactory) {
 				t.Helper()
 
 				require.ErrorIs(t, err, contextErr)
 				assert.Empty(t, result)
 				assert.Zero(t, committer.calls)
+
+				assert.Equal(t, 1, factory.destroyCalls)
+				assert.Same(t, factory.ctx, factory.destroyedCtx)
 			},
 		},
 		"commits successful execution": {
@@ -135,7 +157,7 @@ func TestCoordinatorHandle(t *testing.T) {
 
 				committer.output = output
 			},
-			assert: func(t *testing.T, result testOutput, err error, committer *testCommitter) {
+			assert: func(t *testing.T, result testOutput, err error, committer *testCommitter, factory *testContextFactory) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -143,6 +165,9 @@ func TestCoordinatorHandle(t *testing.T) {
 				assert.Equal(t, 1, committer.calls)
 				assert.Equal(t, target, committer.target)
 				assert.NotNil(t, committer.ctx)
+
+				assert.Equal(t, 1, factory.destroyCalls)
+				assert.Same(t, factory.ctx, factory.destroyedCtx)
 			},
 		},
 		"returns commit error": {
@@ -155,7 +180,7 @@ func TestCoordinatorHandle(t *testing.T) {
 				committer.output = output
 				committer.err = commitErr
 			},
-			assert: func(t *testing.T, result testOutput, err error, committer *testCommitter) {
+			assert: func(t *testing.T, result testOutput, err error, committer *testCommitter, factory *testContextFactory) {
 				t.Helper()
 
 				require.ErrorIs(t, err, commitErr)
@@ -163,28 +188,34 @@ func TestCoordinatorHandle(t *testing.T) {
 				assert.Equal(t, 1, committer.calls)
 				assert.Equal(t, target, committer.target)
 				assert.NotNil(t, committer.ctx)
+
+				assert.Equal(t, 1, factory.destroyCalls)
+				assert.Same(t, factory.ctx, factory.destroyedCtx)
 			},
 		},
 	} {
 		t.Run(uc, func(t *testing.T) {
+			// GIVEN
 			ctx := pipelinemocks.NewExecutionContextMock(t)
 			executor := pipelinemocks.NewExecutorMock(t)
 
-			factory := &testContextFactory{ctx: ctx}
+			factory := &testContextFactory{ctx: ctx, err: tc.factoryErr}
 			committer := &testCommitter{}
 
-			tc.setup(t, executor, ctx, committer)
+			if tc.setup != nil {
+				tc.setup(t, executor, ctx, committer)
+			}
 
 			coordinator := New(executor, factory, committer)
 
+			// WHEN
 			result, err := coordinator.Handle(input, target)
 
-			tc.assert(t, result, err, committer)
+			// THEN
+			tc.assert(t, result, err, committer, factory)
 
 			assert.Equal(t, 1, factory.createCalls)
 			assert.Equal(t, input, factory.createdWith)
-			assert.Equal(t, 1, factory.destroyCalls)
-			assert.Same(t, ctx, factory.destroyedCtx)
 		})
 	}
 }

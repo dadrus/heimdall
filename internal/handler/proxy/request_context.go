@@ -45,12 +45,16 @@ type requestContext struct {
 	hasUpstreamTarget    bool
 }
 
-func (r *requestContext) Init(req *http.Request) {
+func (r *requestContext) Init(req *http.Request) error {
+	if err := r.NetHTTPRequestContext.Init(req); err != nil {
+		return err
+	}
+
 	r.req = req
 	r.nativeGRPC = isNativeGRPCContentType(req.Header.Get("Content-Type"))
 	r.upgrade = classifyUpgrade(req)
 
-	r.NetHTTPRequestContext.Init(req)
+	return nil
 }
 
 func (r *requestContext) Reset() {

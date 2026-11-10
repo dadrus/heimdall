@@ -521,7 +521,7 @@ mechanisms:
           auth:
             type: http_message_signatures
             config:
-              components: ["@method", "content-digest", "@authority", "@target-uri", "@scheme"]
+              components: ['"@method"', '"content-digest"', '"@authority"', '"@target-uri"', '"@scheme"']
               signer:
                 name: heimdall
                 secret:

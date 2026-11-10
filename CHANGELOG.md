@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.17.29](https://github.com/dadrus/heimdall/compare/v0.17.28...v0.17.29) (2026-11-09)
+
+
+### Bug Fixes
+
+* Request URI handling improved ([#3661](https://github.com/dadrus/heimdall/issues/3661)) ([80fcd55](https://github.com/dadrus/heimdall/commit/80fcd557171b7fb038ae80b936ae504013ee04df))
+
+
+### Dependencies
+
+* update google.golang.org/genproto/googleapis/rpc digest to d1e00e9 ([#3650](https://github.com/dadrus/heimdall/issues/3650)) ([94b5a86](https://github.com/dadrus/heimdall/commit/94b5a861f22afafc882e46f2ac0920052ee417bf))
+* update module cel.dev/cel-go to v0.33.2 ([#3643](https://github.com/dadrus/heimdall/issues/3643)) ([44f2973](https://github.com/dadrus/heimdall/commit/44f2973dde5c21ab05c373ecf7e79bf9b2aa8881))
+* update module github.com/dadrus/httpsig to v0.12.0 ([#3651](https://github.com/dadrus/heimdall/issues/3651)) ([2d042c6](https://github.com/dadrus/heimdall/commit/2d042c6217816cccfaf1f48ed2a6de3b4fc16cd3))
+* update module github.com/go-jose/go-jose/v4 to v4.1.9 ([#3653](https://github.com/dadrus/heimdall/issues/3653)) ([214df8c](https://github.com/dadrus/heimdall/commit/214df8ce6de6e2a89443996464bb02e2c8880bec))
+* update module github.com/go-playground/validator/v10 to v10.30.6 ([#3646](https://github.com/dadrus/heimdall/issues/3646)) ([8841522](https://github.com/dadrus/heimdall/commit/8841522d37cd4fff1cf3fdf12dd70c5fd7a053f4))
+* update module github.com/spf13/pflag to v1.1.0 ([#3657](https://github.com/dadrus/heimdall/issues/3657)) ([387fdb9](https://github.com/dadrus/heimdall/commit/387fdb9228055fddc5dafd8959827f2cf92d0523))
+* update module github.com/tidwall/gjson to v1.20.2 ([#3659](https://github.com/dadrus/heimdall/issues/3659)) ([c3d1ddc](https://github.com/dadrus/heimdall/commit/c3d1ddc3224772e36b5715e11e49b85ea291fbc2))
+
 ## [0.17.28](https://github.com/dadrus/heimdall/compare/v0.17.27...v0.17.28) (2026-10-30)
 
 
@@ -23,7 +41,6 @@
 * update module github.com/gobwas/glob to v1.1.0 ([#3636](https://github.com/dadrus/heimdall/issues/3636)) ([d530bb6](https://github.com/dadrus/heimdall/commit/d530bb696c7d2939dd716ab22fc5a1762873d1ce))
 * update module github.com/goccy/go-json to v0.12.0 ([#3635](https://github.com/dadrus/heimdall/issues/3635)) ([550ea61](https://github.com/dadrus/heimdall/commit/550ea618ed4d8ff87593d3cccf63bde8b70e647f))
 * update module google.golang.org/grpc to v1.85.0 ([#3623](https://github.com/dadrus/heimdall/issues/3623)) ([041d6a5](https://github.com/dadrus/heimdall/commit/041d6a52771c9e7caf48cae8eacf50daf096d87c))
-
 
 ## [0.17.27](https://github.com/dadrus/heimdall/compare/v0.17.26...v0.17.27) (2026-10-25)
 

@@ -32,8 +32,8 @@ type requestContext struct {
 	upstreamViewPrepared bool
 }
 
-func (r *requestContext) Init(req *http.Request) {
-	r.NetHTTPRequestContext.Init(req)
+func (r *requestContext) Init(req *http.Request) error {
+	return r.NetHTTPRequestContext.Init(req)
 }
 
 func (r *requestContext) Reset() {

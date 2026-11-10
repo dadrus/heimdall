@@ -59,10 +59,11 @@ func TestNewRequestContext(t *testing.T) {
 	})
 
 	cf := newContextFactory()
-	ctx := cf.Create(requestInput{
+	ctx, err := cf.Create(requestInput{
 		ctx: grpcCtx,
 		req: checkReq,
 	})
+	require.NoError(t, err)
 
 	defer cf.Destroy(ctx)
 
@@ -83,15 +84,26 @@ func TestNewRequestContext(t *testing.T) {
 func TestRequestContextURL(t *testing.T) {
 	t.Parallel()
 
-	cf := newContextFactory()
-
 	for uc, tc := range map[string]struct {
 		requestPath string
+		expectedErr error
 		path        string
 		rawPath     string
 		rawQuery    string
 		forceQuery  bool
 	}{
+		"malformed request URI": {
+			requestPath: "/admin/%zz",
+			expectedErr: errInvalidRequestURI,
+		},
+		"missing request path": {
+			requestPath: "http://admin",
+			expectedErr: errInvalidRequestURI,
+		},
+		"missing request path with query": {
+			requestPath: "http://admin?x=1",
+			expectedErr: errInvalidRequestURI,
+		},
 		"regular path": {
 			requestPath: "/test/baz?bar=moo#foobar",
 			path:        "/test/baz",
@@ -151,23 +163,29 @@ func TestRequestContextURL(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := cf.Create(
-				requestInput{
-					ctx: t.Context(),
-					req: &envoy_auth.CheckRequest{
-						Attributes: &envoy_auth.AttributeContext{
-							Request: &envoy_auth.AttributeContext_Request{
-								Http: &envoy_auth.AttributeContext_HttpRequest{
-									Path: tc.requestPath,
-								},
-							},
+			// GIVEN
+			ctx := newRequestContext()
+			req := &envoy_auth.CheckRequest{
+				Attributes: &envoy_auth.AttributeContext{
+					Request: &envoy_auth.AttributeContext_Request{
+						Http: &envoy_auth.AttributeContext_HttpRequest{
+							Path: tc.requestPath,
 						},
 					},
 				},
-			)
+			}
 
-			defer cf.Destroy(ctx)
+			// WHEN
+			err := ctx.Init(t.Context(), req)
 
+			// THEN
+			if tc.expectedErr != nil {
+				require.ErrorIs(t, err, tc.expectedErr)
+
+				return
+			}
+
+			require.NoError(t, err)
 			assert.Equal(t, tc.path, ctx.Request().URL.Path)
 			assert.Equal(t, tc.rawPath, ctx.Request().URL.RawPath)
 			assert.Equal(t, tc.rawPath, ctx.Request().URL.EscapedPath())
@@ -191,7 +209,7 @@ func TestRequestContextUpstreamRequest(t *testing.T) {
 		t.Run(uc, func(t *testing.T) {
 			// GIVEN
 			ctx := newRequestContext()
-			ctx.Init(
+			err := ctx.Init(
 				t.Context(),
 				&envoy_auth.CheckRequest{
 					Attributes: &envoy_auth.AttributeContext{
@@ -206,6 +224,7 @@ func TestRequestContextUpstreamRequest(t *testing.T) {
 					},
 				},
 			)
+			require.NoError(t, err)
 
 			if tc.prepared {
 				ctx.PrepareUpstreamView(nil)
@@ -230,13 +249,14 @@ func TestRequestContextInternalMetadataIsNotExposed(t *testing.T) {
 
 	// GIVEN
 	ctx := newRequestContext()
-	ctx.Init(
+	err := ctx.Init(
 		t.Context(),
 		&envoy_auth.CheckRequest{
 			Attributes: &envoy_auth.AttributeContext{
 				Request: &envoy_auth.AttributeContext_Request{
 					Http: &envoy_auth.AttributeContext_HttpRequest{
 						Host: "foo.bar",
+						Path: "/test",
 						Headers: map[string]string{
 							"x-foo":                     "bar",
 							"x-envoy-auth-partial-body": "false",
@@ -246,6 +266,7 @@ func TestRequestContextInternalMetadataIsNotExposed(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	// WHEN
 	headers := ctx.Headers()
@@ -299,7 +320,7 @@ func TestRequestContextRawBody(t *testing.T) {
 			}
 
 			ctx := newRequestContext()
-			ctx.Init(
+			err := ctx.Init(
 				t.Context(),
 				&envoy_auth.CheckRequest{
 					Attributes: &envoy_auth.AttributeContext{
@@ -314,6 +335,7 @@ func TestRequestContextRawBody(t *testing.T) {
 					},
 				},
 			)
+			require.NoError(t, err)
 
 			// WHEN
 			body, err := ctx.RawBody()
@@ -343,7 +365,7 @@ func TestRequestContextReset(t *testing.T) {
 
 	// GIVEN
 	ctx := newRequestContext()
-	ctx.Init(
+	err := ctx.Init(
 		t.Context(),
 		&envoy_auth.CheckRequest{
 			Attributes: &envoy_auth.AttributeContext{
@@ -359,6 +381,7 @@ func TestRequestContextReset(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 	ctx.PrepareUpstreamView(nil)
 
 	require.NotNil(t, ctx.bodySource.body)
@@ -379,16 +402,17 @@ func TestRequestContextWithParent(t *testing.T) {
 
 	// GIVEN
 	ctx := newRequestContext()
-	ctx.Init(
+	err := ctx.Init(
 		context.TODO(),
 		&envoy_auth.CheckRequest{
 			Attributes: &envoy_auth.AttributeContext{
 				Request: &envoy_auth.AttributeContext_Request{
-					Http: &envoy_auth.AttributeContext_HttpRequest{},
+					Http: &envoy_auth.AttributeContext_HttpRequest{Path: "/test"},
 				},
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	orig := ctx.Context()
 

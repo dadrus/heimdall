@@ -32,11 +32,15 @@ type contextFactory struct {
 	pool *sync.Pool
 }
 
-func (cf *contextFactory) Create(input requestInput) *RequestContext {
+func (cf *contextFactory) Create(input requestInput) (*RequestContext, error) {
 	ctx := cf.pool.Get().(*RequestContext) //nolint: forcetypeassert
-	ctx.Init(input.ctx, input.req)
+	if err := ctx.Init(input.ctx, input.req); err != nil {
+		cf.Destroy(ctx)
 
-	return ctx
+		return nil, err
+	}
+
+	return ctx, nil
 }
 
 func (cf *contextFactory) Destroy(rc *RequestContext) {

@@ -17,6 +17,7 @@
 package requestcontext
 
 import (
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -25,14 +26,11 @@ import (
 	"github.com/dadrus/heimdall/internal/x/urlx"
 )
 
-func extractURL(req *http.Request) url.URL {
-	var (
-		rawPath    string
-		path       string
-		query      string
-		forceQuery bool
-	)
+// ErrInvalidForwardedURI indicates that an explicitly supplied request target
+// cannot be used as the resource for authorization.
+var ErrInvalidForwardedURI = errors.New("invalid X-Forwarded-Uri")
 
+func extractURL(req *http.Request) (url.URL, error) {
 	proto := req.Header.Get("X-Forwarded-Proto")
 	if len(proto) == 0 {
 		proto = x.IfThenElse(req.TLS == nil, "http", "https")
@@ -44,32 +42,32 @@ func extractURL(req *http.Request) url.URL {
 	}
 
 	host = strings.ToLower(host)
-	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
-		if forwardedURI, err := url.ParseRequestURI(val); err == nil {
-			rawPath = urlx.EscapedPath(forwardedURI)
-			query = forwardedURI.RawQuery
-			forceQuery = forwardedURI.ForceQuery
+
+	source := req.URL
+	forwarded := req.Header.Get("X-Forwarded-Uri")
+	if len(forwarded) != 0 {
+		forwardedURI, err := url.ParseRequestURI(forwarded)
+		if err != nil {
+			return url.URL{}, ErrInvalidForwardedURI
 		}
+
+		source = forwardedURI
 	}
 
-	if len(rawPath) == 0 {
-		rawPath = urlx.EscapedPath(req.URL)
-	}
-
-	if len(query) == 0 && !forceQuery {
-		query = req.URL.RawQuery
-		forceQuery = req.URL.ForceQuery
+	rawPath := urlx.EscapedPath(source)
+	if len(forwarded) != 0 && len(rawPath) == 0 {
+		return url.URL{}, ErrInvalidForwardedURI
 	}
 
 	rawPath = urlx.NormalizePath(rawPath)
-	path, _ = url.PathUnescape(rawPath)
+	path, _ := url.PathUnescape(rawPath)
 
 	return url.URL{
 		Scheme:     proto,
 		Host:       host,
 		Path:       path,
 		RawPath:    rawPath,
-		RawQuery:   query,
-		ForceQuery: forceQuery,
-	}
+		RawQuery:   source.RawQuery,
+		ForceQuery: source.ForceQuery,
+	}, nil
 }

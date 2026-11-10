@@ -69,6 +69,10 @@ For guidance on how to keep mechanism definitions reusable and how to separate
 stable mechanism behaviour from rule-specific inputs, see
 link:{{< relref "/docs/mechanisms/mechanism_design.adoc" >}}[Designing Mechanism Definitions].
 
+For guidance on how to keep mechanism definitions reusable and how to separate
+stable mechanism behaviour from rule-specific inputs, see
+link:{{< relref "/docs/mechanisms/mechanism_design.adoc" >}}[Designing Mechanism Definitions].
+
 == Example
 
 Here is an example which defines a mechanism catalogue using some of the available types:

@@ -42,43 +42,74 @@ func (r errorReader) Read([]byte) (int, error) {
 func TestNetHTTPRequestContextInit(t *testing.T) {
 	t.Parallel()
 
-	// GIVEN
-	req := httptest.NewRequestWithContext(
-		t.Context(),
-		http.MethodPatch,
-		"https://foo.bar/test?foo=bar",
-		nil,
-	)
-	req.Header.Set("X-Foo", "bar")
-	req.Header.Set("Connection", "X-Hop")
-	req.Header.Set("X-Hop", "incoming")
-	req.Host = "Bar.foo"
+	for uc, tc := range map[string]struct {
+		configureRequest func(req *http.Request)
+		assert           func(t *testing.T, req *http.Request, ctx *NetHTTPRequestContext, err error)
+	}{
+		"valid request": {
+			configureRequest: func(req *http.Request) {
+				req.Header.Set("X-Foo", "bar")
+				req.Header.Set("Connection", "X-Hop")
+				req.Header.Set("X-Hop", "incoming")
+				req.Host = "Bar.foo"
+			},
+			assert: func(t *testing.T, req *http.Request, ctx *NetHTTPRequestContext, err error) {
+				t.Helper()
 
-	ctx := New()
+				require.NoError(t, err)
+				assert.Same(t, req, ctx.req)
+				assert.Equal(t, req.Context(), ctx.Context())
+				assert.Equal(t, http.MethodPatch, ctx.Method())
+				assert.Equal(t, "https", ctx.URL().Scheme)
+				assert.Equal(t, "bar.foo", ctx.URL().Host)
+				assert.Equal(t, "/test", ctx.URL().Path)
+				assert.Equal(t, "foo=bar", ctx.URL().RawQuery)
+				assert.Equal(t, "bar", ctx.Request().Header("X-Foo"))
+				assert.Equal(t, "bar.foo", ctx.Request().Header("Host"))
 
-	// WHEN
-	ctx.Init(req)
+				require.Len(t, ctx.Request().ClientIPAddresses, 1)
+				assert.Equal(t, "192.0.2.1", ctx.Request().ClientIPAddresses[0])
 
-	// THEN
-	assert.Same(t, req, ctx.req)
-	assert.Equal(t, req.Context(), ctx.Context())
-	assert.Equal(t, http.MethodPatch, ctx.Method())
-	assert.Equal(t, "https", ctx.URL().Scheme)
-	assert.Equal(t, "bar.foo", ctx.URL().Host)
-	assert.Equal(t, "/test", ctx.URL().Path)
-	assert.Equal(t, "foo=bar", ctx.URL().RawQuery)
-	assert.Equal(t, "bar", ctx.Request().Header("X-Foo"))
-	assert.Equal(t, "bar.foo", ctx.Request().Header("Host"))
+				actual := make([]string, 0, 1)
+				for name := range ctx.ConnectionSpecificHeaders() {
+					actual = append(actual, name)
+				}
 
-	require.Len(t, ctx.Request().ClientIPAddresses, 1)
-	assert.Equal(t, "192.0.2.1", ctx.Request().ClientIPAddresses[0])
+				assert.ElementsMatch(t, []string{"X-Hop"}, actual)
+			},
+		},
+		"invalid forwarded URI": {
+			configureRequest: func(req *http.Request) {
+				req.Header.Set("X-Forwarded-Uri", "/admin/%zz")
+			},
+			assert: func(t *testing.T, _ *http.Request, ctx *NetHTTPRequestContext, err error) {
+				t.Helper()
 
-	actual := make([]string, 0, 1)
-	for name := range ctx.ConnectionSpecificHeaders() {
-		actual = append(actual, name)
+				require.ErrorIs(t, err, ErrInvalidForwardedURI)
+				assert.Nil(t, ctx.req)
+				assert.Nil(t, ctx.Context())
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPatch,
+				"https://foo.bar/test?foo=bar",
+				nil,
+			)
+			tc.configureRequest(req)
+
+			ctx := New()
+
+			// WHEN
+			err := ctx.Init(req)
+
+			// THEN
+			tc.assert(t, req, ctx, err)
+		})
 	}
-
-	assert.ElementsMatch(t, []string{"X-Hop"}, actual)
 }
 
 func TestNetHTTPRequestContextUpstreamRequest(t *testing.T) {
@@ -86,12 +117,13 @@ func TestNetHTTPRequestContextUpstreamRequest(t *testing.T) {
 
 	// GIVEN
 	ctx := New()
-	ctx.Init(httptest.NewRequestWithContext(
+	err := ctx.Init(httptest.NewRequestWithContext(
 		t.Context(),
 		http.MethodGet,
 		"https://foo.bar/test",
 		nil,
 	))
+	require.NoError(t, err)
 
 	// WHEN
 	upstreamRequest := ctx.UpstreamRequest()
@@ -192,7 +224,8 @@ func TestNetHTTPRequestContextRawBody(t *testing.T) {
 			tc.setup(req)
 
 			ctx := New()
-			ctx.Init(req)
+			err := ctx.Init(req)
+			require.NoError(t, err)
 
 			// WHEN
 			body, err := ctx.RawBody()
@@ -215,8 +248,9 @@ func TestNetHTTPRequestContextReset(t *testing.T) {
 	)
 
 	ctx := New()
-	ctx.Init(req)
-	_, err := ctx.RawBody()
+	err := ctx.Init(req)
+	require.NoError(t, err)
+	_, err = ctx.RawBody()
 	require.NoError(t, err)
 
 	// WHEN

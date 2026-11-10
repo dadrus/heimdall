@@ -33,7 +33,10 @@ import (
 
 var _ pipeline.UpstreamRequest = (*RequestContext)(nil)
 
-var errRequestBodyIncomplete = errors.New("request body is not fully available")
+var (
+	errRequestBodyIncomplete = errors.New("request body is not fully available")
+	errInvalidRequestURI     = errors.New("invalid request URI")
+)
 
 type envoyBodySource struct {
 	body     []byte
@@ -61,16 +64,21 @@ func newRequestContext() *RequestContext {
 	}
 }
 
-func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest) {
+func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest) error {
 	httpReq := req.GetAttributes().GetRequest().GetHttp()
 
 	parsed, err := url.ParseRequestURI(httpReq.GetPath())
 	if err != nil {
-		parsed = &url.URL{}
-	} else {
-		parsed.RawPath = urlx.NormalizePath(urlx.EscapedPath(parsed))
-		parsed.Path, _ = url.PathUnescape(parsed.RawPath)
+		return errInvalidRequestURI
 	}
+
+	rawPath := urlx.EscapedPath(parsed)
+	if len(rawPath) == 0 {
+		return errInvalidRequestURI
+	}
+
+	parsed.RawPath = urlx.NormalizePath(rawPath)
+	parsed.Path, _ = url.PathUnescape(parsed.RawPath)
 
 	headers := canonicalizeHeaders(httpReq.GetHeaders())
 
@@ -102,6 +110,8 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 		RemoteAddr: peerAddress(ctx),
 		Body:       &r.bodySource,
 	})
+
+	return nil
 }
 
 func peerAddress(ctx context.Context) string {

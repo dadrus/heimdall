@@ -32,6 +32,49 @@ import (
 	"github.com/dadrus/heimdall/internal/pipeline/mocks"
 )
 
+func TestRequestContextInit(t *testing.T) {
+	t.Parallel()
+
+	for uc, tc := range map[string]struct {
+		forwardedURI string
+		assert       func(t *testing.T, req *http.Request, ctx *requestContext, err error)
+	}{
+		"valid request": {
+			assert: func(t *testing.T, req *http.Request, ctx *requestContext, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Same(t, req, ctx.req)
+			},
+		},
+		"invalid forwarded URI": {
+			forwardedURI: "/admin/%zz",
+			assert: func(t *testing.T, _ *http.Request, ctx *requestContext, err error) {
+				t.Helper()
+
+				require.ErrorIs(t, err, requestcontext.ErrInvalidForwardedURI)
+				assert.Nil(t, ctx.req)
+			},
+		},
+	} {
+		t.Run(uc, func(t *testing.T) {
+			// GIVEN
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/_auth", nil)
+			if tc.forwardedURI != "" {
+				req.Header.Set("X-Forwarded-Uri", tc.forwardedURI)
+			}
+
+			ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
+
+			// WHEN
+			err := ctx.Init(req)
+
+			// THEN
+			tc.assert(t, req, ctx, err)
+		})
+	}
+}
+
 func TestRequestContextReset(t *testing.T) {
 	t.Parallel()
 
@@ -39,7 +82,8 @@ func TestRequestContextReset(t *testing.T) {
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
 
 	ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
-	ctx.Init(req)
+	err := ctx.Init(req)
+	require.NoError(t, err)
 
 	target := mocks.NewUpstreamTargetMock(t)
 	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
@@ -86,7 +130,8 @@ func TestRequestContextUpstreamRequest(t *testing.T) {
 			// GIVEN
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
 			ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
-			ctx.Init(req)
+			err := ctx.Init(req)
+			require.NoError(t, err)
 
 			if tc.prepare {
 				ctx.PrepareUpstreamView(nil)
@@ -151,7 +196,8 @@ func TestRequestContextURL(t *testing.T) {
 			)
 
 			ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
-			ctx.Init(req)
+			err := ctx.Init(req)
+			require.NoError(t, err)
 
 			if tc.target == nil {
 				ctx.PrepareUpstreamView(nil)
@@ -236,7 +282,8 @@ func TestRequestContextTransportClassification(t *testing.T) {
 			}
 
 			ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
-			ctx.Init(req)
+			err := ctx.Init(req)
+			require.NoError(t, err)
 
 			target := mocks.NewUpstreamTargetMock(t)
 			target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
@@ -268,7 +315,8 @@ func TestRequestContextRewriteRequestNormalizesH2C(t *testing.T) {
 	// GIVEN
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
 	ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
-	ctx.Init(req)
+	err := ctx.Init(req)
+	require.NoError(t, err)
 
 	target := mocks.NewUpstreamTargetMock(t)
 	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
@@ -300,7 +348,8 @@ func TestRequestContextHostMutationDoesNotChangeURL(t *testing.T) {
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://foo.bar/test", nil)
 
 	ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
-	ctx.Init(req)
+	err := ctx.Init(req)
+	require.NoError(t, err)
 
 	target := mocks.NewUpstreamTargetMock(t)
 	target.EXPECT().ApplyTo(mock.Anything).Run(func(targetURL *url.URL) {
@@ -447,7 +496,8 @@ func TestRequestContextPreparedHeaders(t *testing.T) {
 			}
 
 			ctx := &requestContext{NetHTTPRequestContext: requestcontext.New()}
-			ctx.Init(req)
+			err := ctx.Init(req)
+			require.NoError(t, err)
 			ctx.PrepareUpstreamView(nil)
 
 			if tc.updateContext != nil {
@@ -470,7 +520,7 @@ func TestRequestContextWithParent(t *testing.T) {
 	ctx := &requestContext{
 		NetHTTPRequestContext: requestcontext.New(),
 	}
-	ctx.Init(
+	err := ctx.Init(
 		httptest.NewRequestWithContext(
 			context.TODO(),
 			http.MethodGet,
@@ -478,6 +528,7 @@ func TestRequestContextWithParent(t *testing.T) {
 			nil,
 		),
 	)
+	require.NoError(t, err)
 
 	orig := ctx.Context()
 

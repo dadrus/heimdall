@@ -70,18 +70,25 @@ func (r *NetHTTPRequestContext) UpstreamRequest() pipeline.UpstreamRequest {
 	return nil
 }
 
-func (r *NetHTTPRequestContext) Init(req *http.Request) {
+func (r *NetHTTPRequestContext) Init(req *http.Request) error {
+	requestURL, err := extractURL(req)
+	if err != nil {
+		return err
+	}
+
 	r.req = req
 	r.bodySource.req = req
 
 	r.RequestContext.Init(Input{
 		Context:    req.Context(),
 		Method:     extractMethod(req),
-		URL:        extractURL(req),
+		URL:        requestURL,
 		Headers:    req.Header,
 		RemoteAddr: req.RemoteAddr,
 		Body:       &r.bodySource,
 	})
+
+	return nil
 }
 
 func (r *NetHTTPRequestContext) Reset() {

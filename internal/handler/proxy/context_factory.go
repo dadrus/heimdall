@@ -39,11 +39,15 @@ func newContextFactory() *contextFactory {
 	}
 }
 
-func (cf *contextFactory) Create(req *http.Request) *requestContext {
+func (cf *contextFactory) Create(req *http.Request) (*requestContext, error) {
 	rc := cf.pool.Get().(*requestContext) //nolint:forcetypeassert
-	rc.Init(req)
+	if err := rc.Init(req); err != nil {
+		cf.Destroy(rc)
 
-	return rc
+		return nil, err
+	}
+
+	return rc, nil
 }
 
 func (cf *contextFactory) Destroy(rc *requestContext) {

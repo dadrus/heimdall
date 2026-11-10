@@ -8,7 +8,17 @@ We provide security updates at least once a month for the last released minor ve
 
 To report a security vulnerability, please use the [Security Advisories](https://github.com/dadrus/heimdall/security/advisories) feature. Do not use GitHub issues or other communication channels for security concerns.
 
-When you report a vulnerability, you will receive a response within 48 hours. If the issue is confirmed, we will issue a new release to address the vulnerability as soon as possible, depending on its complexity and severity.
+We aim to respond to vulnerability reports within 48 hours. If the issue is confirmed, we will issue a new release to address the vulnerability as soon as possible, depending on its complexity and severity.
+
+## Preparing Security Advisories
+
+Security advisories should help affected users and operators understand their exposure and take appropriate action. They should describe the vulnerability, affected versions, operating modes and integrations, exploitation prerequisites, potential impact, and available fixes or verified workarounds.
+
+Please organize the advisory into **Summary**, **Details**, **Impact**, and **Workarounds**, following the conventions established by previously published Heimdall advisories. Technical examples should help readers understand the risk or assess their exposure. GitHub metadata should include the affected version(s), applicable CWE identifiers, and a justified CVSS v4.0 vector and score.
+
+Advisories must distinguish verified findings from assumptions and conditional exploitation scenarios.
+
+The underlying technical investigation belongs in the advisory discussion as comments. This includes the technical report, reproduction steps, proof-of-concept results, affected code, verification findings, remaining uncertainties and any other information that could help us (better) understand, reproduce, and fix the issue.
 
 ## Security Updates and Patching
 

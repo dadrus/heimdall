@@ -620,7 +620,8 @@ func TestCommitterCommit(t *testing.T) {
 			targetURL, err := url.Parse(srv.URL)
 			require.NoError(t, err)
 
-			ctx := cf.Create(req)
+			ctx, err := cf.Create(req)
+			require.NoError(t, err)
 			defer cf.Destroy(ctx)
 
 			target := mocks.NewUpstreamTargetMock(t)
@@ -673,7 +674,8 @@ func TestCommitterDoesNotMaterializeProxyErrorAfterHijack(t *testing.T) {
 	req.Header.Set("Upgrade", "websocket")
 
 	cf := newContextFactory()
-	ctx := cf.Create(req)
+	ctx, err := cf.Create(req)
+	require.NoError(t, err)
 	defer cf.Destroy(ctx)
 
 	target := mocks.NewUpstreamTargetMock(t)
@@ -688,7 +690,7 @@ func TestCommitterDoesNotMaterializeProxyErrorAfterHijack(t *testing.T) {
 	rw := &hijackResponseWriter{conn: downstream}
 
 	// WHEN
-	_, err := committer.Commit(rw, ctx)
+	_, err = committer.Commit(rw, ctx)
 
 	// THEN
 	require.NoError(t, err)
@@ -763,7 +765,8 @@ func TestCommitterConcurrentIsolation(t *testing.T) {
 	)
 	reqA.RemoteAddr = "192.0.2.10:1234"
 
-	ctxA := cf.Create(reqA)
+	ctxA, err := cf.Create(reqA)
+	require.NoError(t, err)
 	defer cf.Destroy(ctxA)
 
 	targetURLA, err := url.Parse("https://upstream-a.example/target-a?foo=a")
@@ -786,7 +789,8 @@ func TestCommitterConcurrentIsolation(t *testing.T) {
 	)
 	reqB.RemoteAddr = "198.51.100.20:4321"
 
-	ctxB := cf.Create(reqB)
+	ctxB, err := cf.Create(reqB)
+	require.NoError(t, err)
 	defer cf.Destroy(ctxB)
 
 	targetURLB, err := url.Parse("http://upstream-b.example/target-b?foo=b")

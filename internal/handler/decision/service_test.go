@@ -544,6 +544,35 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Equal(t, http.StatusOK, response.StatusCode)
 			},
 		},
+		"invalid forwarded URI from trusted proxy": {
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(
+					t.Context(),
+					http.MethodGet,
+					fmt.Sprintf("http://%s/_auth", host),
+					nil,
+				)
+				require.NoError(t, err)
+
+				req.Header.Set("X-Forwarded-Uri", "/admin/settings;x=%")
+
+				return req
+			},
+			configureMocks: func(t *testing.T, _ *mocks2.ExecutorMock) {
+				t.Helper()
+				// The executor must not be called for an invalid forwarded URI.
+			},
+			assertResponse: func(t *testing.T, err error, response *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, response)
+				assert.Equal(t, http.StatusBadRequest, response.StatusCode)
+			},
+		},
 		"successful rule execution - only scheme is sent via header" +
 			"(trusted proxy configured and matches host)": {
 			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
@@ -757,233 +786,233 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 			tc.assertResponse(t, err, resp)
 		})
 	}
+}
 
-	t.Run("applies request body read idle timeout", func(t *testing.T) {
-		// GIVEN
-		port, err := testsupport.GetFreePort()
-		require.NoError(t, err)
+func TestHandleDecisionEndpointRequestBodyReadIdleTimeout(t *testing.T) {
+	// GIVEN
+	port, err := testsupport.GetFreePort()
+	require.NoError(t, err)
 
-		srvConf := config.ServeConfig{
-			Host: "127.0.0.1",
-			Port: port,
-			Requests: config.IngressRequests{
-				Body: config.IngressRequestBody{
-					ReadIdleTimeout: 100 * time.Millisecond,
-				},
+	srvConf := config.ServeConfig{
+		Host: "127.0.0.1",
+		Port: port,
+		Requests: config.IngressRequests{
+			Body: config.IngressRequestBody{
+				ReadIdleTimeout: 100 * time.Millisecond,
 			},
-		}
+		},
+	}
 
-		factory, err := listener.NewFactory(
-			srvConf.Address(),
-			srvConf.TLS,
-			0,
-			nil,
-		)
-		require.NoError(t, err)
+	factory, err := listener.NewFactory(
+		srvConf.Address(),
+		srvConf.TLS,
+		0,
+		nil,
+	)
+	require.NoError(t, err)
 
-		lstnr, err := factory.Create(t.Context())
-		require.NoError(t, err)
+	lstnr, err := factory.Create(t.Context())
+	require.NoError(t, err)
 
-		conf := &config.Configuration{Serve: srvConf}
-		exec := mocks2.NewExecutorMock(t)
-		bodyReadResult := make(chan error, 1)
+	conf := &config.Configuration{Serve: srvConf}
+	exec := mocks2.NewExecutorMock(t)
+	bodyReadResult := make(chan error, 1)
 
-		exec.EXPECT().Execute(mock.Anything).
-			RunAndReturn(func(ctx pipeline.ExecutionContext) error {
-				_, err := ctx.Request().Body()
-				bodyReadResult <- err
+	exec.EXPECT().Execute(mock.Anything).
+		RunAndReturn(func(ctx pipeline.ExecutionContext) error {
+			_, err := ctx.Request().Body()
+			bodyReadResult <- err
 
-				return err
-			})
+			return err
+		})
 
-		decision := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
-		defer decision.Shutdown(t.Context())
+	decision := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+	defer decision.Shutdown(t.Context())
 
-		go func() {
-			_ = decision.Serve(lstnr)
-		}()
+	go func() {
+		_ = decision.Serve(lstnr)
+	}()
 
-		time.Sleep(50 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 
-		dialer := &net.Dialer{}
-		conn, err := dialer.DialContext(t.Context(), "tcp", srvConf.Address())
-		require.NoError(t, err)
-		defer conn.Close()
+	dialer := &net.Dialer{}
+	conn, err := dialer.DialContext(t.Context(), "tcp", srvConf.Address())
+	require.NoError(t, err)
+	defer conn.Close()
 
-		_, err = io.WriteString(
-			conn,
-			"POST / HTTP/1.1\r\nHost: "+srvConf.Address()+"\r\nContent-Length: 1\r\n\r\n",
-		)
-		require.NoError(t, err)
+	_, err = io.WriteString(
+		conn,
+		"POST / HTTP/1.1\r\nHost: "+srvConf.Address()+"\r\nContent-Length: 1\r\n\r\n",
+	)
+	require.NoError(t, err)
 
-		// WHEN
-		var bodyReadErr error
-		select {
-		case bodyReadErr = <-bodyReadResult:
-		case <-time.After(2 * time.Second):
-			require.FailNow(t, "request body read did not complete")
-		}
+	// WHEN
+	var bodyReadErr error
+	select {
+	case bodyReadErr = <-bodyReadResult:
+	case <-time.After(2 * time.Second):
+		require.FailNow(t, "request body read did not complete")
+	}
 
-		// THEN
-		require.Error(t, bodyReadErr)
+	// THEN
+	require.Error(t, bodyReadErr)
 
-		var netErr net.Error
-		require.ErrorAs(t, bodyReadErr, &netErr)
-		assert.True(t, netErr.Timeout())
-	})
+	var netErr net.Error
+	require.ErrorAs(t, bodyReadErr, &netErr)
+	assert.True(t, netErr.Timeout())
+}
 
-	t.Run("rejects request if maximum number of requests is in flight", func(t *testing.T) {
-		// GIVEN
-		port, err := testsupport.GetFreePort()
-		require.NoError(t, err)
+func TestHandleDecisionEndpointRequestMaxInFlight(t *testing.T) {
+	// GIVEN
+	port, err := testsupport.GetFreePort()
+	require.NoError(t, err)
 
-		srvConf := config.ServeConfig{
-			Host: "127.0.0.1",
-			Port: port,
-		}
+	srvConf := config.ServeConfig{
+		Host: "127.0.0.1",
+		Port: port,
+	}
 
-		srvConf.Requests.MaxInFlight = 1
+	srvConf.Requests.MaxInFlight = 1
 
-		factory, err := listener.NewFactory(
-			srvConf.Address(),
-			srvConf.TLS,
-			0,
-			nil,
-		)
-		require.NoError(t, err)
+	factory, err := listener.NewFactory(
+		srvConf.Address(),
+		srvConf.TLS,
+		0,
+		nil,
+	)
+	require.NoError(t, err)
 
-		lstnr, err := factory.Create(t.Context())
-		require.NoError(t, err)
+	lstnr, err := factory.Create(t.Context())
+	require.NoError(t, err)
 
-		conf := &config.Configuration{Serve: srvConf}
-		exec := mocks2.NewExecutorMock(t)
+	conf := &config.Configuration{Serve: srvConf}
+	exec := mocks2.NewExecutorMock(t)
 
-		requestEntered := make(chan struct{}, 2)
-		releaseRequest := make(chan struct{})
+	requestEntered := make(chan struct{}, 2)
+	releaseRequest := make(chan struct{})
 
-		var releaseOnce sync.Once
-		release := func() {
-			releaseOnce.Do(func() {
-				close(releaseRequest)
-			})
-		}
-		t.Cleanup(release)
+	var releaseOnce sync.Once
+	release := func() {
+		releaseOnce.Do(func() {
+			close(releaseRequest)
+		})
+	}
+	t.Cleanup(release)
 
-		exec.EXPECT().Execute(mock.Anything).
-			Run(func(_ pipeline.ExecutionContext) {
-				requestEntered <- struct{}{}
+	exec.EXPECT().Execute(mock.Anything).
+		Run(func(_ pipeline.ExecutionContext) {
+			requestEntered <- struct{}{}
 
-				<-releaseRequest
-			}).
-			Return(pipeline.ErrNoRuleFound)
+			<-releaseRequest
+		}).
+		Return(pipeline.ErrNoRuleFound)
 
-		decision := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
-		defer decision.Shutdown(t.Context())
+	decision := newService(conf, mocks.NewCacheMock(t), log.Logger, exec)
+	defer decision.Shutdown(t.Context())
 
-		go func() {
-			_ = decision.Serve(lstnr)
-		}()
+	go func() {
+		_ = decision.Serve(lstnr)
+	}()
 
-		time.Sleep(50 * time.Millisecond)
+	time.Sleep(50 * time.Millisecond)
 
-		client := &http.Client{Transport: &http.Transport{}}
+	client := &http.Client{Transport: &http.Transport{}}
 
-		firstResponse := make(chan *http.Response, 1)
-		firstError := make(chan error, 1)
+	firstResponse := make(chan *http.Response, 1)
+	firstError := make(chan error, 1)
 
-		go func() {
-			req, err := http.NewRequestWithContext(
-				t.Context(),
-				http.MethodGet,
-				fmt.Sprintf("http://%s/", srvConf.Address()),
-				nil,
-			)
-			if err != nil {
-				firstError <- err
-
-				return
-			}
-
-			resp, err := client.Do(req) //nolint:bodyclose
-			firstResponse <- resp
-			firstError <- err
-		}()
-
-		select {
-		case <-requestEntered:
-		case <-time.After(time.Second):
-			release()
-			require.FailNow(t, "first request did not enter pipeline")
-		}
-
-		secondRequest, err := http.NewRequestWithContext(
+	go func() {
+		req, err := http.NewRequestWithContext(
 			t.Context(),
 			http.MethodGet,
 			fmt.Sprintf("http://%s/", srvConf.Address()),
 			nil,
 		)
-		require.NoError(t, err)
+		if err != nil {
+			firstError <- err
 
-		var (
-			secondResponse *http.Response
-			secondErr      error
-		)
-
-		secondDone := make(chan struct{})
-
-		// WHEN
-		go func() {
-			defer close(secondDone)
-
-			secondResponse, secondErr = client.Do(secondRequest) //nolint:bodyclose
-		}()
-
-		// THEN
-		select {
-		case <-requestEntered:
-			release()
-
-			require.FailNow(
-				t,
-				"second request entered pipeline while maximum number of requests was in flight",
-			)
-
-		case <-secondDone:
-			require.NoError(t, secondErr)
-			require.NotNil(t, secondResponse)
-			defer secondResponse.Body.Close()
-
-			assert.Equal(t, http.StatusServiceUnavailable, secondResponse.StatusCode)
-
-			data, err := io.ReadAll(secondResponse.Body)
-			require.NoError(t, err)
-			assert.Empty(t, data)
-
-		case <-time.After(time.Second):
-			release()
-
-			require.FailNow(t, "second request was not rejected immediately")
+			return
 		}
 
-		// WHEN
+		resp, err := client.Do(req) //nolint:bodyclose
+		firstResponse <- resp
+		firstError <- err
+	}()
+
+	select {
+	case <-requestEntered:
+	case <-time.After(time.Second):
+		release()
+		require.FailNow(t, "first request did not enter pipeline")
+	}
+
+	secondRequest, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		fmt.Sprintf("http://%s/", srvConf.Address()),
+		nil,
+	)
+	require.NoError(t, err)
+
+	var (
+		secondResponse *http.Response
+		secondErr      error
+	)
+
+	secondDone := make(chan struct{})
+
+	// WHEN
+	go func() {
+		defer close(secondDone)
+
+		secondResponse, secondErr = client.Do(secondRequest) //nolint:bodyclose
+	}()
+
+	// THEN
+	select {
+	case <-requestEntered:
 		release()
 
-		// THEN
-		select {
-		case err := <-firstError:
-			require.NoError(t, err)
-		case <-time.After(time.Second):
-			require.FailNow(t, "first request did not complete")
-		}
+		require.FailNow(
+			t,
+			"second request entered pipeline while maximum number of requests was in flight",
+		)
 
-		select {
-		case resp := <-firstResponse:
-			require.NotNil(t, resp)
-			defer resp.Body.Close()
+	case <-secondDone:
+		require.NoError(t, secondErr)
+		require.NotNil(t, secondResponse)
+		defer secondResponse.Body.Close()
 
-			assert.Equal(t, http.StatusNotFound, resp.StatusCode)
-		case <-time.After(time.Second):
-			require.FailNow(t, "first response was not received")
-		}
-	})
+		assert.Equal(t, http.StatusServiceUnavailable, secondResponse.StatusCode)
+
+		data, err := io.ReadAll(secondResponse.Body)
+		require.NoError(t, err)
+		assert.Empty(t, data)
+
+	case <-time.After(time.Second):
+		release()
+
+		require.FailNow(t, "second request was not rejected immediately")
+	}
+
+	// WHEN
+	release()
+
+	// THEN
+	select {
+	case err := <-firstError:
+		require.NoError(t, err)
+	case <-time.After(time.Second):
+		require.FailNow(t, "first request did not complete")
+	}
+
+	select {
+	case resp := <-firstResponse:
+		require.NotNil(t, resp)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	case <-time.After(time.Second):
+		require.FailNow(t, "first response was not received")
+	}
 }

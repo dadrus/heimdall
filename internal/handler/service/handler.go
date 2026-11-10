@@ -17,9 +17,11 @@
 package service
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler"
+	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 )
 
 type requestCoordinator interface {
@@ -40,6 +42,12 @@ func NewHandler(coordinator requestCoordinator, eh errorhandler.ErrorHandler) ht
 
 func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	if _, err := h.c.Handle(req, rw); err != nil {
+		if errors.Is(err, requestcontext.ErrInvalidForwardedURI) {
+			rw.WriteHeader(http.StatusBadRequest)
+
+			return
+		}
+
 		h.eh.HandleError(rw, req, err)
 	}
 }
