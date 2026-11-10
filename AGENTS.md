@@ -48,10 +48,14 @@ Use the documentation and applicable specifications to establish intended behavi
 
 ## Test design
 
-- Each unit test function should cover the meaningful positive and negative branches of its own target function or method. Higher-level tests should exercise that function's orchestration and error propagation, not duplicate detailed validation tests of its dependencies.
+- Unit tests for a function or method should collectively cover its meaningful positive and negative branches. Keep individual test functions focused on coherent behaviors or scenarios. 
+- Higher-level tests should exercise orchestration and error propagation, not duplicate detailed validation tests of its dependencies.
 - When refactoring responsibilities, move the corresponding tests to the appropriate target functions and remove obsolete or overlapping scenarios.
-- Extend existing test functions where possible. Add only cases for new behavior, regressions, or genuinely uncovered edges; avoid overlapping scenarios.
-- Use table-driven tests only when they improve clarity. Keep cases independently understandable without unnecessary helpers or abstraction (KISS before DRY).
+- Before modifying tests, inspect their existing structure and comparable tests in the same package. Follow established setup, execution, assertion, and subtest patterns unless a different approach makes the tests simpler and easier to understand.
+- Prefer extending existing test functions when new cases fit naturally without compromising readability. Use small, closely related subtests when they simplify different setup or assertions. Prefer separate test functions for substantial or structurally different scenarios. Do not force unrelated scenarios into the same test function or table.
+- Use table-driven tests only when they improve clarity. Keep cases independently understandable without unnecessary helpers or abstraction (KISS before DRY). Preserve established assertion patterns, such as separating function calls from assertions and keeping case-specific assertions in existing assertion callbacks, unless doing so would increase complexity.
+- Add only cases for new behavior, regressions, or genuinely uncovered edges; avoid overlapping scenarios and repeated testing of dependency behavior.
+- Structure tests consistently using // GIVEN, // WHEN, and // THEN comments to separate setup, execution of the behavior under test, and assertions. Apply this convention to new and modified tests, even if existing tests do not consistently use these comments.
 - Put end-to-end authorization, proxying, and cross-adapter workflows in integration tests rather than repeating entire workflows in unit tests.
 - Assert observable contracts, including partial results and error identity or wrapping (`errors.Is` where appropriate), rather than incidental implementation details.
 - Treat coverage as a diagnostic, not a target percentage. Inspect whether changed functions' meaningful branches have appropriate tests. Prefer removing unreachable or redundant code over adding artificial tests solely to increase coverage.
@@ -60,6 +64,7 @@ Use the documentation and applicable specifications to establish intended behavi
 - For bug fixes, add a reproducing regression case and verify that it fails before implementing the fix, where practical.
 - Keep tests deterministic; prefer local fakes, fixtures, and mocks over unnecessary external dependencies.
 - Regenerate mocks through the repository's configured Mockery workflow. Do not edit generated mocks manually.
+- Before handoff, review modified tests against their original structure and comparable tests. Check test ownership, readability, unnecessary complexity, overlapping scenarios, and deviations from established conventions.
 
 ## Performance
 
