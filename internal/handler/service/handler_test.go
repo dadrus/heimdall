@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	mocks "github.com/dadrus/heimdall/internal/handler/middleware/http/errorhandler/mocks"
+	"github.com/dadrus/heimdall/internal/handler/requestcontext"
 )
 
 type requestCoordinatorFunc func(*http.Request, http.ResponseWriter) (struct{}, error)
@@ -36,13 +37,18 @@ func TestHandlerServeHTTP(t *testing.T) {
 	t.Parallel()
 
 	for uc, tc := range map[string]struct {
-		err   error
-		setup func(*testing.T, *mocks.ErrorHandlerMock, http.ResponseWriter, *http.Request)
+		err    error
+		status int
+		setup  func(*testing.T, *mocks.ErrorHandlerMock, http.ResponseWriter, *http.Request)
 	}{
 		"no error": {
 			setup: func(t *testing.T, _ *mocks.ErrorHandlerMock, _ http.ResponseWriter, _ *http.Request) {
 				t.Helper()
 			},
+		},
+		"invalid forwarded URI": {
+			err:    requestcontext.ErrInvalidForwardedURI,
+			status: http.StatusBadRequest,
 		},
 		"with error": {
 			err: assert.AnError,
@@ -59,7 +65,9 @@ func TestHandlerServeHTTP(t *testing.T) {
 			rw := httptest.NewRecorder()
 
 			eh := mocks.NewErrorHandlerMock(t)
-			tc.setup(t, eh, rw, req)
+			if tc.setup != nil {
+				tc.setup(t, eh, rw, req)
+			}
 
 			coordinator := requestCoordinatorFunc(func(actualReq *http.Request, actualRW http.ResponseWriter) (struct{}, error) {
 				assert.Same(t, req, actualReq)
@@ -72,6 +80,10 @@ func TestHandlerServeHTTP(t *testing.T) {
 
 			// WHEN -> THEN expectations are met
 			handler.ServeHTTP(rw, req)
+
+			if tc.status != 0 {
+				assert.Equal(t, tc.status, rw.Code)
+			}
 		})
 	}
 }
