@@ -30,7 +30,7 @@ func TestExtractURL(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		configureRequest func(t *testing.T, req *http.Request)
-		assert           func(t *testing.T, extracted url.URL)
+		assert           func(t *testing.T, extracted url.URL, err error)
 	}{
 		"X-Forwarded-Proto set": {
 			configureRequest: func(t *testing.T, req *http.Request) {
@@ -39,8 +39,9 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "https", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
@@ -55,8 +56,9 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Host", "foobar")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "foobar", extracted.Host)
@@ -70,8 +72,9 @@ func TestExtractURL(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Host", "FoObAr.Example.COM:8443")
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "foobar.example.com:8443", extracted.Host)
 			},
@@ -82,8 +85,9 @@ func TestExtractURL(t *testing.T) {
 
 				req.Host = "FooBar.Example.Local:9443"
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "foobar.example.local:9443", extracted.Host)
 			},
@@ -95,8 +99,9 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Path", "/bar%2Ftest/foo/%5Bval%5D")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
@@ -111,8 +116,9 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Uri", "/bar%2Ftest/foo/%5Bval%5D?bar=foo")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
@@ -126,8 +132,9 @@ func TestExtractURL(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Uri", "//admin/settings?bar=foo")
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
 				assert.Equal(t, "/admin/settings", extracted.EscapedPath())
@@ -141,8 +148,9 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Uri", "/bar/../test/foo/%5Bval%5D?bar=foo")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
@@ -157,8 +165,9 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Uri", "/bar/%2e.%2ftest/foo/%5Bval%5D?bar=foo")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
@@ -172,8 +181,9 @@ func TestExtractURL(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Uri", "/admin/%2e%2e%2fpublic/x|?bar=foo")
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "/admin/../public/x|", extracted.Path)
 				assert.Equal(t, "/admin/%2e%2e%2fpublic/x%7C", extracted.RawPath)
@@ -187,8 +197,9 @@ func TestExtractURL(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Uri", "/files/a%2Fb|")
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "/files/a/b|", extracted.Path)
 				assert.Equal(t, "/files/a%2Fb%7C", extracted.RawPath)
@@ -204,8 +215,9 @@ func TestExtractURL(t *testing.T) {
 
 				req.URL = parsed
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "/admin/../public/x|", extracted.Path)
 				assert.Equal(t, "/admin/%2e%2e%2fpublic/x%7C", extracted.RawPath)
@@ -221,8 +233,9 @@ func TestExtractURL(t *testing.T) {
 
 				req.URL = parsed
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "/files/a/b|", extracted.Path)
 				assert.Equal(t, "/files/a%2Fb%7C", extracted.RawPath)
@@ -236,8 +249,9 @@ func TestExtractURL(t *testing.T) {
 				req.URL.Path = "/bar/baz/"
 				req.URL.RawPath = "/bar/baz/"
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
@@ -252,13 +266,122 @@ func TestExtractURL(t *testing.T) {
 				req.URL.Path = "/"
 				req.URL.RawPath = "/"
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
 				assert.Equal(t, "/", extracted.EscapedPath())
 				assert.Empty(t, extracted.Query())
+			},
+		},
+		"X-Forwarded-Uri without query does not inherit subrequest query": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/admin/settings")
+				req.URL.RawQuery = "internal=true"
+				req.URL.ForceQuery = true
+			},
+			assert: func(t *testing.T, extracted url.URL, err error) {
+				t.Helper()
+				require.NoError(t, err)
+
+				assert.Equal(t, "/admin/settings", extracted.Path)
+				assert.Empty(t, extracted.RawQuery)
+				assert.False(t, extracted.ForceQuery)
+			},
+		},
+		"X-Forwarded-Uri with empty query retains ForceQuery": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/admin/settings?")
+				req.URL.RawQuery = "internal=true"
+			},
+			assert: func(t *testing.T, extracted url.URL, err error) {
+				t.Helper()
+				require.NoError(t, err)
+
+				assert.Empty(t, extracted.RawQuery)
+				assert.True(t, extracted.ForceQuery)
+				assert.Equal(t, "http://heimdall.test.local/admin/settings?", extracted.String())
+			},
+		},
+		"X-Forwarded-Uri in absolute form with path": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "http://other.example/admin/settings?x=1")
+			},
+			assert: func(t *testing.T, extracted url.URL, err error) {
+				t.Helper()
+				require.NoError(t, err)
+
+				assert.Equal(t, "heimdall.test.local", extracted.Host)
+				assert.Equal(t, "/admin/settings", extracted.Path)
+				assert.Equal(t, "x=1", extracted.RawQuery)
+			},
+		},
+		"invalid percent escape in path parameter": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/admin/settings;x=%")
+			},
+			assert: func(t *testing.T, _ url.URL, err error) {
+				t.Helper()
+
+				require.ErrorIs(t, err, ErrInvalidForwardedURI)
+			},
+		},
+		"incomplete percent escape": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/admin/x%")
+			},
+			assert: func(t *testing.T, _ url.URL, err error) {
+				t.Helper()
+
+				require.ErrorIs(t, err, ErrInvalidForwardedURI)
+			},
+		},
+		"invalid percent escape": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/admin/%zz")
+			},
+			assert: func(t *testing.T, _ url.URL, err error) {
+				t.Helper()
+
+				require.ErrorIs(t, err, ErrInvalidForwardedURI)
+			},
+		},
+		"absolute URI without path": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "http://admin")
+			},
+			assert: func(t *testing.T, _ url.URL, err error) {
+				t.Helper()
+
+				require.ErrorIs(t, err, ErrInvalidForwardedURI)
+			},
+		},
+		"absolute URI without path and with query": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "http://admin?x=1")
+			},
+			assert: func(t *testing.T, _ url.URL, err error) {
+				t.Helper()
+
+				require.ErrorIs(t, err, ErrInvalidForwardedURI)
 			},
 		},
 		"Request URL with empty query": {
@@ -267,8 +390,9 @@ func TestExtractURL(t *testing.T) {
 
 				req.URL.ForceQuery = true
 			},
-			assert: func(t *testing.T, extracted url.URL) {
+			assert: func(t *testing.T, extracted url.URL, err error) {
 				t.Helper()
+				require.NoError(t, err)
 
 				assert.True(t, extracted.ForceQuery)
 				assert.Equal(t, "http://heimdall.test.local/test%2Ffoo/bar/%5Bval%5D?", extracted.String())
@@ -288,10 +412,10 @@ func TestExtractURL(t *testing.T) {
 			tc.configureRequest(t, req)
 
 			// WHEN
-			extracted := extractURL(req)
+			extracted, err := extractURL(req)
 
 			// THEN
-			tc.assert(t, extracted)
+			tc.assert(t, extracted, err)
 		})
 	}
 }
