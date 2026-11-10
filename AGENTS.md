@@ -48,7 +48,7 @@ Use the documentation and applicable specifications to establish intended behavi
 
 ## Test design
 
-- Unit tests for a function or method should collectively cover its meaningful positive and negative branches. Keep individual test functions focused on coherent behaviors or scenarios. 
+- Unit tests for a function or method should collectively cover its meaningful positive and negative branches. Keep individual test functions focused on coherent behaviors or scenarios.
 - Higher-level tests should exercise orchestration and error propagation, not duplicate detailed validation tests of its dependencies.
 - When refactoring responsibilities, move the corresponding tests to the appropriate target functions and remove obsolete or overlapping scenarios.
 - Before modifying tests, inspect their existing structure and comparable tests in the same package. Follow established setup, execution, assertion, and subtest patterns unless a different approach makes the tests simpler and easier to understand.
