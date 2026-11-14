@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.17.30](https://github.com/dadrus/heimdall/compare/v0.17.29...v0.17.30) (2026-11-14)
+
+
+### Dependencies
+
+* update module github.com/go-co-op/gocron/v2 to v2.23.1 ([#3666](https://github.com/dadrus/heimdall/issues/3666)) ([706e373](https://github.com/dadrus/heimdall/commit/706e373c7a29ee970cab895f53f4c09793135702))
+* update module github.com/tidwall/gjson to v1.20.3 ([#3675](https://github.com/dadrus/heimdall/issues/3675)) ([b0f78fb](https://github.com/dadrus/heimdall/commit/b0f78fbda7cf7ff2696494a4e832d7ed1a5d572a))
+* update module gocloud.dev to v0.48.0 ([#3673](https://github.com/dadrus/heimdall/issues/3673)) ([13d6140](https://github.com/dadrus/heimdall/commit/13d61409101475bf5b460752cad65981f88a1149))
+* update module gocloud.dev to v0.49.0 ([#3674](https://github.com/dadrus/heimdall/issues/3674)) ([f70fccf](https://github.com/dadrus/heimdall/commit/f70fccf65e948f0cfa0ef40fb4841827cfb9eed9))
+
 ## [0.17.29](https://github.com/dadrus/heimdall/compare/v0.17.28...v0.17.29) (2026-11-09)
 
 
