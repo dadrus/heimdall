@@ -71,6 +71,7 @@ jobs:
               - 'scripts/generate-doc-versions.sh'
             ci:
               - '.github/workflows/**'
+              - '.github/actions/**'
 
   check-licenses:
     runs-on: ubuntu-26.04
@@ -132,10 +133,11 @@ jobs:
     runs-on: ubuntu-26.04
     permissions:
       contents: read
+      pull-requests: write
     needs:
       - check-changes
-    if: > 
-      needs.check-changes.outputs.docs_changed == 'true' || 
+    if: >
+      needs.check-changes.outputs.docs_changed == 'true' ||
       needs.check-changes.outputs.ci_config_changed == 'true'
     steps:
       - name: Harden Runner
@@ -146,12 +148,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Setup Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+          fetch-depth: 0
+      - name: Review OpenAPI specification
+        uses: ./.github/actions/vacuum-lint
         with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Run Redocly CLI
-        run: npx --yes @redocly/cli@1.34.3 lint
+          specification: docs/openapi/specification.yaml
+          ruleset: vacuum-ruleset.yaml
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
   lint-dockerfiles:
     runs-on: ubuntu-26.04

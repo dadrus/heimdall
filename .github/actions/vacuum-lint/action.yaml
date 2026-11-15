@@ -1,0 +1,98 @@
+name: Vacuum OpenAPI Linter
+description: Lint an OpenAPI specification with Vacuum and report PR findings through reviewdog
+author: dadrus
+
+inputs:
+  specification:
+    description: Path to the OpenAPI specification
+    required: true
+  ruleset:
+    description: Path to the Vacuum ruleset
+    required: true
+  github_token:
+    description: GitHub token for posting pull request review comments
+    required: false
+    default: ${{ github.token }}
+  vacuum_version:
+    description: Vacuum version, optionally followed by @sha256:<binary checksum>
+    required: false
+    default: '0.41.0@sha256:761162ce561fb681ef45a904fbe19fb2b68ecfc75bd605d68854ded2ec9de48c'
+  reviewdog_version:
+    description: Reviewdog release version
+    required: false
+    default: 'v0.21.3'
+  reporter:
+    description: Reviewdog reporter
+    required: false
+    default: github-pr-review
+  filter_mode:
+    description: Reviewdog filter mode
+    required: false
+    default: added
+  fail_severity:
+    description: Minimum Vacuum severity that fails linting
+    required: false
+    default: error
+
+runs:
+  using: composite
+  steps:
+    - name: Install Vacuum
+      shell: bash
+      env:
+        VACUUM_VERSION: ${{ inputs.vacuum_version }}
+      run: |
+        set -euo pipefail
+        if [[ "$VACUUM_VERSION" =~ ^([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)(@sha256:([0-9a-fA-F]{64}))?$ ]]; then
+          version="${BASH_REMATCH[1]}"
+          checksum="${BASH_REMATCH[4]:-}"
+        else
+          echo "Invalid vacuum_version: $VACUUM_VERSION" >&2
+          exit 1
+        fi
+
+        archive="$RUNNER_TEMP/vacuum.tar.gz"
+        bin_dir="$RUNNER_TEMP/vacuum-bin"
+
+        curl -fsSL --retry 3 -o "$archive" \
+          "https://github.com/daveshanley/vacuum/releases/download/v${version}/vacuum_${version}_linux_x86_64.tar.gz"
+        mkdir -p "$bin_dir"
+        tar -xzf "$archive" -C "$bin_dir" vacuum
+        if [[ -n "$checksum" ]]; then
+          printf '%s  %s\n' "$checksum" "$bin_dir/vacuum" | sha256sum -c -
+        fi
+        echo "$bin_dir" >> "$GITHUB_PATH"
+
+    - name: Set up reviewdog
+      if: github.event_name == 'pull_request'
+      uses: reviewdog/action-setup@d8a7baabd7f3e8544ee4dbde3ee41d0011c3a93f # v1.5.0
+      with:
+        reviewdog_version: ${{ inputs.reviewdog_version }}
+
+    - name: Review OpenAPI specification
+      if: github.event_name == 'pull_request'
+      shell: bash
+      env:
+        SPECIFICATION: ${{ inputs.specification }}
+        RULESET: ${{ inputs.ruleset }}
+        REVIEWDOG_GITHUB_API_TOKEN: ${{ inputs.github_token }}
+        REPORTER: ${{ inputs.reporter }}
+        FILTER_MODE: ${{ inputs.filter_mode }}
+        FAIL_SEVERITY: ${{ inputs.fail_severity }}
+      run: |
+        set -euo pipefail
+        vacuum lint "$SPECIFICATION" \
+          --ruleset "$RULESET" \
+          --no-update-check --no-banner --fail-severity "$FAIL_SEVERITY" --min-score 0 --format sarif |
+          reviewdog -f=sarif -name=vacuum -reporter="$REPORTER" -filter-mode="$FILTER_MODE" -fail-level=none
+
+    - name: Lint OpenAPI specification
+      if: github.event_name != 'pull_request'
+      shell: bash
+      env:
+        SPECIFICATION: ${{ inputs.specification }}
+        RULESET: ${{ inputs.ruleset }}
+        FAIL_SEVERITY: ${{ inputs.fail_severity }}
+      run: |
+        set -euo pipefail
+        vacuum lint "$SPECIFICATION" --ruleset "$RULESET" --no-update-check --fail-severity "$FAIL_SEVERITY" --min-score 0
