@@ -82,7 +82,7 @@ params:
 
 module:
   mounts:
-    - source: versions
+    - source: /tmp/heimdall-doc-versions
       target: static
     - source: openapi
       target: static

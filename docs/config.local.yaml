@@ -1,0 +1,4 @@
+# Overrides for `just run-docs` only.
+params:
+  version: dev
+  version_file: /data.json
