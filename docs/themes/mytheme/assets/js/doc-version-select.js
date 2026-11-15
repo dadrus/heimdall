@@ -1,7 +1,7 @@
 function splitVersionString(version) {
-    const [corepre, build] = version.split('+')
-    const [core, pre] = corepre.split('-').map(x => String(x).split('.').map(y => isNaN(y) ? y : parseInt(y, 10)))
-    return {core, pre, build}
+    const [corepre] = version.replace(/^v/, '').split('+')
+    const [core, pre] = corepre.split('-').map(x => x.split('.').map(y => /^\d+$/.test(y) ? Number(y) : y))
+    return {core, pre}
 }
 
 function compareCore(a, b) {
@@ -21,6 +21,8 @@ function comparePre(a, b) {
         return -1
     } else if (!a && b) {
         return 1
+    } else if (!a && !b) {
+        return 0
     } else {
         const len = a.length > b.length ? a.length : b.length
         for (let i = 0; i < len; i++) {
@@ -39,6 +41,8 @@ function comparePre(a, b) {
             }
         }
     }
+
+    return 0
 }
 
 const semanticCompare = (a, b) => {
@@ -67,16 +71,23 @@ const html = htmlSnippet => {
 }
 
 const linkListItem = (currentVersion, currentPath) => element => `
-<li><a class="dropdown-item ${currentVersion === element.version ? 'current' : ''}" href="${element.path}${currentPath}">${element.version}</a></li>`
+<li><a class="dropdown-item ${currentVersion === element.version ? 'current' : ''}" ${currentVersion === element.version ? 'aria-current="page"' : ''} href="${element.path}${currentPath}">${element.version}</a></li>`
 
 const linkList = (elements = [], currentVersion, currentPath) => {
     const linkItem = linkListItem(currentVersion, currentPath)
+    const additionalCurrent = currentVersion !== 'unknown' && !elements.some(element => element.version === currentVersion)
+        ? `
+      <li><hr class="dropdown-divider"></li>
+      <li><span class="dropdown-header text-white-50">Currently viewing</span></li>
+      <li><a class="dropdown-item current" aria-current="page" href="${window.location.href}">${currentVersion}</a></li>`
+        : ''
 
     return html(`
     <ul class="dropdown-menu  bg-dark">
       ${linkItem(elements[0])}
       <li><hr class="dropdown-divider"></li>
-      ${elements.slice(1).map(linkItem).sort(semanticCompare).reverse().join('\n')}
+      ${elements.slice(1).sort((a, b) => semanticCompare(b.version, a.version)).map(linkItem).join('\n')}
+      ${additionalCurrent}
     </ul>
   `)
 }
