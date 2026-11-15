@@ -68,9 +68,6 @@ x-tagGroups:
 
 components:
   schemas:
-    ReviewdogTestUnusedSchema:
-      description: Temporary schema to verify Reviewdog PR comments.
-      type: string
     ETag:
       description: |
         The ETag (or entity tag) HTTP response header is an identifier for a specific version of a resource. 
