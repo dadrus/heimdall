@@ -1,4 +1,4 @@
-openapi: 3.1.0
+openapi: 3.2.1
 
 info:
   title: Heimdall
@@ -13,24 +13,36 @@ servers:
     description: Management Server
 
 tags:
+  - name: Management
+    kind: nav
+
   - name: Well-Known
+    parent: Management
+    kind: nav
     description: |
       Operations/resources which fall under the `.well-known` (see [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615))
       category, like health endpoints, etc. 
       
       This functionality is only available on heimdall's **management port**.
 
+  - name: Main
+    kind: nav
+
   - name: Main Service
+    parent: Main
+    kind: nav
     description: |
       This is the main service exposed by heimdall and available on the **main port**.
 
   - name: Profiling
+    kind: nav
     description: |
       Provides runtime profiling information, like CPU profile, memory usage, program counter, etc.
       
       This information is only available on heimdall's **profiling port**.
 
   - name: Metrics
+    kind: nav
     description: |
       Provides available Prometheus style metrics like:
       
@@ -43,29 +55,13 @@ tags:
       This information is only available on heimdall's **metrics port**.
 
   - name: Validating Admission Controller
+    kind: nav
     description: |
       Implements a [validating admission controller webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)
       for integration purposes with the Kubernetes API server. If used, allows a direct feedback for `RuleSet` resources upon deployment of these
       into a Kubernetes cluster without the need to look into the logs, if a RuleSet could not be loaded for any reasons.
 
       This functionality is only available on heimdall's **validating admission controller** port, supported in Kubernetes deployments only.
-x-tagGroups:
-  - name: Management
-    tags:
-      - Well-Known
-  - name: Main
-    tags:
-      - Main Service
-  - name: Profiling
-    tags:
-      - Profiling
-  - name: Metrics
-    tags:
-      - Metrics
-  - name: Validating Admission Controller
-    tags:
-      - Validating Admission Controller
-
 components:
   schemas:
     ETag:
