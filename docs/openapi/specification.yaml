@@ -7,7 +7,6 @@ info:
   license:
     name: Apache 2.0
     identifier: Apache-2.0
-    url: https://github.com/dadrus/heimdall/blob/main/LICENSE
 
 servers:
   - url: https://heimdall.management.local
@@ -21,7 +20,7 @@ tags:
       
       This functionality is only available on heimdall's **management port**.
 
-  - name: Main
+  - name: Main Service
     description: |
       This is the main service exposed by heimdall and available on the **main port**.
 
@@ -346,6 +345,7 @@ paths:
       parameters:
         - name: If-None-Match
           in: header
+          description: The ETag received from an earlier JWKS response. If it still matches, heimdall responds with HTTP 304 Not Modified.
           required: false
           schema:
             $ref: '#/components/schemas/If-None-Match'
@@ -590,6 +590,7 @@ paths:
       parameters:
         - name: path_and_query_params
           in: path
+          required: true
           description: The path and query parameter to match a rule and to work on.
           schema:
             type: string
