@@ -2,3 +2,14 @@
 params:
   version: dev
   version_file: /data.json
+
+module:
+  mounts:
+    - source: /tmp/heimdall-doc-versions
+      target: static
+    - source: openapi
+      target: static
+    - source: node_modules/bootstrap/dist/js/bootstrap.bundle.js
+      target: assets/js/bootstrap.bundle.js
+    - source: node_modules/bootstrap-icons/font/fonts
+      target: static/css/fonts
