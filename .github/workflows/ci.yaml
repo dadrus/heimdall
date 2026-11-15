@@ -68,6 +68,7 @@ jobs:
               - 'charts/**'
             docs:
               - 'docs/**'
+              - 'scripts/generate-doc-versions.sh'
             ci:
               - '.github/workflows/**'
 
