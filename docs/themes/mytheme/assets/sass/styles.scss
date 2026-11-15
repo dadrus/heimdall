@@ -245,16 +245,9 @@ td {
 
 doc-version-select {
   .dropdown-item.current {
-    position: relative;
-    padding-right: 1.5rem;
-
-    &:after {
-      content: "✔";
-      position: absolute;
-      right: .5rem;
-      top: 50%;
-      transform: translateY(-50%);
-    }
+    font-weight: 600;
+    background-color: rgba(255, 255, 255, .1);
+    box-shadow: inset 3px 0 0 var(--bs-primary);
   }
 }
 

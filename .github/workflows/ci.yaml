@@ -68,6 +68,7 @@ jobs:
               - 'charts/**'
             docs:
               - 'docs/**'
+              - 'scripts/generate-doc-versions.sh'
             ci:
               - '.github/workflows/**'
 
@@ -559,14 +560,31 @@ jobs:
         uses: step-security/harden-runner@1d88384fd173af6ecb012dfd0264a306b711241a # v2.22.4
         with:
           egress-policy: audit
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+          path: source
       - name: Download documentation artifact
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: dev-docs
           path: ./docs
+      - name: Generate documentation versions
+        working-directory: ./source
+        run: |
+          mkdir -p /tmp/heimdall-doc-versions
+          ./scripts/generate-doc-versions.sh > /tmp/heimdall-doc-versions/data.json
       - name: Deploy documentation
         uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs
           destination_dir: dev
+      - name: Deploy versions JSON document
+        uses: peaceiris/actions-gh-pages@84c30a85c19949d7eee79c4ff27748b70285e453 # v4.1.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: /tmp/heimdall-doc-versions
+          keep_files: true

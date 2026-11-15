@@ -82,8 +82,6 @@ params:
 
 module:
   mounts:
-    - source: versions
-      target: static
     - source: openapi
       target: static
     - source: node_modules/bootstrap/dist/js/bootstrap.bundle.js
