@@ -5,7 +5,12 @@ check-licenses:
   go-licenses check --disallowed_types=forbidden,restricted,reciprocal,permissive,unknown .
 
 lint-api:
-  redocly lint
+  vacuum lint \
+    --no-update-check \
+    --fail-severity error \
+    --min-score 0 \
+    --ruleset vacuum-ruleset.yaml \
+    docs/openapi/specification.yaml
 
 lint-code:
   golangci-lint run
