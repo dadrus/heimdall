@@ -1,0 +1,10 @@
+extends: [[vacuum:oas, recommended]]
+rules:
+  oas3-unused-component: error
+  no-ambiguous-paths: warn
+  operation-tag-defined: warn
+  oas3-parameter-description: warn
+
+  oas3-missing-example: off
+  camel-case-properties: off
+  description-duplication: off
