@@ -1,0 +1,16 @@
+{{- $page := . -}}
+{{- $groups := .Params.api_groups | transform.Unmarshal -}}
+{{- $components := .Params.api_components | transform.Unmarshal -}}
+{{- $servers := .Params.api_servers | transform.Unmarshal -}}
+{{- range $groups -}}
+  {{- $nested := ne .tag.name $page.Params.api_tag -}}
+  {{- if $nested -}}
+    <section id="{{ .tag.name | anchorize }}" class="mt-5">
+      <h2>{{ default .tag.name .tag.summary }}</h2>
+      {{ with .tag.description }}{{ $page.RenderString (dict "markup" "markdown") . }}{{ end }}
+    </section>
+  {{- end -}}
+  {{- range .operations -}}
+    {{ partial "openapi/operation.html" (dict "item" . "nested" $nested "components" $components "servers" $servers "page" $page) }}
+  {{- end -}}
+{{- end -}}

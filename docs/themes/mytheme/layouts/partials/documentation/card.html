@@ -1,0 +1,7 @@
+<div class="gridcol card my-3">
+  <div class="card-body d-flex flex-column">
+    <h5 class="card-title">{{ .Title }}</h5>
+    {{ with .Description }}<p class="card-text">{{ . }}</p>{{ end }}
+    <a class="stretched-link mt-auto align-self-start" href="{{ .RelPermalink }}">Read &rarr;</a>
+  </div>
+</div>

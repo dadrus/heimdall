@@ -1,0 +1,28 @@
+{{- $page := .page -}}
+{{- range $status, $response := .responses -}}
+  {{- $response = partial "openapi/resolve-ref.html" (dict "value" $response "components" $.components) -}}
+  <div class="d-flex align-items-start gap-3 border-top py-3">
+    <div class="flex-shrink-0 font-monospace fw-semibold{{ if hasPrefix $status "2" }} text-success{{ else }} text-body-secondary{{ end }}">{{ $status }}</div>
+    <div class="flex-grow-1">
+      {{ with $response.description }}<div>{{ $page.RenderString (dict "markup" "markdown") . }}</div>{{ end }}
+      {{ with $response.headers }}
+        <div class="mt-3">
+          <h5 class="fs-6 fw-semibold mb-2">Response headers</h5>
+          <dl class="mb-0">
+            {{ range $name, $header := . }}
+              {{ $header = partial "openapi/resolve-ref.html" (dict "value" $header "components" $.components) }}
+              <dt><code>{{ $name }}</code></dt>
+              <dd class="mb-3">
+                {{ with $header.description }}{{ $page.RenderString (dict "markup" "markdown") . }}{{ end }}
+                {{ with $header.schema }}{{ partial "openapi/schema.html" (dict "schema" . "components" $.components "page" $page) }}{{ end }}
+              </dd>
+            {{ end }}
+          </dl>
+        </div>
+      {{ end }}
+      {{ with $response.content }}
+        {{ partial "openapi/media.html" (dict "content" . "components" $.components "page" $page) }}
+      {{ end }}
+    </div>
+  </div>
+{{- end -}}

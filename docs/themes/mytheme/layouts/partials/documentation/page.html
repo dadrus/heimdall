@@ -1,0 +1,45 @@
+{{- $page := .page -}}
+{{- $toc := .toc -}}
+<div class="container-xxl docs-layout px-4">
+  <aside class="d-none pe-3 docs-sidebar">
+    {{ partial "sidebar/docs-menu.html" $page }}
+  </aside>
+
+  <main class="docs-main{{ if not $toc }} docs-main--no-toc{{ end }}">
+    {{/* Like the existing Docs and Guides layouts, breadcrumbs appear only on individual pages and only on mobile. */}}
+    {{ if $page.IsPage }}
+      <div class="d-md-none docs-location bg-body">
+        <nav style="--bs-breadcrumb-divider: '>';" aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item fw-bold">{{ $page.Parent.Name }}</li>
+            <li class="breadcrumb-item active" aria-current="page">{{ $page.Title }}</li>
+          </ol>
+        </nav>
+      </div>
+    {{ end }}
+
+    <div class="docs-intro pt-3 pe-3">
+      <h1>{{ $page.Title }}</h1>
+      {{ with $page.Description }}
+        {{/* AsciiDoc page descriptions are plain front matter; OpenAPI descriptions are CommonMark. */}}
+        {{ if eq $page.Section "openapi" }}
+          <div class="docs-description">{{ $page.RenderString (dict "markup" "markdown") . }}</div>
+        {{ else }}
+          <p>{{ . }}</p>
+        {{ end }}
+      {{ end }}
+    </div>
+
+    {{ with $toc }}{{ partial "documentation/toc.html" . }}{{ end }}
+
+    <div class="docs-content pe-3{{ with .contentClass }} {{ . }}{{ end }}">
+      <div data-bs-spy="scroll" data-bs-target="#page-content-toc" class="mt-3">
+        <linkable-headline-area>
+          {{ .content | safeHTML }}
+        </linkable-headline-area>
+      </div>
+      {{ partial "last-updated-info.html" $page }}
+      {{ partial "bottom-navigation.html" $page }}
+    </div>
+  </main>
+</div>

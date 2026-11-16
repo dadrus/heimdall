@@ -1,0 +1,24 @@
+{{- $page := . -}}
+{{- $groups := .Params.api_groups | transform.Unmarshal -}}
+{{- with $groups -}}
+<nav id="TableOfContents">
+  <ul>
+    {{- range . -}}
+      {{- $nested := ne .tag.name $page.Params.api_tag -}}
+      {{- if $nested -}}
+        <li><a href="#{{ .tag.name | anchorize }}">{{ default .tag.name .tag.summary }}</a>
+          <ul>
+            {{- range .operations -}}
+              <li><a href="#{{ .id | anchorize }}">{{ .method }} {{ .path }}</a></li>
+            {{- end -}}
+          </ul>
+        </li>
+      {{- else -}}
+        {{- range .operations -}}
+          <li><a href="#{{ .id | anchorize }}">{{ .method }} {{ .path }}</a></li>
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+  </ul>
+</nav>
+{{- end -}}

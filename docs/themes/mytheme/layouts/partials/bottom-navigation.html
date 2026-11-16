@@ -1,23 +1,28 @@
-{{ if or .Prev .Next -}}
+{{- /* Keep the existing Docs/Guides ordering; generated API pages follow the sidebar weights. */ -}}
+{{- $pages := where site.RegularPages "Section" .Section -}}
+{{- if eq .Section "openapi" -}}
+  {{- $pages = $pages.ByWeight -}}
+{{- end -}}
+{{- $previous := $pages.Next . -}}
+{{- $next := $pages.Prev . -}}
+{{- if and .IsPage (or $previous $next) -}}
 <hr>
-<div class="d-flex justify-content-between py-3">
-  <!-- https://www.feliciano.tech/blog/custom-sort-hugo-single-pages/ -->
-  {{ $pages := where site.RegularPages "Section" .Section -}}
-  {{ with $pages.Next . -}}
-  <a href="{{ .RelPermalink }}" class="fs-6 fw-bold text-dark link-secondary link-underline-opacity-0">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
+<div class="docs-bottom-navigation py-3">
+  {{ with $previous }}
+  <a href="{{ .RelPermalink }}" class="docs-bottom-navigation__link fs-6 fw-bold text-dark link-secondary link-underline-opacity-0">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left" aria-hidden="true" viewBox="0 0 16 16">
       <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
     </svg>
-    {{ .Title }}
+    <span class="docs-bottom-navigation__text">{{ .Title }}</span>
   </a>
-  {{ end -}}
-  {{ with $pages.Prev . -}}
-  <a class="ms-auto fs-6 fw-bold text-dark link-secondary link-underline-opacity-0" href="{{ .RelPermalink }}">
-    {{ .Title }}
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16">
-      <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
+  {{ end }}
+  {{ with $next }}
+  <a class="docs-bottom-navigation__link docs-bottom-navigation__link--next fs-6 fw-bold text-dark link-secondary link-underline-opacity-0" href="{{ .RelPermalink }}">
+    <span class="docs-bottom-navigation__text">{{ .Title }}</span>
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right" aria-hidden="true" viewBox="0 0 16 16">
+      <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708z"/>
     </svg>
   </a>
-  {{ end -}}
+  {{ end }}
 </div>
-{{ end -}}
+{{- end -}}
