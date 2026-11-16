@@ -1,5 +1,5 @@
 baseURL: https://dadrus.github.io/
-languageCode: en-us
+locale: en-us
 title: Heimdall
 theme: mytheme
 relativeURLS: true
@@ -9,7 +9,7 @@ enableGitInfo: true
 security:
   enableInlineShortcodes: false
   exec:
-    allow: ['asciidoctor', 'git']
+    allow: ['asciidoctor', 'git', 'sass']
     osEnv: ['(?i)^(PATH|PATHEXT|APPDATA|TMP|TEMP|TERM|GEM_PATH)$']
 
   funcs:
