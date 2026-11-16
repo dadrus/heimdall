@@ -23,7 +23,7 @@ tags:
       Operations/resources which fall under the `.well-known` (see [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615))
       category, like health endpoints, etc. 
       
-      This functionality is only available on heimdall's **management port**.
+      This functionality is only available on heimdall's [management port](/docs/services/management/).
 
   - name: Main
     kind: nav
@@ -32,14 +32,14 @@ tags:
     parent: Main
     kind: nav
     description: |
-      This is the main service exposed by heimdall and available on the **main port**.
+      This is the main service exposed by heimdall and available on the [main port](/docs/services/main/).
 
   - name: Profiling
     kind: nav
     description: |
       Provides runtime profiling information, like CPU profile, memory usage, program counter, etc.
       
-      This information is only available on heimdall's **profiling port**.
+      This information is only available on heimdall's [profiling port](/docs/operations/observability/#_runtime_profiling).
 
   - name: Metrics
     kind: nav
@@ -52,7 +52,7 @@ tags:
       * Information about the decision and proxy requests handled, including the total amount and duration of http requests by status code, method and path, as well as information about requests in progress.
       * Information about expiry for configured certificates.
       
-      This information is only available on heimdall's **metrics port**.
+      This information is only available on heimdall's [metrics port](/docs/operations/observability/#_metrics).
 
   - name: Validating Admission Controller
     kind: nav
@@ -61,7 +61,7 @@ tags:
       for integration purposes with the Kubernetes API server. If used, allows a direct feedback for `RuleSet` resources upon deployment of these
       into a Kubernetes cluster without the need to look into the logs, if a RuleSet could not be loaded for any reasons.
 
-      This functionality is only available on heimdall's **validating admission controller** port, supported in Kubernetes deployments only.
+      This functionality is only available on heimdall's [validating admission controller](/docs/rules/providers/#_kubernetes) port, supported in Kubernetes deployments only.
 components:
   schemas:
     ETag:
@@ -148,7 +148,7 @@ components:
               x5c:
                 description: |
                   Stands for an X.509 certificate chain. This parameter contains a chain of one or more PKIX 
-                  certificates [RFC5280](https://www.rfc-editor.org/rfc/rfc5280). The certificate chain is 
+                  certificates [RFC5280](https://www.rfc-editor.org/rfc/rfc5280). The certificate chain is
                   represented as a JSON array of certificate value strings. Each string in the array is base64-encoded
                 type: array
                 items:
@@ -175,9 +175,6 @@ security: []
 
 paths:
   /metrics:
-    servers:
-      - url: https://metrics.heimdall.local
-        description: Metrics Service
     get:
       summary: Get available Prometheus style metrics
       description: |
@@ -388,7 +385,7 @@ paths:
     post:
       summary: Validate RuleSet
       description: |
-        Validates RuleSets enveloped into the [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview) object as defined by the 
+        Validates RuleSets enveloped into the [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview) object as defined by the
         [Kubernetes Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers)
         specification.
       tags:
