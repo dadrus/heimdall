@@ -96,7 +96,6 @@
       "title" (default $tag.name $tag.summary)
       "weight" (mul (add $index 1) 10)
       "description" (default "" $tag.description)
-      "content" (dict "mediaType" "text/markdown" "value" (default "" $tag.description))
       "menus" (dict "openapi" (dict "parent" "api_reference" "weight" (mul (add $index 1) 10)))
       "params" (dict "api_groups" ($groups | jsonify) "api_tag" $tag.name "api_components" ($api.components | jsonify) "api_servers" ($api.servers | jsonify))
     ) -}}
