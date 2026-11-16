@@ -1,10 +1,23 @@
-{{- define "main" -}}
-<div class="container-xxl d-xxl-flex">
-  <main class="pt-2 flex-xxl-grow-0">
-    <div>
-      <redoc spec-url="{{ .Params.spec | relURL }}"></redoc>
+{{ define "main" }}
+<div class="container-xxl docs-layout px-4">
+  <aside class="d-none pe-3 docs-sidebar">
+    {{ partial "sidebar/docs-menu.html" . }}
+  </aside>
+
+  <main class="docs-main">
+    <div class="docs-intro pt-3 pe-3">
+      <h1>{{ .Title }}</h1>
+    </div>
+    <div class="docs-content pe-3">
+      {{ .Content }}
+      {{ with .Pages.ByWeight }}
+      <ul>
+        {{ range . }}
+        <li><a href="{{ .RelPermalink }}">{{ .Title }}</a></li>
+        {{ end }}
+      </ul>
+      {{ end }}
     </div>
   </main>
 </div>
-<script src="https://cdn.redoc.ly/redoc/latest/bundles/redoc.standalone.js"> </script>
 {{ end }}
