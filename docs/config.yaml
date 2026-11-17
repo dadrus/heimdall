@@ -84,7 +84,7 @@ module:
   mounts:
     - source: openapi
       target: static
-    - source: node_modules/bootstrap/dist/js/bootstrap.bundle.js
+    - source: bootstrap/dist/js/bootstrap.bundle.js
       target: assets/js/bootstrap.bundle.js
-    - source: node_modules/bootstrap-icons/font/fonts
+    - source: bootstrap-icons/font/fonts
       target: static/css/fonts
