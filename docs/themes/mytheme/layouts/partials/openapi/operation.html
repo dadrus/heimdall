@@ -1,13 +1,15 @@
 {{- $page := .page -}}
 {{- $item := .item -}}
 {{- $operation := $item.operation -}}
-<section id="{{ $item.id | anchorize }}" class="border-top pt-4 mt-5 mb-5">
+{{- $nested := .nested -}}
+{{- $title := default (printf "%s %s" $item.method $item.path) $operation.summary -}}
+<section id="{{ $item.id | anchorize }}" class="api-operation">
   {{ if .nested }}
-    <h3 class="mt-0 mb-3">{{ default $item.id $operation.summary }}</h3>
+    <h3 class="api-operation__title">{{ $title }}</h3>
   {{ else }}
-    <h2 class="mt-0 mb-3">{{ default $item.id $operation.summary }}</h2>
+    <h2 class="api-operation__title">{{ $title }}</h2>
   {{ end }}
-  <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+  <div class="api-operation__endpoint d-flex flex-wrap align-items-center gap-2 mb-3">
     {{- $methodColor := "bg-body-tertiary text-body-secondary" -}}
     {{- if eq $item.method "GET" -}}
       {{- $methodColor = "bg-success-subtle text-success-emphasis" -}}
@@ -24,9 +26,10 @@
   {{- $servers := .servers -}}
   {{- with $item.path_item.servers }}{{ $servers = . }}{{ end -}}
   {{- with $operation.servers }}{{ $servers = . }}{{ end -}}
-  {{ with $servers }}
-    <h4>Server</h4>
-    <ul class="list-unstyled">
+  {{/* '/' is OpenAPI's default server URL, not a deployed instance. */}}
+  {{ with (where $servers "url" "ne" "/") }}
+    {{ if $nested }}<h4>Server</h4>{{ else }}<h3>Server</h3>{{ end }}
+    <ul class="list-unstyled api-server-list">
       {{ range . }}<li class="mb-2"><code>{{ .url }}</code>{{ with .description }} <span class="small text-body-secondary">— {{ . }}</span>{{ end }}</li>{{ end }}
     </ul>
   {{ end }}
@@ -35,40 +38,47 @@
   {{- range $item.path_item.parameters }}{{ $parameters = append . $parameters }}{{ end -}}
   {{- range $operation.parameters }}{{ $parameters = append . $parameters }}{{ end -}}
   {{ with $parameters }}
-    <h4>Parameters</h4>
-    {{ range . }}
-      {{ $parameter := partial "openapi/resolve-ref.html" (dict "value" . "components" $.components) }}
-      {{ $schema := dict }}
-      {{ with $parameter.schema }}
-        {{ $schema = partial "openapi/resolve-ref.html" (dict "value" . "components" $.components) }}
-      {{ end }}
-      <div class="border-top py-3">
-        <div class="d-flex flex-wrap align-items-baseline gap-2 mb-2">
-          <code class="fw-semibold">{{ $parameter.name }}</code>
-          <span class="small text-body-secondary">{{ index $parameter "in" }}</span>
-          {{ with $schema.type }}<span class="small text-body-secondary">{{ . }}{{ with $schema.format }} · {{ . }}{{ end }}</span>{{ end }}
-          {{ if $parameter.required }}<span class="small fw-semibold text-danger">required</span>{{ else }}<span class="small text-body-secondary">optional</span>{{ end }}
-        </div>
-        {{ with $parameter.description }}<div>{{ $page.RenderString (dict "markup" "markdown") . }}</div>{{ end }}
-        {{ if or $schema.properties $schema.items }}
-          {{ partial "openapi/schema.html" (dict "schema" $schema "components" $.components "page" $page) }}
-        {{ else }}
-          {{ with $schema.description }}<div>{{ $page.RenderString (dict "markup" "markdown") . }}</div>{{ end }}
+    {{ if $nested }}<h4>Parameters</h4>{{ else }}<h3>Parameters</h3>{{ end }}
+    {{/* Match the property lists under Docs > Configuration Reference > Type Definitions. */}}
+    <div class="ulist">
+      <ul class="api-definition-list">
+        {{ range . }}
+          {{ $parameter := partial "openapi/resolve-ref.html" (dict "value" . "components" $.components) }}
+          {{ $schema := dict }}
+          {{ with $parameter.schema }}
+            {{ $schema = partial "openapi/resolve-ref.html" (dict "value" . "components" $.components) }}
+          {{ end }}
+          <li class="api-parameter">
+            <p>
+              <strong><code>{{ $parameter.name }}</code></strong>{{ with $schema.type }}: <em>{{ . }}{{ with $schema.format }} ({{ . }}){{ end }}</em>{{ end }}
+              ({{ index $parameter "in" }}, {{ if $parameter.required }}required{{ else }}optional{{ end }})
+            </p>
+            {{ with $parameter.description }}<div class="paragraph">{{ $page.RenderString (dict "markup" "markdown") . }}</div>{{ end }}
+            {{ if or $schema.properties $schema.items }}
+              {{ partial "openapi/schema.html" (dict "schema" $schema "components" $.components "page" $page) }}
+            {{ else }}
+              {{ with $schema.description }}<div class="paragraph">{{ $page.RenderString (dict "markup" "markdown") . }}</div>{{ end }}
+            {{ end }}
+            {{ if isset $parameter "example" }}<p>Example: <code>{{ $parameter.example }}</code></p>{{ end }}
+          </li>
         {{ end }}
-        {{ if isset $parameter "example" }}<p class="mb-0">Example: <code>{{ $parameter.example }}</code></p>{{ end }}
-      </div>
-    {{ end }}
+      </ul>
+    </div>
   {{ end }}
 
   {{ with $operation.requestBody }}
     {{ $body := partial "openapi/resolve-ref.html" (dict "value" . "components" $.components) }}
-    <h4>Request body{{ if $body.required }} <span class="small fw-semibold text-danger">required</span>{{ end }}</h4>
+    {{ if $nested }}
+      <h4>Request body{{ if $body.required }} <span class="small fw-semibold text-danger">required</span>{{ end }}</h4>
+    {{ else }}
+      <h3>Request body{{ if $body.required }} <span class="small fw-semibold text-danger">required</span>{{ end }}</h3>
+    {{ end }}
     {{ with $body.description }}<div>{{ $page.RenderString (dict "markup" "markdown") . }}</div>{{ end }}
     {{ with $body.content }}{{ partial "openapi/media.html" (dict "content" . "components" $.components "page" $page) }}{{ end }}
   {{ end }}
 
   {{ with $operation.responses }}
-    <h4>Responses</h4>
-    {{ partial "openapi/responses.html" (dict "responses" . "components" $.components "page" $page) }}
+    {{ if $nested }}<h4>Responses</h4>{{ else }}<h3>Responses</h3>{{ end }}
+    {{ partial "openapi/responses.html" (dict "responses" . "components" $.components "page" $page "nested" $nested) }}
   {{ end }}
 </section>

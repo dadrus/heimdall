@@ -2,16 +2,11 @@
 {{- with .Pages.ByWeight -}}
   <div class="row gap-2">
     {{- range . -}}
-      <div class="gridcol card my-3">
-        <div class="card-body d-flex flex-column">
-          <h5 class="card-title">{{ .Title }}</h5>
-          {{- with .Description -}}
-            {{- $description := $page.RenderString (dict "markup" "markdown") . | plainify | truncate 220 -}}
-            <p class="card-text">{{ $description }}</p>
-          {{- end -}}
-          <a class="stretched-link mt-auto align-self-start" href="{{ .RelPermalink }}">Read &rarr;</a>
-        </div>
-      </div>
+      {{- $description := "" -}}
+      {{- with .Description -}}
+        {{- $description = $page.RenderString (dict "markup" "markdown") . | plainify | truncate 220 -}}
+      {{- end -}}
+      {{ partial "documentation/card.html" (dict "page" . "description" $description) }}
     {{- end -}}
   </div>
 {{- end -}}

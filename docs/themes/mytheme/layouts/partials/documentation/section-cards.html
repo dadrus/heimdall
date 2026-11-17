@@ -7,7 +7,7 @@
       {{- $currentSection := .CurrentSection -}}
       {{- range where $page.Site.RegularPages.ByTitle "Section" $page.Section -}}
         {{- if in (.RelPermalink | string) $currentSection.RelPermalink -}}
-          {{ partial "documentation/card.html" . }}
+          {{ partial "documentation/card.html" (dict "page" .) }}
         {{- end -}}
       {{- end -}}
     </div>
@@ -17,7 +17,7 @@
     {{- $currentSection := .CurrentSection -}}
     {{- range where .Site.RegularPages.ByTitle "Section" .Section -}}
       {{- if in (.RelPermalink | string) $currentSection.RelPermalink -}}
-        {{ partial "documentation/card.html" . }}
+        {{ partial "documentation/card.html" (dict "page" .) }}
       {{- end -}}
     {{- end -}}
   </div>

@@ -9,13 +9,13 @@
         <li><a href="#{{ .tag.name | anchorize }}">{{ default .tag.name .tag.summary }}</a>
           <ul>
             {{- range .operations -}}
-              <li><a href="#{{ .id | anchorize }}">{{ .method }} {{ .path }}</a></li>
+              <li><a href="#{{ .id | anchorize }}">{{ default (printf "%s %s" .method .path) .operation.summary }}</a></li>
             {{- end -}}
           </ul>
         </li>
       {{- else -}}
         {{- range .operations -}}
-          <li><a href="#{{ .id | anchorize }}">{{ .method }} {{ .path }}</a></li>
+          <li><a href="#{{ .id | anchorize }}">{{ default (printf "%s %s" .method .path) .operation.summary }}</a></li>
         {{- end -}}
       {{- end -}}
     {{- end -}}
