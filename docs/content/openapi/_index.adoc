@@ -3,6 +3,12 @@ title: "API Reference"
 date: 2022-06-29T17:32:36+02:00
 draft: false
 weight: 200
+description: >-
+  This reference describes heimdall's HTTP interfaces for access-control
+  decisions and request proxying, management, profiling, metrics, and
+  Kubernetes admission hooks. Available endpoints and listening addresses
+  depend on the deployment. For configuration and usage, see the
+  [documentation](/docs/).
 menu:
   openapi:
     identifier: api_reference
