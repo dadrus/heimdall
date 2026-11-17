@@ -5,8 +5,8 @@
 {{- range $groups -}}
   {{- $nested := ne .tag.name $page.Params.api_tag -}}
   {{- if $nested -}}
-    <section id="{{ .tag.name | anchorize }}" class="mt-5">
-      <h2>{{ default .tag.name .tag.summary }}</h2>
+    <section class="mt-5" aria-labelledby="{{ .tag.name | anchorize }}">
+      <h2 id="{{ .tag.name | anchorize }}">{{ default .tag.name .tag.summary }}</h2>
       {{ with .tag.description }}{{ $page.RenderString (dict "markup" "markdown") . }}{{ end }}
     </section>
   {{- end -}}

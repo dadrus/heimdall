@@ -8,11 +8,7 @@
         <p><strong><code>{{ $status }}</code></strong>{{ with $response.description }}: {{ $page.RenderString (dict "markup" "markdown" "display" "inline") . }}{{ end }}</p>
         {{ with $response.headers }}
           <div class="mt-3">
-            {{ if $.nested }}
-              <h5 class="fs-6 fw-semibold mb-2">Response headers</h5>
-            {{ else }}
-              <h4 class="fs-6 fw-semibold mb-2">Response headers</h4>
-            {{ end }}
+            <p class="fw-semibold mb-2">Response headers</p>
             <div class="ulist">
               <ul class="api-definition-list">
                 {{ range $name, $header := . }}

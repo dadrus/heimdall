@@ -1,7 +1,7 @@
 {{- define "main" -}}
   {{- partial "documentation/page.html" (dict
     "page" .
-    "content" (partial "openapi/content.html" .)
+    "content" .Content
     "toc" (partial "openapi/toc.html" .)
     "contentClass" "api-reference"
   ) -}}

@@ -89,11 +89,13 @@
         {{- end -}}
       {{- end -}}
     {{- end -}}
-    {{- /* Serialize API objects to preserve case-sensitive JSON keys in Hugo page parameters. */ -}}
+    {{- /* Serialize API objects to preserve case-sensitive JSON keys in Hugo page parameters.
+           The shortcode renders them with the generated page as context, exposing normal .Content/.Plain. */ -}}
     {{- $.AddPage (dict
       "kind" "page"
       "path" (urlize $tag.name)
       "title" (default $tag.name $tag.summary)
+      "content" (dict "mediaType" "text/markdown" "value" "{{< openapi-group >}}\n")
       "weight" (mul (add $index 1) 10)
       "description" (default "" $tag.description)
       "menus" (dict "openapi" (dict "parent" "api_reference" "weight" (mul (add $index 1) 10)))

@@ -1,13 +1,12 @@
 {{- $page := .page -}}
 {{- $item := .item -}}
 {{- $operation := $item.operation -}}
-{{- $nested := .nested -}}
 {{- $title := default (printf "%s %s" $item.method $item.path) $operation.summary -}}
-<section id="{{ $item.id | anchorize }}" class="api-operation">
+<section class="api-operation" aria-labelledby="{{ $item.id | anchorize }}">
   {{ if .nested }}
-    <h3 class="api-operation__title">{{ $title }}</h3>
+    <h3 id="{{ $item.id | anchorize }}" class="api-operation__title">{{ $title }}</h3>
   {{ else }}
-    <h2 class="api-operation__title">{{ $title }}</h2>
+    <h2 id="{{ $item.id | anchorize }}" class="api-operation__title">{{ $title }}</h2>
   {{ end }}
   <div class="api-operation__endpoint d-flex flex-wrap align-items-center gap-2 mb-3">
     {{- $methodColor := "bg-body-tertiary text-body-secondary" -}}
@@ -28,7 +27,7 @@
   {{- with $operation.servers }}{{ $servers = . }}{{ end -}}
   {{/* '/' is OpenAPI's default server URL, not a deployed instance. */}}
   {{ with (where $servers "url" "ne" "/") }}
-    {{ if $nested }}<h4>Server</h4>{{ else }}<h3>Server</h3>{{ end }}
+    <p class="api-operation__section-label">Server</p>
     <ul class="list-unstyled api-server-list">
       {{ range . }}<li class="mb-2"><code>{{ .url }}</code>{{ with .description }} <span class="small text-body-secondary">— {{ . }}</span>{{ end }}</li>{{ end }}
     </ul>
@@ -38,7 +37,7 @@
   {{- range $item.path_item.parameters }}{{ $parameters = append . $parameters }}{{ end -}}
   {{- range $operation.parameters }}{{ $parameters = append . $parameters }}{{ end -}}
   {{ with $parameters }}
-    {{ if $nested }}<h4>Parameters</h4>{{ else }}<h3>Parameters</h3>{{ end }}
+    <p class="api-operation__section-label">Parameters</p>
     {{/* Match the property lists under Docs > Configuration Reference > Type Definitions. */}}
     <div class="ulist">
       <ul class="api-definition-list">
@@ -68,17 +67,13 @@
 
   {{ with $operation.requestBody }}
     {{ $body := partial "openapi/resolve-ref.html" (dict "value" . "components" $.components) }}
-    {{ if $nested }}
-      <h4>Request body{{ if $body.required }} <span class="small fw-semibold text-danger">required</span>{{ end }}</h4>
-    {{ else }}
-      <h3>Request body{{ if $body.required }} <span class="small fw-semibold text-danger">required</span>{{ end }}</h3>
-    {{ end }}
+    <p class="api-operation__section-label">Request body{{ if $body.required }} <span class="small fw-semibold text-danger">required</span>{{ end }}</p>
     {{ with $body.description }}<div>{{ $page.RenderString (dict "markup" "markdown") . }}</div>{{ end }}
     {{ with $body.content }}{{ partial "openapi/media.html" (dict "content" . "components" $.components "page" $page) }}{{ end }}
   {{ end }}
 
   {{ with $operation.responses }}
-    {{ if $nested }}<h4>Responses</h4>{{ else }}<h3>Responses</h3>{{ end }}
-    {{ partial "openapi/responses.html" (dict "responses" . "components" $.components "page" $page "nested" $nested) }}
+    <p class="api-operation__section-label">Responses</p>
+    {{ partial "openapi/responses.html" (dict "responses" . "components" $.components "page" $page) }}
   {{ end }}
 </section>

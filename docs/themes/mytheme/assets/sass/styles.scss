@@ -82,8 +82,7 @@ div[id] {
   }
 }
 
-.listingblock pre,
-.api-reference pre {
+.docs-content pre {
   border-radius: .4rem;
   padding: .75rem;
   box-shadow: inset 0 0 0 1px #5c636a;
@@ -158,6 +157,7 @@ pre code {
 .highlight {
   code {
     border: none;
+    color: inherit;
   }
 }
 
@@ -390,10 +390,6 @@ doc-version-select {
 .api-reference {
   min-width: 0;
 
-  .highlight code {
-    color: inherit;
-  }
-
   p {
     line-height: 1.7;
   }
@@ -404,6 +400,12 @@ doc-version-select {
 
   .api-operation__title {
     margin: 0 0 1rem;
+  }
+
+  .api-operation__section-label {
+    margin: 1.5rem 0 1rem;
+    font-size: 1.2rem;
+    font-weight: 600;
   }
 
   .api-operation__endpoint {
@@ -434,17 +436,8 @@ doc-version-select {
     margin-bottom: .5rem;
   }
 
-  .api-example pre {
-    max-height: 34rem;
-    overflow: auto;
-  }
-
   .highlight {
     border-radius: .4rem;
-  }
-
-  section[id] {
-    scroll-margin-top: 5rem;
   }
 
   details summary {
@@ -453,6 +446,85 @@ doc-version-select {
 
   .flex-grow-1 {
     min-width: 0;
+  }
+}
+
+// The script adds this wrapper only for code blocks longer than 15 lines.
+// Without JavaScript, all preformatted content stays fully visible.
+.code-block {
+  --code-block-bg: var(--bs-tertiary-bg);
+  --code-block-toggle-color: var(--bs-secondary-color);
+  --code-block-toggle-hover: rgba(0, 0, 0, .04);
+  margin-bottom: 1rem;
+  border-radius: .4rem;
+  background-color: var(--code-block-bg);
+  box-shadow: inset 0 0 0 1px #5c636a;
+  overflow: hidden;
+
+  &.code-block--highlighted {
+    --code-block-bg: #122b3b;
+    --code-block-toggle-color: #dbe8f0;
+    --code-block-toggle-hover: rgba(255, 255, 255, .06);
+  }
+
+  .code-block__viewport {
+    min-width: 0;
+
+    > pre,
+    > .highlight pre {
+      margin-bottom: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    > .highlight {
+      border-radius: 0;
+    }
+  }
+
+  &.code-block--collapsed .code-block__viewport {
+    max-height: var(--code-preview-height);
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2rem), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 2rem), transparent);
+  }
+
+  .code-block__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
+    width: 100%;
+    padding: .55rem 1rem .7rem;
+    border: 0;
+    background: transparent;
+    color: var(--code-block-toggle-color);
+    font-size: .875rem;
+    font-weight: 500;
+    line-height: 1.4;
+    cursor: pointer;
+
+    &::before {
+      content: "";
+      width: .45rem;
+      height: .45rem;
+      border-right: .125rem solid currentColor;
+      border-bottom: .125rem solid currentColor;
+      transform: translateY(-.125rem) rotate(45deg);
+    }
+
+    &:hover {
+      background-color: var(--code-block-toggle-hover);
+    }
+
+    &:focus-visible {
+      outline: .125rem solid var(--bs-primary);
+      outline-offset: -.125rem;
+    }
+  }
+
+  &:not(.code-block--collapsed) .code-block__toggle::before {
+    transform: translateY(.125rem) rotate(225deg);
   }
 }
 

@@ -1,6 +1,12 @@
 import HugoFlexSearch from "hugo-flexsearch";
 import * as bs from "bootstrap";
 
+function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[char])
+}
+
 class SingleResult {
     constructor(args) {
         this.title = args.title
@@ -10,8 +16,8 @@ class SingleResult {
 
     render() {
         return `
-        <a class="list-group-item list-group-item-action" href="${this.url}">
-            <div class="fw-bold mb-0 text-secondary">${this.title}</div>
+        <a class="list-group-item list-group-item-action" href="${escapeHTML(this.url)}">
+            <div class="fw-bold mb-0 text-secondary">${escapeHTML(this.title)}</div>
             <div class="text-muted">${this.snippet}</div>
         </a>`
     }
@@ -20,16 +26,16 @@ class SingleResult {
 class SearchResult {
     constructor(args) {
         this.title = args.title
-        this.url = args.url
         this.sections = args.sections
         this.items = args.items
     }
 
     render() {
+        const heading = [...this.sections, this.title].map(escapeHTML).join(" / ")
         return `
         <div class="p-2">
-          <div class="mb-1 fw-bold" >${this.sections.join(" / ")} / ${this.title}</div>
-          <div class="list-group">${this.items.reduce((prev, cur) => prev + cur.render(), "")}</div>
+          <div class="mb-1 fw-bold">${heading}</div>
+          <div class="list-group">${this.items.map(item => item.render()).join("")}</div>
         </div>`
     }
 }
@@ -67,102 +73,93 @@ class DocSearch extends HTMLElement {
         return this.hasAttribute('path-prefix') ? this.getAttribute('path-prefix') : ""
     }
 
-    resultTemplate(post) {
-        const searchValue = document.getElementById("search-input").value
-        if (post.kind === "openapi_operation") {
-            return this.apiOperationResult(post, searchValue)
+    // Associate each heading's text with its URL fragment. AsciiDoc puts IDs on
+    // headings; OpenAPI puts them on the surrounding sections. Both use the same
+    // result representation, including nested headings within an operation.
+    contentSections(html) {
+        const doc = new DOMParser().parseFromString(html, 'text/html')
+        const sections = new Map()
+        const walker = doc.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT)
+        let current = null
+        let lastHeading = null
+        let node
+
+        while ((node = walker.nextNode())) {
+            if (!node.textContent.trim()) continue
+            const heading = node.parentElement.closest('h2, h3, h4, h5, h6')
+            if (heading && heading !== lastHeading) {
+                lastHeading = heading
+                const id = heading.id || heading.closest('[id]')?.id
+                if (!id) {
+                    current = null
+                } else {
+                    if (!sections.has(id)) {
+                        sections.set(id, { id, title: heading.textContent.trim(), text: [] })
+                    }
+                    current = sections.get(id)
+                }
+            }
+            if (current) current.text.push(node.textContent)
         }
-        const pathPrefix = this.pathPrefix
 
-        const parser = new DOMParser()
-        const doc = parser.parseFromString(post.html_content, 'text/html')
-
-        let headingSelector = "h3"
-        let sections = Array.prototype.slice.call(doc.querySelectorAll(".sect2"))
-        let matches = sections
-            .filter(el => el.textContent.toLowerCase().indexOf(searchValue.toLowerCase()) > -1)
-        if (matches.length === 0) {
-            sections = Array.prototype.slice.call(doc.querySelectorAll(".sect1"))
-            matches = sections
-                .filter(el => el.textContent.toLowerCase().indexOf(searchValue.toLowerCase()) > -1)
-            headingSelector = "h2"
-        }
-
-        if (matches.length === 0) {
-            return ""
-        }
-
-        const items = matches.map(el => {
-            const section = el.querySelector(headingSelector)
-            const idx = el.textContent.toLowerCase().indexOf(searchValue.toLowerCase())
-            let snippet = el.textContent.substring(idx - 10, idx + 40)
-
-            const start = snippet.toLowerCase().indexOf(searchValue.toLowerCase())
-            const beforeVal = snippet.substring(0, start)
-            const afterVal = snippet.substring(start + searchValue.length)
-            snippet = '... ' + beforeVal + '<mark>' + searchValue + '</mark>' + afterVal + ' ...'
-
-            return new SingleResult({
-                "title": section.textContent,
-                "url": pathPrefix + post.url + "#" + section.attributes.id.value,
-                "snippet": snippet,
-            })
-        })
-
-        return new SearchResult({
-            "title": post.title,
-            "url": pathPrefix + post.url,
-            "sections": post.sections,
-            "items": items
-        }).render()
+        return [...sections.values()].map(section => ({
+            ...section,
+            text: section.text.join(' ').replace(/\s+/g, ' ').trim(),
+        }))
     }
 
-    // OpenAPI operations have their own index records and stable fragment URLs.
-    // They do not contain AsciiDoc .sect1/.sect2 wrappers like Docs and Guides.
-    apiOperationResult(post, query) {
-        const url = this.escapeHTML(this.pathPrefix + post.url)
-        const sections = this.escapeHTML(post.sections.join(" / "))
-        const title = this.escapeHTML(post.title)
-        const snippet = this.apiSnippet(post.content, query)
-
-        return `
-        <div class="p-2">
-          <div class="mb-1 fw-bold">${sections}</div>
-          <div class="list-group">
-            <a class="list-group-item list-group-item-action" href="${url}">
-              <div class="fw-bold mb-0 text-secondary">${title}</div>
-              <div class="text-muted">${snippet}</div>
-            </a>
-          </div>
-        </div>`
-    }
-
-    // Highlight a matching phrase (or a term from a multiword query) while
-    // keeping the result safe even if the OpenAPI description contains markup.
-    apiSnippet(content, query) {
-        const text = String(content || "").replace(/\s+/g, " ").trim()
+    snippet(content, query) {
+        const text = String(content || '').replace(/\s+/g, ' ').trim()
         const search = query.trim()
         const terms = [search, ...search.split(/\s+/)].filter(Boolean)
         const term = terms.find(value => text.toLowerCase().includes(value.toLowerCase()))
         const position = term ? text.toLowerCase().indexOf(term.toLowerCase()) : 0
         const start = Math.max(0, position - 45)
         const end = Math.min(text.length, position + (term ? term.length : 0) + 90)
-        const prefix = start > 0 ? "… " : ""
-        const suffix = end < text.length ? " …" : ""
+        const prefix = start > 0 ? '… ' : ''
+        const suffix = end < text.length ? ' …' : ''
 
-        if (!term) {
-            return prefix + this.escapeHTML(text.slice(start, end)) + suffix
-        }
+        if (!term) return prefix + escapeHTML(text.slice(start, end)) + suffix
         return prefix
-            + this.escapeHTML(text.slice(start, position))
-            + "<mark>" + this.escapeHTML(text.slice(position, position + term.length)) + "</mark>"
-            + this.escapeHTML(text.slice(position + term.length, end)) + suffix
+            + escapeHTML(text.slice(start, position))
+            + '<mark>' + escapeHTML(text.slice(position, position + term.length)) + '</mark>'
+            + escapeHTML(text.slice(position + term.length, end)) + suffix
     }
 
-    escapeHTML(value) {
-        return String(value).replace(/[&<>"']/g, char => ({
-            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
-        })[char])
+    resultTemplate(post) {
+        const search = document.getElementById('search-input').value.trim()
+        const terms = search.toLowerCase().split(/\s+/).filter(Boolean)
+        if (!terms.length) return ''
+
+        const sections = this.contentSections(post.html_content)
+        const hasTerm = (section, term) =>
+            section.id.toLowerCase().includes(term) || section.text.toLowerCase().includes(term)
+        const matching = sections.filter(section => terms.every(term => hasTerm(section, term)))
+        // An AND match may span sections of one page; preserve those results.
+        const matches = matching.length ? matching : sections.filter(section =>
+            terms.some(term => hasTerm(section, term)))
+        const items = matches.map(section => new SingleResult({
+            title: section.title,
+            url: this.pathPrefix + post.url + '#' + encodeURIComponent(section.id),
+            snippet: this.snippet(
+                terms.some(term => section.text.toLowerCase().includes(term))
+                    ? section.text : section.id + ' ' + section.text, search),
+        }))
+
+        // Pages without headings (or hits in the page title/intro) are searchable too.
+        if (!items.length) {
+            items.push(new SingleResult({
+                title: post.title,
+                url: this.pathPrefix + post.url,
+                snippet: this.snippet(post.content, search),
+            }))
+        }
+
+        return new SearchResult({
+            title: post.title,
+            sections: post.sections || [],
+            items,
+        }).render()
     }
 
     emptyTemplate() {
