@@ -1,7 +1,7 @@
-
-<div class="modal" id="docSearch" tabindex="-1" aria-labelledby="docSearchLabel" aria-hidden="true">
-  <doc-search class="col-auto me-auto mw-75" index-file="{{ .Site.Params.search_index_file }}"
-              path-prefix="{{ .Site.Params.path_prefix }}">
+{{- $search := partialCached "search/index-data.html" .Site }}
+<doc-search class="modal" id="docSearch" tabindex="-1" aria-label="Search documentation" aria-hidden="true"
+            index-file="{{ .Site.Params.search_index_file }}" index-hash="{{ $search.hash }}"
+            path-prefix="{{ .Site.Params.path_prefix }}">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
           <div class="modal-header p-2">
@@ -12,7 +12,7 @@
                   </svg>
               </div>
               <input id="search-input" class="form-control search-bar border-0" type="search" placeholder="Search documentation "
-                     aria-label="Search docs..." autocomplete="off" autofocus>
+                     aria-label="Search docs..." aria-describedby="search-navigation-help" autocomplete="off" autofocus>
               <div class="input-group-text bg-body border-0">
                 <a class="btn input-group-text text-muted border p-1 bg-light-subtle fs-7 fw-bold font-monospace" data-bs-dismiss="modal" aria-label="Close">ESC</a>
               </div>
@@ -23,10 +23,19 @@
             <div class="search-results">
               <p class="text-center mt-5">No recent searches</p>
             </div>
+            <span id="search-navigation-help" class="visually-hidden">Use the up and down arrow keys to select a result, then Enter to open it.</span>
+            <span id="search-result-status" class="visually-hidden" role="status" aria-live="polite"></span>
           </div>
-          <div class="modal-footer">
+          <div class="modal-footer docs-search-footer">
+            <div class="docs-search-footer__item">
+              <span class="docs-search-footer__keys" aria-hidden="true"><kbd>↑</kbd><kbd>↓</kbd></span>
+              <span>Navigate</span>
+            </div>
+            <div class="docs-search-footer__item">
+              <kbd aria-hidden="true">↵</kbd>
+              <span>Open</span>
+            </div>
           </div>
         </div>
     </div>
-  </doc-search>
-</div>
+</doc-search>

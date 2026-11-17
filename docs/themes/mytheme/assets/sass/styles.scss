@@ -272,6 +272,35 @@ doc-version-select {
   border-bottom: 0;
 }
 
+.search-results .list-group-item-action.search-result-active {
+  background-color: var(--bs-list-group-action-hover-bg);
+  box-shadow: inset 3px 0 0 var(--bs-primary);
+}
+
+.docs-search-footer {
+  justify-content: center;
+  gap: 1.5rem;
+  color: var(--bs-secondary-color);
+  font-size: .875rem;
+
+  &__item, &__keys {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+  }
+
+  kbd {
+    min-width: 1.5rem;
+    text-align: center;
+    padding: .125rem .375rem;
+    color: inherit;
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: .25rem;
+    font-size: .75rem;
+  }
+}
+
 .reference-link {
   &:link,
   &:visited,
@@ -606,27 +635,73 @@ html, body {
   .docs-sidebar {
     position: sticky;
     top: calc(4.875rem + (var(--docs-heading-line-height) - var(--docs-search-control-height)) / 2);
-    display: block !important;
+    display: flex !important;
+    flex-direction: column;
     align-self: start;
     height: auto;
     max-height: calc(100vh - 6.5rem);
     padding-left: .25rem;
     margin-left: -.25rem;
-    overflow-y: auto;
     min-width: 13rem;
 
-    overscroll-behavior-y: auto;
-    overscroll-behavior-y: chain;
+    // The search button stays outside the only scrollport. Gradients are
+    // overlays on the menu content, not masks on the scrollbar or button.
+    .docs-menu-container {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+
+      &::before, &::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 1rem;
+        height: 1rem;
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      &::before {
+        top: 0;
+        background: linear-gradient(to bottom, var(--bs-body-bg), transparent);
+      }
+
+      &::after {
+        bottom: 0;
+        background: linear-gradient(to top, var(--bs-body-bg), transparent);
+      }
+
+      nav {
+        max-height: calc(100vh - 6.5rem - var(--docs-search-control-height) - .5rem);
+        overflow-y: auto;
+        overscroll-behavior-y: auto;
+        padding-bottom: 1.25rem;
+      }
+    }
 
     .docs-search-button {
-      position: sticky;
-      top: 0;
+      flex: 0 0 auto;
       padding-bottom: .5rem;
-      background: linear-gradient(to bottom, var(--bs-body-bg) calc(100% - 1rem), color-mix(in srgb, var(--bs-body-bg) 50%, transparent) 95%, transparent);
 
       button {
+        --bs-btn-hover-bg: var(--bs-tertiary-bg);
+        --bs-btn-hover-color: var(--bs-secondary-color);
+        --bs-btn-hover-border-color: var(--bs-secondary-color);
         height: var(--docs-search-control-height);
-        padding-block: .25rem;
+        padding: .25rem .625rem;
+        gap: .5rem;
+
+        svg {
+          stroke: currentColor;
+          stroke-width: .65;
+        }
+      }
+
+      .docs-search-shortcut {
+        margin-left: auto;
+        flex-shrink: 0;
+        font-size: .900rem;
+        font-weight: 600;
       }
     }
   }
@@ -667,8 +742,9 @@ html, body {
     top: 5rem;
     right: 0;
     z-index: 2;
+    align-self: start;
     overflow-y: auto;
-    height: calc(100vh - 7rem);
+    max-height: calc(100vh - 7rem);
   }
 
   linkable-headline-area .gridcol {
