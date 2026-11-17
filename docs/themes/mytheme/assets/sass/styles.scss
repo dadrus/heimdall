@@ -82,17 +82,22 @@ div[id] {
   }
 }
 
-.listingblock {
-  overflow-y: scroll;
-  word-break: break-word;
+.listingblock pre,
+.api-reference pre {
+  border-radius: .4rem;
+  padding: .75rem;
+  box-shadow: inset 0 0 0 1px #5c636a;
+  font-size: .875em;
+  overflow-x: auto;
 
-  pre {
-    border-radius: .4rem;
-    padding: .75rem;
-    box-shadow: inset 0 0 0 1px #5c636a;
-    font-size: .875em;
+  code {
+    max-width: none;
+    white-space: pre;
+    overflow-wrap: normal;
   }
+}
 
+.listingblock {
   b {
     display: none;
   }
@@ -146,11 +151,8 @@ p, td {
   }
 }
 
-pre {
-  code {
-    display: block;
-    max-width: 10rem;
-  }
+pre code {
+  display: block;
 }
 
 .highlight {
@@ -345,6 +347,7 @@ doc-version-select {
 
 .docs-intro {
   grid-area: intro;
+  padding-top: 1rem;
 }
 
 .docs-toc {
@@ -356,8 +359,6 @@ doc-version-select {
   min-width: 0;
 }
 
-// Keep the previous/next links in two columns on narrow screens. Titles may wrap,
-// while the chevrons remain vertically centered beside the entire title.
 .docs-bottom-navigation {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -386,23 +387,60 @@ doc-version-select {
   }
 }
 
-// The generated API pages use the same documentation layout and typography.
 .api-reference {
   min-width: 0;
 
-  // API examples may contain long paths or JSON that should scroll, not stretch the grid.
-  pre {
-    overflow-x: auto;
-    border-radius: .4rem;
-    box-shadow: inset 0 0 0 1px #5c636a;
-    padding: .75rem;
-    font-size: .875em;
+  .highlight code {
+    color: inherit;
+  }
 
-    code {
-      max-width: none;
-      white-space: pre;
-      overflow-wrap: normal;
+  p {
+    line-height: 1.7;
+  }
+
+  .api-operation {
+    margin: 3rem 0;
+  }
+
+  .api-operation__title {
+    margin: 0 0 1rem;
+  }
+
+  .api-operation__endpoint {
+    padding: .375rem .625rem;
+    background-color: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color-translucent);
+    border-radius: .4rem;
+  }
+
+  .api-definition-list > li {
+    margin-bottom: 1rem;
+
+    > p {
+      margin-bottom: .5rem;
     }
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .api-example {
+    margin-top: 1rem;
+  }
+
+  .api-example__title {
+    font-weight: bold;
+    margin-bottom: .5rem;
+  }
+
+  .api-example pre {
+    max-height: 34rem;
+    overflow: auto;
+  }
+
+  .highlight {
+    border-radius: .4rem;
   }
 
   section[id] {
@@ -470,9 +508,18 @@ doc-version-select {
   }
 }
 
-// breakpoint md
+html, body {
+  overscroll-behavior-y: none;
+}
+
+.offcanvas-body {
+  overscroll-behavior-y: none;
+}
+
 @media (min-width: 768px) {
   .docs-layout {
+    --docs-heading-line-height: min(3rem, calc(1.65rem + 1.8vw));
+    --docs-search-control-height: 2.25rem;
     display: grid;
     grid-template-areas: "sidebar main";
     grid-template-columns: 2fr 9fr;
@@ -491,20 +538,29 @@ doc-version-select {
 
   .docs-sidebar {
     position: sticky;
-    top: 5rem;
+    top: calc(4.875rem + (var(--docs-heading-line-height) - var(--docs-search-control-height)) / 2);
     display: block !important;
-    height: calc(100vh - 6rem);
+    align-self: start;
+    height: auto;
+    max-height: calc(100vh - 6.5rem);
     padding-left: .25rem;
     margin-left: -.25rem;
     overflow-y: auto;
     min-width: 13rem;
 
+    overscroll-behavior-y: auto;
+    overscroll-behavior-y: chain;
+
     .docs-search-button {
       position: sticky;
       top: 0;
-      padding-top: .5rem;
       padding-bottom: .5rem;
       background: linear-gradient(to bottom, var(--bs-body-bg) calc(100% - 1rem), color-mix(in srgb, var(--bs-body-bg) 50%, transparent) 95%, transparent);
+
+      button {
+        height: var(--docs-search-control-height);
+        padding-block: .25rem;
+      }
     }
   }
 
@@ -513,7 +569,6 @@ doc-version-select {
   }
 }
 
-// breakpoot lg
 @media (min-width: 992px) {
   .docs-main {
     display: grid;
@@ -524,7 +579,6 @@ doc-version-select {
     grid-template-columns: 5fr 1fr;
   }
 
-  // Index and overview pages do not have a right-hand table of contents.
   .docs-main--no-toc {
     grid-template-areas:
           "intro"
@@ -574,7 +628,6 @@ doc-version-select {
   }
 }
 
-// fix for invisible close button in deployed docs
 .btn-close {
   background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat;
 }
