@@ -636,6 +636,16 @@ paths:
           description: Standardized information about the original request and its proxy forwarding chain.
           schema:
             type: string
+        - name: <Application Specific>
+          in: header
+          description: Placeholder for other headers, the defined rules make use of.
+          schema:
+            type: string
+        - name: <Application Specific>
+          in: cookie
+          description: Placeholder for cookies, the defined rules make use of.
+          schema:
+            type: string
       responses:
         '200':
           description: |
