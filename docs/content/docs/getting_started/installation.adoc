@@ -51,7 +51,7 @@ Prebuild binaries are available with every released version on https://github.co
 * `linux/armv7`
 * `windows/amd64`
 
-For Linux and Darwin the binaries are archived with tar.gz and for Windows with zip. All archives are signed (see also link:{{< relref "security.adoc#_verifying_heimdall_binaries_and_container_images" >}}[Verifying Heimdall Binaries and Container Images] section on how to verify the signatures).
+For Linux and Darwin the binaries are archived with tar.gz and for Windows with zip. All archives are signed (see also link:{{< relref "security.adoc#_release_binary_verification" >}}[Release Binary Verification] section on how to verify the signatures).
 
 === Download
 Retrieve the desired released version of heimdall binary for your operating system/architecture
@@ -75,7 +75,7 @@ Heimdall utilizes a minimal container multi-arch image which you can find on htt
 
 All container images are rootless - so heimdall will always run as a non-root user within the container. Since Heimdall does not have any dependencies, the images are distroless as well and contain only the binary of heimdall and the settings related to the OS user and group permissions, heimdall is running with.
 
-As with the binary distribution, all container images are signed (see also link:{{< relref "security.adoc#_verifying_heimdall_binaries_and_container_images" >}}[Verifying Heimdall Binaries and Container Images] section on how to verify the signatures).
+As with the binary distribution, all container images are signed (see also link:{{< relref "security.adoc#_container_image_verification" >}}[Container Image Verification] section on how to verify the signatures).
 
 === Prerequisites
 
