@@ -1,5 +1,6 @@
 {{- $.Scratch.Add "index" slice -}}
 {{- range .Site.RegularPages -}}
+  {{- $page := . -}}
   {{- $section := slice -}}
   {{- $next := .Parent -}}
   {{ if and $next (not (eq $next.Title "Docs")) (not $next.IsHome) }}
@@ -10,17 +11,61 @@
     {{- end -}}
   {{- end -}}
 
-  {{- $.Scratch.Add "index" (dict
-      "sections" $section
-      "title" .Title
-      "tags" .Params.tags
-      "description" .Description
-      "tags" .Params.tags
-      "categories" .Params.categories
-      "content" .Plain
-      "html_content" .Content
-      "url" .RelPermalink
-    ) -}}
-{{- end -}}
-{{- $.Scratch.Get "index" | jsonify -}}
+  {{- $isAPIGroup := and (eq .Section "openapi") .Params.api_groups -}}
+  {{- /* API group pages have no searchable .Content and are not supported by
+         the AsciiDoc search-result renderer. Index their operations instead. */ -}}
+  {{- if not $isAPIGroup -}}
+    {{- $.Scratch.Add "index" (dict
+        "sections" $section
+        "title" .Title
+        "tags" .Params.tags
+        "description" .Description
+        "categories" .Params.categories
+        "content" (printf "%s %s %s" .Title .RelPermalink .Plain)
+        "html_content" .Content
+        "url" .RelPermalink
+      ) -}}
+  {{- end -}}
 
+  {{- /* OpenAPI operations render in partials, not in .Content. */ -}}
+  {{- if $isAPIGroup -}}
+    {{- $groups := .Params.api_groups | transform.Unmarshal -}}
+    {{- $components := .Params.api_components | transform.Unmarshal -}}
+    {{- $servers := .Params.api_servers | transform.Unmarshal -}}
+    {{- range $group := $groups -}}
+      {{- $sections := slice "API Reference" $page.Title -}}
+      {{- if ne $group.tag.name $page.Params.api_tag -}}
+        {{- $sections = append $group.tag.name $sections -}}
+      {{- end -}}
+      {{- range $item := $group.operations -}}
+        {{- $operation := $item.operation -}}
+        {{- $methodPath := printf "%s %s" $item.method $item.path -}}
+        {{- $title := printf "%s" (default $item.id $operation.summary) -}}
+        {{- $operationHTML := partial "openapi/operation.html" (dict
+          "item" $item
+          "nested" (ne $group.tag.name $page.Params.api_tag)
+          "components" $components
+          "servers" $servers
+          "page" $page
+        ) -}}
+        {{- $url := printf "%s#%s" $page.RelPermalink ($item.id | anchorize) -}}
+        {{- $rawText := printf "%s %s %s %s %s %s %s" $title $url $page.Title $group.tag.name
+          (default "" $page.Description) (default "" $group.tag.description) ($operationHTML | plainify) -}}
+        {{- /* FlexSearch 0.6 tokenizes best on single spaces, not HTML line breaks. */ -}}
+        {{- $content := replaceRE `\s+` " " $rawText | strings.TrimSpace -}}
+        {{- $.Scratch.Add "index" (dict
+          "kind" "openapi_operation"
+          "sections" $sections
+          "title" $title
+          "content" $content
+          "url" $url
+        ) -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- /* hugo-flexsearch 1.0.2 expects a final hash item and skips it during indexing.
+       Without the hash, the last page is silently lost and the cache is stale. */ -}}
+{{- $index := $.Scratch.Get "index" -}}
+{{- $.Scratch.Add "index" (dict "hash" (sha256 ($index | jsonify))) -}}
+{{- $.Scratch.Get "index" | jsonify -}}
