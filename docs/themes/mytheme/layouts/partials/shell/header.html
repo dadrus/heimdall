@@ -79,7 +79,7 @@
           <h5 class="offcanvas-title text-white" id="mainMenuContentLabel">{{ .Site.Title }}</h5>
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close main menu"></button>
         </div>
-        <div class="offcanvas-body">
+        <div class="offcanvas-body align-items-md-center">
           <ul class="navbar-nav flex-column d-md-none d-lg-none d-xl-none">
             {{ $currentPage := . }}
             {{- range .Site.Menus.main.ByWeight -}}
