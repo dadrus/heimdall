@@ -695,11 +695,6 @@ html, body {
         height: var(--docs-search-control-height);
         padding: .25rem .625rem;
         gap: .5rem;
-
-        svg {
-          stroke: currentColor;
-          stroke-width: .65;
-        }
       }
 
       .docs-search-shortcut {
