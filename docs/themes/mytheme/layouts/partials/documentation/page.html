@@ -19,7 +19,7 @@
     {{ end }}
 
     <div class="docs-intro pe-3">
-      <h1>{{ $page.Title }}</h1>
+      <h1 id="{{ $page.Title | anchorize }}">{{ $page.Title }}</h1>
       {{ with $page.Description }}
         {{/* AsciiDoc page descriptions are plain front matter; OpenAPI descriptions are CommonMark. */}}
         {{ if eq $page.Section "openapi" }}

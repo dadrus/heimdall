@@ -7,22 +7,24 @@
     if (!menu || !menu.getClientRects().length) return
 
     const key = `heimdall:docs-menu-scroll:${menu.dataset.scrollKey}`
-    let restored = false
     try {
         const stored = sessionStorage.getItem(key)
         const offset = Number(stored)
         if (stored !== null && Number.isFinite(offset) && offset >= 0) {
             menu.scrollTop = offset
-            restored = true
         }
     } catch {
         // Storage can be disabled; active-link visibility still works.
     }
 
-    // On first entry, reveal the active link without moving the document.
-    // With a saved position, preserve the user's menu context exactly.
-    const active = !restored && menu.querySelector('a.active')
-    if (active) {
+    const active = menu.querySelector('a.active')
+    if (!active || active === menu.querySelector('a')) {
+        // Overview pages and the first menu entry should start at the top,
+        // not inherit a deep scroll position from another page.
+        menu.scrollTop = 0
+    } else {
+        // Keep the saved context when possible, but always reveal the active
+        // page if it falls outside the visible menu (including the fades).
         const viewport = menu.getBoundingClientRect()
         const entry = active.getBoundingClientRect()
         const fade = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16

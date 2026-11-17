@@ -1,6 +1,6 @@
 {{- if .Sections -}}
   {{- range .Sections.ByWeight -}}
-    <h2>{{ .LinkTitle }}</h2>
+    <h2 id="{{ .LinkTitle | anchorize }}">{{ .LinkTitle }}</h2>
     {{ with .Description }}<p>{{ . }}</p>{{ end }}
     <div class="row gap-2">
       {{- range .RegularPagesRecursive.ByTitle -}}

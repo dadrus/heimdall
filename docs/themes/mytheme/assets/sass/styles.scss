@@ -301,6 +301,10 @@ doc-version-select {
   }
 }
 
+.docs-intro h1[id] {
+  scroll-margin-top: 5rem;
+}
+
 .reference-link {
   &:link,
   &:visited,
