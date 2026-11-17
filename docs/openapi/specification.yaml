@@ -19,14 +19,14 @@ tags:
     kind: nav
     description: |
       The management service provides health information and public keys for
-      verifying JWTs issued by heimdall. For available configuration options see 
+      verifying JWTs issued by heimdall. For available configuration options see
       [management port](/docs/services/management/).
 
   - name: Well-Known
     parent: Management
     kind: nav
     description: |
-      The `/.well-known/` prefix provides locations for management resources, 
+      The `/.well-known/` prefix provides locations for management resources,
       following the conventions in [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615).
 
   - name: Main
@@ -53,7 +53,7 @@ tags:
     kind: nav
     description: |
       Runtime diagnostics include CPU and heap profiles, goroutine information,
-      and execution traces. For available configuration options see 
+      and execution traces. For available configuration options see
       [profiling port](/docs/operations/observability/#_runtime_profiling).
 
   - name: Metrics
@@ -61,15 +61,15 @@ tags:
     description: |
       Metrics for Prometheus cover process and Go runtime information, HTTP
       request counts and durations, active requests, and certificate expiry.
-      For available configuration options see 
+      For available configuration options see
       [metrics port](/docs/operations/observability/#_metrics).
 
   - name: Validating Admission Controller
     kind: nav
     description: |
       A Kubernetes validating admission webhook checks heimdall `RuleSet`
-      resources when they are submitted to the Kubernetes API server. This 
-      interface is available only for Kubernetes deployments using the 
+      resources when they are submitted to the Kubernetes API server. This
+      interface is available only for Kubernetes deployments using the
       [Kubernetes rules provider](/docs/rules/providers/#_kubernetes).
 
 components:
