@@ -70,8 +70,10 @@ const html = htmlSnippet => {
     return doc.body.firstChild
 }
 
+// Until the target version's sitemap is available, link to its home page.
+// This avoids 404s even when switching immediately after opening the menu.
 const linkListItem = (currentVersion, currentPath) => element => `
-<li><a class="dropdown-item ${currentVersion === element.version ? 'current' : ''}" ${currentVersion === element.version ? 'aria-current="page"' : ''} href="${element.path}${currentPath}">${element.version}</a></li>`
+<li><a class="dropdown-item ${currentVersion === element.version ? 'current' : ''}" ${currentVersion === element.version ? 'aria-current="page"' : ''} data-version-path="${element.path}" href="${element.path}${currentVersion === element.version ? currentPath : '/'}">${element.version}</a></li>`
 
 const linkList = (elements = [], currentVersion, currentPath) => {
     const linkItem = linkListItem(currentVersion, currentPath)
@@ -90,6 +92,37 @@ const linkList = (elements = [], currentVersion, currentPath) => {
       ${additionalCurrent}
     </ul>
   `)
+}
+
+// Every published version already has a Hugo sitemap. Its page paths do not
+// include the /heimdall/<version> deployment prefix, just like .RelPermalink.
+// Choose the requested page if it exists, otherwise its nearest available
+// parent (e.g. /openapi/), and ultimately the version's homepage.
+function closestAvailablePage(currentPath, availablePages) {
+    const parts = currentPath.split('/').filter(Boolean)
+    for (let count = parts.length; count >= 0; count--) {
+        const path = count ? `/${parts.slice(0, count).join('/')}/` : '/'
+        if (availablePages.has(path)) return path
+    }
+    return '/'
+}
+
+async function resolveVersionLink(link, currentPath) {
+    const versionPath = link.getAttribute('data-version-path')
+    const response = await fetch(`${versionPath}/sitemap.xml`, {credentials: 'same-origin'})
+    if (!response.ok) return // Keep the safe version-home fallback.
+
+    const xml = new DOMParser().parseFromString(await response.text(), 'application/xml')
+    if (xml.querySelector('parsererror')) return
+    const availablePages = new Set(Array.from(xml.getElementsByTagName('loc'), element =>
+        new URL(element.textContent).pathname))
+    if (!availablePages.size) return
+
+    const closest = closestAvailablePage(currentPath, availablePages)
+    link.href = versionPath + closest
+    if (closest !== currentPath) {
+        link.title = 'Page not available in this version; opening the nearest available section.'
+    }
 }
 
 const load = async dataFile => {
@@ -113,6 +146,17 @@ class DocVersionSelect extends HTMLElement {
         const versions = await load(this.versionsFile)
 
         this.appendChild(linkList(versions, this.currentVersion, this.currentPage))
+
+        // Resolve only when the dropdown is opened; avoid fetching every
+        // historical version's sitemap on ordinary page loads.
+        this.addEventListener('show.bs.dropdown', () => {
+            for (const link of this.querySelectorAll('a[data-version-path]')) {
+                if (link.getAttribute('aria-current') === 'page') continue
+                resolveVersionLink(link, this.currentPage).catch(() => {
+                    // Network failures retain the safe version-home link.
+                })
+            }
+        }, {once: true})
     }
 
     get currentPage() {

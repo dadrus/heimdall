@@ -528,6 +528,16 @@ doc-version-select {
   }
 }
 
+// Short CommonMark descriptions are rendered without a <p>; give them the
+// same spacing as the plain-text descriptions of Docs and Guides.
+.docs-description {
+  margin-bottom: 1rem;
+
+  > :last-child {
+    margin-bottom: 0;
+  }
+}
+
 .docs-toc-content {
   nav {
     font-size: .875rem;
@@ -656,6 +666,15 @@ html, body {
           "intro"
           "content";
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  // The TOC is rendered once for desktop and mobile. On desktop remove the
+  // mobile-only card treatment without duplicating the navigation markup.
+  .docs-toc-content > .card {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
   }
 
   .docs-toc {

@@ -1,24 +1,17 @@
-{{- $page := . -}}
 {{- if .Sections -}}
   {{- range .Sections.ByWeight -}}
     <h2>{{ .LinkTitle }}</h2>
     {{ with .Description }}<p>{{ . }}</p>{{ end }}
     <div class="row gap-2">
-      {{- $currentSection := .CurrentSection -}}
-      {{- range where $page.Site.RegularPages.ByTitle "Section" $page.Section -}}
-        {{- if in (.RelPermalink | string) $currentSection.RelPermalink -}}
-          {{ partial "documentation/card.html" (dict "page" .) }}
-        {{- end -}}
+      {{- range .RegularPagesRecursive.ByTitle -}}
+        {{ partial "documentation/card.html" (dict "page" . "headingLevel" 3) }}
       {{- end -}}
     </div>
   {{- end -}}
 {{- else -}}
   <div class="row gap-2">
-    {{- $currentSection := .CurrentSection -}}
-    {{- range where .Site.RegularPages.ByTitle "Section" .Section -}}
-      {{- if in (.RelPermalink | string) $currentSection.RelPermalink -}}
-        {{ partial "documentation/card.html" (dict "page" .) }}
-      {{- end -}}
+    {{- range .RegularPagesRecursive.ByTitle -}}
+      {{ partial "documentation/card.html" (dict "page" .) }}
     {{- end -}}
   </div>
 {{- end -}}

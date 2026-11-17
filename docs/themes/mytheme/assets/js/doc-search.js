@@ -1,5 +1,4 @@
 import HugoFlexSearch from "hugo-flexsearch";
-import * as bs from "bootstrap";
 
 function escapeHTML(value) {
     return String(value).replace(/[&<>"']/g, char => ({
@@ -40,9 +39,32 @@ class SearchResult {
     }
 }
 
+// hugo-flexsearch 1.0.2 uses the same localStorage keys for every index.
+// Scope both the index and its hash to the current documentation version.
+class VersionedHugoFlexSearch extends HugoFlexSearch {
+    getCache(key) {
+        return super.getCache(`${key}:${this.config.indexUrl}`)
+    }
+
+    setCache(key, value) {
+        if (key === "HugoSearch.index") {
+            // One serialized index is several MB; do not fill localStorage with
+            // copies of every visited version (or the old unscoped cache).
+            for (let i = localStorage.length - 1; i >= 0; i--) {
+                const stored = localStorage.key(i)
+                if (stored && /^HugoSearch\.(index|hash)(:|$)/.test(stored)
+                    && !stored.endsWith(`:${this.config.indexUrl}`)) {
+                    localStorage.removeItem(stored)
+                }
+            }
+        }
+        super.setCache(`${key}:${this.config.indexUrl}`, value)
+    }
+}
+
 class DocSearch extends HTMLElement {
     async connectedCallback() {
-        new HugoFlexSearch({
+        new VersionedHugoFlexSearch({
             indexUrl: this.indexFile,
             indexedFields: ["content"],
             limit: 30,
@@ -73,9 +95,7 @@ class DocSearch extends HTMLElement {
         return this.hasAttribute('path-prefix') ? this.getAttribute('path-prefix') : ""
     }
 
-    // Associate each heading's text with its URL fragment. AsciiDoc puts IDs on
-    // headings; OpenAPI puts them on the surrounding sections. Both use the same
-    // result representation, including nested headings within an operation.
+    // Index sections by heading IDs, shared by AsciiDoc and rendered OpenAPI content.
     contentSections(html) {
         const doc = new DOMParser().parseFromString(html, 'text/html')
         const sections = new Map()
@@ -135,10 +155,9 @@ class DocSearch extends HTMLElement {
         const hasTerm = (section, term) =>
             section.id.toLowerCase().includes(term) || section.text.toLowerCase().includes(term)
         const matching = sections.filter(section => terms.every(term => hasTerm(section, term)))
-        // An AND match may span sections of one page; preserve those results.
-        const matches = matching.length ? matching : sections.filter(section =>
-            terms.some(term => hasTerm(section, term)))
-        const items = matches.map(section => new SingleResult({
+        // If an AND match spans multiple sections, link to the page rather
+        // than to individual sections that match only part of the query.
+        const items = matching.map(section => new SingleResult({
             title: section.title,
             url: this.pathPrefix + post.url + '#' + encodeURIComponent(section.id),
             snippet: this.snippet(

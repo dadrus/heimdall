@@ -8,9 +8,11 @@
     <section class="mt-5" aria-labelledby="{{ .tag.name | anchorize }}">
       <h2 id="{{ .tag.name | anchorize }}">{{ default .tag.name .tag.summary }}</h2>
       {{ with .tag.description }}{{ $page.RenderString (dict "markup" "markdown") . }}{{ end }}
-    </section>
   {{- end -}}
   {{- range .operations -}}
     {{ partial "openapi/operation.html" (dict "item" . "nested" $nested "components" $components "servers" $servers "page" $page) }}
+  {{- end -}}
+  {{- if $nested -}}
+    </section>
   {{- end -}}
 {{- end -}}
