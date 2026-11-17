@@ -1,5 +1,5 @@
 {{- $page := .page -}}
-{{- $schema := partial "openapi/resolve-ref.html" (dict "value" .schema "components" .components) -}}
+{{- $schema := .schema -}}
 {{- with $schema -}}
   <div class="mb-3">
     <div class="d-flex flex-wrap align-items-baseline gap-2">
@@ -13,14 +13,14 @@
     {{ with .properties }}
       <div class="border-start ps-3 ms-1 mt-3">
         {{ range $name, $property := . }}
-          {{ partial "openapi/schema.html" (dict "schema" $property "components" $.components "page" $page "name" $name "required" (in (default (slice) $schema.required) $name)) }}
+          {{ partial "openapi/schema.html" (dict "schema" $property "page" $page "name" $name "required" (in (default (slice) $schema.required) $name)) }}
         {{ end }}
       </div>
     {{ end }}
     {{ with .items }}
       <div class="border-start ps-3 ms-1 mt-3">
         <span class="small text-body-secondary">Array items</span>
-        {{ partial "openapi/schema.html" (dict "schema" . "components" $.components "page" $page) }}
+        {{ partial "openapi/schema.html" (dict "schema" . "page" $page) }}
       </div>
     {{ end }}
   </div>

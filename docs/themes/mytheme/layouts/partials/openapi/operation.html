@@ -22,31 +22,22 @@
   </div>
   {{ with $operation.description }}<div>{{ $page.RenderString (dict "markup" "markdown") . }}</div>{{ end }}
 
-  {{- $servers := .servers -}}
-  {{- with $item.path_item.servers }}{{ $servers = . }}{{ end -}}
-  {{- with $operation.servers }}{{ $servers = . }}{{ end -}}
   {{/* '/' is OpenAPI's default server URL, not a deployed instance. */}}
-  {{ with (where $servers "url" "ne" "/") }}
+  {{ with (where $item.servers "url" "ne" "/") }}
     <p class="api-operation__section-label">Server</p>
     <ul class="list-unstyled api-server-list">
       {{ range . }}<li class="mb-2"><code>{{ .url }}</code>{{ with .description }} <span class="small text-body-secondary">— {{ . }}</span>{{ end }}</li>{{ end }}
     </ul>
   {{ end }}
 
-  {{- $parameters := slice -}}
-  {{- range $item.path_item.parameters }}{{ $parameters = append . $parameters }}{{ end -}}
-  {{- range $operation.parameters }}{{ $parameters = append . $parameters }}{{ end -}}
-  {{ with $parameters }}
+  {{ with $item.parameters }}
     <p class="api-operation__section-label">Parameters</p>
     {{/* Match the property lists under Docs > Configuration Reference > Type Definitions. */}}
     <div class="ulist">
       <ul class="api-definition-list">
         {{ range . }}
-          {{ $parameter := partial "openapi/resolve-ref.html" (dict "value" . "components" $.components) }}
-          {{ $schema := dict }}
-          {{ with $parameter.schema }}
-            {{ $schema = partial "openapi/resolve-ref.html" (dict "value" . "components" $.components) }}
-          {{ end }}
+          {{ $parameter := . }}
+          {{ $schema := default (dict) $parameter.schema }}
           <li class="api-parameter">
             <p>
               <strong><code>{{ $parameter.name }}</code></strong>{{ with $schema.type }}: <em>{{ . }}{{ with $schema.format }} ({{ . }}){{ end }}</em>{{ end }}
@@ -54,7 +45,7 @@
             </p>
             {{ with $parameter.description }}<div class="paragraph">{{ $page.RenderString (dict "markup" "markdown") . }}</div>{{ end }}
             {{ if or $schema.properties $schema.items }}
-              {{ partial "openapi/schema.html" (dict "schema" $schema "components" $.components "page" $page) }}
+              {{ partial "openapi/schema.html" (dict "schema" $schema "page" $page) }}
             {{ else }}
               {{ with $schema.description }}<div class="paragraph">{{ $page.RenderString (dict "markup" "markdown") . }}</div>{{ end }}
             {{ end }}
@@ -66,14 +57,14 @@
   {{ end }}
 
   {{ with $operation.requestBody }}
-    {{ $body := partial "openapi/resolve-ref.html" (dict "value" . "components" $.components) }}
+    {{ $body := . }}
     <p class="api-operation__section-label">Request body{{ if $body.required }} <span class="small fw-semibold text-danger">required</span>{{ end }}</p>
     {{ with $body.description }}<div>{{ $page.RenderString (dict "markup" "markdown") . }}</div>{{ end }}
-    {{ with $body.content }}{{ partial "openapi/media.html" (dict "content" . "components" $.components "page" $page) }}{{ end }}
+    {{ with $body.content }}{{ partial "openapi/media.html" (dict "content" . "page" $page) }}{{ end }}
   {{ end }}
 
   {{ with $operation.responses }}
     <p class="api-operation__section-label">Responses</p>
-    {{ partial "openapi/responses.html" (dict "responses" . "components" $.components "page" $page) }}
+    {{ partial "openapi/responses.html" (dict "responses" . "page" $page) }}
   {{ end }}
 </section>

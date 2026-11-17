@@ -1,7 +1,5 @@
 {{- $page := . -}}
 {{- $groups := .Params.api_groups | transform.Unmarshal -}}
-{{- $components := .Params.api_components | transform.Unmarshal -}}
-{{- $servers := .Params.api_servers | transform.Unmarshal -}}
 {{- range $groups -}}
   {{- $nested := ne .tag.name $page.Params.api_tag -}}
   {{- if $nested -}}
@@ -10,7 +8,7 @@
       {{ with .tag.description }}{{ $page.RenderString (dict "markup" "markdown") . }}{{ end }}
   {{- end -}}
   {{- range .operations -}}
-    {{ partial "openapi/operation.html" (dict "item" . "nested" $nested "components" $components "servers" $servers "page" $page) }}
+    {{ partial "openapi/operation.html" (dict "item" . "nested" $nested "page" $page) }}
   {{- end -}}
   {{- if $nested -}}
     </section>

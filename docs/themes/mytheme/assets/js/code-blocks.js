@@ -30,15 +30,13 @@
             wrapper.append(viewport)
             viewport.append(block)
 
-            if (!pre.id) {
-                do { nextId++ } while (document.getElementById(`code-block-${nextId}`))
-                pre.id = `code-block-${nextId}`
-            }
+            do { nextId++ } while (document.getElementById(`code-block-${nextId}`))
+            viewport.id = `code-block-${nextId}`
 
             const toggle = document.createElement('button')
             toggle.type = 'button'
             toggle.className = 'code-block__toggle'
-            toggle.setAttribute('aria-controls', pre.id)
+            toggle.setAttribute('aria-controls', viewport.id)
             toggle.setAttribute('aria-expanded', 'false')
             toggle.textContent = 'Show full code'
             toggle.addEventListener('click', () => {

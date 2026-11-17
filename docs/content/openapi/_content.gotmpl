@@ -22,7 +22,7 @@
 {{- /* Resolve every tag, including tags not reachable from a root, to catch broken hierarchies. */ -}}
 {{- $rootByTag := dict -}}
 {{- range $api.tags -}}
-  {{- $root := partial "openapi/root-tag.html" (dict "tag" . "tags" $tags) -}}
+  {{- $root := partial "openapi/model/root-tag.html" (dict "tag" . "tags" $tags) -}}
   {{- $rootByTag = merge $rootByTag (dict .name $root.name) -}}
 {{- end -}}
 
@@ -51,12 +51,25 @@
         {{- end -}}
       {{- end -}}
       {{- $tagName := index $operationTags 0 -}}
+      {{- /* All references and inherited parameters/servers are prepared here, not in the theme. */ -}}
+      {{- $resolvedOperation := partial "openapi/model/resolve-refs.html" (dict "value" $operation "components" $api.components) -}}
+      {{- $parameters := slice -}}
+      {{- range $pathItem.parameters -}}
+        {{- $parameters = append (partial "openapi/model/resolve-refs.html" (dict "value" . "components" $api.components)) $parameters -}}
+      {{- end -}}
+      {{- range $resolvedOperation.parameters -}}
+        {{- $parameters = append . $parameters -}}
+      {{- end -}}
+      {{- $servers := $api.servers -}}
+      {{- with $pathItem.servers }}{{ $servers = . }}{{ end -}}
+      {{- with $operation.servers }}{{ $servers = . }}{{ end -}}
       {{- $item := dict
         "id" $operation.operationId
         "method" (upper $method)
         "path" $endpoint
-        "path_item" $pathItem
-        "operation" $operation
+        "operation" $resolvedOperation
+        "parameters" $parameters
+        "servers" $servers
       -}}
       {{- $operations = merge $operations (dict $tagName (append $item (default (slice) (index $operations $tagName)))) -}}
     {{- end -}}
@@ -99,7 +112,7 @@
       "weight" (mul (add $index 1) 10)
       "description" (default "" $tag.description)
       "menus" (dict "openapi" (dict "parent" "api_reference" "weight" (mul (add $index 1) 10)))
-      "params" (dict "api_groups" ($groups | jsonify) "api_tag" $tag.name "api_components" ($api.components | jsonify) "api_servers" ($api.servers | jsonify))
+      "params" (dict "api_groups" ($groups | jsonify) "api_tag" $tag.name)
     ) -}}
   {{- end -}}
 {{- end -}}

@@ -8,7 +8,7 @@
     {{- if not $parent -}}
       {{- errorf "OpenAPI tag %q references unknown parent %q" $.tag.name . -}}
     {{- else -}}
-      {{- $tag = partial "openapi/root-tag.html" (dict "tag" $parent "tags" $.tags "ancestors" (append $tag.name $ancestors)) -}}
+      {{- $tag = partial "openapi/model/root-tag.html" (dict "tag" $parent "tags" $.tags "ancestors" (append $tag.name $ancestors)) -}}
     {{- end -}}
   {{- end -}}
 {{- end -}}

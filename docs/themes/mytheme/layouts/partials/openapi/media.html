@@ -19,7 +19,7 @@
       <details class="mb-2">
         <summary class="py-1 text-primary fw-medium">Schema</summary>
         <div class="mt-2 mb-3">
-          {{ partial "openapi/schema.html" (dict "schema" . "components" $.components "page" $page) }}
+          {{ partial "openapi/schema.html" (dict "schema" . "page" $page) }}
         </div>
       </details>
     {{ end }}

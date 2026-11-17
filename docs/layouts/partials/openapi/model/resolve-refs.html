@@ -1,0 +1,42 @@
+{{- /* Resolve local OpenAPI references before passing page data to the theme. */ -}}
+{{- $value := .value -}}
+{{- $components := .components -}}
+{{- $ancestors := default (slice) .ancestors -}}
+{{- if reflect.IsMap $value -}}
+  {{- with index $value "$ref" -}}
+    {{- $ref := . -}}
+    {{- if in $ancestors $ref -}}
+      {{- errorf "Cyclic OpenAPI reference: %q" $ref -}}
+    {{- else -}}
+      {{- $parts := split $ref "/" -}}
+      {{- if or (ne (len $parts) 4) (ne (index $parts 0) "#") (ne (index $parts 1) "components") -}}
+        {{- errorf "Unsupported OpenAPI reference: %q" $ref -}}
+      {{- else -}}
+        {{- $section := index $components (index $parts 2) -}}
+        {{- $resolved := index $section (index $parts 3) -}}
+        {{- if not $resolved -}}
+          {{- errorf "Unresolved OpenAPI reference: %q" $ref -}}
+        {{- else -}}
+          {{- $value = partial "openapi/model/resolve-refs.html" (dict "value" $resolved "components" $components "ancestors" (append $ref $ancestors)) -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- else -}}
+    {{- $resolved := dict -}}
+    {{- range $key, $item := $value -}}
+      {{- /* Example payloads and schema literal values are data, not reference objects. */ -}}
+      {{- if not (in (slice "example" "examples" "default" "const" "enum" "value") $key) -}}
+        {{- $item = partial "openapi/model/resolve-refs.html" (dict "value" $item "components" $components "ancestors" $ancestors) -}}
+      {{- end -}}
+      {{- $resolved = merge $resolved (dict $key $item) -}}
+    {{- end -}}
+    {{- $value = $resolved -}}
+  {{- end -}}
+{{- else if reflect.IsSlice $value -}}
+  {{- $resolved := slice -}}
+  {{- range $value -}}
+    {{- $resolved = append (partial "openapi/model/resolve-refs.html" (dict "value" . "components" $components "ancestors" $ancestors)) $resolved -}}
+  {{- end -}}
+  {{- $value = $resolved -}}
+{{- end -}}
+{{- return $value -}}

@@ -19,6 +19,5 @@ function link(href) {
     a.setAttribute('href', href)
     a.classList.add('reference-link')
     a.textContent = '#'
-    console.log(a)
     return a
 }

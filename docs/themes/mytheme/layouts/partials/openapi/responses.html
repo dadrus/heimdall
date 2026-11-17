@@ -3,7 +3,6 @@
 <div class="ulist">
   <ul class="api-definition-list">
     {{- range $status, $response := .responses -}}
-      {{- $response = partial "openapi/resolve-ref.html" (dict "value" $response "components" $.components) -}}
       <li class="api-response">
         <p><strong><code>{{ $status }}</code></strong>{{ with $response.description }}: {{ $page.RenderString (dict "markup" "markdown" "display" "inline") . }}{{ end }}</p>
         {{ with $response.headers }}
@@ -12,11 +11,10 @@
             <div class="ulist">
               <ul class="api-definition-list">
                 {{ range $name, $header := . }}
-                  {{ $header = partial "openapi/resolve-ref.html" (dict "value" $header "components" $.components) }}
                   <li>
                     <p><strong><code>{{ $name }}</code></strong></p>
                     {{ with $header.description }}<div class="paragraph">{{ $page.RenderString (dict "markup" "markdown") . }}</div>{{ end }}
-                    {{ with $header.schema }}{{ partial "openapi/schema.html" (dict "schema" . "components" $.components "page" $page) }}{{ end }}
+                    {{ with $header.schema }}{{ partial "openapi/schema.html" (dict "schema" . "page" $page) }}{{ end }}
                   </li>
                 {{ end }}
               </ul>
@@ -24,7 +22,7 @@
           </div>
         {{ end }}
         {{ with $response.content }}
-          {{ partial "openapi/media.html" (dict "content" . "components" $.components "page" $page) }}
+          {{ partial "openapi/media.html" (dict "content" . "page" $page) }}
         {{ end }}
       </li>
     {{- end -}}

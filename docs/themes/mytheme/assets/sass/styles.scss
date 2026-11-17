@@ -67,19 +67,19 @@ div[id] {
   scroll-margin-top: 5rem;
 }
 
-.paragraph {
-  p {
-    line-height: 1.7;
-  }
+.paragraph p,
+.api-reference p {
+  line-height: 1.7;
 }
 
 .exampleblock {
   margin: 2rem 0;
+}
 
-  .title {
-    font-weight: bold;
-    margin-bottom: 0.5rem;
-  }
+.exampleblock .title,
+.api-reference .api-example__title {
+  font-weight: bold;
+  margin-bottom: .5rem;
 }
 
 .docs-content pre {
@@ -388,12 +388,6 @@ doc-version-select {
 }
 
 .api-reference {
-  min-width: 0;
-
-  p {
-    line-height: 1.7;
-  }
-
   .api-operation {
     margin: 3rem 0;
   }
@@ -431,22 +425,13 @@ doc-version-select {
     margin-top: 1rem;
   }
 
-  .api-example__title {
-    font-weight: bold;
-    margin-bottom: .5rem;
-  }
-
   .highlight {
     border-radius: .4rem;
   }
+}
 
-  details summary {
-    cursor: pointer;
-  }
-
-  .flex-grow-1 {
-    min-width: 0;
-  }
+.docs-content details summary {
+  cursor: pointer;
 }
 
 // The script adds this wrapper only for code blocks longer than 15 lines.
