@@ -3,65 +3,75 @@ openapi: 3.2.1
 info:
   title: Heimdall
   version: x-current-version
-  description: The API of heimdall
+  description: |
+    HTTP interface definitions for heimdall's access-control, management, and
+    operational services. Listening addresses and available interfaces depend
+    on the deployment. See the [documentation](/docs/) for setup and usage.
   license:
     name: Apache 2.0
     identifier: Apache-2.0
 
 servers:
-  - url: https://heimdall.management.local
-    description: Management Server
+  - url: /
 
 tags:
   - name: Management
     kind: nav
+    description: |
+      The management service provides health information and public keys for
+      verifying JWTs issued by heimdall. For available configuration options see 
+      [management port](/docs/services/management/).
 
   - name: Well-Known
     parent: Management
     kind: nav
     description: |
-      Operations/resources which fall under the `.well-known` (see [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615))
-      category, like health endpoints, etc. 
-      
-      This functionality is only available on heimdall's [management port](/docs/services/management/).
+      The `/.well-known/` prefix provides locations for management resources, 
+      following the conventions in [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615).
 
   - name: Main
     kind: nav
+    description: |
+      The main service evaluates incoming HTTP requests against configured
+      access-control rules. In
+      [decision mode](/docs/concepts/operating_modes/#_decision_mode), it returns
+      an authorization result to an integrating proxy or API gateway. In
+      [proxy mode](/docs/concepts/operating_modes/#_proxy_mode), it forwards
+      authorized requests to an upstream service.
+
+      For available configuration options see [main port](/docs/services/main/).
 
   - name: Main Service
     parent: Main
     kind: nav
     description: |
-      This is the main service exposed by heimdall and available on the [main port](/docs/services/main/).
+      This reference entry describes the request data used for access-control
+      evaluation and the possible responses. See
+      [Rules](/docs/concepts/rules/) for details of request matching.
 
   - name: Profiling
     kind: nav
     description: |
-      Provides runtime profiling information, like CPU profile, memory usage, program counter, etc.
-      
-      This information is only available on heimdall's [profiling port](/docs/operations/observability/#_runtime_profiling).
+      Runtime diagnostics include CPU and heap profiles, goroutine information,
+      and execution traces. For available configuration options see 
+      [profiling port](/docs/operations/observability/#_runtime_profiling).
 
   - name: Metrics
     kind: nav
     description: |
-      Provides available Prometheus style metrics like:
-      
-      * Process information, like CPU, memory, file descriptor usage and start time
-      * Go runtime information, including details about GC, number of goroutines and OS threats
-      * Information about the metrics endpoint itself, including the number of internal errors encountered while gathering the metrics, number of current inflight and overall scrapes done.
-      * Information about the decision and proxy requests handled, including the total amount and duration of http requests by status code, method and path, as well as information about requests in progress.
-      * Information about expiry for configured certificates.
-      
-      This information is only available on heimdall's [metrics port](/docs/operations/observability/#_metrics).
+      Metrics for Prometheus cover process and Go runtime information, HTTP
+      request counts and durations, active requests, and certificate expiry.
+      For available configuration options see 
+      [metrics port](/docs/operations/observability/#_metrics).
 
   - name: Validating Admission Controller
     kind: nav
     description: |
-      Implements a [validating admission controller webhook](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/)
-      for integration purposes with the Kubernetes API server. If used, allows a direct feedback for `RuleSet` resources upon deployment of these
-      into a Kubernetes cluster without the need to look into the logs, if a RuleSet could not be loaded for any reasons.
+      A Kubernetes validating admission webhook checks heimdall `RuleSet`
+      resources when they are submitted to the Kubernetes API server. This 
+      interface is available only for Kubernetes deployments using the 
+      [Kubernetes rules provider](/docs/rules/providers/#_kubernetes).
 
-      This functionality is only available on heimdall's [validating admission controller](/docs/rules/providers/#_kubernetes) port, supported in Kubernetes deployments only.
 components:
   schemas:
     ETag:
@@ -79,7 +89,7 @@ components:
 
     HealthStatus:
       title: Health status
-      description: Simple information about the health status of a heimdall instance
+      description: Basic health information for the current heimdall instance.
       type: object
       properties:
         status:
@@ -88,7 +98,7 @@ components:
 
     JWKS:
       title: JSON Web Key Set
-      description: JSON Web Key Set to validate JSON Web Token.
+      description: Public keys used to verify JWTs issued by heimdall, in JSON Web Key Set format.
       type: object
       required:
         - keys
@@ -167,37 +177,37 @@ components:
 
   responses:
     NotModified:
-      description: Not Modified. Returned if the resource has not been changed for the given `ETag` value
+      description: Not Modified. Returned when the resource has not changed since the supplied `If-None-Match` value.
     InternalServerError:
-      description: Internal Server Error. Returned if the service run in a bad condition and cannot serve the request.
+      description: Internal Server Error. Returned when the service cannot process the request because of an internal error.
 
 security: []
 
 paths:
   /metrics:
     get:
-      summary: Get available Prometheus style metrics
+      summary: Get Prometheus metrics
       description: |
-        Lists the available metrics. Please note that the `/metrics` path is configurable and may differ 
-        depending on the setup
+        Returns metrics for scraping by Prometheus or compatible monitoring
+        systems. The `/metrics` path is configurable and may differ between
+        deployments.
       tags:
         - Metrics
       operationId: metrics_get
       responses:
         '200':
-          description: List of available metrics
+          description: The metrics exposed by this heimdall instance.
           content:
             text/html:
               schema:
                 type: string
 
   /debug/pprof:
-    servers:
-      - url: https://profiling.heimdall.local
-        description: Profiling Service
     get:
       summary: Get available profiles
-      description: Lists the available profiles.
+      description: |
+        Lists the runtime profiles available on this heimdall instance. Use the
+        profile-specific endpoint to retrieve a selected profile.
       tags:
         - Profiling
       operationId: pprof_list
@@ -210,12 +220,12 @@ paths:
                 type: string
 
   /debug/pprof/{profile_name}:
-    servers:
-      - url: https://profiling.heimdall.local
-        description: Profiling Service
     get:
-      summary: Get profiling samples for a specific profile.
-      description: Exposes requested profiling information.
+      summary: Get a runtime profile
+      description: |
+        Retrieves the selected runtime profile. Depending on the profile,
+        query parameters control sampling duration, garbage collection, and
+        the output format. Not every option applies to every profile.
       tags:
         - Profiling
       operationId: pprof_get
@@ -293,19 +303,17 @@ paths:
           description: Not Found. Returned if requested profile is not supported/known.
 
   /.well-known/health:
-    servers:
-      - url: https://heimdall.management.local
-        description: Management Server
     get:
       description: |
-        Offers functionality to see the health status of a heimdall instance.
+        Returns the health status of the current heimdall instance for
+        monitoring and health checks.
       tags:
         - Well-Known
       operationId: well_known_health
       summary: Get health status
       responses:
         '200':
-          description: Health status of a heimdall instance
+          description: The current health status.
           content:
             application/json:
               schema:
@@ -316,24 +324,18 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
   /.well-known/jwks:
-    servers:
-      - url: https://heimdall.management.local
-        description: Management Server
     get:
       description: |
-        Exposes the keys for the verification purposes of the issued JWTs in the format of JWKS as described
-        in [RFC7517](https://www.rfc-editor.org/rfc/rfc7517). This key set contains the key material configured
-        for signing JWTs and makes use of [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
-        for caching purposes.
+        Returns the public keys needed to verify JWTs issued by heimdall as a
+        JSON Web Key Set ([RFC 7517](https://www.rfc-editor.org/rfc/rfc7517)).
+        The contents reflect the configured key store.
 
-        The contents served by this endpoint directly depend on the configuration for heimdall's key store. So, if
-        nothing has been configured, the response will contain the JWKS with a single JWK for the key material heimdall
-        generated on start up. Otherwise, the response will contain the JWKS with as many JWK entries, as
-        specified via the aforesaid key store. If certificates have been configured together with the keys, 
-        the corresponding `x5c` entries will be present as well.
+        Responses use an [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
+        for caching. A client can send the previously received value using
+        `If-None-Match`; unchanged content results in HTTP 304 Not Modified.
       tags:
         - Well-Known
-      summary: Get JWT verification keys (aka JWKS endpoint)
+      summary: Get JWT verification keys
       operationId: well_known_jwks
       parameters:
         - name: If-None-Match
@@ -344,7 +346,7 @@ paths:
             $ref: '#/components/schemas/If-None-Match'
       responses:
         '200':
-          description: JWKS with keys ans certificates
+          description: JWKS containing verification keys and optional certificate chains.
           headers:
             ETag:
               schema:
@@ -379,22 +381,20 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
   /validate-ruleset:
-    servers:
-      - url: https://heimdall.decision.kuberetes.svc
-        description: RuleSet Validation Admission Controller
     post:
       summary: Validate RuleSet
       description: |
-        Validates RuleSets enveloped into the [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview) object as defined by the
-        [Kubernetes Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers)
-        specification.
+        Validates a heimdall `RuleSet` submitted in a Kubernetes
+        [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
+        request and returns the admission decision with validation feedback.
       tags:
         - Validating Admission Controller
       operationId: admission_controller_validate_ruleset
       parameters:
         - name: timeout
           description: |
-            How long the validation is allowed to take. Adheres to the following pattern: `^[0-9]+(ns|us|ms|s|m|h)$`
+            Maximum duration allowed for validation, such as `5s` or `250ms`.
+            Accepted units are `ns`, `us`, `ms`, `s`, `m`, and `h`.
           in: query
           required: false
           schema:
@@ -402,8 +402,8 @@ paths:
           example: 5s
       requestBody:
         description: |
-          The [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
-          request object as specified by Kubernetes API enveloping a `RuleSet` to be validated.
+          A Kubernetes [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
+          request containing the `RuleSet` to validate.
         required: true
         content:
           application/json:
@@ -446,9 +446,6 @@ paths:
                   "apiVersion": "heimdall.dadrus.github.com/v1alpha4",
                   "kind": "RuleSet",
                   "metadata": {
-                    "annotations": {
-                      "kubectl.kubernetes.io/last-applied-configuration": "{\"apiVersion\":\"heimdall.dadrus.github.com/v1alpha4\",\"kind\":\"RuleSet\",\"metadata\":{\"annotations\":{},\"labels\":{\"app.kubernetes.io/name\":\"echo-app\"},\"name\":\"echo-app-rules\",\"namespace\":\"quickstarts\"},\"spec\":{\"rules\":[{\"execute\":[{\"authorizer\":\"allow_all_requests\"},{\"finalizer\":\"noop_finalizer\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"public-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/pub/\\u003c**\\u003e\"}},{\"execute\":[{\"authorizer\":\"allow_all_requests\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"anonymous-access\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/anon/\\u003c**\\u003e\"}},{\"execute\":[{\"authenticator\":\"deny_authenticator\"}],\"forward_to\":{\"host\":\"echo-app.quickstarts.svc.cluster.local:8080\"},\"id\":\"redirect\",\"match\":{\"url\":\"\\u003c**\\u003e://\\u003c**\\u003e/redir/\\u003c**\\u003e\"}}]}}\n"
-                    },
                     "creationTimestamp": "2023-10-25T17:13:37Z",
                     "generation": 1,
                     "labels": {
@@ -549,8 +546,8 @@ paths:
       responses:
         '200':
           description: |
-            The [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
-            response object as specified by Kubernetes API.
+            A Kubernetes [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
+            response containing the validation decision for the submitted `RuleSet`.
           content:
             application/json:
               example: {
@@ -571,12 +568,28 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
   /{path_and_query_params}:
-    servers:
-      - url: https://heimdall.proxy.local
-        description: Main Service
     get:
-      summary: Main endpoint
-      description: This endpoint accepts any subpaths, headers, cookies, etc. Also, all methods can be used as well.
+      summary: Process an HTTP request
+      description: |
+        This operation represents heimdall's main HTTP request interface. It is
+        not limited to `GET`. All other HTTP verbs are also supported and are subject
+        to the configured rules. Method-specific HTTP semantics
+        still apply: HEAD responses have no body, and configured CORS preflight
+        OPTIONS requests can be handled without rule evaluation.
+
+        Requests may have nested paths and query strings. The path placeholder
+        shown above is illustrative: it does not express a single-segment
+        restriction on the requests that heimdall can process.
+
+        Response statuses and bodies depend on the matching rule and operating
+        mode. In proxy mode, the upstream service determines the response, so
+        its status codes are not limited to the examples listed below.
+
+        `X-Forwarded-*` and `Forwarded` headers are trusted only when the
+        sender matches the configured
+        [`trusted_proxies`](/docs/services/main/#_trusted_proxies).
+        Additional application-specific headers and cookies can be evaluated
+        by the configured rules.
       tags:
         - Main Service
       operationId: get_proxy
@@ -584,54 +597,52 @@ paths:
         - name: path_and_query_params
           in: path
           required: true
-          description: The path and query parameter to match a rule and to work on.
+          description: |
+            Actual requested path, including any nested segments and optional
+            query string, to be evaluated against the configured rules.
           schema:
             type: string
         - name: X-Forwarded-Method
           in: header
-          description: The HTTP method to use to for the url to verify access to. If not present defaults to the method used for sending the request to heimdall.
+          description: |
+            HTTP method to use for rule evaluation. Defaults to the method of
+            the request received by heimdall when this header is absent.
           schema:
             type: string
         - name: X-Forwarded-Proto
           in: header
-          description: HTTP scheme to use to build the url to verify access to. If not present defaults to the scheme used to operate heimdall.
+          description: |
+            HTTP scheme to use when evaluating the request URL. When absent,
+            heimdall uses the scheme of the incoming request.
           schema:
             type: string
         - name: X-Forwarded-Host
           in: header
-          description: Host to use to build the url to verify access to.
+          description: Original request host to use when evaluating the request URL.
           schema:
             type: string
         - name: X-Forwarded-Uri
           in: header
-          description: The Uri to use to build the url to verify access to.
+          description: Original request path and query string to use for rule evaluation.
           schema:
             type: string
         - name: X-Forwarded-For
           in: header
-          description: A list with IPs of the clients (from heimdall perspective), the request has been passed through.
+          description: Client IP address information supplied by a trusted proxy.
           schema:
             type: string
         - name: Forwarded
           in: header
-          description: A list with IPs of the clients (from heimdall perspective), the request has been passed through.
-          schema:
-            type: string
-        - name: <Application Specific>
-          in: header
-          description: Placeholder for other headers, the defined rules make use of.
-          schema:
-            type: string
-        - name: <Application Specific>
-          in: cookie
-          description: Placeholder for cookies, the defined rules make use of.
+          description: Standardized information about the original request and its proxy forwarding chain.
           schema:
             type: string
       responses:
         '200':
           description: |
-            If the request has been accepted. If heimdall is operated in proxy mode, it will be forwarded to the upstream service. In that case the
-            response comes from the upstream service. Otherwise, if operated in decision mode, the response comes from heimdall.
+            A successful decision normally returns HTTP 200 in decision mode,
+            unless a different status is configured. In proxy mode, an authorized
+            request is forwarded and the upstream service determines the response
+            status and body; HTTP 200 is only one possible result.
         '400':
           description: |
             Bad Request. Returned if the evaluated request path contains dot segments (`.` or `..`), including
@@ -643,9 +654,10 @@ paths:
         '404':
           description: Not Found. Returned if there was no rule found, which could be used to verify the request.
         '405':
-          description: Method not allowed. Returned if the patched rule doesn't allow the usage of a particular HTTP method.
+          description: Method Not Allowed. Returned if the matched rule does not permit the HTTP method.
         '500':
           $ref: '#/components/responses/InternalServerError'
         '502':
           description: |
-            Bad Gateway. Returned if the communication with any of the systems failed due to DNS, timeout etc. errors.
+            Bad Gateway. Returned if communication with an upstream service
+            fails, for example because of DNS or timeout errors.
