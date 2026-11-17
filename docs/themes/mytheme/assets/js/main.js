@@ -3,6 +3,7 @@ import { Modal } from "bootstrap"
 import "./doc-version-select.js"
 import "./linkable-headline-area.js"
 import "./code-blocks.js"
+import "./docs-menu-scroll.js"
 import "./doc-search.js"
 
 // Use the same Bootstrap dialog as the search buttons; no extra modal state.

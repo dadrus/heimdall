@@ -13,7 +13,7 @@
 </div>
 
 <div class="docs-menu-container">
-  <nav aria-label="Documentation navigation">
+  <nav aria-label="Documentation navigation" data-scroll-key="{{ .Site.Params.path_prefix }}:{{ .Site.Params.version }}:{{ $section }}">
   <ul>
   {{ range (index .Site.Menus $section) -}}
     <li>
