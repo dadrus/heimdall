@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-  {{- partial "head.html" . -}}
+  {{- partial "shell/head.html" . -}}
   <body>
-    {{- partial "header.html" . }}
+    {{- partial "shell/header.html" . }}
+    {{- partial "search/dialog.html" . }}
     {{- block "main" . }}{{- end }}
-    {{- partial "footer.html" . -}}
+    {{- partial "shell/footer.html" . }}
+    {{- partial "shell/scripts.html" . -}}
   </body>
 </html>

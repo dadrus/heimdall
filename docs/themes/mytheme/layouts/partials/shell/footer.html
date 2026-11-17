@@ -55,7 +55,3 @@
   </div>
 </footer>
 
-<!-- JavaScript and dependencies -->
-{{- $bundle := resources.Get "js/main.js" | js.Build (dict "minify" true) -}}
-<script src="{{ $bundle.RelPermalink }}" defer></script>
-

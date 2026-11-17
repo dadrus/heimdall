@@ -2,7 +2,7 @@
 {{- $toc := .toc -}}
 <div class="container-xxl docs-layout px-4">
   <aside class="d-none pe-3 docs-sidebar">
-    {{ partial "sidebar/docs-menu.html" $page }}
+    {{ partial "navigation/docs-menu.html" $page }}
   </aside>
 
   <main class="docs-main{{ if not $toc }} docs-main--no-toc{{ end }}">
@@ -30,7 +30,7 @@
       {{ end }}
     </div>
 
-    {{ with $toc }}{{ partial "documentation/toc.html" . }}{{ end }}
+    {{ with $toc }}{{ partial "navigation/page-toc.html" . }}{{ end }}
 
     <div class="docs-content pe-3">
       <div data-bs-spy="scroll" data-bs-target="#page-content-toc" class="mt-3">
@@ -38,8 +38,8 @@
           {{ .content | safeHTML }}
         </linkable-headline-area>
       </div>
-      {{ partial "last-updated-info.html" $page }}
-      {{ partial "bottom-navigation.html" $page }}
+      {{ partial "documentation/last-updated.html" $page }}
+      {{ partial "navigation/bottom-navigation.html" $page }}
     </div>
   </main>
 </div>

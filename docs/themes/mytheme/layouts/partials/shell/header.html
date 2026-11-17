@@ -15,7 +15,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close docs menu"></button>
       </div>
       <div class="offcanvas-body docs-sidebar">
-        {{ partial "sidebar/docs-menu.html" . }}
+        {{ partial "navigation/docs-menu.html" . }}
       </div>
     </nav>
 
@@ -141,35 +141,3 @@
     </div>
   </nav>
 </header>
-
-<div class="modal" id="docSearch" tabindex="-1" aria-labelledby="docSearchLabel" aria-hidden="true">
-  <doc-search class="col-auto me-auto mw-75" index-file="{{ .Site.Params.search_index_file }}"
-              path-prefix="{{ .Site.Params.path_prefix }}">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
-        <div class="modal-content">
-          <div class="modal-header p-2">
-            <div class="input-group">
-              <div class="input-group-text bg-body border-0 fs-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search text-secondary my-0" viewBox="0 0 16 16">
-                    <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
-                  </svg>
-              </div>
-              <input id="search-input" class="form-control search-bar border-0" type="search" placeholder="Search documentation "
-                     aria-label="Search docs..." autocomplete="off" autofocus>
-              <div class="input-group-text bg-body border-0">
-                <a class="btn input-group-text text-muted border p-1 bg-light-subtle fs-7 fw-bold font-monospace" data-bs-dismiss="modal" aria-label="Close">ESC</a>
-              </div>
-            </div>
-
-          </div>
-          <div  class="modal-body">
-            <div class="search-results">
-              <p class="text-center mt-5">No recent searches</p>
-            </div>
-          </div>
-          <div class="modal-footer">
-          </div>
-        </div>
-    </div>
-  </doc-search>
-</div>
