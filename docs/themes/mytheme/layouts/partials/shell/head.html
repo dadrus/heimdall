@@ -5,6 +5,9 @@
   <meta name="description" content="{{ .Site.Params.description }}" />
   <meta name="dc.relation" content="{{ .Site.BaseURL }}" />
   <meta name="theme-color" content="#1A94D2" />
+  {{- if eq .Kind "404" }}
+  <base href="{{ printf "%s/" .Site.Params.path_prefix | absURL }}">
+  {{- end }}
 
   {{- $options := dict
     "targetPath" "css/styles.css"
