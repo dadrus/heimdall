@@ -5,9 +5,17 @@
   <meta name="description" content="{{ .Site.Params.description }}" />
   <meta name="dc.relation" content="{{ .Site.BaseURL }}" />
   <meta name="theme-color" content="#1A94D2" />
+  {{- if eq .Kind "404" }}
+  <base href="{{ printf "%s/" .Site.Params.path_prefix | absURL }}">
+  {{- end }}
 
-  {{- $options := (dict "targetPath" "css/styles.css" "outputStyle" "compressed") -}}
-  {{- $style := resources.Get "sass/main.scss" | toCSS  $options | minify -}}
+  {{- $options := dict
+    "targetPath" "css/styles.css"
+    "outputStyle" "compressed"
+    "transpiler" "dartsass"
+    "includePaths" (slice "node_modules")
+  -}}
+  {{- $style := resources.Get "sass/main.scss" | css.Sass $options | minify -}}
   <link rel="stylesheet" href="{{ $style.RelPermalink }}" media="screen">
 
   <!--

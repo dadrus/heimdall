@@ -1,0 +1,17 @@
+{{- $page := .page -}}
+{{- $description := $page.Description -}}
+{{- if isset . "description" -}}
+  {{- $description = .description -}}
+{{- end -}}
+<div class="gridcol card my-3">
+  <div class="card-body d-flex flex-column">
+    {{/* Cards appear either directly below the page title or within a section. */}}
+    {{ if eq (default 2 .headingLevel) 3 }}
+      <h3 class="card-title h5">{{ $page.Title }}</h3>
+    {{ else }}
+      <h2 class="card-title h5">{{ $page.Title }}</h2>
+    {{ end }}
+    {{ with $description }}<p class="card-text">{{ . }}</p>{{ end }}
+    <a class="stretched-link mt-auto align-self-start" href="{{ $page.RelPermalink }}">Read &rarr;</a>
+  </div>
+</div>

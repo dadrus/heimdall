@@ -1,5 +1,5 @@
 baseURL: https://dadrus.github.io/
-languageCode: en-us
+locale: en-us
 title: Heimdall
 theme: mytheme
 relativeURLS: true
@@ -9,7 +9,7 @@ enableGitInfo: true
 security:
   enableInlineShortcodes: false
   exec:
-    allow: ['asciidoctor', 'git']
+    allow: ['asciidoctor', 'git', 'sass']
     osEnv: ['(?i)^(PATH|PATHEXT|APPDATA|TMP|TEMP|TERM|GEM_PATH)$']
 
   funcs:
@@ -84,7 +84,7 @@ module:
   mounts:
     - source: openapi
       target: static
-    - source: node_modules/bootstrap/dist/js/bootstrap.bundle.js
+    - source: bootstrap/dist/js/bootstrap.bundle.js
       target: assets/js/bootstrap.bundle.js
-    - source: node_modules/bootstrap-icons/font/fonts
+    - source: bootstrap-icons/font/fonts
       target: static/css/fonts

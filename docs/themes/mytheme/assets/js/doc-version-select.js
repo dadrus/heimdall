@@ -70,8 +70,10 @@ const html = htmlSnippet => {
     return doc.body.firstChild
 }
 
+// Until the target version's sitemap is available, link to its home page.
+// This avoids 404s even when switching immediately after opening the menu.
 const linkListItem = (currentVersion, currentPath) => element => `
-<li><a class="dropdown-item ${currentVersion === element.version ? 'current' : ''}" ${currentVersion === element.version ? 'aria-current="page"' : ''} href="${element.path}${currentPath}">${element.version}</a></li>`
+<li><a class="dropdown-item ${currentVersion === element.version ? 'current' : ''}" ${currentVersion === element.version ? 'aria-current="page"' : ''} data-version-path="${element.path}" href="${element.path}${currentVersion === element.version ? currentPath : '/'}">${element.version}</a></li>`
 
 const linkList = (elements = [], currentVersion, currentPath) => {
     const linkItem = linkListItem(currentVersion, currentPath)
@@ -90,6 +92,105 @@ const linkList = (elements = [], currentVersion, currentPath) => {
       ${additionalCurrent}
     </ul>
   `)
+}
+
+// Every published version already has a Hugo sitemap. Its page paths do not
+// include the /heimdall/<version> deployment prefix, just like .RelPermalink.
+// Choose the requested page if it exists, otherwise its nearest available
+// parent (e.g. /openapi/), and ultimately the version's homepage.
+function closestAvailablePage(currentPath, availablePages) {
+    const parts = currentPath.split('/').filter(Boolean)
+    for (let count = parts.length; count >= 0; count--) {
+        const path = count ? `/${parts.slice(0, count).join('/')}/` : '/'
+        if (availablePages.has(path)) return path
+    }
+    return '/'
+}
+
+// The browser's HTTP cache handles the sitemap responses. Retain only their
+// parsed paths across full page loads so version links can be resolved at once.
+const sitemapCachePrefix = 'heimdall:version-sitemap:'
+const devRefreshMs = 30 * 60 * 1000
+const releaseRefreshMs = 24 * 60 * 60 * 1000
+const failedRetryMs = 10 * 60 * 1000
+
+function readCachedSitemap(versionPath) {
+    try {
+        const cached = JSON.parse(localStorage.getItem(sitemapCachePrefix + versionPath))
+        if (!cached || !Array.isArray(cached.paths) || !Number.isFinite(cached.refreshAfter)
+            || cached.paths.some(path => typeof path !== 'string' || !path.startsWith('/'))) return null
+        return {pages: new Set(cached.paths), refreshAfter: cached.refreshAfter}
+    } catch {
+        return null // Storage is optional (private mode, quota, disabled storage).
+    }
+}
+
+function cacheSitemap(versionPath, pages, refreshIn) {
+    try {
+        localStorage.setItem(sitemapCachePrefix + versionPath, JSON.stringify({
+            paths: [...pages], refreshAfter: Date.now() + refreshIn
+        }))
+    } catch {
+        // Still update the current page's links when persistence is unavailable.
+    }
+}
+
+function setVersionLink(link, currentPath, availablePages) {
+    if (!availablePages.size) return // Keep the safe version-home fallback.
+    const closest = closestAvailablePage(currentPath, availablePages)
+    link.href = link.getAttribute('data-version-path') + closest
+    if (closest !== currentPath) {
+        link.title = 'Page not available in this version; opening the nearest available section.'
+    } else {
+        link.removeAttribute('title')
+    }
+}
+
+async function fetchSitemap(versionPath) {
+    const response = await fetch(`${versionPath}/sitemap.xml`, {credentials: 'same-origin'})
+    if (!response.ok) throw new Error(`Sitemap could not be loaded: ${response.status}`)
+
+    const xml = new DOMParser().parseFromString(await response.text(), 'application/xml')
+    if (xml.querySelector('parsererror')) throw new Error('Invalid sitemap XML')
+    const pages = new Set(Array.from(xml.getElementsByTagName('loc'), element =>
+        new URL(element.textContent).pathname))
+    if (!pages.size) throw new Error('Empty sitemap')
+    return pages
+}
+
+function prepareVersionLinks(links, versions, currentPath) {
+    const versionsByPath = new Map(versions.map(version => [version.path, version.version]))
+    const missingOrStale = []
+
+    // Set every cached link synchronously, even if background requests are slow.
+    for (const link of links) {
+        if (link.getAttribute('aria-current') === 'page') continue
+        const path = link.getAttribute('data-version-path')
+        const cached = readCachedSitemap(path)
+        if (cached) setVersionLink(link, currentPath, cached.pages)
+        if (!cached || cached.refreshAfter <= Date.now()) {
+            missingOrStale.push({link, path, cached, version: versionsByPath.get(path)})
+        }
+    }
+
+    // Start immediately after building the dropdown, never when it is opened
+    // or a link is clicked. Limit concurrent requests on a cold cache.
+    let next = 0
+    async function preloadNext() {
+        while (next < missingOrStale.length) {
+            const {link, path, cached, version} = missingOrStale[next++]
+            try {
+                const pages = await fetchSitemap(path)
+                cacheSitemap(path, pages, version === 'dev' ? devRefreshMs : releaseRefreshMs)
+                setVersionLink(link, currentPath, pages)
+            } catch {
+                // Use stale paths if present, and avoid retrying a broken
+                // sitemap on every single page load.
+                cacheSitemap(path, cached?.pages || new Set(), failedRetryMs)
+            }
+        }
+    }
+    for (let i = 0; i < Math.min(2, missingOrStale.length); i++) preloadNext()
 }
 
 const load = async dataFile => {
@@ -113,6 +214,8 @@ class DocVersionSelect extends HTMLElement {
         const versions = await load(this.versionsFile)
 
         this.appendChild(linkList(versions, this.currentVersion, this.currentPage))
+
+        prepareVersionLinks(this.querySelectorAll('a[data-version-path]'), versions, this.currentPage)
     }
 
     get currentPage() {

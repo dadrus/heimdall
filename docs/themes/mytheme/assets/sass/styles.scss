@@ -67,32 +67,36 @@ div[id] {
   scroll-margin-top: 5rem;
 }
 
-.paragraph {
-  p {
-    line-height: 1.7;
-  }
+.paragraph p,
+.api-reference p {
+  line-height: 1.7;
 }
 
 .exampleblock {
   margin: 2rem 0;
+}
 
-  .title {
-    font-weight: bold;
-    margin-bottom: 0.5rem;
+.exampleblock .title,
+.api-reference .api-example__title {
+  font-weight: bold;
+  margin-bottom: .5rem;
+}
+
+.docs-content pre {
+  border-radius: .4rem;
+  padding: .75rem;
+  box-shadow: inset 0 0 0 1px #5c636a;
+  font-size: .875em;
+  overflow-x: auto;
+
+  code {
+    max-width: none;
+    white-space: pre;
+    overflow-wrap: normal;
   }
 }
 
 .listingblock {
-  overflow-y: scroll;
-  word-break: break-word;
-
-  pre {
-    border-radius: .4rem;
-    padding: .75rem;
-    box-shadow: inset 0 0 0 1px #5c636a;
-    font-size: .875em;
-  }
-
   b {
     display: none;
   }
@@ -146,16 +150,14 @@ p, td {
   }
 }
 
-pre {
-  code {
-    display: block;
-    max-width: 10rem;
-  }
+pre code {
+  display: block;
 }
 
 .highlight {
   code {
     border: none;
+    color: inherit;
   }
 }
 
@@ -270,6 +272,39 @@ doc-version-select {
   border-bottom: 0;
 }
 
+.search-results .list-group-item-action.search-result-active {
+  background-color: var(--bs-list-group-action-hover-bg);
+  box-shadow: inset 3px 0 0 var(--bs-primary);
+}
+
+.docs-search-footer {
+  justify-content: center;
+  gap: 1.5rem;
+  color: var(--bs-secondary-color);
+  font-size: .875rem;
+
+  &__item, &__keys {
+    display: inline-flex;
+    align-items: center;
+    gap: .375rem;
+  }
+
+  kbd {
+    min-width: 1.5rem;
+    text-align: center;
+    padding: .125rem .375rem;
+    color: inherit;
+    background: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: .25rem;
+    font-size: .75rem;
+  }
+}
+
+.docs-intro h1[id] {
+  scroll-margin-top: 5rem;
+}
+
 .reference-link {
   &:link,
   &:visited,
@@ -345,6 +380,7 @@ doc-version-select {
 
 .docs-intro {
   grid-area: intro;
+  padding-top: 1rem;
 }
 
 .docs-toc {
@@ -353,6 +389,171 @@ doc-version-select {
 
 .docs-content {
   grid-area: content;
+  min-width: 0;
+}
+
+.docs-bottom-navigation {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+
+  &__link {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    min-width: 0;
+
+    svg {
+      flex: 0 0 16px;
+    }
+  }
+
+  &__text {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  &__link--next {
+    grid-column: 2;
+    justify-content: flex-end;
+    text-align: right;
+  }
+}
+
+.api-reference {
+  .api-operation {
+    margin: 3rem 0;
+  }
+
+  .api-operation__title {
+    margin: 0 0 1rem;
+  }
+
+  .api-operation__section-label {
+    margin: 1.5rem 0 1rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  .api-operation__endpoint {
+    padding: .375rem .625rem;
+    background-color: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color-translucent);
+    border-radius: .4rem;
+  }
+
+  .api-definition-list > li {
+    margin-bottom: 1rem;
+
+    > p {
+      margin-bottom: .5rem;
+    }
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  .api-example {
+    margin-top: 1rem;
+  }
+
+  .highlight {
+    border-radius: .4rem;
+  }
+}
+
+.docs-content details summary {
+  cursor: pointer;
+}
+
+// The script adds this wrapper only for code blocks longer than 15 lines.
+// Without JavaScript, all preformatted content stays fully visible.
+.code-block {
+  --code-block-bg: var(--bs-tertiary-bg);
+  --code-block-toggle-color: var(--bs-secondary-color);
+  --code-block-toggle-hover: rgba(0, 0, 0, .04);
+  margin-bottom: 1rem;
+  border-radius: .4rem;
+  background-color: var(--code-block-bg);
+  box-shadow: inset 0 0 0 1px #5c636a;
+  overflow: hidden;
+
+  &.code-block--highlighted {
+    --code-block-bg: #122b3b;
+    --code-block-toggle-color: #dbe8f0;
+    --code-block-toggle-hover: rgba(255, 255, 255, .06);
+  }
+
+  .code-block__viewport {
+    min-width: 0;
+
+    > pre,
+    > .highlight pre {
+      margin-bottom: 0;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    > .highlight {
+      border-radius: 0;
+    }
+  }
+
+  &.code-block--collapsed .code-block__viewport {
+    max-height: var(--code-preview-height);
+    overflow: hidden;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2rem), transparent);
+    mask-image: linear-gradient(to bottom, #000 calc(100% - 2rem), transparent);
+  }
+
+  .code-block__toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .6rem;
+    width: 100%;
+    padding: .55rem 1rem .7rem;
+    border: 0;
+    background: transparent;
+    color: var(--code-block-toggle-color);
+    font-size: .875rem;
+    font-weight: 500;
+    line-height: 1.4;
+    cursor: pointer;
+
+    &::before {
+      content: "";
+      width: .45rem;
+      height: .45rem;
+      border-right: .125rem solid currentColor;
+      border-bottom: .125rem solid currentColor;
+      transform: translateY(-.125rem) rotate(45deg);
+    }
+
+    &:hover {
+      background-color: var(--code-block-toggle-hover);
+    }
+
+    &:focus-visible {
+      outline: .125rem solid var(--bs-primary);
+      outline-offset: -.125rem;
+    }
+  }
+
+  &:not(.code-block--collapsed) .code-block__toggle::before {
+    transform: translateY(.125rem) rotate(225deg);
+  }
+}
+
+// Short CommonMark descriptions are rendered without a <p>; give them the
+// same spacing as the plain-text descriptions of Docs and Guides.
+.docs-description {
+  margin-bottom: 1rem;
+
+  > :last-child {
+    margin-bottom: 0;
+  }
 }
 
 .docs-toc-content {
@@ -407,9 +608,18 @@ doc-version-select {
   }
 }
 
-// breakpoint md
+html, body {
+  overscroll-behavior-y: none;
+}
+
+.offcanvas-body {
+  overscroll-behavior-y: none;
+}
+
 @media (min-width: 768px) {
   .docs-layout {
+    --docs-heading-line-height: min(3rem, calc(1.65rem + 1.8vw));
+    --docs-search-control-height: 2.25rem;
     display: grid;
     grid-template-areas: "sidebar main";
     grid-template-columns: 2fr 9fr;
@@ -428,20 +638,71 @@ doc-version-select {
 
   .docs-sidebar {
     position: sticky;
-    top: 5rem;
-    display: block !important;
-    height: calc(100vh - 6rem);
+    top: calc(4.875rem + (var(--docs-heading-line-height) - var(--docs-search-control-height)) / 2);
+    display: flex !important;
+    flex-direction: column;
+    align-self: start;
+    height: auto;
+    max-height: calc(100vh - 6.5rem);
     padding-left: .25rem;
     margin-left: -.25rem;
-    overflow-y: auto;
     min-width: 13rem;
 
+    // The search button stays outside the only scrollport. Gradients are
+    // overlays on the menu content, not masks on the scrollbar or button.
+    .docs-menu-container {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 0;
+
+      &::before, &::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        right: 1rem;
+        height: 1rem;
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      &::before {
+        top: 0;
+        background: linear-gradient(to bottom, var(--bs-body-bg), transparent);
+      }
+
+      &::after {
+        bottom: 0;
+        background: linear-gradient(to top, var(--bs-body-bg), transparent);
+      }
+
+      nav {
+        max-height: calc(100vh - 6.5rem - var(--docs-search-control-height) - .5rem);
+        overflow-y: auto;
+        overscroll-behavior-y: auto;
+        padding-bottom: 1.25rem;
+      }
+    }
+
     .docs-search-button {
-      position: sticky;
-      top: 0;
-      padding-top: .5rem;
+      flex: 0 0 auto;
       padding-bottom: .5rem;
-      background: linear-gradient(to bottom, var(--bs-body-bg) calc(100% - 1rem), color-mix(in srgb, var(--bs-body-bg) 50%, transparent) 95%, transparent);
+      padding-right: .9rem;
+
+      button {
+        --bs-btn-hover-bg: var(--bs-tertiary-bg);
+        --bs-btn-hover-color: var(--bs-secondary-color);
+        --bs-btn-hover-border-color: var(--bs-secondary-color);
+        height: var(--docs-search-control-height);
+        padding: .25rem .625rem;
+        gap: .5rem;
+      }
+
+      .docs-search-shortcut {
+        margin-left: auto;
+        flex-shrink: 0;
+        font-size: .900rem;
+        font-weight: 600;
+      }
     }
   }
 
@@ -450,7 +711,6 @@ doc-version-select {
   }
 }
 
-// breakpoot lg
 @media (min-width: 992px) {
   .docs-main {
     display: grid;
@@ -461,13 +721,30 @@ doc-version-select {
     grid-template-columns: 5fr 1fr;
   }
 
+  .docs-main--no-toc {
+    grid-template-areas:
+          "intro"
+          "content";
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  // The TOC is rendered once for desktop and mobile. On desktop remove the
+  // mobile-only card treatment without duplicating the navigation markup.
+  .docs-toc-content > .card {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    padding: 0;
+  }
+
   .docs-toc {
     position: sticky;
     top: 5rem;
     right: 0;
     z-index: 2;
+    align-self: start;
     overflow-y: auto;
-    height: calc(100vh - 7rem);
+    max-height: calc(100vh - 7rem);
   }
 
   linkable-headline-area .gridcol {
@@ -503,7 +780,6 @@ doc-version-select {
   }
 }
 
-// fix for invisible close button in deployed docs
 .btn-close {
   background: transparent url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") center/1em auto no-repeat;
 }

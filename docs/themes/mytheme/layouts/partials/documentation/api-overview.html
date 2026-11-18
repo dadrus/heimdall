@@ -1,0 +1,12 @@
+{{- $page := . -}}
+{{- with .Pages.ByWeight -}}
+  <div class="row gap-2">
+    {{- range . -}}
+      {{- $description := "" -}}
+      {{- with .Description -}}
+        {{- $description = $page.RenderString (dict "markup" "markdown") . | plainify | truncate 220 -}}
+      {{- end -}}
+      {{ partial "documentation/page-preview.html" (dict "page" . "description" $description) }}
+    {{- end -}}
+  </div>
+{{- end -}}

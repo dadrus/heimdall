@@ -1,0 +1,39 @@
+{{ $currentPage := . -}}
+{{ $section := $currentPage.Section -}}
+
+<div class="docs-search-button">
+  <button type="button" class="btn btn-outline-secondary d-none d-md-flex align-items-center w-100 text-start" data-bs-toggle="modal" data-bs-target="#docSearch"
+          aria-controls="docSearch" aria-expanded="false" aria-label="Open search" aria-keyshortcuts="Control+K Meta+K">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none" class="bi bi-search flex-shrink-0" aria-hidden="true">
+      <circle cx="8.25" cy="8.25" r="5.25" stroke="currentColor" stroke-width="2.0"/>
+      <path d="M12.2 12.2L16.4 16.4" stroke="currentColor" stroke-width="2.0" stroke-linecap="round" />
+    </svg>
+    <span class="text-truncate">Search...</span>
+    <span class="docs-search-shortcut text-nowrap" aria-hidden="true">Ctrl K</span>
+  </button>
+</div>
+
+<div class="docs-menu-container">
+  <nav aria-label="Documentation navigation" data-scroll-key="{{ .Site.Params.path_prefix }}:{{ .Site.Params.version }}:{{ $section }}">
+  <ul>
+  {{ range (index .Site.Menus $section) -}}
+    <li>
+    {{ $active := in $currentPage.RelPermalink .URL }}
+    {{ if .HasChildren -}}
+      <span>{{ .Title }}</span>
+      <ul>
+      {{ range .Children -}}
+        <li>
+        {{ $active := in $currentPage.RelPermalink .URL }}
+          <a class="{{ if $active }}active{{ end }}" href="{{ .URL }}">{{ .Title }}</a>
+        </li>
+      {{ end }}
+      </ul>
+    {{- else -}}
+      <a class="{{ if $active }}active{{ end }}" href="{{ .URL }}">{{- .Title -}}</a>
+    {{- end -}}
+    </li>
+  {{ end }}
+  </ul>
+  </nav>
+</div>

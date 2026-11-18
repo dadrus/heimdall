@@ -1,0 +1,27 @@
+{{- $page := .page -}}
+{{- $schema := .schema -}}
+{{- with $schema -}}
+  <div class="mb-3">
+    <div class="d-flex flex-wrap align-items-baseline gap-2">
+      {{ with $.name }}<code class="fw-semibold">{{ . }}</code>{{ end }}
+      {{ with .title }}<strong>{{ . }}</strong>{{ end }}
+      {{ with .type }}<span class="small text-body-secondary">{{ . }}</span>{{ end }}
+      {{ with .format }}<span class="small text-body-secondary">{{ . }}</span>{{ end }}
+      {{ if $.required }}<span class="small fw-semibold text-danger">required</span>{{ end }}
+    </div>
+    {{ with .description }}<div class="mt-1">{{ $page.RenderString (dict "markup" "markdown") . }}</div>{{ end }}
+    {{ with .properties }}
+      <div class="border-start ps-3 ms-1 mt-3">
+        {{ range $name, $property := . }}
+          {{ partial "openapi/schema.html" (dict "schema" $property "page" $page "name" $name "required" (in (default (slice) $schema.required) $name)) }}
+        {{ end }}
+      </div>
+    {{ end }}
+    {{ with .items }}
+      <div class="border-start ps-3 ms-1 mt-3">
+        <span class="small text-body-secondary">Array items</span>
+        {{ partial "openapi/schema.html" (dict "schema" . "page" $page) }}
+      </div>
+    {{ end }}
+  </div>
+{{- end -}}

@@ -1,0 +1,9 @@
+{{/* Generated API pages inherit GitInfo from their adapter, not specification.yaml.
+     Until a reliable specification-specific date is available, omit that misleading date. */}}
+{{ if not .Params.api_tag }}
+  {{ with .GitInfo }}
+    <p class="text-end fst-italic fs-7 pb-3">
+      Last updated on <span class="fw-bold">{{ .AuthorDate.Format "Jan 2, 2006" }}</span>
+    </p>
+  {{ end }}
+{{ end }}

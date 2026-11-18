@@ -1,6 +1,8 @@
 class LinkableContentArea extends HTMLElement {
     connectedCallback() {
         const headlines = Array.from(this.querySelectorAll('h1,h2,h3,h4'))
+        const pageTitle = this.closest('.docs-main')?.querySelector('.docs-intro h1[id]')
+        if (pageTitle) headlines.unshift(pageTitle)
 
         for (const headline of headlines) {
             if (headline.hasAttribute('id')) {
@@ -19,6 +21,5 @@ function link(href) {
     a.setAttribute('href', href)
     a.classList.add('reference-link')
     a.textContent = '#'
-    console.log(a)
     return a
 }

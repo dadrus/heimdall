@@ -1,0 +1,118 @@
+{{- /* Generate one page per top-level OpenAPI navigation tag. */ -}}
+{{- $api := readFile "openapi/specification.yaml" | transform.Unmarshal -}}
+{{- $tags := dict -}}
+{{- $rootSlugs := dict -}}
+{{- range $tag := $api.tags -}}
+  {{- if not $tag.name -}}
+    {{- errorf "OpenAPI tags must have a name" -}}
+  {{- end -}}
+  {{- if index $tags $tag.name -}}
+    {{- errorf "Duplicate OpenAPI tag %q" $tag.name -}}
+  {{- end -}}
+  {{- $tags = merge $tags (dict $tag.name $tag) -}}
+  {{- if not $tag.parent -}}
+    {{- $slug := urlize $tag.name -}}
+    {{- with index $rootSlugs $slug -}}
+      {{- errorf "OpenAPI root tags %q and %q have the same URL slug %q" . $tag.name $slug -}}
+    {{- end -}}
+    {{- $rootSlugs = merge $rootSlugs (dict $slug $tag.name) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* Resolve every tag, including tags not reachable from a root, to catch broken hierarchies. */ -}}
+{{- $rootByTag := dict -}}
+{{- range $api.tags -}}
+  {{- $root := partial "openapi/model/root-tag.html" (dict "tag" . "tags" $tags) -}}
+  {{- $rootByTag = merge $rootByTag (dict .name $root.name) -}}
+{{- end -}}
+
+{{- /* The first operation tag determines its canonical page and section. */ -}}
+{{- $operations := dict -}}
+{{- $operationAnchors := dict -}}
+{{- range $endpoint, $pathItem := $api.paths -}}
+  {{- range $method := slice "get" "put" "post" "delete" "options" "head" "patch" "trace" "query" -}}
+    {{- with index $pathItem $method -}}
+      {{- $operation := . -}}
+      {{- if not $operation.operationId -}}
+        {{- errorf "OpenAPI operation %s %s needs an operationId for a stable anchor" (upper $method) $endpoint -}}
+      {{- end -}}
+      {{- $anchor := $operation.operationId | anchorize -}}
+      {{- with index $operationAnchors $anchor -}}
+        {{- errorf "OpenAPI operations %s and %s %s have the same anchor %q" . (upper $method) $endpoint $anchor -}}
+      {{- end -}}
+      {{- $operationAnchors = merge $operationAnchors (dict $anchor (printf "%s %s" (upper $method) $endpoint)) -}}
+      {{- $operationTags := default (slice) $operation.tags -}}
+      {{- if not $operationTags -}}
+        {{- errorf "OpenAPI operation %s %s has no navigation tag" (upper $method) $endpoint -}}
+      {{- end -}}
+      {{- range $operationTags -}}
+        {{- if not (index $tags .) -}}
+          {{- errorf "OpenAPI operation %s %s refers to unknown tag %q" (upper $method) $endpoint . -}}
+        {{- end -}}
+      {{- end -}}
+      {{- $tagName := index $operationTags 0 -}}
+      {{- /* All references and inherited parameters/servers are prepared here, not in the theme. */ -}}
+      {{- $resolvedOperation := partial "openapi/model/resolve-refs.html" (dict "value" $operation "components" $api.components) -}}
+      {{- $parameters := slice -}}
+      {{- range $pathItem.parameters -}}
+        {{- $parameters = append (partial "openapi/model/resolve-refs.html" (dict "value" . "components" $api.components)) $parameters -}}
+      {{- end -}}
+      {{- range $resolvedOperation.parameters -}}
+        {{- $parameters = append . $parameters -}}
+      {{- end -}}
+      {{- $servers := $api.servers -}}
+      {{- with $pathItem.servers }}{{ $servers = . }}{{ end -}}
+      {{- with $operation.servers }}{{ $servers = . }}{{ end -}}
+      {{- $item := dict
+        "id" $operation.operationId
+        "method" (upper $method)
+        "path" $endpoint
+        "operation" $resolvedOperation
+        "parameters" $parameters
+        "servers" $servers
+      -}}
+      {{- $operations = merge $operations (dict $tagName (append $item (default (slice) (index $operations $tagName)))) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* Only root tags become pages/menu items. Nested tags group sections on those pages. */ -}}
+{{- range $index, $tag := $api.tags -}}
+  {{- if not $tag.parent -}}
+    {{- $groups := slice -}}
+    {{- $pageAnchors := dict -}}
+    {{- range $groupTag := $api.tags -}}
+      {{- if eq (index $rootByTag $groupTag.name) $tag.name -}}
+        {{- with index $operations $groupTag.name -}}
+          {{- if ne $groupTag.name $tag.name -}}
+            {{- $tagAnchor := $groupTag.name | anchorize -}}
+            {{- with index $pageAnchors $tagAnchor -}}
+              {{- errorf "Duplicate OpenAPI anchor %q on page %q" $tagAnchor $tag.name -}}
+            {{- end -}}
+            {{- $pageAnchors = merge $pageAnchors (dict $tagAnchor true) -}}
+          {{- end -}}
+          {{- range . -}}
+            {{- $anchor := .id | anchorize -}}
+            {{- with index $pageAnchors $anchor -}}
+              {{- errorf "Duplicate OpenAPI anchor %q on page %q" $anchor $tag.name -}}
+            {{- end -}}
+            {{- $pageAnchors = merge $pageAnchors (dict $anchor true) -}}
+          {{- end -}}
+          {{- $groups = append (dict "tag" $groupTag "operations" .) $groups -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- /* Serialize API objects to preserve case-sensitive JSON keys in Hugo page parameters.
+           The shortcode renders them with the generated page as context, exposing normal .Content/.Plain. */ -}}
+    {{- $.AddPage (dict
+      "kind" "page"
+      "path" (urlize $tag.name)
+      "title" (default $tag.name $tag.summary)
+      "content" (dict "mediaType" "text/markdown" "value" "{{< openapi-group >}}\n")
+      "weight" (mul (add $index 1) 10)
+      "description" (default "" $tag.description)
+      "menus" (dict "openapi" (dict "parent" "api_reference" "weight" (mul (add $index 1) 10)))
+      "params" (dict "api_groups" ($groups | jsonify) "api_tag" $tag.name)
+    ) -}}
+  {{- end -}}
+{{- end -}}

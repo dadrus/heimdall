@@ -1,0 +1,30 @@
+{{- $index := slice -}}
+{{- range .RegularPages -}}
+  {{- $section := slice -}}
+  {{- $next := .Parent -}}
+  {{ if and $next (not (eq $next.Title "Docs")) (not $next.IsHome) }}
+    {{- $section = slice $next.Title | append $section -}}
+    {{- $next := $next.Parent -}}
+    {{ if and $next (not (eq $next.Title "Docs")) (not $next.IsHome) }}
+      {{- $section = slice $next.Title | append $section -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- /* All regular pages, including adapted OpenAPI groups, supply their own .Content. */ -}}
+  {{- /* Include fragment IDs so anchors are searchable even when not visible in .Plain. */ -}}
+  {{- $anchors := delimit (findRE `\sid="[^"]+"` .Content) " " | replaceRE `\sid="([^"]+)"` "$1" -}}
+  {{- $index = append (dict
+      "sections" $section
+      "title" .Title
+      "tags" .Params.tags
+      "description" .Description
+      "categories" .Params.categories
+      "content" (printf "%s %s %s %s %s" .Title .RelPermalink .Description .Plain $anchors | replaceRE `\s+` " " | strings.TrimSpace)
+      "search_sections" (partial "search/content-sections.html" .Content)
+      "url" .RelPermalink
+    ) $index -}}
+{{- end -}}
+{{- /* hugo-flexsearch 1.0.2 expects the trailing hash record and excludes it
+       from indexing. Share this hash with the HTML search widget. */ -}}
+{{- $hash := sha256 ($index | jsonify) -}}
+{{- return (dict "hash" $hash "index" (append (dict "hash" $hash) $index)) -}}

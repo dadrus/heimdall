@@ -1,0 +1,27 @@
+{{- $page := .page -}}
+{{- range $mediaType, $media := .content -}}
+  <div class="mt-3">
+    <p class="mb-2 small text-body-secondary"><code>{{ $mediaType }}</code></p>
+    {{ if isset $media "example" }}
+      <div class="api-example">
+        <p class="api-example__title">Example</p>
+        <div>
+          {{- if in $mediaType "json" -}}
+            {{/* Use the existing Rouge-compatible token colors via Chroma classes. */}}
+            {{ highlight (printf "%s" (jsonify (dict "indent" "  ") $media.example)) "json" "noClasses=false" }}
+          {{- else -}}
+            <pre class="highlight"><code>{{ $media.example }}</code></pre>
+          {{- end -}}
+        </div>
+      </div>
+    {{ end }}
+    {{ with $media.schema }}
+      <details class="mb-2">
+        <summary class="py-1 text-primary fw-medium">Schema</summary>
+        <div class="mt-2 mb-3">
+          {{ partial "openapi/schema.html" (dict "schema" . "page" $page) }}
+        </div>
+      </details>
+    {{ end }}
+  </div>
+{{- end -}}

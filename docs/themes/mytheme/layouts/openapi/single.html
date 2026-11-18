@@ -1,0 +1,7 @@
+{{- define "main" -}}
+  {{- partial "documentation/page.html" (dict
+    "page" .
+    "content" .Content
+    "toc" (partial "openapi/toc.html" .)
+  ) -}}
+{{- end -}}

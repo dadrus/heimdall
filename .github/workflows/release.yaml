@@ -10,7 +10,8 @@ env:
   HELM_VERSION: "3.18.5"
   NODE_VERSION: "24.8.0"
   RUBY_VERSION: "3.4"
-  HUGO_VERSION: "0.150.0"
+  HUGO_VERSION: "0.170.0"
+  DART_SASS_VERSION: "1.108.2"
   DOCUMENTATION_URL: "https://dadrus.github.io/heimdall/"
 
 permissions: {}
@@ -405,7 +406,7 @@ jobs:
         uses: peaceiris/actions-hugo@d1c81a15d4e6dca7086a17b9c2565cb70fd576bf # v3.3.0
         with:
           hugo-version: ${{ env.HUGO_VERSION }}
-          extended: true
+          dart-sass-version: ${{ env.DART_SASS_VERSION }}
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:

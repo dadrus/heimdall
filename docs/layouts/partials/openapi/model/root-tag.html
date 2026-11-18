@@ -1,0 +1,15 @@
+{{- $tag := .tag -}}
+{{- $ancestors := default (slice) .ancestors -}}
+{{- if in $ancestors $tag.name -}}
+  {{- errorf "OpenAPI tag hierarchy contains a cycle at %q" $tag.name -}}
+{{- else -}}
+  {{- with $tag.parent -}}
+    {{- $parent := index $.tags . -}}
+    {{- if not $parent -}}
+      {{- errorf "OpenAPI tag %q references unknown parent %q" $.tag.name . -}}
+    {{- else -}}
+      {{- $tag = partial "openapi/model/root-tag.html" (dict "tag" $parent "tags" $.tags "ancestors" (append $tag.name $ancestors)) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return $tag -}}

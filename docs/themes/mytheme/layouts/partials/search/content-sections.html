@@ -1,0 +1,22 @@
+{{- /* Extract the same heading-anchored sections used by the search dialog.
+       Keep .Plain as the searchable content; these sections supply result links/snippets.
+       Splitting at headings preserves each heading and its following text up to the next heading. */ -}}
+{{- $sections := slice -}}
+{{- $separator := printf "%c" 30 -}}
+{{- $chunks := split (replaceRE `(?i)<h[2-6]\b[^>]*>` (printf "%s${0}" $separator) (string .)) $separator -}}
+{{- range after 1 $chunks -}}
+  {{- $chunk := . -}}
+  {{- $headings := findRE `(?is)^<h[2-6]\b[^>]*>.*?</h[2-6]\s*>` . 1 -}}
+  {{- with $headings -}}
+    {{- $heading := index . 0 -}}
+    {{- $opening := index (findRE `(?i)^<h[2-6]\b[^>]*>` $heading 1) 0 -}}
+    {{- $ids := findRESubmatch `(?i)\bid="([^"]+)"` $opening -}}
+    {{- with $ids -}}
+      {{- $id := htmlUnescape (index (index . 0) 1) -}}
+      {{- $title := strings.TrimSpace (htmlUnescape (plainify $heading)) -}}
+      {{- $text := htmlUnescape (replaceRE `(?s)<[^>]+>` " " $chunk) | replaceRE `\s+` " " | strings.TrimSpace -}}
+      {{- $sections = append (dict "id" $id "title" $title "text" $text) $sections -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return $sections -}}

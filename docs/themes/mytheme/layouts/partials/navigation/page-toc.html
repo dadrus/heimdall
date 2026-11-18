@@ -1,0 +1,17 @@
+{{- with . -}}
+<aside class="text-muted docs-toc">
+  <strong class="d-md-block h6 pb-2 my-2 ms-2 border-bottom d-none d-md-none d-lg-block">On this page</strong>
+  <button class="btn btn-outline-secondary text-decoration-none d-lg-none collapsed" type="button" data-bs-toggle="collapse"
+          data-bs-target="#page-content-toc" aria-expanded="false" aria-controls="page-content-toc">
+    On this page
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-expand" viewBox="0 0 16 16">
+      <path fill-rule="evenodd" d="M3.646 9.146a.5.5 0 0 1 .708 0L8 12.793l3.646-3.647a.5.5 0 0 1 .708.708l-4 4a.5.5 0 0 1-.708 0l-4-4a.5.5 0 0 1 0-.708m0-2.292a.5.5 0 0 0 .708 0L8 3.207l3.646 3.647a.5.5 0 0 0 .708-.708l-4-4a.5.5 0 0 0-.708 0l-4 4a.5.5 0 0 0 0 .708"/>
+    </svg>
+  </button>
+  <div id="page-content-toc" class="mt-1 mb-3 text-muted collapse d-lg-block docs-toc-content">
+    <div class="card card-body">
+      {{ . }}
+    </div>
+  </div>
+</aside>
+{{- end -}}

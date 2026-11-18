@@ -1,0 +1,17 @@
+{{- if .Sections -}}
+  {{- range .Sections.ByWeight -}}
+    <h2 id="{{ .LinkTitle | anchorize }}">{{ .LinkTitle }}</h2>
+    {{ with .Description }}<p>{{ . }}</p>{{ end }}
+    <div class="row gap-2">
+      {{- range .RegularPagesRecursive.ByTitle -}}
+        {{ partial "documentation/page-preview.html" (dict "page" . "headingLevel" 3) }}
+      {{- end -}}
+    </div>
+  {{- end -}}
+{{- else -}}
+  <div class="row gap-2">
+    {{- range .RegularPagesRecursive.ByTitle -}}
+      {{ partial "documentation/page-preview.html" (dict "page" .) }}
+    {{- end -}}
+  </div>
+{{- end -}}
