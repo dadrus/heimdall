@@ -43,7 +43,7 @@ func TestNewRequestContext(t *testing.T) {
 		Method:   http.MethodPatch,
 		Scheme:   "https",
 		Host:     "FoO.Bar:8080",
-		Path:     "/test/baz?bar=moo#foobar",
+		Path:     "/test/baz?bar=moo%23foobar",
 		Query:    "", // documented to be empty
 		Fragment: "", // documented to be empty
 		Body:     "content=heimdall",
@@ -86,7 +86,7 @@ func TestNewRequestContext(t *testing.T) {
 	require.Equal(t, "foo.bar:8080", ctx.Request().URL.Host)
 	require.Equal(t, "/test/baz", ctx.Request().URL.Path)
 	require.Empty(t, ctx.Request().URL.Fragment)
-	require.Equal(t, "bar=moo#foobar", ctx.Request().URL.RawQuery)
+	require.Equal(t, "bar=moo%23foobar", ctx.Request().URL.RawQuery)
 	require.Equal(t, "moo#foobar", ctx.Request().URL.URL.Query().Get("bar"))
 	require.Equal(t, map[string]any{"content": []string{"heimdall"}}, ctx.Request().Body())
 	require.Len(t, ctx.Request().Headers(), 5)
@@ -112,10 +112,10 @@ func TestRequestContextURL(t *testing.T) {
 		rawQuery    string
 	}{
 		"regular path": {
-			requestPath: "/test/baz?bar=moo#foobar",
+			requestPath: "/test/baz?bar=moo%23foobar",
 			path:        "/test/baz",
 			rawPath:     "/test/baz",
-			rawQuery:    "bar=moo#foobar",
+			rawQuery:    "bar=moo%23foobar",
 		},
 		"escaped characters": {
 			requestPath: "/test%2Ffoo/bar/%5Bval%5D?foo=bar",
@@ -194,6 +194,7 @@ func TestRequestContextInitInvalidURI(t *testing.T) {
 	for name, path := range map[string]string{
 		"invalid path parameter escape": "/admin/settings;x=%",
 		"invalid hex escape":            "/admin/%zz",
+		"literal fragment delimiter":    "/metrics#fragment",
 		"pathless absolute URI":         "http://admin",
 		"empty path":                    "",
 	} {

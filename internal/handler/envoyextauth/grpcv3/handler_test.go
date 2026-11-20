@@ -217,6 +217,25 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				assert.Empty(t, deniedResponse.GetHeaders())
 			},
 		},
+		"request URI with fragment is rejected": {
+			host: "heimdall.local",
+			path: "/admin#foo",
+			configureMocks: func(t *testing.T, _ *mocks2.ExecutorMock) {
+				t.Helper()
+			},
+			assertResponse: func(t *testing.T, err error, response *envoy_auth.CheckResponse) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
+
+				deniedResponse := response.GetDeniedResponse()
+				require.NotNil(t, deniedResponse)
+				assert.Equal(t, typev3.StatusCode_BadRequest, deniedResponse.GetStatus().GetCode())
+				assert.Empty(t, deniedResponse.GetBody())
+				assert.Empty(t, deniedResponse.GetHeaders())
+			},
+		},
 		"invalid host is rejected": {
 			host: "evil.com,for=127.0.0.1",
 			path: "/test",

@@ -105,7 +105,7 @@ func newRequestContext() *RequestContext {
 func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest) error {
 	httpReq := req.GetAttributes().GetRequest().GetHttp()
 
-	parsed, err := url.ParseRequestURI(httpReq.GetPath())
+	parsed, err := urlx.ParseRequestURI(httpReq.GetPath())
 	if err != nil {
 		return errInvalidRequestURI
 	}
