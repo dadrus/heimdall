@@ -26,11 +26,15 @@ import (
 	"github.com/dadrus/heimdall/internal/x/urlx"
 )
 
-// ErrInvalidForwardedURI indicates that an explicitly supplied request target
-// cannot be used as the resource for authorization.
-var ErrInvalidForwardedURI = errors.New("invalid X-Forwarded-Uri")
+// ErrInvalidRequestURI indicates that the request target cannot be used
+// as the resource for authorization.
+var ErrInvalidRequestURI = errors.New("invalid request URI")
 
 func extractURL(req *http.Request) (url.URL, error) {
+	if urlx.HasFragmentDelimiter(req.RequestURI) {
+		return url.URL{}, ErrInvalidRequestURI
+	}
+
 	var (
 		rawPath string
 		path    string
@@ -51,14 +55,14 @@ func extractURL(req *http.Request) (url.URL, error) {
 
 	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
 		// ParseRequestURI retains a leading "//" as part of the path.
-		forwardedURI, err := url.ParseRequestURI(val)
+		forwardedURI, err := urlx.ParseRequestURI(val)
 		if err != nil {
-			return url.URL{}, ErrInvalidForwardedURI
+			return url.URL{}, ErrInvalidRequestURI
 		}
 
 		rawPath = urlx.EscapedPath(forwardedURI)
 		if len(rawPath) == 0 {
-			return url.URL{}, ErrInvalidForwardedURI
+			return url.URL{}, ErrInvalidRequestURI
 		}
 
 		query = forwardedURI.RawQuery

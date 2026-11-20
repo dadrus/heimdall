@@ -309,7 +309,7 @@ func TestExtractURL(t *testing.T) {
 			assert: func(t *testing.T, _ url.URL, err error) {
 				t.Helper()
 
-				require.ErrorIs(t, err, ErrInvalidForwardedURI)
+				require.ErrorIs(t, err, ErrInvalidRequestURI)
 			},
 		},
 		"truncated escape in X-Forwarded-Uri": {
@@ -321,7 +321,7 @@ func TestExtractURL(t *testing.T) {
 			assert: func(t *testing.T, _ url.URL, err error) {
 				t.Helper()
 
-				require.ErrorIs(t, err, ErrInvalidForwardedURI)
+				require.ErrorIs(t, err, ErrInvalidRequestURI)
 			},
 		},
 		"invalid escape in X-Forwarded-Uri": {
@@ -333,7 +333,7 @@ func TestExtractURL(t *testing.T) {
 			assert: func(t *testing.T, _ url.URL, err error) {
 				t.Helper()
 
-				require.ErrorIs(t, err, ErrInvalidForwardedURI)
+				require.ErrorIs(t, err, ErrInvalidRequestURI)
 			},
 		},
 		"pathless X-Forwarded-Uri": {
@@ -345,7 +345,7 @@ func TestExtractURL(t *testing.T) {
 			assert: func(t *testing.T, _ url.URL, err error) {
 				t.Helper()
 
-				require.ErrorIs(t, err, ErrInvalidForwardedURI)
+				require.ErrorIs(t, err, ErrInvalidRequestURI)
 			},
 		},
 		"pathless X-Forwarded-Uri with query": {
@@ -357,7 +357,44 @@ func TestExtractURL(t *testing.T) {
 			assert: func(t *testing.T, _ url.URL, err error) {
 				t.Helper()
 
-				require.ErrorIs(t, err, ErrInvalidForwardedURI)
+				require.ErrorIs(t, err, ErrInvalidRequestURI)
+			},
+		},
+		"literal fragment delimiter in X-Forwarded-Uri": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/metrics#fragment")
+			},
+			assert: func(t *testing.T, _ url.URL, err error) {
+				t.Helper()
+
+				require.ErrorIs(t, err, ErrInvalidRequestURI)
+			},
+		},
+		"literal fragment delimiter in request line": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.RequestURI = "/metrics#fragment"
+			},
+			assert: func(t *testing.T, _ url.URL, err error) {
+				t.Helper()
+
+				require.ErrorIs(t, err, ErrInvalidRequestURI)
+			},
+		},
+		"literal fragment delimiter in request line with valid forwarded URI": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.RequestURI = "/metrics#fragment"
+				req.Header.Set("X-Forwarded-Uri", "/metrics")
+			},
+			assert: func(t *testing.T, _ url.URL, err error) {
+				t.Helper()
+
+				require.ErrorIs(t, err, ErrInvalidRequestURI)
 			},
 		},
 		"Request path is used and ends with a slash": {
