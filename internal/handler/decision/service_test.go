@@ -45,6 +45,27 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 		configureMocks func(t *testing.T, exec *mocks4.ExecutorMock)
 		assertResponse func(t *testing.T, err error, response *http.Response)
 	}{
+		"literal fragment in forwarded request URI is rejected": {
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+host+"/metrics", nil)
+				require.NoError(t, err)
+				req.Header.Set("X-Forwarded-Uri", "/metrics#")
+
+				return req
+			},
+			configureMocks: func(t *testing.T, _ *mocks4.ExecutorMock) {
+				t.Helper()
+			},
+			assertResponse: func(t *testing.T, err error, response *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, response.StatusCode)
+			},
+		},
 		"no rules configured": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()
