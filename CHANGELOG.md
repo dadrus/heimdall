@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.17.30](https://github.com/dadrus/heimdall/compare/v0.17.29...v0.17.30) (2026-11-20)
+
+
+### Documentation
+
+* Native OpenAPI integration ([#3685](https://github.com/dadrus/heimdall/issues/3685)) ([7bf6328](https://github.com/dadrus/heimdall/commit/7bf63282633a3ca89c43f6cd53a55b5dd94a73d7))
+
+
+### Dependencies
+
+* update golang to v1.27.4 ([#3670](https://github.com/dadrus/heimdall/issues/3670)) ([62026ca](https://github.com/dadrus/heimdall/commit/62026ca3f4dd98ca357387e4e164cec2005cc1a3))
+* update google.golang.org/genproto/googleapis/rpc digest to fd2c768 ([#3668](https://github.com/dadrus/heimdall/issues/3668)) ([6978b23](https://github.com/dadrus/heimdall/commit/6978b23df304a1b394547f61f49f5a8ea1258a46))
+* update module cel.dev/cel-go to v0.33.4 ([#3684](https://github.com/dadrus/heimdall/issues/3684)) ([494efe4](https://github.com/dadrus/heimdall/commit/494efe4122fff29a97e021a7efff32ce77ba8e22))
+* update module github.com/go-co-op/gocron/v2 to v2.23.1 ([#3666](https://github.com/dadrus/heimdall/issues/3666)) ([706e373](https://github.com/dadrus/heimdall/commit/706e373c7a29ee970cab895f53f4c09793135702))
+* update module github.com/go-co-op/gocron/v2 to v2.23.2 ([#3689](https://github.com/dadrus/heimdall/issues/3689)) ([dc77a37](https://github.com/dadrus/heimdall/commit/dc77a370e9dfb21cd79d9976c710f660e91d9b8b))
+* update module github.com/redis/rueidis to v1.0.80 ([fc48f41](https://github.com/dadrus/heimdall/commit/fc48f41239cd8638a56dee2710a7fa41075a46e6))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.80 ([#3680](https://github.com/dadrus/heimdall/issues/3680)) ([fc48f41](https://github.com/dadrus/heimdall/commit/fc48f41239cd8638a56dee2710a7fa41075a46e6))
+* update module github.com/tidwall/gjson to v1.20.4 ([#3681](https://github.com/dadrus/heimdall/issues/3681)) ([8d12983](https://github.com/dadrus/heimdall/commit/8d12983e8fa3366c3fb16b32669a5e51e38fae60))
+* update module github.com/tidwall/gjson to v1.20.5 ([#3691](https://github.com/dadrus/heimdall/issues/3691)) ([7f0cc3b](https://github.com/dadrus/heimdall/commit/7f0cc3b42dbe61fac557ce84d5998017233ea147))
+* update module gocloud.dev to v0.49.0 ([#3674](https://github.com/dadrus/heimdall/issues/3674)) ([f70fccf](https://github.com/dadrus/heimdall/commit/f70fccf65e948f0cfa0ef40fb4841827cfb9eed9))
+
 ## [0.17.29](https://github.com/dadrus/heimdall/compare/v0.17.28...v0.17.29) (2026-11-09)
 
 
