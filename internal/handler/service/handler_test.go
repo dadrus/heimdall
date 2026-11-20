@@ -79,7 +79,7 @@ func TestHandlerServeHTTP(t *testing.T) {
 			) {
 				t.Helper()
 
-				factory.EXPECT().Create(rw, req).Return(nil, requestcontext.ErrInvalidForwardedURI)
+				factory.EXPECT().Create(rw, req).Return(nil, requestcontext.ErrInvalidRequestURI)
 			},
 			assert: func(t *testing.T, rw *httptest.ResponseRecorder) {
 				t.Helper()
