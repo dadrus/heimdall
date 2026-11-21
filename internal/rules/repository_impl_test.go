@@ -1490,6 +1490,51 @@ func TestRepositoryFindRule(t *testing.T) {
 				assert.Empty(t, captures)
 			},
 		},
+		"encoded slash in path parameter selects specific rule over fallback": {
+			requestURL: &url.URL{
+				Scheme:  "http",
+				Host:    "example.com",
+				Path:    "/files/admin/secret",
+				RawPath: "/files/admin%2Fsecret",
+			},
+			configureFactory: func(t *testing.T, factory *mocks.FactoryMock) {
+				t.Helper()
+
+				factory.EXPECT().HasDefaultRule().Return(false)
+			},
+			addRules: func(t *testing.T, repo *repository) {
+				t.Helper()
+
+				protected := &ruleImpl{id: "protected", srcID: "1", hash: []byte{1}}
+				protected.routes = append(protected.routes, &routeImpl{
+					rule: protected,
+					host: "example.com",
+					path: "/files/:name",
+					matcher: &pathParamMatcher{
+						newExactMatcher("admin%2Fsecret"),
+						"name",
+						config.EncodedSlashesOff,
+					},
+				})
+
+				public := &ruleImpl{id: "public", srcID: "1", hash: []byte{2}}
+				public.routes = append(public.routes, &routeImpl{
+					rule:    public,
+					host:    "example.com",
+					path:    "/files/**",
+					matcher: andMatcher{},
+				})
+
+				require.NoError(t, repo.AddRuleSet(t.Context(), "1", []rule.Rule{protected, public}))
+			},
+			assert: func(t *testing.T, err error, rul rule.Rule, captures map[string]string) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, "protected", rul.ID())
+				assert.Equal(t, map[string]string{"name": "admin%2Fsecret"}, captures)
+			},
+		},
 		"reserved encoded slash remains part of capture": {
 			requestURL: &url.URL{
 				Scheme:  "http",
