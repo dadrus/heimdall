@@ -106,10 +106,11 @@ func TestRequestContextURL(t *testing.T) {
 	cf := newContextFactory()
 
 	for uc, tc := range map[string]struct {
-		requestPath string
-		path        string
-		rawPath     string
-		rawQuery    string
+		requestPath     string
+		path            string
+		rawPath         string
+		rawQuery        string
+		hasEncodedSlash bool
 	}{
 		"regular path": {
 			requestPath: "/test/baz?bar=moo%23foobar",
@@ -118,10 +119,11 @@ func TestRequestContextURL(t *testing.T) {
 			rawQuery:    "bar=moo%23foobar",
 		},
 		"escaped characters": {
-			requestPath: "/test%2Ffoo/bar/%5Bval%5D?foo=bar",
-			path:        "/test/foo/bar/[val]",
-			rawPath:     "/test%2Ffoo/bar/%5Bval%5D",
-			rawQuery:    "foo=bar",
+			requestPath:     "/test%2Ffoo/bar/%5Bval%5D?foo=bar",
+			path:            "/test/foo/bar/[val]",
+			rawPath:         "/test%2Ffoo/bar/%5Bval%5D",
+			rawQuery:        "foo=bar",
+			hasEncodedSlash: true,
 		},
 		"dot segments": {
 			requestPath: "/bar/../test/foo/%5Bval%5D?bar=foo",
@@ -129,21 +131,34 @@ func TestRequestContextURL(t *testing.T) {
 			rawPath:     "/test/foo/%5Bval%5D",
 			rawQuery:    "bar=foo",
 		},
-		"encoded dot segments": {
-			requestPath: "/bar/%2e.%2ftest/foo/%5Bval%5D?bar=foo",
-			path:        "/bar/../test/foo/[val]",
-			rawPath:     "/bar/%2e.%2ftest/foo/%5Bval%5D",
-			rawQuery:    "bar=foo",
-		},
-		"encoded dot segments are retained if another byte requires escaping": {
-			requestPath: "/admin/%2e%2e%2fpublic/x|",
-			path:        "/admin/../public/x|",
-			rawPath:     "/admin/%2e%2e%2fpublic/x%7C",
-		},
 		"encoded slash is retained if another byte requires escaping": {
-			requestPath: "/files/a%2Fb|",
-			path:        "/files/a/b|",
-			rawPath:     "/files/a%2Fb%7C",
+			requestPath:     "/files/a%2Fb|",
+			path:            "/files/a/b|",
+			rawPath:         "/files/a%2Fb%7C",
+			hasEncodedSlash: true,
+		},
+		"slash erased by normalization": {
+			requestPath:     "/api/a%2fb/../c",
+			path:            "/api/c",
+			rawPath:         "/api/c",
+			hasEncodedSlash: true,
+		},
+		"encoded separator before literal parent segment": {
+			requestPath:     "/metrics/%2f/../metrics",
+			path:            "/metrics/metrics",
+			rawPath:         "/metrics/metrics",
+			hasEncodedSlash: true,
+		},
+		"encoded dot within filename": {
+			requestPath: "/files/report%2Epdf",
+			path:        "/files/report.pdf",
+			rawPath:     "/files/report%2Epdf",
+		},
+		"query escaped slash does not count": {
+			requestPath: "/public?next=%2F",
+			path:        "/public",
+			rawPath:     "/public",
+			rawQuery:    "next=%2F",
 		},
 		"trailing slash": {
 			requestPath: "/bar/baz/",
@@ -184,6 +199,7 @@ func TestRequestContextURL(t *testing.T) {
 			assert.Equal(t, tc.rawPath, ctx.Request().URL.RawPath)
 			assert.Equal(t, tc.rawPath, ctx.Request().URL.EscapedPath())
 			assert.Equal(t, tc.rawQuery, ctx.Request().URL.RawQuery)
+			assert.Equal(t, tc.hasEncodedSlash, ctx.OriginalPathContainsEncodedSlash())
 		})
 	}
 }
@@ -197,6 +213,7 @@ func TestRequestContextInitInvalidURI(t *testing.T) {
 		"literal fragment delimiter":    "/metrics#fragment",
 		"pathless absolute URI":         "http://admin",
 		"empty path":                    "",
+		"encoded dot segment":           "/metrics/%2e/../metrics",
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -585,7 +602,7 @@ func TestRequestContextReset(t *testing.T) {
 					Method:  http.MethodPatch,
 					Scheme:  "https",
 					Host:    "foo.bar:8080",
-					Path:    "/test",
+					Path:    "/test%2Fone",
 					Query:   "bar=moo",
 					RawBody: []byte(`{ "content": "heimdall" }`),
 					Headers: map[string]string{
@@ -607,6 +624,7 @@ func TestRequestContextReset(t *testing.T) {
 	// GIVEN
 	ctx := newRequestContext()
 	require.NoError(t, ctx.Init(grpcCtx, checkReq))
+	require.True(t, ctx.OriginalPathContainsEncodedSlash())
 	ctx.Request().URL.Captures = map[string]string{"b": "a"}
 	ctx.SetPipelineError(errors.New("test error"))
 	_ = ctx.Body()
@@ -627,6 +645,7 @@ func TestRequestContextReset(t *testing.T) {
 
 	// THEN
 	require.Nil(t, ctx.ctx)
+	require.False(t, ctx.OriginalPathContainsEncodedSlash())
 	require.Nil(t, ctx.reqHeaders)
 	require.Nil(t, ctx.reqRawBody)
 	require.Nil(t, ctx.savedBody)
@@ -648,6 +667,10 @@ func TestRequestContextReset(t *testing.T) {
 	require.NotNil(t, ctx.hmdlReq.ClientIPAddresses)
 	require.Empty(t, ctx.hmdlReq.ClientIPAddresses)
 	require.Equal(t, 10, cap(ctx.hmdlReq.ClientIPAddresses))
+
+	checkReq.Attributes.Request.Http.Path = "/plain"
+	require.NoError(t, ctx.Init(grpcCtx, checkReq))
+	assert.False(t, ctx.OriginalPathContainsEncodedSlash())
 }
 
 func TestRequestContextHeader(t *testing.T) {
