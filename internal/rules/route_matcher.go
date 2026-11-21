@@ -116,22 +116,13 @@ func (m *pathParamMatcher) Matches(request *heimdall.Request, keys, values []str
 	}
 
 	value := values[idx]
-	// URL.RawPath is set only if the original url contains url encoded parts
-	if len(request.URL.RawPath) != 0 {
-		switch m.slashHandling {
-		case config.EncodedSlashesOff:
-			if urlx.ContainsEncodedSlash(request.URL.RawPath) {
-				return errorchain.NewWithMessage(ErrRequestPathMismatch,
-					"request path contains encoded slashes which are not allowed")
-			}
-		default:
-			decodingMode := urlx.UnescapeAllExceptSlash
-			if m.slashHandling == config.EncodedSlashesOn {
-				decodingMode = urlx.UnescapeAll
-			}
-
-			value = urlx.PathUnescape(value, urlx.UnescapeOptions{Mode: decodingMode})
+	if len(request.URL.RawPath) != 0 && m.slashHandling != config.EncodedSlashesOff {
+		decodingMode := urlx.UnescapeAllExceptSlash
+		if m.slashHandling == config.EncodedSlashesOn {
+			decodingMode = urlx.UnescapeAll
 		}
+
+		value = urlx.PathUnescape(value, urlx.UnescapeOptions{Mode: decodingMode})
 	}
 
 	if !m.match(value) {
