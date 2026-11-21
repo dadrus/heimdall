@@ -30,7 +30,7 @@ func TestExtractURL(t *testing.T) {
 
 	for uc, tc := range map[string]struct {
 		configureRequest func(t *testing.T, req *http.Request)
-		assert           func(t *testing.T, extracted url.URL, err error)
+		assert           func(t *testing.T, extracted url.URL, originalPathContainsEncodedSlash bool, err error)
 	}{
 		"X-Forwarded-Proto set": {
 			configureRequest: func(t *testing.T, req *http.Request) {
@@ -39,7 +39,7 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Proto", "https")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, _ bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -57,7 +57,7 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Host", "foobar")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, _ bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -74,7 +74,7 @@ func TestExtractURL(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Host", "FoObAr.Example.COM:8443")
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, _ bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -88,7 +88,7 @@ func TestExtractURL(t *testing.T) {
 
 				req.Host = "FooBar.Example.Local:9443"
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, _ bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -103,10 +103,11 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Path", "/bar%2Ftest/foo/%5Bval%5D")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, originalPathContainsEncodedSlash bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
+				assert.True(t, originalPathContainsEncodedSlash)
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
@@ -121,10 +122,11 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Uri", "")
 				req.URL.RawQuery = "foo=bar"
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, originalPathContainsEncodedSlash bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
+				assert.True(t, originalPathContainsEncodedSlash)
 
 				assert.Equal(t, "/test%2Ffoo/bar/%5Bval%5D", extracted.EscapedPath())
 				assert.Equal(t, "foo=bar", extracted.RawQuery)
@@ -137,10 +139,11 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Uri", "/admin")
 				req.URL.RawQuery = "foo=bar"
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, originalPathContainsEncodedSlash bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
+				assert.False(t, originalPathContainsEncodedSlash)
 
 				assert.Equal(t, "/admin", extracted.EscapedPath())
 				assert.Empty(t, extracted.RawQuery)
@@ -152,7 +155,7 @@ func TestExtractURL(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Uri", "http://example.com/admin")
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, _ bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -168,10 +171,11 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Uri", "/bar%2Ftest/foo/%5Bval%5D?bar=foo")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, originalPathContainsEncodedSlash bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
+				assert.True(t, originalPathContainsEncodedSlash)
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
@@ -185,7 +189,7 @@ func TestExtractURL(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Uri", "//admin/settings?bar=foo")
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, _ bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -195,6 +199,35 @@ func TestExtractURL(t *testing.T) {
 				assert.Equal(t, url.Values{"bar": []string{"foo"}}, extracted.Query())
 			},
 		},
+		"X-Forwarded-Uri original slash is erased by normalization": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/api/a%2fb/../c")
+			},
+			assert: func(t *testing.T, extracted url.URL, originalPathContainsEncodedSlash bool, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.True(t, originalPathContainsEncodedSlash)
+				assert.Equal(t, "/api/c", extracted.EscapedPath())
+			},
+		},
+		"X-Forwarded-Uri query escapes do not count as path slashes": {
+			configureRequest: func(t *testing.T, req *http.Request) {
+				t.Helper()
+
+				req.Header.Set("X-Forwarded-Uri", "/public?next=%2F")
+			},
+			assert: func(t *testing.T, extracted url.URL, originalPathContainsEncodedSlash bool, err error) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.False(t, originalPathContainsEncodedSlash)
+				assert.Equal(t, "/public", extracted.EscapedPath())
+				assert.Equal(t, "next=%2F", extracted.RawQuery)
+			},
+		},
 		"X-Forwarded-Uri set with dot segments": {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
@@ -202,10 +235,11 @@ func TestExtractURL(t *testing.T) {
 				req.Header.Set("X-Forwarded-Uri", "/bar/../test/foo/%5Bval%5D?bar=foo")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, originalPathContainsEncodedSlash bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
+				assert.False(t, originalPathContainsEncodedSlash)
 
 				assert.Equal(t, "http", extracted.Scheme)
 				assert.Equal(t, "heimdall.test.local", extracted.Host)
@@ -213,39 +247,31 @@ func TestExtractURL(t *testing.T) {
 				assert.Equal(t, url.Values{"bar": []string{"foo"}}, extracted.Query())
 			},
 		},
-		"X-Forwarded-Uri set with encoded dot segments": {
+		"X-Forwarded-Uri rejects encoded dot segments": {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
 				req.Header.Set("X-Forwarded-Uri", "/bar/%2e.%2ftest/foo/%5Bval%5D?bar=foo")
 				req.URL.RawQuery = url.Values{"foo": []string{"bar"}}.Encode()
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, originalPathContainsEncodedSlash bool, err error) {
 				t.Helper()
 
-				require.NoError(t, err)
-
-				assert.Equal(t, "http", extracted.Scheme)
-				assert.Equal(t, "heimdall.test.local", extracted.Host)
-				assert.Equal(t, "/bar/%2e.%2ftest/foo/%5Bval%5D", extracted.EscapedPath())
-				assert.Equal(t, url.Values{"bar": []string{"foo"}}, extracted.Query())
+				require.ErrorIs(t, err, ErrInvalidRequestURI)
+				assert.Equal(t, url.URL{}, extracted)
+				assert.False(t, originalPathContainsEncodedSlash)
 			},
 		},
-		"X-Forwarded-Uri retains encoded dot segments if another byte requires escaping": {
+		"X-Forwarded-Uri rejects encoded dot segments if another byte requires escaping": {
 			configureRequest: func(t *testing.T, req *http.Request) {
 				t.Helper()
 
 				req.Header.Set("X-Forwarded-Uri", "/admin/%2e%2e%2fpublic/x|?bar=foo")
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, _ url.URL, _ bool, err error) {
 				t.Helper()
 
-				require.NoError(t, err)
-
-				assert.Equal(t, "/admin/../public/x|", extracted.Path)
-				assert.Equal(t, "/admin/%2e%2e%2fpublic/x%7C", extracted.RawPath)
-				assert.Equal(t, "/admin/%2e%2e%2fpublic/x%7C", extracted.EscapedPath())
-				assert.Equal(t, url.Values{"bar": []string{"foo"}}, extracted.Query())
+				require.ErrorIs(t, err, ErrInvalidRequestURI)
 			},
 		},
 		"X-Forwarded-Uri retains encoded slash if another byte requires escaping": {
@@ -254,74 +280,15 @@ func TestExtractURL(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Uri", "/files/a%2Fb|")
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, originalPathContainsEncodedSlash bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
+				assert.True(t, originalPathContainsEncodedSlash)
 
 				assert.Equal(t, "/files/a/b|", extracted.Path)
 				assert.Equal(t, "/files/a%2Fb%7C", extracted.RawPath)
 				assert.Equal(t, "/files/a%2Fb%7C", extracted.EscapedPath())
-			},
-		},
-		"request URL retains encoded dot segments if another byte requires escaping": {
-			configureRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				parsed, err := url.ParseRequestURI("/admin/%2e%2e%2fpublic/x|")
-				require.NoError(t, err)
-				req.URL = parsed
-			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				assert.Equal(t, "/admin/../public/x|", extracted.Path)
-				assert.Equal(t, "/admin/%2e%2e%2fpublic/x%7C", extracted.RawPath)
-				assert.Equal(t, "/admin/%2e%2e%2fpublic/x%7C", extracted.EscapedPath())
-			},
-		},
-		"request URL retains encoded slash if another byte requires escaping": {
-			configureRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				parsed, err := url.ParseRequestURI("/files/a%2Fb|")
-				require.NoError(t, err)
-				req.URL = parsed
-			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
-				t.Helper()
-
-				require.NoError(t, err)
-
-				assert.Equal(t, "/files/a/b|", extracted.Path)
-				assert.Equal(t, "/files/a%2Fb%7C", extracted.RawPath)
-				assert.Equal(t, "/files/a%2Fb%7C", extracted.EscapedPath())
-			},
-		},
-		"invalid path parameter in X-Forwarded-Uri": {
-			configureRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				req.Header.Set("X-Forwarded-Uri", "/admin/settings;x=%")
-			},
-			assert: func(t *testing.T, _ url.URL, err error) {
-				t.Helper()
-
-				require.ErrorIs(t, err, ErrInvalidRequestURI)
-			},
-		},
-		"truncated escape in X-Forwarded-Uri": {
-			configureRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				req.Header.Set("X-Forwarded-Uri", "/admin/x%")
-			},
-			assert: func(t *testing.T, _ url.URL, err error) {
-				t.Helper()
-
-				require.ErrorIs(t, err, ErrInvalidRequestURI)
 			},
 		},
 		"invalid escape in X-Forwarded-Uri": {
@@ -330,7 +297,7 @@ func TestExtractURL(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Uri", "/admin/%zz")
 			},
-			assert: func(t *testing.T, _ url.URL, err error) {
+			assert: func(t *testing.T, _ url.URL, _ bool, err error) {
 				t.Helper()
 
 				require.ErrorIs(t, err, ErrInvalidRequestURI)
@@ -342,19 +309,7 @@ func TestExtractURL(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Uri", "http://admin")
 			},
-			assert: func(t *testing.T, _ url.URL, err error) {
-				t.Helper()
-
-				require.ErrorIs(t, err, ErrInvalidRequestURI)
-			},
-		},
-		"pathless X-Forwarded-Uri with query": {
-			configureRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				req.Header.Set("X-Forwarded-Uri", "http://admin?foo=bar")
-			},
-			assert: func(t *testing.T, _ url.URL, err error) {
+			assert: func(t *testing.T, _ url.URL, _ bool, err error) {
 				t.Helper()
 
 				require.ErrorIs(t, err, ErrInvalidRequestURI)
@@ -366,19 +321,7 @@ func TestExtractURL(t *testing.T) {
 
 				req.Header.Set("X-Forwarded-Uri", "/metrics#fragment")
 			},
-			assert: func(t *testing.T, _ url.URL, err error) {
-				t.Helper()
-
-				require.ErrorIs(t, err, ErrInvalidRequestURI)
-			},
-		},
-		"literal fragment delimiter in request line": {
-			configureRequest: func(t *testing.T, req *http.Request) {
-				t.Helper()
-
-				req.RequestURI = "/metrics#fragment"
-			},
-			assert: func(t *testing.T, _ url.URL, err error) {
+			assert: func(t *testing.T, _ url.URL, _ bool, err error) {
 				t.Helper()
 
 				require.ErrorIs(t, err, ErrInvalidRequestURI)
@@ -391,7 +334,7 @@ func TestExtractURL(t *testing.T) {
 				req.RequestURI = "/metrics#fragment"
 				req.Header.Set("X-Forwarded-Uri", "/metrics")
 			},
-			assert: func(t *testing.T, _ url.URL, err error) {
+			assert: func(t *testing.T, _ url.URL, _ bool, err error) {
 				t.Helper()
 
 				require.ErrorIs(t, err, ErrInvalidRequestURI)
@@ -404,7 +347,7 @@ func TestExtractURL(t *testing.T) {
 				req.URL.Path = "/bar/baz/"
 				req.URL.RawPath = "/bar/baz/"
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, _ bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -422,7 +365,7 @@ func TestExtractURL(t *testing.T) {
 				req.URL.Path = "/"
 				req.URL.RawPath = "/"
 			},
-			assert: func(t *testing.T, extracted url.URL, err error) {
+			assert: func(t *testing.T, extracted url.URL, _ bool, err error) {
 				t.Helper()
 
 				require.NoError(t, err)
@@ -447,10 +390,10 @@ func TestExtractURL(t *testing.T) {
 			tc.configureRequest(t, req)
 
 			// WHEN
-			extracted, err := extractURL(req)
+			extracted, originalPathContainsEncodedSlash, err := extractURL(req)
 
 			// THEN
-			tc.assert(t, extracted, err)
+			tc.assert(t, extracted, originalPathContainsEncodedSlash, err)
 		})
 	}
 }

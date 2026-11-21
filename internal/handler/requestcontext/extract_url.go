@@ -30,9 +30,9 @@ import (
 // as the resource for authorization.
 var ErrInvalidRequestURI = errors.New("invalid request URI")
 
-func extractURL(req *http.Request) (url.URL, error) {
+func extractURL(req *http.Request) (url.URL, bool, error) {
 	if urlx.HasFragmentDelimiter(req.RequestURI) {
-		return url.URL{}, ErrInvalidRequestURI
+		return url.URL{}, false, ErrInvalidRequestURI
 	}
 
 	var (
@@ -54,15 +54,14 @@ func extractURL(req *http.Request) (url.URL, error) {
 	host = strings.ToLower(host)
 
 	if val := req.Header.Get("X-Forwarded-Uri"); len(val) != 0 {
-		// ParseRequestURI retains a leading "//" as part of the path.
 		forwardedURI, err := urlx.ParseRequestURI(val)
 		if err != nil {
-			return url.URL{}, ErrInvalidRequestURI
+			return url.URL{}, false, ErrInvalidRequestURI
 		}
 
 		rawPath = urlx.EscapedPath(forwardedURI)
 		if len(rawPath) == 0 {
-			return url.URL{}, ErrInvalidRequestURI
+			return url.URL{}, false, ErrInvalidRequestURI
 		}
 
 		query = forwardedURI.RawQuery
@@ -71,6 +70,11 @@ func extractURL(req *http.Request) (url.URL, error) {
 	if len(rawPath) == 0 {
 		rawPath = urlx.EscapedPath(req.URL)
 		query = req.URL.RawQuery
+	}
+
+	res := urlx.InspectPath(rawPath)
+	if res.HasEncodedDotSegments {
+		return url.URL{}, false, ErrInvalidRequestURI
 	}
 
 	rawPath = urlx.NormalizePath(rawPath)
@@ -82,5 +86,5 @@ func extractURL(req *http.Request) (url.URL, error) {
 		Path:     path,
 		RawPath:  rawPath,
 		RawQuery: query,
-	}, nil
+	}, res.HasEncodedSlash, nil
 }
