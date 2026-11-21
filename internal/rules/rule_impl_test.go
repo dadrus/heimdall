@@ -59,6 +59,8 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
+				ctx.EXPECT().OriginalPathContainsEncodedSlash().Return(false)
+
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
 				testErr := errors.New("test error")
@@ -79,6 +81,8 @@ func TestRuleExecute(t *testing.T) {
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
+
+				ctx.EXPECT().OriginalPathContainsEncodedSlash().Return(false)
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
@@ -101,6 +105,8 @@ func TestRuleExecute(t *testing.T) {
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
+
+				ctx.EXPECT().OriginalPathContainsEncodedSlash().Return(false)
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
@@ -126,6 +132,8 @@ func TestRuleExecute(t *testing.T) {
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
+
+				ctx.EXPECT().OriginalPathContainsEncodedSlash().Return(false)
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
@@ -153,6 +161,8 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
+				ctx.EXPECT().OriginalPathContainsEncodedSlash().Return(false)
+
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
 				sub := &subject.Subject{ID: "Foo"}
@@ -178,6 +188,8 @@ func TestRuleExecute(t *testing.T) {
 				errHandler *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
+
+				ctx.EXPECT().OriginalPathContainsEncodedSlash().Return(false)
 
 				ctx.EXPECT().Request().Return(&heimdall.Request{URL: &heimdall.URL{}})
 
@@ -209,6 +221,8 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
+				ctx.EXPECT().OriginalPathContainsEncodedSlash().Return(true)
+
 				targetURL, _ := url.Parse("http://foo.local/api%2Fv1/foo%5Bid%5D")
 				ctx.EXPECT().Request().Return(&heimdall.Request{
 					URL: &heimdall.URL{
@@ -235,12 +249,39 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
+				ctx.EXPECT().OriginalPathContainsEncodedSlash().Return(true)
+
 				targetURL, _ := url.Parse("http://foo.local/api%2fv1/foo%5Bid%5D")
 				ctx.EXPECT().Request().Return(&heimdall.Request{
 					URL: &heimdall.URL{
 						URL:      *targetURL,
 						Captures: map[string]string{"first": "api%2fv1", "second": "foo%5Bid%5D"},
 					},
+				})
+			},
+			assert: func(t *testing.T, err error, _ rule.Backend, _ map[string]string) {
+				t.Helper()
+
+				require.Error(t, err)
+				require.ErrorIs(t, err, heimdall.ErrArgument)
+				require.ErrorContains(t, err, "path contains encoded slash")
+			},
+		},
+		"disallowed urlencoded slash in original path but not in normalized path": {
+			slashHandling: config.EncodedSlashesOff,
+			backend: &config.Backend{
+				Host: "foo.bar",
+			},
+			configureMocks: func(t *testing.T, ctx *heimdallmocks.RequestContextMock, _ *mocks.SubjectCreatorMock,
+				_ *mocks.SubjectHandlerMock, _ *mocks.SubjectHandlerMock, _ *mocks.ErrorHandlerMock,
+			) {
+				t.Helper()
+
+				ctx.EXPECT().OriginalPathContainsEncodedSlash().Return(true)
+
+				targetURL, _ := url.Parse("http://foo.local/api/c")
+				ctx.EXPECT().Request().Return(&heimdall.Request{
+					URL: &heimdall.URL{URL: *targetURL},
 				})
 			},
 			assert: func(t *testing.T, err error, _ rule.Backend, _ map[string]string) {
@@ -453,6 +494,8 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
+				ctx.EXPECT().OriginalPathContainsEncodedSlash().Return(false)
+
 				sub := &subject.Subject{ID: "Foo"}
 
 				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
@@ -483,6 +526,8 @@ func TestRuleExecute(t *testing.T) {
 			) {
 				t.Helper()
 
+				ctx.EXPECT().OriginalPathContainsEncodedSlash().Return(false)
+
 				sub := &subject.Subject{ID: "Foo"}
 
 				authenticator.EXPECT().Execute(ctx).Return(sub, nil)
@@ -512,6 +557,8 @@ func TestRuleExecute(t *testing.T) {
 				_ *mocks.ErrorHandlerMock,
 			) {
 				t.Helper()
+
+				ctx.EXPECT().OriginalPathContainsEncodedSlash().Return(false)
 
 				sub := &subject.Subject{ID: "Foo"}
 
