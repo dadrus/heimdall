@@ -208,7 +208,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
+				assert.Equal(t, int32(codes.InvalidArgument), response.GetStatus().GetCode())
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)
@@ -227,7 +227,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
+				assert.Equal(t, int32(codes.InvalidArgument), response.GetStatus().GetCode())
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)
@@ -246,7 +246,7 @@ func TestHandleDecisionEndpointRequest(t *testing.T) {
 				t.Helper()
 
 				require.NoError(t, err)
-				assert.Equal(t, int32(codes.OK), response.GetStatus().GetCode())
+				assert.Equal(t, int32(codes.InvalidArgument), response.GetStatus().GetCode())
 
 				deniedResponse := response.GetDeniedResponse()
 				require.NotNil(t, deniedResponse)

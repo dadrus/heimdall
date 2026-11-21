@@ -63,7 +63,7 @@ func (h *Handler) Check(ctx context.Context, req *envoy_auth.CheckRequest) (*env
 
 func badRequest() *envoy_auth.CheckResponse {
 	return &envoy_auth.CheckResponse{
-		Status: &status.Status{Code: int32(codes.OK)},
+		Status: &status.Status{Code: int32(codes.InvalidArgument)},
 		HttpResponse: &envoy_auth.CheckResponse_DeniedResponse{
 			DeniedResponse: &envoy_auth.DeniedHttpResponse{
 				Status: &envoy_type.HttpStatus{
