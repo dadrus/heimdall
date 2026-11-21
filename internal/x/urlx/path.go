@@ -24,6 +24,112 @@ import (
 
 const pathUpperHex = "0123456789ABCDEF"
 
+// PathInspection describes encoded dot segments and slashes in a path.
+type PathInspection struct {
+	HasEncodedDotSegments bool
+	HasEncodedSlash       bool
+}
+
+// InspectPath reports encoded dot segments and slashes in an escaped URL path.
+// A dot segment consists of one or two dots bounded by slashes or backslashes,
+// including their percent-encoded forms. HasEncodedDotSegments is set when a
+// dot or boundary is encoded, or a boundary is a literal backslash. Literal
+// dot segments bounded only by slashes are not reported. HasEncodedSlash
+// reports any %2F, independently of the dot segments. Escapes are matched
+// case-insensitively; malformed triplets count as ordinary characters.
+//
+//nolint:gocognit,gocyclo,cyclop,funlen
+func InspectPath(path string) PathInspection {
+	// Ordinary paths have neither escapes nor backslashes.
+	idx := strings.IndexByte(path, '%')
+	if backslash := strings.IndexByte(path, '\\'); backslash != -1 && (idx == -1 || backslash < idx) {
+		idx = backslash
+	}
+
+	if idx == -1 {
+		return PathInspection{}
+	}
+
+	// Recover the literal prefix of the segment containing the first
+	// percent sign or backslash, without creating a substring.
+	var segmentLen, dotCount int
+	for i := idx - 1; i >= 0 && path[i] != '/'; i-- {
+		segmentLen++
+		if path[i] == '.' {
+			dotCount++
+		}
+	}
+
+	var inspection PathInspection
+	var encodedDot, alternativeStart bool
+
+	for i := idx; i < len(path); i++ {
+		alternativeEnd := false
+
+		switch path[i] {
+		case '/':
+		case '\\':
+			alternativeEnd = true
+		case '.':
+			segmentLen++
+			dotCount++
+
+			continue
+		case '%':
+			if i+2 >= len(path) {
+				segmentLen++
+
+				continue
+			}
+
+			second := path[i+2] | 0x20 //nolint:mnd
+			switch {
+			case path[i+1] == '2' && second == 'e':
+				segmentLen++
+				dotCount++
+				encodedDot = true
+				i += 2
+
+				continue
+			case path[i+1] == '2' && second == 'f':
+				inspection.HasEncodedSlash = true
+				alternativeEnd = true
+				i += 2
+			case path[i+1] == '5' && second == 'c':
+				alternativeEnd = true
+				i += 2
+			default:
+				segmentLen++
+
+				continue
+			}
+		default:
+			segmentLen++
+
+			continue
+		}
+
+		if segmentLen == dotCount && (segmentLen == 1 || segmentLen == 2) &&
+			(encodedDot || alternativeStart || alternativeEnd) {
+			inspection.HasEncodedDotSegments = true
+		}
+
+		if inspection.HasEncodedDotSegments && inspection.HasEncodedSlash {
+			return inspection
+		}
+
+		segmentLen, dotCount = 0, 0
+		encodedDot, alternativeStart = false, alternativeEnd
+	}
+
+	if segmentLen == dotCount && (segmentLen == 1 || segmentLen == 2) &&
+		(encodedDot || alternativeStart) {
+		inspection.HasEncodedDotSegments = true
+	}
+
+	return inspection
+}
+
 //nolint:gocognit,gocyclo,gocyclo,cyclop,funlen
 func PathHasDotSegments(path string) bool {
 	iDot := strings.IndexByte(path, '.')

@@ -18,10 +18,44 @@ package urlx
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+func FuzzInspectPath(f *testing.F) {
+	for _, path := range []string{
+		"", "/api/users/123", "/a/../b", "/metrics/%2e/../metrics",
+		"/metrics/%2f/../metrics", "/a%2Fb/../c", "/a%2F..%2Fb",
+		"/a%5C%2E%2E/b", "/a\\../b", "/files/name%2Etxt",
+		"/fetch/http%3A%2F%2Fexample.com%2Ffiles%2F..%2Fdocument.pdf",
+		"/files/%252e%252e", "/foo/%ZZ/%2/%", "\x00%00\xff",
+	} {
+		f.Add(path)
+	}
+
+	f.Fuzz(func(t *testing.T, path string) {
+		result := InspectPath(path)
+
+		// The two checks operate on the same original escaped path. An
+		// encoded slash is significant even if it is removed by a later
+		// normalization step.
+		require.Equal(t, ContainsEncodedSlash(path), result.HasEncodedSlash)
+
+		// Every ambiguous dot segment is also a dot segment according to
+		// the legacy detection used before rule lookup.
+		if result.HasEncodedDotSegments {
+			require.True(t, PathHasDotSegments(path))
+		}
+
+		// Without encoded characters or alternative separators, only
+		// ordinary literal dot segments can exist, which are allowed.
+		if !strings.ContainsAny(path, "%\\") {
+			require.Equal(t, PathInspection{}, result)
+		}
+	})
+}
 
 func FuzzPathUnescape(f *testing.F) {
 	allOpts := UnescapeOptions{Mode: UnescapeAll}

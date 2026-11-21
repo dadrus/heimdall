@@ -41,6 +41,31 @@ func BenchmarkPathHasDotSegments(b *testing.B) {
 	}
 }
 
+func BenchmarkInspectPath(b *testing.B) {
+	for name, path := range map[string]string{
+		"plain_short":             "/api/v1/resource",
+		"plain_long":              "/api/v1/resource/with/a/longer/path/and/more/segments/for/hot/path/testing",
+		"literal_parent":          "/api/a/../c",
+		"encoded_filename":        "/files/report%2Epdf",
+		"encoded_slash":           "/files/folder%2Fdocument",
+		"encoded_url":             "/fetch/http%3A%2F%2Fexample.com%2Ffiles%2Fdocument.pdf",
+		"encoded_url_dot":         "/fetch/http%3A%2F%2Fexample.com%2Ffiles%2F..%2Fdocument.pdf",
+		"encoded_dot":             "/metrics/%2e/../metrics",
+		"slash_removed_by_parent": "/metrics/%2f/../metrics",
+	} {
+		b.Run(name, func(b *testing.B) {
+			b.ReportAllocs()
+
+			var inspection PathInspection
+			for b.Loop() {
+				inspection = InspectPath(path)
+			}
+
+			_ = inspection
+		})
+	}
+}
+
 func BenchmarkContainsEncodedSlash(b *testing.B) {
 	for uc, path := range map[string]string{
 		"clean_short":        "/api/v1/resource",
