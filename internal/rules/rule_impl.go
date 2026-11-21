@@ -59,7 +59,7 @@ func (r *ruleImpl) Execute(ctx heimdall.RequestContext) (rule.Backend, error) {
 		// unescape path
 		request.URL.RawPath = ""
 	case config.EncodedSlashesOff:
-		if urlx.ContainsEncodedSlash(request.URL.RawPath) {
+		if ctx.OriginalPathContainsEncodedSlash() {
 			return nil, errorchain.NewWithMessage(heimdall.ErrArgument,
 				"path contains encoded slash, which is not allowed")
 		}
