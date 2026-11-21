@@ -22,25 +22,6 @@ import (
 	"testing"
 )
 
-func BenchmarkPathHasDotSegments(b *testing.B) {
-	b.ReportAllocs()
-
-	for uc, path := range map[string]string{
-		"clean short path":               "/api/v1/resource",
-		"clean long path":                "/api/v1/resource/with/a/longer/path/and/more/segments/for/hot/path/testing",
-		"plain dot segments":             "/foo/../admin",
-		"encoded dot segment lower case": "/scripts/%2e%2e%2fWindows/System32/cmd.exe",
-		"encoded dot segment upper case": "/scripts/%2E%2E%2FWindows/System32/cmd.exe",
-		"encoded backslash":              "/scripts/%2E%2E%5CWindows/System32/cmd.exe",
-	} {
-		b.Run(uc, func(b *testing.B) {
-			for b.Loop() {
-				_ = PathHasDotSegments(path)
-			}
-		})
-	}
-}
-
 func BenchmarkInspectPath(b *testing.B) {
 	for name, path := range map[string]string{
 		"plain_short":             "/api/v1/resource",
@@ -62,24 +43,6 @@ func BenchmarkInspectPath(b *testing.B) {
 			}
 
 			_ = inspection
-		})
-	}
-}
-
-func BenchmarkContainsEncodedSlash(b *testing.B) {
-	for uc, path := range map[string]string{
-		"clean_short":        "/api/v1/resource",
-		"clean_long":         "/api/v1/resource/with/a/longer/path/and/more/segments/for/hot/path/testing",
-		"encoded_upper":      "/scripts/api%2Fv1/resource",
-		"encoded_lower":      "/scripts/api%2fv1/resource",
-		"encoded_upper_long": "/very/long/path/with/many/segments/and/an/encoded/slash/%2F/end",
-	} {
-		b.Run(uc, func(b *testing.B) {
-			b.ReportAllocs()
-
-			for b.Loop() {
-				_ = ContainsEncodedSlash(path)
-			}
 		})
 	}
 }

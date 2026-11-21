@@ -41,13 +41,7 @@ func FuzzInspectPath(f *testing.F) {
 		// The two checks operate on the same original escaped path. An
 		// encoded slash is significant even if it is removed by a later
 		// normalization step.
-		require.Equal(t, ContainsEncodedSlash(path), result.HasEncodedSlash)
-
-		// Every ambiguous dot segment is also a dot segment according to
-		// the legacy detection used before rule lookup.
-		if result.HasEncodedDotSegments {
-			require.True(t, PathHasDotSegments(path))
-		}
+		require.Equal(t, strings.Contains(strings.ToLower(path), "%2f"), result.HasEncodedSlash)
 
 		// Without encoded characters or alternative separators, only
 		// ordinary literal dot segments can exist, which are allowed.
@@ -104,7 +98,7 @@ func FuzzPathUnescape(f *testing.F) {
 
 		// The two broader modes can differ only if the original value
 		// contains an encoded slash.
-		if !ContainsEncodedSlash(value) {
+		if !InspectPath(value).HasEncodedSlash {
 			require.Equal(t, all, allExceptSlash)
 		}
 
@@ -201,8 +195,7 @@ func FuzzEscapedPath(f *testing.F) {
 		// RawPath there is no encoded source representation to compare against;
 		// the helper delegates to net/url, which is asserted above.
 		if rawPath != "" {
-			require.Equal(t, ContainsEncodedSlash(rawPath), ContainsEncodedSlash(result))
-			require.Equal(t, PathHasDotSegments(rawPath), PathHasDotSegments(result))
+			require.Equal(t, InspectPath(rawPath), InspectPath(result))
 		}
 
 		// Existing percent-encoded octets must never disappear or have their hex

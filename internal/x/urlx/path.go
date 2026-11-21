@@ -130,91 +130,6 @@ func InspectPath(path string) PathInspection {
 	return inspection
 }
 
-//nolint:gocognit,gocyclo,gocyclo,cyclop,funlen
-func PathHasDotSegments(path string) bool {
-	iDot := strings.IndexByte(path, '.')
-	iPct := strings.IndexByte(path, '%')
-	iBsl := strings.IndexByte(path, '\\')
-
-	idx := iDot
-	if idx == -1 || (iPct != -1 && iPct < idx) {
-		idx = iPct
-	}
-
-	if idx == -1 || (iBsl != -1 && iBsl < idx) {
-		idx = iBsl
-	}
-
-	if idx == -1 {
-		return false
-	}
-
-	segLen := 0
-	for i := idx - 1; i >= 0 && path[i] != '/'; i-- {
-		segLen++
-	}
-
-	dotCount := 0
-
-	for i := idx; i < len(path); {
-		switch path[i] {
-		case '/', '\\':
-			if (segLen == 1 && dotCount == 1) || (segLen == 2 && dotCount == 2) {
-				return true
-			}
-
-			segLen = 0
-			dotCount = 0
-			i++
-		case '.':
-			segLen++
-			dotCount++
-			i++
-		case '%':
-			if i+2 >= len(path) {
-				segLen++
-				i++
-
-				continue
-			}
-
-			h1 := path[i+1]
-			h2 := path[i+2] | 0x20 //nolint:mnd
-
-			switch {
-			case h1 == '2' && h2 == 'e':
-				segLen++
-				dotCount++
-				i += 3
-			case h1 == '2' && h2 == 'f':
-				if (segLen == 1 && dotCount == 1) || (segLen == 2 && dotCount == 2) {
-					return true
-				}
-
-				segLen = 0
-				dotCount = 0
-				i += 3
-			case h1 == '5' && h2 == 'c':
-				if (segLen == 1 && dotCount == 1) || (segLen == 2 && dotCount == 2) {
-					return true
-				}
-
-				segLen = 0
-				dotCount = 0
-				i += 3
-			default:
-				segLen++
-				i++
-			}
-		default:
-			segLen++
-			i++
-		}
-	}
-
-	return (segLen == 1 && dotCount == 1) || (segLen == 2 && dotCount == 2)
-}
-
 func NormalizePath(path string) string {
 	if path == "/" {
 		return path
@@ -228,25 +143,6 @@ func NormalizePath(path string) string {
 	}
 
 	return path
-}
-
-// ContainsEncodedSlash reports whether path contains a URL-encoded slash
-// sequence, case-insensitive, e.g. %2F or %2f.
-func ContainsEncodedSlash(path string) bool {
-	for i := strings.IndexByte(path, '%'); i != -1; {
-		if i+2 < len(path) && path[i+1] == '2' && (path[i+2]|0x20) == 'f' { //nolint:mnd
-			return true
-		}
-
-		next := strings.IndexByte(path[i+1:], '%')
-		if next == -1 {
-			break
-		}
-
-		i += next + 1
-	}
-
-	return false
 }
 
 // isUnreserved reports whether ch is an RFC 3986 unreserved character.

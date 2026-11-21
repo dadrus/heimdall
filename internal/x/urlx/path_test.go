@@ -25,75 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPathHasDotSegments(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		path     string
-		expected bool
-	}{
-		"no dot segment": {
-			path: "/foo/bar",
-		},
-		"dot in a path segment": {
-			path: "/foo/bar.baz",
-		},
-		"two dots in a path segment": {
-			path: "/foo/bar..baz",
-		},
-		"only encoded slash in a path": {
-			path: "/foo%2fbar",
-		},
-		"single dot segment": {
-			path:     "/foo/./bar",
-			expected: true,
-		},
-		"double dot segment": {
-			path:     "/foo/../bar",
-			expected: true,
-		},
-		"multiple dot segment": {
-			path:     "/foo/../../bar",
-			expected: true,
-		},
-		"encoded double dot and slash lowercase": {
-			path:     "/foo/%2e%2e%2fbar",
-			expected: true,
-		},
-		"encoded double dot and slash lowercase 2": {
-			path:     "/foo%2f%2e%2e/bar",
-			expected: true,
-		},
-		"encoded double dot and slash uppercase": {
-			path:     "/foo/%2E%2E%2Fbar",
-			expected: true,
-		},
-		"encoded double dot and slash uppercase 2": {
-			path:     "/foo%2F%2E%2E/bar",
-			expected: true,
-		},
-		"mixed dot encoding": {
-			path:     "/foo/.%2e/bar",
-			expected: true,
-		},
-		"encoded backslash as separator": {
-			path:     "/foo/%2e%2e%5cbar",
-			expected: true,
-		},
-		"encoded backslash as separator 2": {
-			path:     "/foo%5c%2e%2e/bar",
-			expected: true,
-		},
-		"encoded slash without dot segment": {
-			path: "/foo%2Fbar",
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			assert.Equal(t, tc.expected, PathHasDotSegments(tc.path))
-		})
-	}
-}
-
 func TestInspectPath(t *testing.T) {
 	t.Parallel()
 
@@ -215,42 +146,6 @@ func TestInspectPath(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			assert.Equal(t, tc.want, InspectPath(tc.path))
-		})
-	}
-}
-
-func TestContainsEncodedSlash(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		path     string
-		expected bool
-	}{
-		"empty": {},
-		"without escapes": {
-			path: "/api/v1/resource",
-		},
-		"uppercase sequence": {
-			path:     "/api%2Fv1/resource",
-			expected: true,
-		},
-		"lowercase sequence": {
-			path:     "/api%2fv1/resource",
-			expected: true,
-		},
-		"mixed in long path": {
-			path:     "/foo/bar/baz%2Fqux/quux",
-			expected: true,
-		},
-		"not slash escape": {
-			path: "/api%2Ev1/resource",
-		},
-		"incomplete escape": {
-			path: "/api%2",
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			assert.Equal(t, tc.expected, ContainsEncodedSlash(tc.path))
 		})
 	}
 }
