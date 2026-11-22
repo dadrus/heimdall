@@ -78,6 +78,12 @@ func (f *ruleFactory) CreateRule(version, srcID string, rc config2.Rule) (rule.R
 		return nil, errorchain.NewWithMessage(heimdall.ErrConfiguration, "proxy mode requires forward_to definition")
 	}
 
+	for _, route := range rc.Matcher.Routes {
+		if err := validateRoutePath(route.Path); err != nil {
+			return nil, errorchain.NewWithMessagef(heimdall.ErrConfiguration, "invalid rule").CausedBy(err)
+		}
+	}
+
 	if rc.Matcher.BacktrackingEnabled != nil {
 		f.logger.Warn().Msgf("Rule ID=%s from %s has a deprecated 'backtracking_enabled' property configured", rc.ID, srcID)
 	}
@@ -380,7 +386,10 @@ func (f *ruleFactory) initWithDefaultRule(ruleConfig *config.DefaultRule, logger
 
 type CheckFunc func() error
 
-var errHandlerNotFound = errors.New("handler not found")
+var (
+	errHandlerNotFound = errors.New("handler not found")
+	errPathValidation  = errors.New("invalid path")
+)
 
 func createHandler[T subjectHandler](
 	version string,
@@ -456,4 +465,26 @@ func getExecutionCondition(conf any) (executionCondition, error) {
 	}
 
 	return newCelExecutionCondition(expression)
+}
+
+func validateRoutePath(path string) error {
+	names := make(map[string]struct{})
+
+	for segment := range strings.SplitSeq(path, "/") {
+		if len(segment) < 2 || (segment[0] != ':' && segment[0] != '*') || segment[1:] == "*" {
+			continue
+		}
+
+		name := segment[1:]
+		if _, exists := names[name]; exists {
+			return errorchain.NewWithMessagef(
+				errPathValidation,
+				"duplicate parameter name '%s' in '%s'", name, path,
+			)
+		}
+
+		names[name] = struct{}{}
+	}
+
+	return nil
 }
