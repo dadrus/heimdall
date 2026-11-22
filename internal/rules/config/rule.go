@@ -54,9 +54,8 @@ func (r *Rule) DeepCopyInto(out *Rule) {
 	inm.DeepCopyInto(outm)
 
 	if r.Backend != nil {
-		in, out := r.Backend, out.Backend
-
-		in.DeepCopyInto(out)
+		out.Backend = new(Backend)
+		r.Backend.DeepCopyInto(out.Backend)
 	}
 
 	if r.Execute != nil {

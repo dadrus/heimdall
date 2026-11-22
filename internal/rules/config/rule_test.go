@@ -76,12 +76,21 @@ func TestRuleConfigDeepCopyInto(t *testing.T) {
 
 	// THEN
 	assert.Equal(t, in, out)
+	require.NotSame(t, in.Backend, out.Backend)
+	require.NotSame(t, in.Backend.URLRewriter, out.Backend.URLRewriter)
+
+	out.Backend.Host = "changed"
+	out.Backend.URLRewriter.QueryParamsToRemove[0] = "changed"
+	assert.Equal(t, "baz", in.Backend.Host)
+	assert.Equal(t, "baz", in.Backend.URLRewriter.QueryParamsToRemove[0])
 }
 
 func TestRuleConfigDeepCopy(t *testing.T) {
 	t.Parallel()
 
 	// GIVEN
+	forwardHostHeader := true
+
 	in := &Rule{
 		ID: "foo",
 		Matcher: Matcher{
@@ -107,7 +116,8 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 			Methods: []string{"GET", "PATCH"},
 		},
 		Backend: &Backend{
-			Host: "baz",
+			Host:              "baz",
+			ForwardHostHeader: &forwardHostHeader,
 			URLRewriter: &URLRewriter{
 				Scheme:              "http",
 				PathPrefixToCut:     "/foo",
@@ -124,8 +134,21 @@ func TestRuleConfigDeepCopy(t *testing.T) {
 
 	// THEN
 	// different addresses
-	require.NotSame(t, &in, out)
+	require.NotSame(t, in, out)
 
 	// but same contents
 	assert.Equal(t, in, out)
+	require.NotSame(t, in.Backend, out.Backend)
+	require.NotSame(t, in.Backend.ForwardHostHeader, out.Backend.ForwardHostHeader)
+	require.NotSame(t, in.Backend.URLRewriter, out.Backend.URLRewriter)
+
+	// Changing the copy must not change the original configuration.
+	out.Backend.Host = "changed"
+	*out.Backend.ForwardHostHeader = false
+	out.Backend.URLRewriter.Scheme = "https"
+	out.Backend.URLRewriter.QueryParamsToRemove[0] = "changed"
+	assert.Equal(t, "baz", in.Backend.Host)
+	assert.True(t, *in.Backend.ForwardHostHeader)
+	assert.Equal(t, "http", in.Backend.URLRewriter.Scheme)
+	assert.Equal(t, "baz", in.Backend.URLRewriter.QueryParamsToRemove[0])
 }

@@ -86,6 +86,15 @@ func TestBackendDeepCopyInto(t *testing.T) {
 
 	// THEN
 	require.Equal(t, in, out)
+	require.NotSame(t, in.ForwardHostHeader, out.ForwardHostHeader)
+	require.NotSame(t, in.URLRewriter, out.URLRewriter)
+
+	*out.ForwardHostHeader = false
+	out.URLRewriter.Scheme = "http"
+	out.URLRewriter.QueryParamsToRemove[0] = "changed"
+	assert.True(t, *in.ForwardHostHeader)
+	assert.Equal(t, "https", in.URLRewriter.Scheme)
+	assert.Equal(t, "foo", in.URLRewriter.QueryParamsToRemove[0])
 }
 
 func TestBackendIsInsecure(t *testing.T) {

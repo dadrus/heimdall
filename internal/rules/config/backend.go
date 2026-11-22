@@ -52,6 +52,7 @@ func (b *Backend) DeepCopyInto(out *Backend) {
 	}
 
 	if b.URLRewriter != nil {
+		out.URLRewriter = new(URLRewriter)
 		b.URLRewriter.DeepCopyInto(out.URLRewriter)
 	}
 }
