@@ -106,6 +106,28 @@ func TestProxyService(t *testing.T) {
 		processRequest func(t *testing.T, rw http.ResponseWriter, req *http.Request)
 		assertResponse func(t *testing.T, err error, upstreamCalled bool, resp *http.Response)
 	}{
+		"literal fragment in forwarded request URI is rejected": {
+			serviceConf: config.ServeConfig{TrustedProxies: []string{"0.0.0.0/0"}},
+			createRequest: func(t *testing.T, host string) *http.Request {
+				t.Helper()
+
+				req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+host+"/metrics", nil)
+				require.NoError(t, err)
+				req.Header.Set("X-Forwarded-Uri", "/metrics#")
+
+				return req
+			},
+			configureMocks: func(t *testing.T, _ *mocks4.ExecutorMock, _ *url.URL) {
+				t.Helper()
+			},
+			assertResponse: func(t *testing.T, err error, upstreamCalled bool, resp *http.Response) {
+				t.Helper()
+
+				require.NoError(t, err)
+				assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+				assert.False(t, upstreamCalled)
+			},
+		},
 		"no rules configured": {
 			createRequest: func(t *testing.T, host string) *http.Request {
 				t.Helper()

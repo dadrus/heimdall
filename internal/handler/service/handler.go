@@ -38,7 +38,7 @@ func NewHandler(rcf requestcontext.ContextFactory, re rule.Executor, eh errorhan
 func (h *handler) ServeHTTP(rw http.ResponseWriter, req *http.Request) {
 	rc, err := h.f.Create(rw, req)
 	if err != nil {
-		if errors.Is(err, requestcontext.ErrInvalidForwardedURI) {
+		if errors.Is(err, requestcontext.ErrInvalidRequestURI) {
 			rw.WriteHeader(http.StatusBadRequest)
 
 			return

@@ -36,6 +36,8 @@ type RequestContext struct {
 	hmdlReq         *heimdall.Request
 	req             *http.Request
 
+	originalPathContainsEncodedSlash bool
+
 	// the following properties are created lazy and cached
 	err       error
 	savedBody any
@@ -63,12 +65,13 @@ func New() *RequestContext {
 }
 
 func (r *RequestContext) Init(req *http.Request) error {
-	requestURL, err := extractURL(req)
+	requestURL, hasEncodedSlash, err := extractURL(req)
 	if err != nil {
 		return err
 	}
 
 	r.req = req
+	r.originalPathContainsEncodedSlash = hasEncodedSlash
 	r.hmdlReq.Method = extractMethod(req)
 	r.hmdlReq.URL.URL = requestURL
 	r.hmdlReq.ClientIPAddresses = requestClientIPs(r.hmdlReq.ClientIPAddresses, req)
@@ -80,6 +83,7 @@ func (r *RequestContext) Reset() {
 	r.savedBody = nil
 	r.err = nil
 	r.req = nil
+	r.originalPathContainsEncodedSlash = false
 
 	clear(r.outputs)
 	clear(r.results)
@@ -160,7 +164,11 @@ func (r *RequestContext) Body() any {
 	return r.savedBody
 }
 
-func (r *RequestContext) Request() *heimdall.Request              { return r.hmdlReq }
+func (r *RequestContext) Request() *heimdall.Request { return r.hmdlReq }
+func (r *RequestContext) OriginalPathContainsEncodedSlash() bool {
+	return r.originalPathContainsEncodedSlash
+}
+
 func (r *RequestContext) AddHeaderForUpstream(name, value string) { r.upstreamHeaders.Add(name, value) }
 func (r *RequestContext) UpstreamHeaders() http.Header            { return r.upstreamHeaders }
 func (r *RequestContext) AddCookieForUpstream(name, value string) { r.upstreamCookies[name] = value }

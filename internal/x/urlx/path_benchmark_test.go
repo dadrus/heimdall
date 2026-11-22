@@ -22,39 +22,27 @@ import (
 	"testing"
 )
 
-func BenchmarkPathHasDotSegments(b *testing.B) {
-	b.ReportAllocs()
-
-	for uc, path := range map[string]string{
-		"clean short path":               "/api/v1/resource",
-		"clean long path":                "/api/v1/resource/with/a/longer/path/and/more/segments/for/hot/path/testing",
-		"plain dot segments":             "/foo/../admin",
-		"encoded dot segment lower case": "/scripts/%2e%2e%2fWindows/System32/cmd.exe",
-		"encoded dot segment upper case": "/scripts/%2E%2E%2FWindows/System32/cmd.exe",
-		"encoded backslash":              "/scripts/%2E%2E%5CWindows/System32/cmd.exe",
+func BenchmarkInspectPath(b *testing.B) {
+	for name, path := range map[string]string{
+		"plain_short":             "/api/v1/resource",
+		"plain_long":              "/api/v1/resource/with/a/longer/path/and/more/segments/for/hot/path/testing",
+		"literal_parent":          "/api/a/../c",
+		"encoded_filename":        "/files/report%2Epdf",
+		"encoded_slash":           "/files/folder%2Fdocument",
+		"encoded_url":             "/fetch/http%3A%2F%2Fexample.com%2Ffiles%2Fdocument.pdf",
+		"encoded_url_dot":         "/fetch/http%3A%2F%2Fexample.com%2Ffiles%2F..%2Fdocument.pdf",
+		"encoded_dot":             "/metrics/%2e/../metrics",
+		"slash_removed_by_parent": "/metrics/%2f/../metrics",
 	} {
-		b.Run(uc, func(b *testing.B) {
-			for b.Loop() {
-				_ = PathHasDotSegments(path)
-			}
-		})
-	}
-}
-
-func BenchmarkContainsEncodedSlash(b *testing.B) {
-	for uc, path := range map[string]string{
-		"clean_short":        "/api/v1/resource",
-		"clean_long":         "/api/v1/resource/with/a/longer/path/and/more/segments/for/hot/path/testing",
-		"encoded_upper":      "/scripts/api%2Fv1/resource",
-		"encoded_lower":      "/scripts/api%2fv1/resource",
-		"encoded_upper_long": "/very/long/path/with/many/segments/and/an/encoded/slash/%2F/end",
-	} {
-		b.Run(uc, func(b *testing.B) {
+		b.Run(name, func(b *testing.B) {
 			b.ReportAllocs()
 
+			var inspection PathInspection
 			for b.Loop() {
-				_ = ContainsEncodedSlash(path)
+				inspection = InspectPath(path)
 			}
+
+			_ = inspection
 		})
 	}
 }

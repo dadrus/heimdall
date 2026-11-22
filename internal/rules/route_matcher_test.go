@@ -404,7 +404,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			keys:   []string{"bar"},
 			values: []string{"baz"},
 		},
-		"encoded slashes are not allowed": {
+		"matches with path having disallowed but not decoded encoded slashes": {
 			conf: []config.ParameterMatcher{
 				{Name: "foo", Type: "exact", Value: "bar%2Fbaz"},
 			},
@@ -412,15 +412,7 @@ func TestPathParamsMatcherMatches(t *testing.T) {
 			keys:          []string{"foo"},
 			values:        []string{"bar%2Fbaz"},
 			toMatch:       "http://example.com/bar%2Fbaz",
-		},
-		"lowercase encoded slashes are not allowed": {
-			conf: []config.ParameterMatcher{
-				{Name: "foo", Type: "exact", Value: "bar%2fbaz"},
-			},
-			slashHandling: config.EncodedSlashesOff,
-			keys:          []string{"foo"},
-			values:        []string{"bar%2fbaz"},
-			toMatch:       "http://example.com/bar%2fbaz",
+			matches:       true,
 		},
 		"matches with path having allowed but not decoded encoded slashes": {
 			conf: []config.ParameterMatcher{

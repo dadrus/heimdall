@@ -18,10 +18,51 @@ package urlx
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
+
+func FuzzInspectPath(f *testing.F) {
+	for _, path := range []string{
+		"", "/api/users/123", "/a/../b", "/metrics/%2e/../metrics",
+		"/metrics/%2f/../metrics", "/a%2Fb/../c", "/a%2F..%2Fb",
+		"/a%5C%2E%2E/b", "/a\\../b", "/files/name%2Etxt",
+		"/fetch/http%3A%2F%2Fexample.com%2Ffiles%2F..%2Fdocument.pdf",
+		"/files/%252e%252e", "/foo/%ZZ/%2/%", "\x00%00\xff",
+	} {
+		f.Add(path)
+	}
+
+	f.Fuzz(func(t *testing.T, path string) {
+		result := InspectPath(path)
+		require.Equal(t, referenceInspectPath(path), result, "path=%q", path)
+
+		// The two checks operate on the same original escaped path. An
+		// encoded slash is significant even if it is removed by a later
+		// normalization step.
+		require.Equal(t, strings.Contains(strings.ToLower(path), "%2f"), result.HasEncodedSlash)
+
+		// Without encoded characters or alternative separators, only
+		// ordinary literal dot segments can exist, which are allowed.
+		if !strings.ContainsAny(path, "%\\") {
+			require.Equal(t, PathInspection{}, result)
+		}
+
+		// Equivalent escape casing and a harmless encoded alphanumeric
+		// must not change path inspection. Literal safe segments may be
+		// added without changing the inspection of the existing segments.
+		for _, variant := range []string{
+			flipEscapeHexCase(path),
+			encodeHarmlessLiteral(path),
+			"/safe/" + path,
+			path + "/safe",
+		} {
+			require.Equal(t, result, InspectPath(variant), "path=%q, variant=%q", path, variant)
+		}
+	})
+}
 
 func FuzzPathUnescape(f *testing.F) {
 	allOpts := UnescapeOptions{Mode: UnescapeAll}
@@ -52,6 +93,20 @@ func FuzzPathUnescape(f *testing.F) {
 		allExceptSlash := PathUnescape(value, allExceptSlashOpts)
 		unreserved := PathUnescape(value, unreservedOpts)
 
+		// Independent single-pass oracle, including malformed percent escapes.
+		require.Equal(t, referencePathUnescape(value, UnescapeAll), all)
+		require.Equal(t, referencePathUnescape(value, UnescapeAllExceptSlash), allExceptSlash)
+		require.Equal(t, referencePathUnescape(value, UnescapeUnreserved), unreserved)
+
+		// A safe literal prefix cannot affect the decoding of the input.
+		for _, mode := range []UnescapeMode{UnescapeAll, UnescapeAllExceptSlash, UnescapeUnreserved} {
+			opts := UnescapeOptions{Mode: mode}
+			require.Equal(t, "prefix/"+PathUnescape(value, opts), PathUnescape("prefix/"+value, opts))
+		}
+
+		// Escape-case changes leave fully decoded octets unchanged.
+		require.Equal(t, all, PathUnescape(flipEscapeHexCase(value), allOpts))
+
 		// A decoded triplet is replaced by a single byte. Preserved and
 		// malformed sequences retain their original length.
 		require.LessOrEqual(t, len(all), len(value))
@@ -70,7 +125,7 @@ func FuzzPathUnescape(f *testing.F) {
 
 		// The two broader modes can differ only if the original value
 		// contains an encoded slash.
-		if !ContainsEncodedSlash(value) {
+		if !InspectPath(value).HasEncodedSlash {
 			require.Equal(t, all, allExceptSlash)
 		}
 
@@ -150,6 +205,7 @@ func FuzzEscapedPath(f *testing.F) {
 		// RawPath is absent, result is derived from Path instead.
 		if rawPath != "" {
 			require.GreaterOrEqual(t, len(result), len(rawPath))
+			require.Equal(t, referenceRepairEscapedPath(rawPath), result, "rawPath=%q", rawPath)
 		}
 
 		decoded, err := url.PathUnescape(result)
@@ -167,8 +223,7 @@ func FuzzEscapedPath(f *testing.F) {
 		// RawPath there is no encoded source representation to compare against;
 		// the helper delegates to net/url, which is asserted above.
 		if rawPath != "" {
-			require.Equal(t, ContainsEncodedSlash(rawPath), ContainsEncodedSlash(result))
-			require.Equal(t, PathHasDotSegments(rawPath), PathHasDotSegments(result))
+			require.Equal(t, InspectPath(rawPath), InspectPath(result))
 		}
 
 		// Existing percent-encoded octets must never disappear or have their hex

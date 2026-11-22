@@ -333,13 +333,14 @@ func TestRequestContextReset(t *testing.T) {
 	req := httptest.NewRequestWithContext(
 		t.Context(),
 		http.MethodHead,
-		"https://foo.bar/test",
+		"https://foo.bar/test%2Fone",
 		bytes.NewBufferString(`{ "content": "heimdall" }`),
 	)
 	req.Header.Set("Content-Type", "application/json; charset=utf-8")
 
 	ctx := New()
 	require.NoError(t, ctx.Init(req))
+	require.True(t, ctx.OriginalPathContainsEncodedSlash())
 	ctx.Request().URL.Captures = map[string]string{"a": "b"}
 	ctx.SetPipelineError(errors.New("pipeline error"))
 	_ = ctx.Body()
@@ -356,6 +357,7 @@ func TestRequestContextReset(t *testing.T) {
 	require.Nil(t, ctx.savedBody)
 	require.NoError(t, ctx.err)
 	require.Nil(t, ctx.req)
+	require.False(t, ctx.OriginalPathContainsEncodedSlash())
 	require.NotNil(t, ctx.outputs)
 	require.Empty(t, ctx.outputs)
 	require.NotNil(t, ctx.results)
@@ -375,4 +377,8 @@ func TestRequestContextReset(t *testing.T) {
 	require.NotNil(t, ctx.hmdlReq.ClientIPAddresses)
 	require.Empty(t, ctx.hmdlReq.ClientIPAddresses)
 	require.Equal(t, 10, cap(ctx.hmdlReq.ClientIPAddresses))
+
+	plain := httptest.NewRequestWithContext(t.Context(), http.MethodHead, "https://foo.bar/plain", nil)
+	require.NoError(t, ctx.Init(plain))
+	assert.False(t, ctx.OriginalPathContainsEncodedSlash())
 }

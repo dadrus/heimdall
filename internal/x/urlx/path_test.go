@@ -25,107 +25,127 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestPathHasDotSegments(t *testing.T) {
+func TestInspectPath(t *testing.T) {
 	t.Parallel()
 
-	for uc, tc := range map[string]struct {
-		path     string
-		expected bool
+	for name, tc := range map[string]struct {
+		path string
+		want PathInspection
 	}{
-		"no dot segment": {
-			path: "/foo/bar",
+		"empty path":             {},
+		"ordinary request":       {path: "/api/users/123"},
+		"literal dot segment":    {path: "/a/./b"},
+		"literal parent segment": {path: "/a/../b"},
+		"literal parent after encoded slash segment": {
+			path: "/api/a%2Fb/../c",
+			want: PathInspection{HasEncodedSlash: true},
 		},
-		"dot in a path segment": {
-			path: "/foo/bar.baz",
+		"encoded slash erased by literal parent": {
+			path: "/metrics/%2f/../metrics",
+			want: PathInspection{HasEncodedSlash: true},
 		},
-		"two dots in a path segment": {
-			path: "/foo/bar..baz",
+		"literal parent after encoded backslash segment": {
+			path: "/api/a%5Cb/../c",
 		},
-		"only encoded slash in a path": {
-			path: "/foo%2fbar",
+		"encoded dot segment": {
+			path: "/metrics/%2e/../metrics",
+			want: PathInspection{HasEncodedDotSegments: true},
 		},
-		"single dot segment": {
-			path:     "/foo/./bar",
-			expected: true,
+		"uppercase encoded dot": {
+			path: "/metrics/%2E/../metrics",
+			want: PathInspection{HasEncodedDotSegments: true},
 		},
-		"double dot segment": {
-			path:     "/foo/../bar",
-			expected: true,
+		"encoded parent": {
+			path: "/a/%2e%2e/b",
+			want: PathInspection{HasEncodedDotSegments: true},
 		},
-		"multiple dot segment": {
-			path:     "/foo/../../bar",
-			expected: true,
+		"encoded single dot at end": {
+			path: "/a/%2e",
+			want: PathInspection{HasEncodedDotSegments: true},
 		},
-		"encoded double dot and slash lowercase": {
-			path:     "/foo/%2e%2e%2fbar",
-			expected: true,
+		"encoded parent at end": {
+			path: "/a/%2e%2E",
+			want: PathInspection{HasEncodedDotSegments: true},
 		},
-		"encoded double dot and slash lowercase 2": {
-			path:     "/foo%2f%2e%2e/bar",
-			expected: true,
+		"mixed literal and encoded dots": {
+			path: "/a/.%2E/b",
+			want: PathInspection{HasEncodedDotSegments: true},
 		},
-		"encoded double dot and slash uppercase": {
-			path:     "/foo/%2E%2E%2Fbar",
-			expected: true,
+		"encoded dot bounded by encoded slash": {
+			path: "/a/%2e%2e%2Fb",
+			want: PathInspection{HasEncodedDotSegments: true, HasEncodedSlash: true},
 		},
-		"encoded double dot and slash uppercase 2": {
-			path:     "/foo%2F%2E%2E/bar",
-			expected: true,
+		"encoded slash introduces literal parent": {
+			path: "/a%2F../b",
+			want: PathInspection{HasEncodedDotSegments: true, HasEncodedSlash: true},
 		},
-		"mixed dot encoding": {
-			path:     "/foo/.%2e/bar",
-			expected: true,
+		"encoded slash terminates literal parent": {
+			path: "/a/..%2Fb",
+			want: PathInspection{HasEncodedDotSegments: true, HasEncodedSlash: true},
 		},
-		"encoded backslash as separator": {
-			path:     "/foo/%2e%2e%5cbar",
-			expected: true,
+		"encoded slash surrounds literal parent": {
+			path: "/a%2f..%2Fb",
+			want: PathInspection{HasEncodedDotSegments: true, HasEncodedSlash: true},
 		},
-		"encoded backslash as separator 2": {
-			path:     "/foo%5c%2e%2e/bar",
-			expected: true,
+		"encoded slash introduces terminal parent": {
+			path: "/a%2F..",
+			want: PathInspection{HasEncodedDotSegments: true, HasEncodedSlash: true},
 		},
-		"encoded slash without dot segment": {
-			path: "/foo%2Fbar",
+		"encoded backslash introduces literal parent": {
+			path: "/a%5C../b",
+			want: PathInspection{HasEncodedDotSegments: true},
+		},
+		"encoded backslash terminates literal parent": {
+			path: "/a/..%5cb",
+			want: PathInspection{HasEncodedDotSegments: true},
+		},
+		"literal backslash introduces parent": {
+			path: "/a\\../b",
+			want: PathInspection{HasEncodedDotSegments: true},
+		},
+		"literal backslash terminates parent": {
+			path: "/a/..\\b",
+			want: PathInspection{HasEncodedDotSegments: true},
+		},
+		"literal backslash is not itself a dot segment": {
+			path: "/files/a\\b",
+		},
+		"uppercase encoded slash": {
+			path: "/files/a%2Fb",
+			want: PathInspection{HasEncodedSlash: true},
+		},
+		"lowercase encoded slash": {
+			path: "/files/a%2fb",
+			want: PathInspection{HasEncodedSlash: true},
+		},
+		"slash after an encoded dot": {
+			path: "/a/%2E/encoded%2fslash",
+			want: PathInspection{HasEncodedDotSegments: true, HasEncodedSlash: true},
+		},
+		"slash before an encoded dot": {
+			path: "/a%2F%2E/b",
+			want: PathInspection{HasEncodedDotSegments: true, HasEncodedSlash: true},
+		},
+		"encoded period in filename":           {path: "/files/document%2Epdf"},
+		"multiple periods in filename":         {path: "/files/..%2Epdf"},
+		"encoded percent is not decoded again": {path: "/files/%252e%252e"},
+		"incomplete percent encoding":          {path: "/files/%2"},
+		"invalid percent encoding":             {path: "/files/%ZZ"},
+		"encoded slash does not hide a later dot segment": {
+			path: "/files/a%2Fb/other/%2E%2E/end",
+			want: PathInspection{HasEncodedDotSegments: true, HasEncodedSlash: true},
+		},
+		"encoded URL as an opaque parameter": {
+			path: "/fetch/http%3A%2F%2Fexample.com%2Ffiles%2Fdocument.pdf",
+			want: PathInspection{HasEncodedSlash: true},
+		},
+		"encoded URL with internal parent segment": {
+			path: "/fetch/http%3A%2F%2Fexample.com%2Ffiles%2F..%2Fdocument.pdf",
+			want: PathInspection{HasEncodedDotSegments: true, HasEncodedSlash: true},
 		},
 	} {
-		t.Run(uc, func(t *testing.T) {
-			assert.Equal(t, tc.expected, PathHasDotSegments(tc.path))
-		})
-	}
-}
-
-func TestContainsEncodedSlash(t *testing.T) {
-	t.Parallel()
-
-	for uc, tc := range map[string]struct {
-		path     string
-		expected bool
-	}{
-		"empty": {},
-		"without escapes": {
-			path: "/api/v1/resource",
-		},
-		"uppercase sequence": {
-			path:     "/api%2Fv1/resource",
-			expected: true,
-		},
-		"lowercase sequence": {
-			path:     "/api%2fv1/resource",
-			expected: true,
-		},
-		"mixed in long path": {
-			path:     "/foo/bar/baz%2Fqux/quux",
-			expected: true,
-		},
-		"not slash escape": {
-			path: "/api%2Ev1/resource",
-		},
-		"incomplete escape": {
-			path: "/api%2",
-		},
-	} {
-		t.Run(uc, func(t *testing.T) {
-			assert.Equal(t, tc.expected, ContainsEncodedSlash(tc.path))
+		t.Run(name, func(t *testing.T) {
+			assert.Equal(t, tc.want, InspectPath(tc.path))
 		})
 	}
 }

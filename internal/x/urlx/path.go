@@ -24,89 +24,110 @@ import (
 
 const pathUpperHex = "0123456789ABCDEF"
 
-//nolint:gocognit,gocyclo,gocyclo,cyclop,funlen
-func PathHasDotSegments(path string) bool {
-	iDot := strings.IndexByte(path, '.')
-	iPct := strings.IndexByte(path, '%')
-	iBsl := strings.IndexByte(path, '\\')
+// PathInspection describes encoded dot segments and slashes in a path.
+type PathInspection struct {
+	HasEncodedDotSegments bool
+	HasEncodedSlash       bool
+}
 
-	idx := iDot
-	if idx == -1 || (iPct != -1 && iPct < idx) {
-		idx = iPct
-	}
-
-	if idx == -1 || (iBsl != -1 && iBsl < idx) {
-		idx = iBsl
+// InspectPath reports encoded dot segments and slashes in an escaped URL path.
+// A dot segment consists of one or two dots bounded by slashes or backslashes,
+// including their percent-encoded forms. HasEncodedDotSegments is set when a
+// dot or boundary is encoded, or a boundary is a literal backslash. Literal
+// dot segments bounded only by slashes are not reported. HasEncodedSlash
+// reports any %2F, independently of the dot segments. Escapes are matched
+// case-insensitively; malformed triplets count as ordinary characters.
+//
+//nolint:gocognit,gocyclo,cyclop,funlen
+func InspectPath(path string) PathInspection {
+	// Ordinary paths have neither escapes nor backslashes.
+	idx := strings.IndexByte(path, '%')
+	if backslash := strings.IndexByte(path, '\\'); backslash != -1 && (idx == -1 || backslash < idx) {
+		idx = backslash
 	}
 
 	if idx == -1 {
-		return false
+		return PathInspection{}
 	}
 
-	segLen := 0
+	// Recover the literal prefix of the segment containing the first
+	// percent sign or backslash, without creating a substring.
+	var segmentLen, dotCount int
 	for i := idx - 1; i >= 0 && path[i] != '/'; i-- {
-		segLen++
+		segmentLen++
+		if path[i] == '.' {
+			dotCount++
+		}
 	}
 
-	dotCount := 0
+	var inspection PathInspection
+	var encodedDot, alternativeStart bool
 
-	for i := idx; i < len(path); {
+	for i := idx; i < len(path); i++ {
+		alternativeEnd := false
+
 		switch path[i] {
-		case '/', '\\':
-			if (segLen == 1 && dotCount == 1) || (segLen == 2 && dotCount == 2) {
-				return true
-			}
-
-			segLen = 0
-			dotCount = 0
-			i++
+		case '/':
+		case '\\':
+			alternativeEnd = true
 		case '.':
-			segLen++
+			segmentLen++
 			dotCount++
-			i++
+
+			continue
 		case '%':
 			if i+2 >= len(path) {
-				segLen++
-				i++
+				segmentLen++
 
 				continue
 			}
 
-			h1 := path[i+1]
-			h2 := path[i+2] | 0x20 //nolint:mnd
-
+			second := path[i+2] | 0x20 //nolint:mnd
 			switch {
-			case h1 == '2' && h2 == 'e':
-				segLen++
+			case path[i+1] == '2' && second == 'e':
+				segmentLen++
 				dotCount++
-				i += 3
-			case h1 == '2' && h2 == 'f':
-				if (segLen == 1 && dotCount == 1) || (segLen == 2 && dotCount == 2) {
-					return true
-				}
+				encodedDot = true
+				i += 2
 
-				segLen = 0
-				dotCount = 0
-				i += 3
-			case h1 == '5' && h2 == 'c':
-				if (segLen == 1 && dotCount == 1) || (segLen == 2 && dotCount == 2) {
-					return true
-				}
-
-				segLen = 0
-				dotCount = 0
-				i += 3
+				continue
+			case path[i+1] == '2' && second == 'f':
+				inspection.HasEncodedSlash = true
+				alternativeEnd = true
+				i += 2
+			case path[i+1] == '5' && second == 'c':
+				alternativeEnd = true
+				i += 2
 			default:
-				segLen++
-				i++
+				segmentLen++
+
+				continue
 			}
 		default:
-			segLen++
-			i++
+			segmentLen++
+
+			continue
 		}
+
+		if segmentLen == dotCount && (segmentLen == 1 || segmentLen == 2) &&
+			(encodedDot || alternativeStart || alternativeEnd) {
+			inspection.HasEncodedDotSegments = true
+		}
+
+		if inspection.HasEncodedDotSegments && inspection.HasEncodedSlash {
+			return inspection
+		}
+
+		segmentLen, dotCount = 0, 0
+		encodedDot, alternativeStart = false, alternativeEnd
 	}
 
-	return (segLen == 1 && dotCount == 1) || (segLen == 2 && dotCount == 2)
+	if segmentLen == dotCount && (segmentLen == 1 || segmentLen == 2) &&
+		(encodedDot || alternativeStart) {
+		inspection.HasEncodedDotSegments = true
+	}
+
+	return inspection
 }
 
 func NormalizePath(path string) string {
@@ -122,25 +143,6 @@ func NormalizePath(path string) string {
 	}
 
 	return path
-}
-
-// ContainsEncodedSlash reports whether path contains a URL-encoded slash
-// sequence, case-insensitive, e.g. %2F or %2f.
-func ContainsEncodedSlash(path string) bool {
-	for i := strings.IndexByte(path, '%'); i != -1; {
-		if i+2 < len(path) && path[i+1] == '2' && (path[i+2]|0x20) == 'f' { //nolint:mnd
-			return true
-		}
-
-		next := strings.IndexByte(path[i+1:], '%')
-		if next == -1 {
-			break
-		}
-
-		i += next + 1
-	}
-
-	return false
 }
 
 // isUnreserved reports whether ch is an RFC 3986 unreserved character.

@@ -26,6 +26,8 @@ import (
 type RequestContext interface {
 	Request() *Request
 
+	OriginalPathContainsEncodedSlash() bool
+
 	AddHeaderForUpstream(name, value string)
 	AddCookieForUpstream(name, value string)
 

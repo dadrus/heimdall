@@ -79,6 +79,8 @@ type RequestContext struct {
 	err             error
 	hmdlReq         *heimdall.Request
 
+	originalPathContainsEncodedSlash bool
+
 	// the following properties are created lazy and cached
 	savedBody any
 	outputs   map[string]any
@@ -105,7 +107,7 @@ func newRequestContext() *RequestContext {
 func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest) error {
 	httpReq := req.GetAttributes().GetRequest().GetHttp()
 
-	parsed, err := url.ParseRequestURI(httpReq.GetPath())
+	parsed, err := urlx.ParseRequestURI(httpReq.GetPath())
 	if err != nil {
 		return errInvalidRequestURI
 	}
@@ -115,10 +117,16 @@ func (r *RequestContext) Init(ctx context.Context, req *envoy_auth.CheckRequest)
 		return errInvalidRequestURI
 	}
 
+	res := urlx.InspectPath(rawPath)
+	if res.HasEncodedDotSegments {
+		return errInvalidRequestURI
+	}
+
 	parsed.RawPath = urlx.NormalizePath(rawPath)
 	parsed.Path, _ = url.PathUnescape(parsed.RawPath)
 
 	r.ctx = ctx
+	r.originalPathContainsEncodedSlash = res.HasEncodedSlash
 	r.reqHeaders = canonicalizeHeaders(httpReq.GetHeaders())
 	r.reqRawBody = httpReq.GetRawBody()
 	r.hmdlReq.Method = httpReq.GetMethod()
@@ -162,6 +170,7 @@ func requestClientIPs(ctx context.Context, ips []string, headers map[string]stri
 
 func (r *RequestContext) Reset() {
 	r.ctx = nil
+	r.originalPathContainsEncodedSlash = false
 	r.reqHeaders = nil
 	r.reqRawBody = nil
 	r.savedBody = nil
@@ -189,6 +198,9 @@ func canonicalizeHeaders(headers map[string]string) map[string]string {
 }
 
 func (r *RequestContext) Request() *heimdall.Request { return r.hmdlReq }
+func (r *RequestContext) OriginalPathContainsEncodedSlash() bool {
+	return r.originalPathContainsEncodedSlash
+}
 func (r *RequestContext) Headers() map[string]string { return r.reqHeaders }
 
 func (r *RequestContext) Header(name string) string {
