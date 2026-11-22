@@ -1,5 +1,33 @@
 # Changelog
 
+## [0.17.30](https://github.com/dadrus/heimdall/compare/v0.17.29...v0.17.30) (2026-11-22)
+
+
+### Bug Fixes
+
+* Inspecting encoded paths before normalization and applying encoded slash settings consistently during rule execution ([#3696](https://github.com/dadrus/heimdall/issues/3696)) ([a9b2d91](https://github.com/dadrus/heimdall/commit/a9b2d91e6188bd455e45aa6da4e0303749b4e3da))
+* Properly deep copy rule backend configuration ([#3694](https://github.com/dadrus/heimdall/issues/3694)) ([cfe2f8b](https://github.com/dadrus/heimdall/commit/cfe2f8b89408a74b0fb8054d2825785e8eca6210))
+* Rejecting duplicate named path wildcards in routes ([#3695](https://github.com/dadrus/heimdall/issues/3695)) ([495327a](https://github.com/dadrus/heimdall/commit/495327a4a3f6b5c2700922c9324f4e7cea365320))
+* Rejecting fragments in request URIs ([#3696](https://github.com/dadrus/heimdall/issues/3696)) ([a9b2d91](https://github.com/dadrus/heimdall/commit/a9b2d91e6188bd455e45aa6da4e0303749b4e3da))
+* Returning `InvalidArgument` instead of `OK` for malformed requests, together with the appropriate HTTP 400 response in envoy adapter ([#3696](https://github.com/dadrus/heimdall/issues/3696)) ([a9b2d91](https://github.com/dadrus/heimdall/commit/a9b2d91e6188bd455e45aa6da4e0303749b4e3da))
+
+
+### Documentation
+
+* Native OpenAPI integration ([#3685](https://github.com/dadrus/heimdall/issues/3685)) ([7bf6328](https://github.com/dadrus/heimdall/commit/7bf63282633a3ca89c43f6cd53a55b5dd94a73d7))
+
+
+### Dependencies
+
+* update golang to v1.27.4 ([#3670](https://github.com/dadrus/heimdall/issues/3670)) ([62026ca](https://github.com/dadrus/heimdall/commit/62026ca3f4dd98ca357387e4e164cec2005cc1a3))
+* update google.golang.org/genproto/googleapis/rpc digest to c8830f6 ([#3688](https://github.com/dadrus/heimdall/issues/3688)) ([e3b97df](https://github.com/dadrus/heimdall/commit/e3b97dff89b95ff31689281bc15fe20b60174ccb))
+* update module cel.dev/cel-go to v0.33.4 ([#3684](https://github.com/dadrus/heimdall/issues/3684)) ([494efe4](https://github.com/dadrus/heimdall/commit/494efe4122fff29a97e021a7efff32ce77ba8e22))
+* update module github.com/go-co-op/gocron/v2 to v2.23.2 ([#3689](https://github.com/dadrus/heimdall/issues/3689)) ([dc77a37](https://github.com/dadrus/heimdall/commit/dc77a370e9dfb21cd79d9976c710f660e91d9b8b))
+* update module github.com/redis/rueidis to v1.0.80 ([fc48f41](https://github.com/dadrus/heimdall/commit/fc48f41239cd8638a56dee2710a7fa41075a46e6))
+* update module github.com/redis/rueidis/rueidisotel to v1.0.80 ([#3680](https://github.com/dadrus/heimdall/issues/3680)) ([fc48f41](https://github.com/dadrus/heimdall/commit/fc48f41239cd8638a56dee2710a7fa41075a46e6))
+* update module github.com/tidwall/gjson to v1.20.6 ([#3693](https://github.com/dadrus/heimdall/issues/3693)) ([dff01f2](https://github.com/dadrus/heimdall/commit/dff01f28ab1287c7b10a4d00bd49569b13a006ff))
+* update module gocloud.dev to v0.49.0 ([#3674](https://github.com/dadrus/heimdall/issues/3674)) ([f70fccf](https://github.com/dadrus/heimdall/commit/f70fccf65e948f0cfa0ef40fb4841827cfb9eed9))
+
 ## [0.17.29](https://github.com/dadrus/heimdall/compare/v0.17.28...v0.17.29) (2026-11-09)
 
 
