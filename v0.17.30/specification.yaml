@@ -1,0 +1,673 @@
+openapi: 3.2.1
+
+info:
+  title: Heimdall
+  version: v0.17.30
+  description: |
+    HTTP interface definitions for heimdall's access-control, management, and
+    operational services. Listening addresses and available interfaces depend
+    on the deployment. See the [documentation](/docs/) for setup and usage.
+  license:
+    name: Apache 2.0
+    identifier: Apache-2.0
+
+servers:
+  - url: /
+
+tags:
+  - name: Management
+    kind: nav
+    description: |
+      The management service provides health information and public keys for
+      verifying JWTs issued by heimdall. For available configuration options see
+      [management port](/docs/services/management/).
+
+  - name: Well-Known
+    parent: Management
+    kind: nav
+    description: |
+      The `/.well-known/` prefix provides locations for management resources,
+      following the conventions in [RFC 8615](https://www.rfc-editor.org/rfc/rfc8615).
+
+  - name: Main
+    kind: nav
+    description: |
+      The main service evaluates incoming HTTP requests against configured
+      access-control rules. In
+      [decision mode](/docs/concepts/operating_modes/#_decision_mode), it returns
+      an authorization result to an integrating proxy or API gateway. In
+      [proxy mode](/docs/concepts/operating_modes/#_proxy_mode), it forwards
+      authorized requests to an upstream service.
+
+      For available configuration options see [main port](/docs/services/main/).
+
+  - name: Main Service
+    parent: Main
+    kind: nav
+    description: |
+      This reference entry describes the request data used for access-control
+      evaluation and the possible responses. See
+      [Rules](/docs/concepts/rules/) for details of request matching.
+
+  - name: Profiling
+    kind: nav
+    description: |
+      Runtime diagnostics include CPU and heap profiles, goroutine information,
+      and execution traces. For available configuration options see
+      [profiling port](/docs/operations/observability/#_runtime_profiling).
+
+  - name: Metrics
+    kind: nav
+    description: |
+      Metrics for Prometheus cover process and Go runtime information, HTTP
+      request counts and durations, active requests, and certificate expiry.
+      For available configuration options see
+      [metrics port](/docs/operations/observability/#_metrics).
+
+  - name: Validating Admission Controller
+    kind: nav
+    description: |
+      A Kubernetes validating admission webhook checks heimdall `RuleSet`
+      resources when they are submitted to the Kubernetes API server. This
+      interface is available only for Kubernetes deployments using the
+      [Kubernetes rules provider](/docs/rules/providers/#_kubernetes).
+
+components:
+  schemas:
+    ETag:
+      description: |
+        The ETag (or entity tag) HTTP response header is an identifier for a specific version of a resource. 
+        It lets caches be more efficient and save bandwidth, as a web server does not need to resend a full response
+        if the content was not changed. Example: `ETag: "33a64df551425fcc55e4d42a148795d9f25f89d4"`.
+      type: string
+
+    If-None-Match:
+      description: |
+        Carries the `ETag` value from the previous response. Enables the client to check whether there is a change
+        to the server side resource. Example: `If-None-Match: "33a64df551425fcc55e4d42a148795d9f25f89d4"`.
+      type: string
+
+    HealthStatus:
+      title: Health status
+      description: Basic health information for the current heimdall instance.
+      type: object
+      properties:
+        status:
+          description: The health status
+          type: string
+
+    JWKS:
+      title: JSON Web Key Set
+      description: Public keys used to verify JWTs issued by heimdall, in JSON Web Key Set format.
+      type: object
+      required:
+        - keys
+      properties:
+        keys:
+          description: |
+            The value of the 'keys' parameter is an array of JWK values. By default, the order of the JWK values
+            within the array does not imply an order of preference among them, although applications of JWK Sets
+            can choose to assign a meaning to the order for their purposes, if desired.
+          type: array
+          items:
+            type: object
+            required:
+              - kty
+            properties:
+              crv:
+                description: |
+                  The name of the curve, if the entry represents an EC key (see 
+                  [RFC 7518](https://www.rfc-editor.org/rfc/rfc7518) for more details)
+                type: string
+              x:
+                description: X parameter of the elliptic curve, if the entry represents an EC key
+                type: string
+              y:
+                description: Y parameter of the elliptic curve, if the entry represents an EC key
+                type: string
+              n:
+                description: |
+                  Modulus parameter of an RSA public key, if the entry represents an RSA public key (see 
+                  [RFC 7518](https://www.rfc-editor.org/rfc/rfc7518) for more details)
+                type: string
+              e:
+                description: Exponent parameter of an RSA public key, if the entry represents an RSA public key
+                type: string
+              kty:
+                description: Identifies the cryptographic algorithm family used with the key, such as 'RSA' or 'EC'
+                type: string
+              use:
+                description: Identifies the intended use of the public key, such as 'sig', or 'enc'
+                type: string
+              key_ops:
+                description: Identifies the operation(s) for which the key is intended to be used
+                type: string
+              alg:
+                description: Identifies the algorithm intended for use with the key
+                type: string
+              kid:
+                description: The identifier of the key
+                type: string
+              x5u:
+                description: |
+                  X.509 URL parameter is a URI [RFC3986](https://www.rfc-editor.org/rfc/rfc3986) that refers to a
+                  resource for an X.509 public key certificate or certificate chain 
+                  [RFC5280](https://www.rfc-editor.org/rfc/rfc5280).
+                type: string
+                format: uri
+              x5c:
+                description: |
+                  Stands for an X.509 certificate chain. This parameter contains a chain of one or more PKIX 
+                  certificates [RFC5280](https://www.rfc-editor.org/rfc/rfc5280). The certificate chain is
+                  represented as a JSON array of certificate value strings. Each string in the array is base64-encoded
+                type: array
+                items:
+                  type: string
+              x5t:
+                description: |
+                  Stands for X.509 certificate SHA-1 thumbprint. This parameter is a base64url-encoded SHA-1 thumbprint
+                  (a.k.a. digest) of the DER encoding of an X.509 certificate 
+                  [RFC5280](https://www.rfc-editor.org/rfc/rfc5280)
+                type: string
+              x5t#S256:
+                description: Stands for X.509 certificate SHA-256 thumbprint. This parameter is a base64url-encoded
+                  SHA-256 thumbprint (a.k.a. digest) of the DER encoding of an X.509 certificate
+                  [RFC5280](https://www.rfc-editor.org/rfc/rfc5280)
+                type: string
+
+  responses:
+    NotModified:
+      description: Not Modified. Returned when the resource has not changed since the supplied `If-None-Match` value.
+    InternalServerError:
+      description: Internal Server Error. Returned when the service cannot process the request because of an internal error.
+
+security: []
+
+paths:
+  /metrics:
+    get:
+      summary: Get Prometheus metrics
+      description: |
+        Returns metrics for scraping by Prometheus or compatible monitoring
+        systems. The `/metrics` path is configurable and may differ between
+        deployments.
+      tags:
+        - Metrics
+      operationId: metrics_get
+      responses:
+        '200':
+          description: The metrics exposed by this heimdall instance.
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /debug/pprof:
+    get:
+      summary: Get available profiles
+      description: |
+        Lists the runtime profiles available on this heimdall instance. Use the
+        profile-specific endpoint to retrieve a selected profile.
+      tags:
+        - Profiling
+      operationId: pprof_list
+      responses:
+        '200':
+          description: List of available profiles
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /debug/pprof/{profile_name}:
+    get:
+      summary: Get a runtime profile
+      description: |
+        Retrieves the selected runtime profile. Depending on the profile,
+        query parameters control sampling duration, garbage collection, and
+        the output format. Not every option applies to every profile.
+      tags:
+        - Profiling
+      operationId: pprof_get
+      parameters:
+        - name: profile_name
+          description: |
+            Defines the profiling information to retrieve. Following profiles are available:
+            
+            * `allocs` - A sampling of all past memory allocations.
+            * `block` - Stack traces that led to blocking on synchronization primitives.
+            * `cmdline` - The command line invocation of the current program, with arguments separated by NUL bytes.
+            * `goroutine` - Stack traces of all current goroutines.
+            * `heap` - A sampling of memory allocations of live objects.
+            * `mutex` - Stack traces of holders of contended mutexes.
+            * `profile` - CPU profile. Profiling lasts for duration specified in `seconds` parameter, or for 30 seconds if not specified
+            * `symbol` - Looks up the program counters listed in the request, responding with a table mapping program counters to function names.
+            * `threadcreate` - Stack traces that led to the creation of new OS threads.
+            * `trace` - Execution trace in binary form. Tracing lasts for duration specified in `seconds` parameter, or for 1 second if not specified.
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: seconds
+          description: |
+            Specifies the duration of sampling. Ignored, if the profile does not support sampling.
+            
+            If `profile` profile is used and this parameter is not specified, defaults to 30s.
+            
+            If `trace` profile is used and this parameter is not specified, defaults to 1s.
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: gc
+          description: |
+            Specifies for the `heap` profile whether the GC should be invoked before the sampling should be done.
+            Any value > 0 means GC should be invoked.
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: debug
+          description: |
+            Specifies whether the profile information should be rendered as text and not in the `profile.proto` format.
+            Any value > 0 means profile information should be rendered as text.
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: |
+            The requested profiling information. If the `debug` query parameter was set to a value > 0 the 
+            MIME type of the response is `text/html`, otherwise it is `application/octet-stream`
+          headers:
+            X-Content-Type-Options:
+              description: Set to `nosniff` value.
+              schema:
+                type: string
+            Content-Disposition:
+              description: |
+                Set to `attachment; filename="<used profile name>"`
+              schema:
+                type: string
+          content:
+            text/html:
+              schema:
+                type: string
+            application/octet-stream:
+              schema:
+                type: string
+        '400':
+          description: Bad Request. Returned if the `seconds` parameter would exceed the server's write timeout.
+        '404':
+          description: Not Found. Returned if requested profile is not supported/known.
+
+  /.well-known/health:
+    get:
+      description: |
+        Returns the health status of the current heimdall instance for
+        monitoring and health checks.
+      tags:
+        - Well-Known
+      operationId: well_known_health
+      summary: Get health status
+      responses:
+        '200':
+          description: The current health status.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+              example:
+                status: ok
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /.well-known/jwks:
+    get:
+      description: |
+        Returns the public keys needed to verify JWTs issued by heimdall as a
+        JSON Web Key Set ([RFC 7517](https://www.rfc-editor.org/rfc/rfc7517)).
+        The contents reflect the configured key store.
+
+        Responses use an [ETag](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/ETag)
+        for caching. A client can send the previously received value using
+        `If-None-Match`; unchanged content results in HTTP 304 Not Modified.
+      tags:
+        - Well-Known
+      summary: Get JWT verification keys
+      operationId: well_known_jwks
+      parameters:
+        - name: If-None-Match
+          in: header
+          description: The ETag received from an earlier JWKS response. If it still matches, heimdall responds with HTTP 304 Not Modified.
+          required: false
+          schema:
+            $ref: '#/components/schemas/If-None-Match'
+      responses:
+        '200':
+          description: JWKS containing verification keys and optional certificate chains.
+          headers:
+            ETag:
+              schema:
+                $ref: '#/components/schemas/ETag'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JWKS'
+              example:
+                keys:
+                  - use: sig
+                    kty: EC
+                    kid: foo
+                    crv: P-384
+                    alg: ES384
+                    x: 0WuRhXd8TpGy8Xn3zDT3xkkS7Ua66QQSK69gWxPHw7k1tZyQXsUuEudYDb_vwN9f
+                    y: _CBaqh43zjEowNq1wZcrMr-bdeDHdz17iVSkJKYonUzDFeyuiHETAQrYcqDT_8mG
+                    x5c:
+                      - "MIIBwzCCAUmgAwIBAgIBATAKBggqhkjOPQQDAzA0MQswCQYDVQQGEwJFVTENMAsGA1UEChMEVGVzdDEWMBQGA1UEAxMNVGVzdCBJbnQgQ0EgMTAeFw0yMjA4MjYxNDE2MzlaFw0yMjA4MjcxNDE2MzlaMDAxCzAJBgNVBAYTAkVVMQ0wCwYDVQQKEwRUZXN0MRIwEAYDVQQDEwlUZXN0IEVFIDEwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAATRa5GFd3xOkbLxeffMNPfGSRLtRrrpBBIrr2BbE8fDuTW1nJBexS4S51gNv+/A31/8IFqqHjfOMSjA2rXBlysyv5t14Md3PXuJVKQkpiidTMMV7K6IcRMBCthyoNP/yYajMzAxMA4GA1UdDwEB/wQEAwIHgDAfBgNVHSMEGDAWgBTnmalbrDGB9vYp3pgrWMsuekT/lTAKBggqhkjOPQQDAwNoADBlAjB6Ww6YNcOc2/b5nEWMNIS65pdaKWmOUzlf0kObTngLy/K+CGR7URSpgebN+l66KT4CMQDx2zCwZ/nm3k66q1y+7xROvb1Ex8/lMu9PR6pUB6ly6Km5NR49jvNPD2y30jVYwYQ="
+                      - "MIIB9zCCAX6gAwIBAgIBATAKBggqhkjOPQQDAzA1MQswCQYDVQQGEwJFVTENMAsGA1UEChMEVGVzdDEXMBUGA1UEAxMOVGVzdCBSb290IENBIDEwHhcNMjIwODI2MTQxNjM5WhcNMjIwODI3MTQxNjM5WjA0MQswCQYDVQQGEwJFVTENMAsGA1UEChMEVGVzdDEWMBQGA1UEAxMNVGVzdCBJbnQgQ0EgMTB2MBAGByqGSM49AgEGBSuBBAAiA2IABN7hGog6/ITGXjAQMgI9SK5o8cQD7S1nY3KeL/E7X8nA9rRn7ypoa3MLRsvqbaTUo0UDQ+1SHiggx6sPZuMFbEEFuNogppwT+FipiRO7STPgl3tzN56ujPbS7zA1Idl8GqNjMGEwDgYDVR0PAQH/BAQDAgEGMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFOeZqVusMYH29inemCtYyy56RP+VMB8GA1UdIwQYMBaAFChI/FlLwR+/sRpsUDoo/09yXQyyMAoGCCqGSM49BAMDA2cAMGQCMACiNY17Rb4ODRcQHPEkXm7ASwgG7LC4qFojACWyOoIYUMsdToVf9qLNEr+VMDFxcwIwMkBU1B49EAuQfw6KjVyRL3eWqjf968J+fZl98JhbBEIiXSZH+QZ1o4Wr3uF1dvPg"
+                      - "MIIB2TCCAV6gAwIBAgIBATAKBggqhkjOPQQDAzA1MQswCQYDVQQGEwJFVTENMAsGA1UEChMEVGVzdDEXMBUGA1UEAxMOVGVzdCBSb290IENBIDEwHhcNMjIwODI2MTQxNjM5WhcNMjIwODI3MTQxNjM5WjA1MQswCQYDVQQGEwJFVTENMAsGA1UEChMEVGVzdDEXMBUGA1UEAxMOVGVzdCBSb290IENBIDEwdjAQBgcqhkjOPQIBBgUrgQQAIgNiAARA9OvlJEV3H6utejUDh04NI4dia5vPD0kA1hBmljoxwv1QmfT3jbkXRqSs59X+tmElmbv5ZEZjrlYzf5w2H2P7RwenUPI0btI/OYtP6Rb7+uSmeHJ2da+fHMU7G48qWVSjQjBAMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBQoSPxZS8Efv7EabFA6KP9Pcl0MsjAKBggqhkjOPQQDAwNpADBmAjEA9c3JZ4zGlCG+ZDHL6uy/pGL2kbk6qS4H4cYfIMse+vbovIcvow+EZ+i0q0cPeTQRAjEAmafGSmd+xfH++ET8S9Xy6ldml6l3zObqi1/FrrUN2BxpVdnud/EoQMgJkGOX70rs"
+                  - use: sig
+                    kty: EC
+                    kid: bar
+                    crv: P-384
+                    alg: ES384
+                    x: F47uZNn_QtqKXcxsYsJSc5asaqEPxVuc2sIVLzR2dRDi29tdA_X7phRX9kGhDnOO
+                    y: elcChdCImsIaRT7xVLslehBpVaWKlNnCSTPhJLYXwcB1dS24bpUkwAiVijejZ0J0
+        '304':
+          $ref: '#/components/responses/NotModified'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /validate-ruleset:
+    post:
+      summary: Validate RuleSet
+      description: |
+        Validates a heimdall `RuleSet` submitted in a Kubernetes
+        [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
+        request and returns the admission decision with validation feedback.
+      tags:
+        - Validating Admission Controller
+      operationId: admission_controller_validate_ruleset
+      parameters:
+        - name: timeout
+          description: |
+            Maximum duration allowed for validation, such as `5s` or `250ms`.
+            Accepted units are `ns`, `us`, `ms`, `s`, `m`, and `h`.
+          in: query
+          required: false
+          schema:
+            type: string
+          example: 5s
+      requestBody:
+        description: |
+          A Kubernetes [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
+          request containing the `RuleSet` to validate.
+        required: true
+        content:
+          application/json:
+            example: {
+              "kind": "AdmissionReview",
+              "apiVersion": "admission.k8s.io/v1",
+              "request": {
+                "uid": "ce409862-eae0-4704-b7d5-46634efdaf9b",
+                "kind": {
+                  "group": "heimdall.dadrus.github.com",
+                  "version": "v1alpha4",
+                  "kind": "RuleSet"
+                },
+                "resource": {
+                  "group": "heimdall.dadrus.github.com",
+                  "version": "v1alpha4",
+                  "resource": "rulesets"
+                },
+                "requestKind": {
+                  "group": "heimdall.dadrus.github.com",
+                  "version": "v1alpha4",
+                  "kind": "RuleSet"
+                },
+                "requestResource": {
+                  "group": "heimdall.dadrus.github.com",
+                  "version": "v1alpha4",
+                  "resource": "rulesets"
+                },
+                "name": "echo-app-rules",
+                "namespace": "quickstarts",
+                "operation": "CREATE",
+                "userInfo": {
+                  "username": "kubernetes-admin",
+                  "groups": [
+                    "system:masters",
+                    "system:authenticated"
+                  ]
+                },
+                "object": {
+                  "apiVersion": "heimdall.dadrus.github.com/v1alpha4",
+                  "kind": "RuleSet",
+                  "metadata": {
+                    "creationTimestamp": "2023-10-25T17:13:37Z",
+                    "generation": 1,
+                    "labels": {
+                      "app.kubernetes.io/name": "echo-app"
+                    },
+                    "managedFields": [
+                      {
+                        "apiVersion": "heimdall.dadrus.github.com/v1alpha4",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                          "f:metadata": {
+                            "f:annotations": {
+                              ".": {},
+                              "f:kubectl.kubernetes.io/last-applied-configuration": {}
+                            },
+                            "f:labels": {
+                              ".": {},
+                              "f:app.kubernetes.io/name": {}
+                            }
+                          },
+                          "f:spec": {
+                            ".": {},
+                            "f:authClassName": {},
+                            "f:rules": {}
+                          }
+                        },
+                        "manager": "kubectl-client-side-apply",
+                        "operation": "Update",
+                        "time": "2023-10-25T17:13:37Z"
+                      }
+                    ],
+                    "name": "echo-app-rules",
+                    "namespace": "quickstarts",
+                    "uid": "28703aca-bb5a-4355-8542-4b37b1146553"
+                  },
+                  "spec": {
+                    "authClassName": "default",
+                    "rules": [
+                      {
+                        "execute": [
+                          {
+                            "authorizer": "allow_all_requests"
+                          },
+                          {
+                            "finalizer": "noop_finalizer"
+                          }
+                        ],
+                        "forward_to": {
+                          "host": "echo-app.quickstarts.svc.cluster.local:8080"
+                        },
+                        "id": "public-access",
+                        "match": {
+                          "path": "/pub/**"
+                        }
+                      },
+                      {
+                        "execute": [
+                          {
+                            "authorizer": "allow_all_requests"
+                          }
+                        ],
+                        "forward_to": {
+                          "host": "echo-app.quickstarts.svc.cluster.local:8080"
+                        },
+                        "id": "anonymous-access",
+                        "match": {
+                          "path": "/anon/**"
+                        }
+                      },
+                      {
+                        "execute": [
+                          {
+                            "authenticator": "deny_authenticator"
+                          }
+                        ],
+                        "forward_to": {
+                          "host": "echo-app.quickstarts.svc.cluster.local:8080"
+                        },
+                        "id": "redirect",
+                        "match": {
+                          "path": "/redir/**"
+                        }
+                      }
+                    ]
+                  }
+                },
+                "oldObject": null,
+                "dryRun": false,
+                "options": {
+                  "kind": "CreateOptions",
+                  "apiVersion": "meta.k8s.io/v1",
+                  "fieldManager": "kubectl-client-side-apply",
+                  "fieldValidation": "Strict"
+                }
+              }
+            }
+
+      responses:
+        '200':
+          description: |
+            A Kubernetes [AdmissionReview](https://kubernetes.io/docs/reference/config-api/apiserver-admission.v1/#admission-k8s-io-v1-AdmissionReview)
+            response containing the validation decision for the submitted `RuleSet`.
+          content:
+            application/json:
+              example: {
+                "kind":"AdmissionReview",
+                "apiVersion":"admission.k8s.io/v1",
+                "response": {
+                  "uid":"ce409862-eae0-4704-b7d5-46634efdaf9b",
+                  "allowed":true,
+                  "status":{
+                    "metadata":{},
+                    "status":"Success",
+                    "message":"RuleSet valid",
+                    "code":200
+                  }
+                }
+              }
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /{path_and_query_params}:
+    get:
+      summary: Process an HTTP request
+      description: |
+        This operation represents heimdall's main HTTP request interface. It is
+        not limited to `GET`. All other HTTP verbs are also supported and are subject
+        to the configured rules. Method-specific HTTP semantics
+        still apply: HEAD responses have no body, and configured CORS preflight
+        OPTIONS requests can be handled without rule evaluation.
+
+        Requests may have nested paths and query strings. The path placeholder
+        shown above is illustrative: it does not express a single-segment
+        restriction on the requests that heimdall can process.
+
+        Response statuses and bodies depend on the matching rule and operating
+        mode. In proxy mode, the upstream service determines the response, so
+        its status codes are not limited to the examples listed below.
+
+        `X-Forwarded-*` and `Forwarded` headers are trusted only when the
+        sender matches the configured
+        [`trusted_proxies`](/docs/services/main/#_trusted_proxies).
+        Additional application-specific headers and cookies can be evaluated
+        by the configured rules.
+      tags:
+        - Main Service
+      operationId: get_proxy
+      parameters:
+        - name: path_and_query_params
+          in: path
+          required: true
+          description: |
+            Actual requested path, including any nested segments and optional
+            query string, to be evaluated against the configured rules.
+          schema:
+            type: string
+        - name: X-Forwarded-Method
+          in: header
+          description: |
+            HTTP method to use for rule evaluation. Defaults to the method of
+            the request received by heimdall when this header is absent.
+          schema:
+            type: string
+        - name: X-Forwarded-Proto
+          in: header
+          description: |
+            HTTP scheme to use when evaluating the request URL. When absent,
+            heimdall uses the scheme of the incoming request.
+          schema:
+            type: string
+        - name: X-Forwarded-Host
+          in: header
+          description: Original request host to use when evaluating the request URL.
+          schema:
+            type: string
+        - name: X-Forwarded-Uri
+          in: header
+          description: Original request path and query string to use for rule evaluation.
+          schema:
+            type: string
+        - name: X-Forwarded-For
+          in: header
+          description: Client IP address information supplied by a trusted proxy.
+          schema:
+            type: string
+        - name: Forwarded
+          in: header
+          description: Standardized information about the original request and its proxy forwarding chain.
+          schema:
+            type: string
+        - name: <Application Specific>
+          in: header
+          description: Placeholder for other headers, the defined rules make use of.
+          schema:
+            type: string
+        - name: <Application Specific>
+          in: cookie
+          description: Placeholder for cookies, the defined rules make use of.
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            A successful decision normally returns HTTP 200 in decision mode,
+            unless a different status is configured. In proxy mode, an authorized
+            request is forwarded and the upstream service determines the response
+            status and body; HTTP 200 is only one possible result.
+        '400':
+          description: |
+            Bad Request. Returned if the evaluated request path contains dot segments (`.` or `..`), including
+            URL-encoded variants (case-insensitive), e.g. `%2e`, `%2f`, and `%5c` combinations, to prevent path traversal.
+        '401':
+          description: Unauthorized. Returned if a matching rule could not verify the authentication status of the subject related to the request.
+        '403':
+          description: Forbidden. Returned if a matching rule could not verify the authorization status of the subject related to the request.
+        '404':
+          description: Not Found. Returned if there was no rule found, which could be used to verify the request.
+        '405':
+          description: Method Not Allowed. Returned if the matched rule does not permit the HTTP method.
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+        '502':
+          description: |
+            Bad Gateway. Returned if communication with an upstream service
+            fails, for example because of DNS or timeout errors.
