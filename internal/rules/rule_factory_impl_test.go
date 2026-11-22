@@ -440,6 +440,36 @@ func TestRuleFactoryNew(t *testing.T) {
 	}
 }
 
+func TestValidateRoutePath(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		path          string
+		duplicateName string
+	}{
+		"distinct named single wildcards":           {path: "/org/:tenant/files/:file"},
+		"distinct named single and free wildcards":  {path: "/org/:tenant/*remaining"},
+		"unnamed single wildcards":                  {path: "/org/:*/files/:*"},
+		"unnamed free wildcard":                     {path: "/org/:tenant/**"},
+		"escaped single wildcard":                   {path: `/org/:tenant/files/\:tenant`},
+		"escaped free wildcard":                     {path: `/org/:tenant/files/\*tenant`},
+		"wildcard marker within literal segment":    {path: "/org/:tenant/files/file:tenant"},
+		"distinct names differing in case":          {path: "/org/:tenant/files/:Tenant"},
+		"repeated named single wildcard":            {path: "/org/:tenant/files/:tenant", duplicateName: "tenant"},
+		"named single and free wildcard share name": {path: "/org/:tenant/*tenant", duplicateName: "tenant"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := validateRoutePath(tc.path)
+
+			if tc.duplicateName == "" {
+				require.NoError(t, err)
+			} else {
+				require.ErrorContains(t, err, "duplicate parameter name '"+tc.duplicateName+"'")
+			}
+		})
+	}
+}
+
 func TestRuleFactoryCreateRule(t *testing.T) {
 	t.Parallel()
 
@@ -464,6 +494,39 @@ func TestRuleFactoryCreateRule(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorIs(t, err, heimdall.ErrConfiguration)
 				require.ErrorContains(t, err, "requires forward_to")
+			},
+		},
+		"with duplicate named path parameters": {
+			config: config2.Rule{
+				ID: "duplicate",
+				Matcher: config2.Matcher{Routes: []config2.Route{
+					{Path: "/org/:tenant/files/:tenant"},
+				}},
+			},
+			defaultRule: &ruleImpl{sc: compositeSubjectCreator{&mocks2.AuthenticatorMock{}}},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.Nil(t, rul)
+				require.ErrorIs(t, err, heimdall.ErrConfiguration)
+				require.ErrorContains(t, err, "duplicate parameter name 'tenant'")
+			},
+		},
+		"with same named path parameter in different routes": {
+			config: config2.Rule{
+				ID: "valid",
+				Matcher: config2.Matcher{Routes: []config2.Route{
+					{Path: "/org/:tenant/files"},
+					{Path: "/admin/:tenant/files"},
+				}},
+			},
+			defaultRule: &ruleImpl{sc: compositeSubjectCreator{&mocks2.AuthenticatorMock{}}},
+			assert: func(t *testing.T, err error, rul *ruleImpl) {
+				t.Helper()
+
+				require.NoError(t, err)
+				require.NotNil(t, rul)
+				require.Len(t, rul.routes, 2)
 			},
 		},
 		"with error while creating method matcher": {

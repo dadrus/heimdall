@@ -218,6 +218,7 @@ There are some simple rules, which must be followed while using wildcards:
 
 - One can use as many single wildcards, as needed in any segment
 - A segment must start with `:` or `*` to define a wildcard
+- A named wildcard must have a unique name within the same path expression
 - No segments are allowed after a free (named) wildcard
 - If a regular segment must start with `:` or `*`, but should not be considered as a wildcard, it must be escaped with `\`.
 
