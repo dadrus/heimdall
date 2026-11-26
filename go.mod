@@ -6,7 +6,7 @@ require (
 	cel.dev/cel-go v0.33.4
 	github.com/DmitriyVTitov/size v1.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/alicebob/miniredis/v2 v2.40.0
+	github.com/alicebob/miniredis/v2 v2.41.0
 	github.com/ccoveille/go-safecast/v2 v2.1.0
 	github.com/dadrus/httpsig v0.12.0
 	github.com/drone/envsubst/v2 v2.0.0-20210730161058-179042472c46
