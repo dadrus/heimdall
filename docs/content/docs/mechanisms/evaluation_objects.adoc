@@ -304,6 +304,21 @@ for details.
 
 Some mechanisms support templating using https://golang.org/pkg/text/template/[Golang Text Templates]. Templates can act on all objects described above (link:{{< relref "#_subject" >}}[Subject], link:{{< relref "#_outputs" >}}[Outputs], link:{{< relref "#_results" >}}[Results], link:{{< relref "#_request" >}}[Request], link:{{< relref "#_payload" >}}[Payload] and link:{{< relref "#_values" >}}[Values]). Which exactly are supported is mechanism specific.
 
+By default, accessing a missing map key with dot notation does not stop template rendering. When printed, the missing value becomes `<no value>`, which can appear in a rendered endpoint URL or header. Check the mechanism's documentation for the evaluation objects available in each template.
+
+For a required, non-empty value in `Values`, use the built-in `index` function and the sprig `fail` function to return a template error with a useful message:
+
+[source, gotemplate]
+----
+{{- $tenant := index .Values "tenant" -}}
+{{- if not $tenant -}}
+  {{- fail "Values.tenant is required and must not be empty" -}}
+{{- end -}}
+https://api.example.invalid/lookup?tenant={{ $tenant | urlenc }}
+----
+
+`Values` is a map of strings, so `index` returns an empty string when the key is absent. This example treats an explicitly empty value as an error too. For an optional value, use a fallback instead, for example `{{ index .Values "region" | default "global" }}`. The `default` function also replaces an explicitly empty string.
+
 To ease the usage, all https://masterminds.github.io/sprig/[sprig] functions, except `env` and `expandenv`, as well as the following functions are available:
 
 * `urlenc` - Encodes a given string using url encoding. Is handy if you need to generate request body or query parameters e.g. for communication with further systems.

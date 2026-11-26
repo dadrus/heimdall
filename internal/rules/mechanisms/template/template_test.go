@@ -97,6 +97,83 @@ func TestTemplateRender(t *testing.T) {
 }`, res)
 }
 
+func TestTemplateRenderRequiredMapKey(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		values  map[string]string
+		want    string
+		wantErr bool
+	}{
+		"missing value is rejected": {
+			values:  map[string]string{},
+			wantErr: true,
+		},
+		"empty value is rejected": {
+			values:  map[string]string{"tenant": ""},
+			wantErr: true,
+		},
+		"present value is rendered": {
+			values: map[string]string{"tenant": "red blue"},
+			want:   "https://api.example.invalid/lookup?tenant=red+blue",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// GIVEN
+			tpl, err := template.New(`{{- $tenant := index .Values "tenant" -}}
+{{- if not $tenant -}}
+  {{- fail "Values.tenant is required and must not be empty" -}}
+{{- end -}}
+https://api.example.invalid/lookup?tenant={{ $tenant | urlenc }}`)
+			require.NoError(t, err)
+
+			// WHEN
+			result, err := tpl.Render(map[string]any{"Values": tc.values})
+
+			// THEN
+			if tc.wantErr {
+				require.ErrorIs(t, err, template.ErrTemplateRender)
+				assert.ErrorContains(t, err, "Values.tenant is required and must not be empty")
+				assert.Empty(t, result)
+
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, result)
+		})
+	}
+}
+
+func TestTemplateRenderOptionalMapKey(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		values map[string]string
+		want   string
+	}{
+		"missing value uses fallback": {values: map[string]string{}, want: "global"},
+		"empty value uses fallback":   {values: map[string]string{"region": ""}, want: "global"},
+		"present value is rendered":   {values: map[string]string{"region": "west"}, want: "west"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// GIVEN
+			tpl, err := template.New(`{{ index .Values "region" | default "global" }}`)
+			require.NoError(t, err)
+
+			// WHEN
+			result, err := tpl.Render(map[string]any{"Values": tc.values})
+
+			// THEN
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, result)
+		})
+	}
+}
+
 func TestAtIndex(t *testing.T) {
 	t.Parallel()
 
