@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.17.31](https://github.com/dadrus/heimdall/compare/v0.17.30...v0.17.31) (2026-11-28)
+
+
+### Dependencies
+
+* update kubernetes monorepo to v0.37.3 ([#3707](https://github.com/dadrus/heimdall/issues/3707)) ([848a7e9](https://github.com/dadrus/heimdall/commit/848a7e97c47822fb6850f96a3c4e4e4dfe0e39e5))
+* update module github.com/ccoveille/go-safecast/v2 to v2.1.0 ([#3704](https://github.com/dadrus/heimdall/issues/3704)) ([0d8e3b4](https://github.com/dadrus/heimdall/commit/0d8e3b44318dd1f70f58c4f69a7a6990c849558a))
+* update module github.com/tidwall/gjson to v1.20.7 ([#3705](https://github.com/dadrus/heimdall/issues/3705)) ([ca5a0f3](https://github.com/dadrus/heimdall/commit/ca5a0f3637aee77302af143e831cbbd65ae9c29a))
+* update module github.com/wi2l/jsondiff to v0.7.2 ([#3710](https://github.com/dadrus/heimdall/issues/3710)) ([125f906](https://github.com/dadrus/heimdall/commit/125f90618f3839e1be7d7b7460dab5e1bc4862e6))
+
 ## [0.17.30](https://github.com/dadrus/heimdall/compare/v0.17.29...v0.17.30) (2026-11-22)
 
 
